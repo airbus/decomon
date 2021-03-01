@@ -1,0 +1,19 @@
+# Mac
+.DS_Store
+
+# IDE
+.*/
+!.vuepress/
+
+# Github
+.github/
+
+# Python
+__pycache__/
+
+# Temp files
+*.tmp
+
+# Build files
+build/
+dist/
