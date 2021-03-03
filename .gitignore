@@ -11,6 +11,9 @@
 # Python
 __pycache__/
 
+# ASDF file
+.tool-versions
+
 # Temp files
 *.tmp
 

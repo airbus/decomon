@@ -24,9 +24,7 @@ class PreprocessVGG(Layer):
         self.input_spec = InputSpec(ndim=4)
 
     def call(self, input):
-        variable = K.variable(
-            np.array([123.68 / 255.0, 116.779 / 255.0, 103.939 / 255.0])
-        )
+        variable = K.variable(np.array([123.68 / 255.0, 116.779 / 255.0, 103.939 / 255.0]))
         # if self.from_pixel:
         #    # input_ = K.tf.floor(input)
         #    # input_ = K.floor(input)
@@ -95,9 +93,7 @@ def to_monotonic_vgg(layer, input_dim=VGG_DIM):
     return to_monotonic(layer, input_dim)
 
 
-def convert_to_monotonic_VGG16(
-    normalized_input=True, input_tensors=None, input_dim=VGG_DIM, *args, **kwargs
-):
+def convert_to_monotonic_VGG16(normalized_input=True, input_tensors=None, input_dim=VGG_DIM, *args, **kwargs):
     """
 
     :param normalized_input:

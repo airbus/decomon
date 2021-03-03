@@ -1,6 +1,6 @@
 # Set of functions that make it easy to use the library in a black box manner
 # No need to understand the technical aspects or to code
-from .models import DecomonModel, convert, clone
+from .models import DecomonModel, convert
 import numpy as np
 from .layers.core import Ball, Box
 
@@ -248,15 +248,11 @@ def get_adv_box(model, x_min, x_max, source_label, target_labels=None, fast=True
         x_min_ = x_min
         x_max_ = x_max
         n_expand = len(w_.shape) - len(x_min_.shape)
-        for i in range(n_expand):
+        for _i in range(n_expand):
             x_min_ = np.expand_dims(x_min_, -1)
             x_max_ = np.expand_dims(x_max_, -1)
 
-        upper_ = (
-            np.sum(np.maximum(w_, 0) * x_max_, 1)
-            + np.sum(np.minimum(w_, 0) * x_min_, 1)
-            + b_
-        )
+        upper_ = np.sum(np.maximum(w_, 0) * x_max_, 1) + np.sum(np.minimum(w_, 0) * x_min_, 1) + b_
         upper_[:, source_label] = -np.inf
 
         upper = np.minimum(upper, upper_)
@@ -335,15 +331,11 @@ def check_adv_box(model, x_min, x_max, source_label, target_labels=None, fast=Tr
         x_min_ = x_min
         x_max_ = x_max
         n_expand = len(w_.shape) - len(x_min_.shape)
-        for i in range(n_expand):
+        for _i in range(n_expand):
             x_min_ = np.expand_dims(x_min_, -1)
             x_max_ = np.expand_dims(x_max_, -1)
 
-        lower_ = (
-            np.sum(np.maximum(w_, 0) * x_max_, 1)
-            + np.sum(np.minimum(w_, 0) * x_min_, 1)
-            + b_
-        )
+        lower_ = np.sum(np.maximum(w_, 0) * x_max_, 1) + np.sum(np.minimum(w_, 0) * x_min_, 1) + b_
         lower_[:, source_label] = -np.inf
 
         lower = np.minimum(lower, lower_)
@@ -383,9 +375,7 @@ def init_alpha(model, decomon_model, x_min, x_max, label, fast=False, n_sub=1000
         return 1, 0.0
 
     # check that the whole domain is not working
-    upper_high = get_adv_box(
-        decomon_model, x_min, x_max, source_label=label, fast=fast
-    )[0]
+    upper_high = get_adv_box(decomon_model, x_min, x_max, source_label=label, fast=fast)[0]
     if upper_high <= 0:
         return -1, 1.0
 
@@ -393,9 +383,7 @@ def init_alpha(model, decomon_model, x_min, x_max, label, fast=False, n_sub=1000
     alpha = np.linspace(0.0, 1.0, n_sub)[:, None]
     X_alpha = (1 - alpha) * x_min + alpha * x_max
 
-    upper = get_adv_box(
-        decomon_model, x_min + 0 * X_alpha, X_alpha, source_label=label, fast=fast
-    )
+    upper = get_adv_box(decomon_model, x_min + 0 * X_alpha, X_alpha, source_label=label, fast=fast)
     index = np.where(upper < 0)[0][-1]
     return -1, alpha[index]
 
@@ -426,17 +414,10 @@ def increase_alpha(decomon_model, x_min, x_alpha, x_max, label, fast=False, alph
     X_min = X_min_.reshape(tuple([-1] + input_shape))
     x_alpha = x_alpha_.reshape(tuple([-1] + input_shape))
     found = False
-    upper_low = get_adv_box(
-        decomon_model, X_min, x_alpha + 0 * X_min, source_label=label, fast=fast
-    )
+    upper_low = get_adv_box(decomon_model, X_min, x_alpha + 0 * X_min, source_label=label, fast=fast)
 
     index_keep = np.array(
-        [
-            i
-            for i in range(n_dim)
-            if (i in np.where(upper_low < 0)[0])
-            and (i in np.where(x_alpha[0] < x_max[0])[0])
-        ]
+        [i for i in range(n_dim) if (i in np.where(upper_low < 0)[0]) and (i in np.where(x_alpha[0] < x_max[0])[0])]
     )
     score = np.min(upper_low)
     j = 0
@@ -450,9 +431,9 @@ def increase_alpha(decomon_model, x_min, x_alpha, x_max, label, fast=False, alph
 
         X_alpha = np.concatenate([x_alpha] * n_dim, 0)
         X_alpha_ = X_alpha.reshape((-1, n_dim))
-        X_alpha_[np.arange(n_dim), np.arange(n_dim)] = alpha_ * x_max.reshape(
-            (-1, n_dim)
-        ) + (1 - alpha_) * x_alpha.reshape((-1, n_dim))
+        X_alpha_[np.arange(n_dim), np.arange(n_dim)] = alpha_ * x_max.reshape((-1, n_dim)) + (
+            1 - alpha_
+        ) * x_alpha.reshape((-1, n_dim))
         X_alpha = X_alpha_.reshape(tuple([-1] + input_shape))
 
         toto = get_adv_box(decomon_model, A, x_max + 0 * A, label, fast=fast)
@@ -484,12 +465,7 @@ def increase_alpha(decomon_model, x_min, x_alpha, x_max, label, fast=False, alph
         found = True
         # index_keep = np.where(score[0] < 0 and x_alpha[0]<x_max[0])[0]
         index_keep = np.array(
-            [
-                i
-                for i in range(n_dim)
-                if (i in np.where(upper_dir < 0)[0])
-                and (i in np.where(x_alpha[0] < x_max[0])[0])
-            ]
+            [i for i in range(n_dim) if (i in np.where(upper_dir < 0)[0]) and (i in np.where(x_alpha[0] < x_max[0])[0])]
         )
         j += 1
 
@@ -567,9 +543,7 @@ def search_space(
     alpha_tmp = np.linspace(0.5, 1.0, 4)[::-1]
     while found and i < len(alpha_tmp):
         # print(i, alpha_tmp[i])
-        x_alpha, found = increase_alpha(
-            decomon_model, x_min, x_alpha, x_max, label, alpha_=alpha_tmp[i]
-        )
+        x_alpha, found = increase_alpha(decomon_model, x_min, x_alpha, x_max, label, alpha_=alpha_tmp[i])
         if np.allclose(x_max, x_alpha):
             return -1
         break

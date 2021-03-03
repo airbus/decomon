@@ -20,14 +20,7 @@ import tensorflow as tf
 
 # step 1: compute the maximum
 class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
-    def __init__(
-        self,
-        pool_size=(2, 2),
-        strides=None,
-        padding="valid",
-        data_format=None,
-        **kwargs
-    ):
+    def __init__(self, pool_size=(2, 2), strides=None, padding="valid", data_format=None, **kwargs):
         """
         Max pooling operation for 2D spatial data.
         see Keras official documentation
@@ -50,11 +43,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
         """
 
         super(DecomonMaxPooling2D, self).__init__(
-            pool_size=pool_size,
-            strides=strides,
-            padding=padding,
-            data_format=data_format,
-            **kwargs
+            pool_size=pool_size, strides=strides, padding=padding, data_format=data_format, **kwargs
         )
 
         if self.grad_bounds:
@@ -87,9 +76,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
             ]
 
         # express maxpooling with convolutions
-        self.filters = np.zeros(
-            (pool_size[0], pool_size[1], 1, np.prod(pool_size)), dtype="float32"
-        )
+        self.filters = np.zeros((pool_size[0], pool_size[1], 1, np.prod(pool_size)), dtype="float32")
         for i in range(pool_size[0]):
             for j in range(pool_size[1]):
                 self.filters[i, j, 0, i * pool_size[0] + j] = 1
@@ -131,14 +118,10 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
         if self.grad_bounds:
             raise NotImplementedError()
 
-        output_shape_ = super(DecomonMaxPooling2D, self).compute_output_shape(
-            input_shape[0]
-        )
+        output_shape_ = super(DecomonMaxPooling2D, self).compute_output_shape(input_shape[0])
         input_dim = input_shape[0][1]
 
-        w_u_shape_, w_l_shape_ = [
-            tuple([output_shape_[0], input_dim] + list(output_shape_)[1:])
-        ] * 2
+        w_u_shape_, w_l_shape_ = [tuple([output_shape_[0], input_dim] + list(output_shape_)[1:])] * 2
 
         output_shape = (
             [output_shape_]
@@ -185,9 +168,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
         else:
             axis = 1
 
-        y_list_ = [
-            self.internal_op(elem) for elem in tf.split(y, input_shape[axis], axis)
-        ]
+        y_list_ = [self.internal_op(elem) for elem in tf.split(y, input_shape[axis], axis)]
         y_list = K.concatenate(y_list_, -2)
 
         if self.dc_decomp:
@@ -201,18 +182,10 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
                 [self.internal_op(elem) for elem in tf.split(g, input_shape[-1], -1)],
                 -2,
             )
-        b_u_list = K.concatenate(
-            [self.internal_op(elem) for elem in tf.split(b_u, input_shape[-1], -1)], -2
-        )
-        b_l_list = K.concatenate(
-            [self.internal_op(elem) for elem in tf.split(b_l, input_shape[-1], -1)], -2
-        )
-        u_c_list = K.concatenate(
-            [self.internal_op(elem) for elem in tf.split(u_c, input_shape[-1], -1)], -2
-        )
-        l_c_list = K.concatenate(
-            [self.internal_op(elem) for elem in tf.split(l_c, input_shape[-1], -1)], -2
-        )
+        b_u_list = K.concatenate([self.internal_op(elem) for elem in tf.split(b_u, input_shape[-1], -1)], -2)
+        b_l_list = K.concatenate([self.internal_op(elem) for elem in tf.split(b_l, input_shape[-1], -1)], -2)
+        u_c_list = K.concatenate([self.internal_op(elem) for elem in tf.split(u_c, input_shape[-1], -1)], -2)
+        l_c_list = K.concatenate([self.internal_op(elem) for elem in tf.split(l_c, input_shape[-1], -1)], -2)
 
         output_shape = list(K.int_shape(b_u_list[0]))[1:]
 
@@ -220,12 +193,8 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
         # w_l_list = K.concatenate(
         #    [time_distributed(elem, self.internal_op, output_shape) for elem in tf.split(w_l, input_shape[-1], -1)], -2)
 
-        w_u_list = K.concatenate(
-            [self.internal_op(elem) for elem in tf.split(w_u, input_shape[-1], -1)], -2
-        )
-        w_l_list = K.concatenate(
-            [self.internal_op(elem) for elem in tf.split(w_l, input_shape[-1], -1)], -2
-        )
+        w_u_list = K.concatenate([self.internal_op(elem) for elem in tf.split(w_u, input_shape[-1], -1)], -2)
+        w_l_list = K.concatenate([self.internal_op(elem) for elem in tf.split(w_l, input_shape[-1], -1)], -2)
 
         output_list = [
             y_list,
@@ -247,9 +216,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
 
     def call(self, inputs):
 
-        return self._pooling_function(
-            inputs, self.pool_size, self.strides, self.padding, self.data_format
-        )
+        return self._pooling_function(inputs, self.pool_size, self.strides, self.padding, self.data_format)
 
 
 # aliases

@@ -11,5 +11,5 @@ from .wrapper import (
     get_range_noise,
     get_upper_noise,
     get_adv_box,
-    check_adv_box
+    check_adv_box,
 )

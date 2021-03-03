@@ -51,9 +51,7 @@ def relu(
 
     if not (alpha) and max_value is None:
         # default values: return relu_(x) = max(x, 0)
-        return relu_(
-            x, dc_decomp=dc_decomp, grad_bounds=grad_bounds, convex_domain=convex_domain
-        )
+        return relu_(x, dc_decomp=dc_decomp, grad_bounds=grad_bounds, convex_domain=convex_domain)
 
     raise NotImplementedError()
 
@@ -317,6 +315,4 @@ def get(identifier):
             )
         return identifier
     else:
-        raise ValueError(
-            "Could not interpret " "activation function identifier:", identifier
-        )
+        raise ValueError("Could not interpret " "activation function identifier:", identifier)

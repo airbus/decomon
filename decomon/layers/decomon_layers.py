@@ -44,9 +44,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         activation = kwargs["activation"]
         if "activation" in kwargs:
             kwargs["activation"] = None
-        super(DecomonConv2D, self).__init__(
-            filters=filters, kernel_size=kernel_size, **kwargs
-        )
+        super(DecomonConv2D, self).__init__(filters=filters, kernel_size=kernel_size, **kwargs)
         self.kernel_constraint_pos_ = NonNeg()
         self.kernel_constraint_neg_ = NonPos()
 
@@ -90,19 +88,12 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         else:
             channel_axis = -1
         if input_shape[0][channel_axis] is None:
-            raise ValueError(
-                "The channel dimension of the inputs "
-                "should be defined. Found `None`."
-            )
+            raise ValueError("The channel dimension of the inputs " "should be defined. Found `None`.")
         input_dim = input_shape[0][channel_axis]
         kernel_shape = self.kernel_size + (input_dim, self.filters)
 
-        self.kernel_constraints_pos = MultipleConstraint(
-            self.kernel_constraint, self.kernel_constraint_pos_
-        )
-        self.kernel_constraints_neg = MultipleConstraint(
-            self.kernel_constraint, self.kernel_constraint_neg_
-        )
+        self.kernel_constraints_pos = MultipleConstraint(self.kernel_constraint, self.kernel_constraint_pos_)
+        self.kernel_constraints_neg = MultipleConstraint(self.kernel_constraint, self.kernel_constraint_neg_)
 
         self.kernel = self.add_weight(
             shape=kernel_shape,
@@ -235,13 +226,9 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         output_shape = b_u_.shape.as_list()[1:]
 
-        w_u_ = time_distributed(w_u, conv_pos, output_shape) + time_distributed(
-            w_l, conv_neg, output_shape
-        )
+        w_u_ = time_distributed(w_u, conv_pos, output_shape) + time_distributed(w_l, conv_neg, output_shape)
 
-        w_l_ = time_distributed(w_l, conv_pos, output_shape) + time_distributed(
-            w_u, conv_neg, output_shape
-        )
+        w_l_ = time_distributed(w_l, conv_pos, output_shape) + time_distributed(w_u, conv_neg, output_shape)
 
         # add bias
         if self.use_bias:
@@ -251,12 +238,8 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             l_c_ = bias_add(l_c_, self.bias, data_format=self.data_format)
             y_ = bias_add(y_, self.bias, data_format=self.data_format)
             if self.dc_decomp:
-                g_ = bias_add(
-                    g_, K.minimum(0.0, self.bias), data_format=self.data_format
-                )
-                h_ = bias_add(
-                    h_, K.maximum(0.0, self.bias), data_format=self.data_format
-                )
+                g_ = bias_add(g_, K.minimum(0.0, self.bias), data_format=self.data_format)
+                h_ = bias_add(h_, K.maximum(0.0, self.bias), data_format=self.data_format)
 
         upper_ = get_upper(x_0, w_u_, b_u_, self.convex_domain)
         u_c_ = K.minimum(upper_, u_c_)
@@ -331,9 +314,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         b_u_shape_, b_l_shape_, u_c_shape, l_c_shape = [output_shape] * 4
         input_dim = x_0_shape[-1]
-        w_u_shape_, w_l_shape_ = [
-            tuple([output_shape[0], input_dim] + list(output_shape)[1:])
-        ] * 2
+        w_u_shape_, w_l_shape_ = [tuple([output_shape[0], input_dim] + list(output_shape)[1:])] * 2
 
         output_shape_ = [
             y_shape,
@@ -456,12 +437,8 @@ class DecomonDense(Dense, DecomonLayer):
 
         input_x = input_shape[1][-1]
 
-        self.kernel_constraints_pos = MultipleConstraint(
-            self.kernel_constraint, self.kernel_constraint_pos_
-        )
-        self.kernel_constraints_neg = MultipleConstraint(
-            self.kernel_constraint, self.kernel_constraint_neg_
-        )
+        self.kernel_constraints_pos = MultipleConstraint(self.kernel_constraint, self.kernel_constraint_pos_)
+        self.kernel_constraints_neg = MultipleConstraint(self.kernel_constraint, self.kernel_constraint_neg_)
 
         self.kernel_pos = self.add_weight(
             shape=(input_dim, self.units),
@@ -586,12 +563,8 @@ class DecomonDense(Dense, DecomonLayer):
             # lower_grad = K.bias_add(lower_grad, self.bias, data_format="channels_last")
 
             if self.dc_decomp:
-                h_ = K.bias_add(
-                    h_, K.maximum(0.0, self.bias), data_format="channels_last"
-                )
-                g_ = K.bias_add(
-                    g_, K.minimum(0.0, self.bias), data_format="channels_last"
-                )
+                h_ = K.bias_add(h_, K.maximum(0.0, self.bias), data_format="channels_last")
+                g_ = K.bias_add(g_, K.minimum(0.0, self.bias), data_format="channels_last")
 
         upper_ = get_upper(x_0, w_u_, b_u_, self.convex_domain)
         u_c_ = K.minimum(upper_, u_c_)
@@ -864,9 +837,7 @@ class DecomonReshape(Reshape, DecomonLayer):
         return output
 
 
-def to_monotonic(
-    layer, input_dim, dc_decomp=False, grad_bounds=False, convex_domain={}
-):
+def to_monotonic(layer, input_dim, dc_decomp=False, grad_bounds=False, convex_domain={}):
     """Transform a standard keras layer into a decomon layer.
 
     Type of layer is tested to know how to transform it into a MonotonicLayer of the good type.

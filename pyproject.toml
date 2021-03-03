@@ -4,6 +4,30 @@ version = "0.1.0"
 description = "Linear Relaxation for Certified Robustness Bound for Tensorflow Neural Networks"
 authors = ["melanie.ducoffe <melanie.ducoffe@gmail.com>"]
 
+[tool.black]
+line-length = 120
+target-version = ['py37']
+include = '\.pyi?$'
+exclude = '''
+
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+  | foo.py           # also separately exclude a file named foo.py in
+                     # the root of the project
+)
+'''
+
 [tool.poetry.dependencies]
 python = "^3.6"
 tensorflow = "^2.4.1"
@@ -11,6 +35,10 @@ six = "^1.15.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.2"
+flake8 = "^3.8.4"
+flake8-bugbear = "^20.11.1"
+black = { version = "*", allow-prereleases = true }
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

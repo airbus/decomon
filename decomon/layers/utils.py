@@ -49,9 +49,7 @@ def time_distributed(inputs, op, output_shape):
     if input_shape[0]:
         input_length = input_shape[1]
         inner_input_shape = _get_shape_tuple((-1,), inputs, 2)
-        inner_input_shape = tuple(
-            [input_shape[0] * input_length] + list(inner_input_shape)[1:]
-        )
+        inner_input_shape = tuple([input_shape[0] * input_length] + list(inner_input_shape)[1:])
         inputs = array_ops.reshape(inputs, inner_input_shape)
         y = op(inputs)
 
@@ -309,9 +307,7 @@ def get_grad(x, constant, W, b):
 
     x_ = K.expand_dims(x, 2)  # (None, n_dim, 1, 1)
     z = K.sum(W * x_, 1) + b
-    grad_ = K.sum(
-        -K.sign(constant - K.maximum(constant, z))[:, None] * W, 2
-    )  # (None, n_dim, ...)
+    grad_ = K.sum(-K.sign(constant - K.maximum(constant, z))[:, None] * W, 2)  # (None, n_dim, ...)
 
     return grad_
 
@@ -547,15 +543,11 @@ def relu_(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
     l_c_ = (1 - index_dead) * l_c_
 
     # set everything to the initial state if relu_ is linear
-    w_u_ = (
-        K.expand_dims(1 - index_linear, 1) * w_u_ + K.expand_dims(index_linear, 1) * w_u
-    )
+    w_u_ = K.expand_dims(1 - index_linear, 1) * w_u_ + K.expand_dims(index_linear, 1) * w_u
     b_u_ = (1 - index_linear) * b_u_ + index_linear * b_u
     u_c_ = (1 - index_linear) * u_c_ + index_linear * u_c
 
-    w_l_ = (
-        K.expand_dims(1 - index_linear, 1) * w_l_ + K.expand_dims(index_linear, 1) * w_l
-    )
+    w_l_ = K.expand_dims(1 - index_linear, 1) * w_l_ + K.expand_dims(index_linear, 1) * w_l
     b_l_ = (1 - index_linear) * b_l_ + index_linear * b_l
     l_c_ = (1 - index_linear) * l_c_ + index_linear * l_c
 
@@ -844,9 +836,7 @@ def softmax_to_linear(model):
 
     # check that layer is not an instance of the object Softmax
     if isinstance(layer, keras.layers.Softmax):
-        model_normalize = keras.models.Model(
-            model.get_input_at(0), keras.layers.Activation("linear")(layer.input)
-        )
+        model_normalize = keras.models.Model(model.get_input_at(0), keras.layers.Activation("linear")(layer.input))
 
         return model_normalize
 

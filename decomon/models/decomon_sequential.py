@@ -20,9 +20,7 @@ from decomon.layers.utils import softmax_to_linear, get_upper, get_lower
 import tensorflow.keras as keras
 
 
-def include_dim_layer_fn(
-    layer_fn, input_dim, dc_decomp=False, grad_bounds=False, convex_domain={}
-):
+def include_dim_layer_fn(layer_fn, input_dim, dc_decomp=False, grad_bounds=False, convex_domain={}):
     """
     include external parameters inside the translation of a layer to its decomon counterpart
     :param layer_fn:
@@ -40,9 +38,7 @@ def include_dim_layer_fn(
             if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
                 input_dim = (2, input_dim)
             else:
-                if convex_domain["name"] == Box.name and not isinstance(
-                    input_dim, tuple
-                ):
+                if convex_domain["name"] == Box.name and not isinstance(input_dim, tuple):
                     input_dim = (2, input_dim)
 
             def func(x):
@@ -59,15 +55,12 @@ def include_dim_layer_fn(
         else:
 
             warnings.warn(
-                "Expected {} to have an input dim option. "
-                "Henceworth the to_monotonic function will be used instead"
+                "Expected {} to have an input dim option. " "Henceworth the to_monotonic function will be used instead"
             )
             if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
                 input_dim = (2, input_dim)
             else:
-                if convex_domain["name"] == Box.name and not isinstance(
-                    input_dim, tuple
-                ):
+                if convex_domain["name"] == Box.name and not isinstance(input_dim, tuple):
                     input_dim = (2, input_dim)
             layer_fn = lambda x: to_monotonic(
                 x,
@@ -170,9 +163,7 @@ def clone_sequential_model(
 
     if not isinstance(model, Sequential):
         raise ValueError(
-            "Expected `model` argument "
-            "to be a `Sequential` model instance, "
-            "but got:",
+            "Expected `model` argument " "to be a `Sequential` model instance, " "but got:",
             model,
         )
 
@@ -252,24 +243,14 @@ def clone_sequential_model(
         # assert that input_tensors is a List of 6 InputLayer objects
         # If input tensors are provided, the original model's InputLayer is
         # overwritten with a different InputLayer.
-        assert isinstance(
-            input_tensors, list
-        ), "expected input_tensors to be a List or None, but got dtype={}".format(
+        assert isinstance(input_tensors, list), "expected input_tensors to be a List or None, but got dtype={}".format(
             input_tensors.dtype
         )
 
         if dc_decomp:
-            assert (
-                len(input_tensors) == 10
-            ), "wrong number of inputs, expexted 10 but got {}".format(
-                len(input_tensors)
-            )
+            assert len(input_tensors) == 10, "wrong number of inputs, expexted 10 but got {}".format(len(input_tensors))
         else:
-            assert (
-                len(input_tensors) == 8
-            ), "wrong number of inputs, expexted 10 but got {}".format(
-                len(input_tensors)
-            )
+            assert len(input_tensors) == 8, "wrong number of inputs, expexted 10 but got {}".format(len(input_tensors))
         assert min(
             [isinstance(input_tensor_i, InputLayer) for input_tensor_i in input_tensors]
         ), "expected a list of InputLayer"
@@ -310,14 +291,10 @@ def clone_functional_model(
         raise NotImplementedError()
 
     if not isinstance(model, Model):
-        raise ValueError(
-            "Expected `model` argument " "to be a `Model` instance, got ", model
-        )
+        raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
     if isinstance(model, Sequential):
         raise ValueError(
-            "Expected `model` argument "
-            "to be a functional `Model` instance, "
-            "got a `Sequential` instance instead:",
+            "Expected `model` argument " "to be a functional `Model` instance, " "got a `Sequential` instance instead:",
             model,
         )
 
@@ -331,9 +308,7 @@ def clone_functional_model(
     model = softmax_to_linear(model)
 
     # we only handle one input
-    assert (
-        len(model._input_layers) == 1
-    ), "error: Expected one input only but got {}".format(len(model._input_layers))
+    assert len(model._input_layers) == 1, "error: Expected one input only but got {}".format(len(model._input_layers))
 
     def clone(layer):
         return layer.__class__.from_config(layer.get_config())
@@ -366,24 +341,12 @@ def clone_functional_model(
 
         z_tensor = Input(shape=input_shape_x, dtype=layer.dtype, name="z_" + layer.name)
         y_tensor = Input(shape=input_shape, dtype=layer.dtype, name="y_" + layer.name)
-        w_u_tensor = Input(
-            shape=input_shape_w, dtype=layer.dtype, name="w_u_" + layer.name
-        )
-        w_l_tensor = Input(
-            shape=input_shape_w, dtype=layer.dtype, name="w_l_" + layer.name
-        )
-        b_u_tensor = Input(
-            shape=input_shape, dtype=layer.dtype, name="b_u_" + layer.name
-        )
-        b_l_tensor = Input(
-            shape=input_shape, dtype=layer.dtype, name="b_l_" + layer.name
-        )
-        u_c_tensor = Input(
-            shape=input_shape, dtype=layer.dtype, name="u_c_" + layer.name
-        )
-        l_c_tensor = Input(
-            shape=input_shape, dtype=layer.dtype, name="l_c_" + layer.name
-        )
+        w_u_tensor = Input(shape=input_shape_w, dtype=layer.dtype, name="w_u_" + layer.name)
+        w_l_tensor = Input(shape=input_shape_w, dtype=layer.dtype, name="w_l_" + layer.name)
+        b_u_tensor = Input(shape=input_shape, dtype=layer.dtype, name="b_u_" + layer.name)
+        b_l_tensor = Input(shape=input_shape, dtype=layer.dtype, name="b_l_" + layer.name)
+        u_c_tensor = Input(shape=input_shape, dtype=layer.dtype, name="u_c_" + layer.name)
+        l_c_tensor = Input(shape=input_shape, dtype=layer.dtype, name="l_c_" + layer.name)
 
         input_tensors = [
             y_tensor,
@@ -396,18 +359,12 @@ def clone_functional_model(
             b_l_tensor,
         ]
         if dc_decomp:
-            h_tensor = Input(
-                shape=input_shape, dtype=layer.dtype, name="h_" + layer.name
-            )
-            g_tensor = Input(
-                shape=input_shape, dtype=layer.dtype, name="g_" + layer.name
-            )
+            h_tensor = Input(shape=input_shape, dtype=layer.dtype, name="h_" + layer.name)
+            g_tensor = Input(shape=input_shape, dtype=layer.dtype, name="g_" + layer.name)
             input_tensors += [h_tensor, g_tensor]
 
         # Cache newly created input layer.
-        newly_created_input_layers = [
-            input_tensor._keras_history[0] for input_tensor in input_tensors
-        ]
+        newly_created_input_layers = [input_tensor._keras_history[0] for input_tensor in input_tensors]
         layer_map[layer] = newly_created_input_layers
 
     else:
@@ -419,13 +376,9 @@ def clone_functional_model(
         if dc_decomp:
             names_i += ["h", "g"]
             # names_i = ['h', 'g', 'x_min', 'x_max', 'u_c', 'w_u', 'b_u', 'l_c', 'w_l', 'b_l']
-            assert (
-                len(input_tensors) == 10
-            ), "error, Expected 10 input tensors but got {}".format(len(input_tensors))
+            assert len(input_tensors) == 10, "error, Expected 10 input tensors but got {}".format(len(input_tensors))
         else:
-            assert (
-                len(input_tensors) == 8
-            ), "error, Expected 8 input tensors but got {}".format(len(input_tensors))
+            assert len(input_tensors) == 8, "error, Expected 8 input tensors but got {}".format(len(input_tensors))
 
         for i, x in enumerate(input_tensors):
 
@@ -442,9 +395,7 @@ def clone_functional_model(
                     if isinstance(layer_map[original_input_layer], list):
                         layer_map[original_input_layer] += [newly_created_input_layer]
                     else:
-                        layer_map[original_input_layer] = [
-                            layer_map[original_input_layer]
-                        ]
+                        layer_map[original_input_layer] = [layer_map[original_input_layer]]
                         layer_map[original_input_layer] += [newly_created_input_layer]
             else:
                 _input_tensors.append(x)
@@ -507,9 +458,7 @@ def clone_functional_model(
                 else:
                     kwargs = {}
                 if len(computed_data) == 1:
-                    computed_tensor, computed_mask = computed_data[
-                        0
-                    ]  # (list of) tensors, None
+                    computed_tensor, computed_mask = computed_data[0]  # (list of) tensors, None
 
                     if has_arg(layer_.call, "mask"):
                         if "mask" not in kwargs:
@@ -522,9 +471,7 @@ def clone_functional_model(
                         output_tensors = [output_tensors]
 
                     if layer_.supports_masking:
-                        output_masks = [
-                            layer.compute_mask(computed_tensor, computed_mask)
-                        ]
+                        output_masks = [layer.compute_mask(computed_tensor, computed_mask)]
                     else:
                         output_masks = [None] * len(output_tensors)
 
@@ -544,16 +491,12 @@ def clone_functional_model(
                         output_tensors = [output_tensors]
 
                     if layer.supports_masking:
-                        output_masks = to_list(
-                            layer.compute_mask(computed_tensors, computed_masks)
-                        )
+                        output_masks = to_list(layer.compute_mask(computed_tensors, computed_masks))
                     else:
                         output_masks = [None] * len(output_tensors)
 
                 # Update tensor_map.
-                for x, y, mask in zip(
-                    reference_output_tensors, output_tensors, output_masks
-                ):
+                for x, y, mask in zip(reference_output_tensors, output_tensors, output_masks):
                     tensor_map[id(x)] = (y, mask)
 
     # Check that we did compute the model outputs,
@@ -648,12 +591,8 @@ def convert(
             w_l_tensor = K.expand_dims(K.zeros_like(y_tensor), 1) + toto
 
             # compute upper and lower bound
-            l_c_tensor = get_lower(
-                z_tensor, w_l_tensor, b_l_tensor, convex_domain=convex_domain
-            )
-            u_c_tensor = get_upper(
-                z_tensor, w_u_tensor, b_u_tensor, convex_domain=convex_domain
-            )
+            l_c_tensor = get_lower(z_tensor, w_l_tensor, b_l_tensor, convex_domain=convex_domain)
+            u_c_tensor = get_upper(z_tensor, w_u_tensor, b_u_tensor, convex_domain=convex_domain)
 
             output = [
                 y_tensor,
