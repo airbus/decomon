@@ -22,6 +22,7 @@ exclude = '''
     | buck-out
     | build
     | dist
+    | tests/.*/setup.py
   )/
   | foo.py           # also separately exclude a file named foo.py in
                      # the root of the project
@@ -38,6 +39,7 @@ pytest = "^6.2.2"
 flake8 = "^3.8.4"
 flake8-bugbear = "^20.11.1"
 black = { version = "*", allow-prereleases = true }
+pre-commit = { version = "^2.6", python = "^3.6.1" }
 
 
 [build-system]
