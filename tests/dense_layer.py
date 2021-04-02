@@ -8,6 +8,7 @@ from . import (
     get_tensor_decomposition_1d_box,
     get_standart_values_1d_box,
     assert_output_properties_box,
+    assert_output_properties_box_linear,
     get_standard_values_multid_box,
     get_tensor_decomposition_multid_box,
 )
@@ -416,7 +417,7 @@ def test_DecomonDense_1D_box_nodc(n, activation):
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[1:])
     y_ref = f_ref(inputs_)
 
-    assert np.allclose(y_ref, y_)
+    assert_output_properties_box_linear(x, y_, z_[:,0], z_[:,1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, 'nodc')
 
 
 @pytest.mark.parametrize(
@@ -464,76 +465,8 @@ def test_DecomonDense_multiD_to_monotonic_box_nodc(odd, activation):
 
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[1:])
 
-    assert np.allclose(y_ref, y_)
+    assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, 'nodc')
 
-
-@pytest.mark.parametrize(
-    "n, activation",
-    [
-        (0, "relu"),
-        (1, "relu"),
-        (2, "relu"),
-        (3, "relu"),
-        (4, "relu"),
-        (5, "relu"),
-        (6, "relu"),
-        (7, "relu"),
-        (8, "relu"),
-        (9, "relu"),
-        (0, "linear"),
-        (1, "linear"),
-        (2, "linear"),
-        (3, "linear"),
-        (4, "linear"),
-        (5, "linear"),
-        (6, "linear"),
-        (7, "linear"),
-        (8, "linear"),
-        (9, "linear"),
-        (0, None),
-        (1, None),
-        (2, None),
-        (3, None),
-        (4, None),
-        (5, None),
-        (6, None),
-        (7, None),
-        (8, None),
-        (9, None),
-    ],
-)
-def test_DecomonDense_1D_box_dc(n, activation):
-
-    monotonic_dense = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=False)
-    ref_dense = Dense(1, use_bias=True, activation=activation)
-
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
-
-    output = monotonic_dense(inputs[1:])
-    ref_dense(inputs[1])
-
-    W_pos, W_neg, bias = monotonic_dense.get_weights()
-
-    monotonic_dense.set_weights([2 * np.ones_like(W_pos), np.zeros_like(W_neg), np.ones_like(bias)])
-    ref_dense.set_weights([2 * np.ones_like(W_pos), np.ones_like(bias)])
-
-    f_dense = K.function(inputs[1:], output)
-    f_ref = K.function(inputs, ref_dense(inputs[1]))
-
-    y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[1:])
-    y_ref = f_ref(inputs_)
-
-    assert_almost_equal(y_ref, y_)
-
-    monotonic_dense.set_weights([np.zeros_like(W_pos), -3 * np.ones_like(W_neg), np.ones_like(bias)])
-    ref_dense.set_weights([-3 * np.ones_like(W_pos), np.ones_like(bias)])
-    y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[1:])
-
-    y_ref = f_ref(inputs_)
-
-    assert_almost_equal(y_ref, y_)
 
 
 @pytest.mark.parametrize(
@@ -562,6 +495,7 @@ def test_DecomonDense_multiD_box_dc(odd, activation):
     y_ref = f_ref(inputs_)
 
     assert_almost_equal(y_, y_ref)
+    assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, 'nodc')
 
     monotonic_dense.set_weights([np.zeros_like(W_pos), -3 * np.ones_like(W_neg), np.ones_like(bias)])
     ref_dense.set_weights([-3 * np.ones_like(W_pos), np.ones_like(bias)])
@@ -569,3 +503,4 @@ def test_DecomonDense_multiD_box_dc(odd, activation):
     y_ref = f_ref(inputs_)
 
     assert_almost_equal(y_, y_ref)
+    assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, 'nodc')

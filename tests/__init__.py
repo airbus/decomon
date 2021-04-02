@@ -717,3 +717,67 @@ def assert_output_properties_box(x_, y_, h_, g_, x_min_, x_max_, u_c_, w_u_, b_u
         decimal=decimal,
         err_msg="upper <u_c",
     )
+
+
+def assert_output_properties_box_linear(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, name, decimal=5):
+
+    # flatten everything
+    # flatten everyting
+    n = len(y_)
+    y_ = y_.reshape((n, -1))
+    u_c_ = u_c_.reshape((n, -1))
+    l_c_ = l_c_.reshape((n, -1))
+    w_u_ = w_u_.reshape((n, w_u_.shape[1], -1))
+    w_l_ = w_l_.reshape((n, w_l_.shape[1], -1))
+    b_u_ = b_u_.reshape((n, -1))
+    b_l_ = b_l_.reshape((n, -1))
+
+    # assert_almost_equal(h_ + g_, y_, decimal=decimal, err_msg='decomposition error for function {}'.format(name))
+    assert np.min(x_min_ <= x_max_), 'x_min >x_max for function {}'.format(name)
+
+    assert_almost_equal(np.clip(x_min_ - x_, 0, np.inf), 0., decimal=decimal,
+                        err_msg='x_min >x_  for function {}'.format(name))
+    assert_almost_equal(np.clip(x_ - x_max_, 0, np.inf), 0., decimal=decimal,
+                        err_msg='x_max < x_  for function {}'.format(name))
+
+    x_expand = x_ + np.zeros_like(x_)
+    n_expand = len(w_u_.shape) - len(x_expand.shape)
+    for i in range(n_expand):
+        x_expand = np.expand_dims(x_expand, -1)
+
+    lower_ = np.sum(w_l_ * x_expand, 1) + b_l_
+    upper_ = np.sum(w_u_ * x_expand, 1) + b_u_
+
+    # check that the functions h_ and g_ remains monotonic
+
+    # assert_almost_equal(np.clip(h_[:-1] - h_[1:], 0, np.inf), np.zeros_like(h_[1:]), decimal=decimal,
+    #                    err_msg='h is not increasing for function {}'.format(name))
+    # assert_almost_equal(np.clip(g_[1:] - g_[:-1], 0, np.inf), np.zeros_like(g_[1:]), decimal=decimal,
+    #                    err_msg='g is not increasing for function {}'.format(name))
+
+    assert_almost_equal(np.clip(l_c_ - y_, 0., np.inf), np.zeros_like(y_), decimal=decimal, err_msg='l_c >y')
+    assert_almost_equal(np.clip(y_ - u_c_, 0., 1e6), np.zeros_like(y_), decimal=decimal, err_msg='u_c <y')
+
+    #
+    assert_almost_equal(np.clip(lower_ - y_, 0., np.inf), np.zeros_like(y_), decimal=decimal, err_msg='lower_ >y')
+    assert_almost_equal(np.clip(y_ - upper_, 0., 1e6), np.zeros_like(y_), decimal=decimal, err_msg='upper <y')
+
+    # computer lower bounds on the domain
+
+    x_expand_min = x_min_ + np.zeros_like(x_)
+    x_expand_max = x_max_ + np.zeros_like(x_)
+    n_expand = len(w_u_.shape) - len(x_expand_min.shape)
+    for i in range(n_expand):
+        x_expand_min = np.expand_dims(x_expand_min, -1)
+        x_expand_max = np.expand_dims(x_expand_max, -1)
+
+    lower_ = np.sum(np.maximum(0, w_l_) * x_expand_min, 1) + np.sum(np.minimum(0, w_l_) * x_expand_max, 1) + b_l_
+    upper_ = np.sum(np.maximum(0, w_u_) * x_expand_max, 1) + np.sum(np.minimum(0, w_u_) * x_expand_min, 1) + b_u_
+
+    # import pdb; pdb.set_trace()
+    assert_almost_equal(np.clip(lower_ - y_, 0., np.inf), np.zeros_like(y_), decimal=decimal, err_msg='l_c >y')
+    assert_almost_equal(np.clip(y_ - upper_, 0., 1e6), np.zeros_like(y_), decimal=decimal, err_msg='u_c <y')
+
+    # assert_almost_equal(np.clip(lower_.min(0) - l_c_.max(0), 0., np.inf), np.zeros_like(y_.min(0)), decimal=decimal, err_msg='lower_ >l_c')
+    # assert_almost_equal(np.clip(u_c_.min(0) - upper_.max(0), 0., 1e6), np.zeros_like(y_.min(0)), decimal=decimal, err_msg='upper <u_c')
+

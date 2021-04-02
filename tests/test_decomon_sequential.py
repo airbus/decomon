@@ -14,6 +14,7 @@ from . import (
     get_tensor_decomposition_1d_box,
     get_standart_values_1d_box,
     assert_output_properties_box,
+    assert_output_properties_box_linear,
     get_standard_values_multid_box,
     get_tensor_decomposition_multid_box,
 )
@@ -90,6 +91,7 @@ def test_convert_model_1d_nodc(n):
     y_ref = f_ref(inputs_)
 
     assert_almost_equal(y_, y_ref, decimal=5)
+    assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, 'nodc')
 
 
 # testing that the cloning function is working
@@ -162,6 +164,8 @@ def test_clone_sequential_model_1d_box_nodc(n):
     y_ref = f_ref(inputs_)
 
     assert_almost_equal(y_, y_ref, decimal=5)
+    assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_,
+                                        b_u_, l_c_, w_l_, b_l_, 'nodc')
 
 
 @pytest.mark.parametrize("odd", [0, 1])
@@ -236,3 +240,5 @@ def test_clone_sequential_model_multid_box_nodc(odd):
     y_ref = f_ref(inputs_)
 
     assert_almost_equal(y_, y_ref, decimal=5)
+    assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_,
+                                        b_u_, l_c_, w_l_, b_l_, 'nodc')

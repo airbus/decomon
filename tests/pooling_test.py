@@ -4,6 +4,7 @@ import pytest
 import numpy as np
 from . import (
     assert_output_properties_box,
+    assert_output_properties_box_linear,
     get_tensor_decomposition_images_box,
     get_standard_values_images_box,
 )
@@ -75,6 +76,7 @@ def test_MaxPooling2D_box_nodc(data_format, odd, m_0, m_1):
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_pooling(inputs_)
 
     assert np.allclose(y_, y_ref)
+    assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, 'nodc')
 
 
 @pytest.mark.parametrize("data_format, odd, m_0, m_1", [("channels_last", 0, 0, 1)])
@@ -141,3 +143,4 @@ def test_MaxPooling2D_to_monotonic_nodc(data_format, odd, m_0, m_1):
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_pooling(inputs_)
 
     assert np.allclose(y_, y_ref)
+    assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, 'nodc')
