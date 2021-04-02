@@ -18,7 +18,7 @@ from tensorflow.keras.layers import (
 from decomon.layers import activations
 from decomon.layers.utils import NonPos, MultipleConstraint, Project_initializer_pos, Project_initializer_neg
 from tensorflow.python.keras.utils import conv_utils
-from decomon.layers.utils import time_distributed, get_upper, get_lower
+from decomon.layers.utils import get_upper, get_lower
 from .maxpooling import DecomonMaxPooling2D
 
 
@@ -217,14 +217,23 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         l_c_ = conv_pos(l_c) + conv_neg(u_c)
 
-        output_shape = b_u_.shape.as_list()[1:]
         input_dim = w_u.shape[1]
         w_u_list = tf.split(w_u, input_dim, 1)
         w_l_list = tf.split(w_l, input_dim, 1)
-        w_u_ = K.concatenate([K.expand_dims(conv_pos(w_u_i[:, 0]) + conv_neg(w_l_i[:, 0]), 1) for (w_u_i, w_l_i) in
-                              zip(w_u_list, w_l_list)], 1)
-        w_l_ = K.concatenate([K.expand_dims(conv_pos(w_l_i[:, 0]) + conv_neg(w_u_i[:, 0]), 1) for (w_u_i, w_l_i) in
-                              zip(w_u_list, w_l_list)], 1)
+        w_u_ = K.concatenate(
+            [
+                K.expand_dims(conv_pos(w_u_i[:, 0]) + conv_neg(w_l_i[:, 0]), 1)
+                for (w_u_i, w_l_i) in zip(w_u_list, w_l_list)
+            ],
+            1,
+        )
+        w_l_ = K.concatenate(
+            [
+                K.expand_dims(conv_pos(w_l_i[:, 0]) + conv_neg(w_u_i[:, 0]), 1)
+                for (w_u_i, w_l_i) in zip(w_u_list, w_l_list)
+            ],
+            1,
+        )
 
         # add bias
         if self.use_bias:

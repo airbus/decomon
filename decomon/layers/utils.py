@@ -5,7 +5,6 @@ from tensorflow.keras.constraints import Constraint
 from tensorflow.keras.initializers import Initializer
 import tensorflow.keras as keras
 import numpy as np
-from tensorflow.python.ops import array_ops
 from .core import Ball, Box, Vertex
 
 
@@ -40,41 +39,6 @@ def _get_shape_tuple(init_tuple, tensor, start_idx, int_shape=None):
         if not s:
             int_shape[i] = shape[start_idx + i]
     return init_tuple + tuple(int_shape)
-
-
-def time_distributed(inputs, op, output_shape):
-
-    input_shape = K.int_shape(inputs)
-
-    if input_shape[0]:
-        input_length = input_shape[1]
-        inner_input_shape = _get_shape_tuple((-1,), inputs, 2)
-        inner_input_shape = tuple([input_shape[0] * input_length] + list(inner_input_shape)[1:])
-        inputs = array_ops.reshape(inputs, inner_input_shape)
-        y = op(inputs)
-
-        output_shape = [input_shape[0], input_length] + list(output_shape)
-        y = array_ops.reshape(y, output_shape)
-
-        return y
-
-    input_length = input_shape[1]
-    if not input_length:
-        input_length = array_ops.shape(inputs)[1]
-
-    inner_input_shape = _get_shape_tuple((-1,), inputs, 2)
-    # Shape: (num_samples * timesteps, ...). And track the
-    # transformation in self._input_map.
-    inputs = array_ops.reshape(inputs, inner_input_shape)
-    # (num_samples * timesteps, ...)
-
-    y = op(inputs)
-
-    # Shape: (num_samples, timesteps, ...)
-    output_shape = [-1, input_length] + list(output_shape)
-    y = array_ops.reshape(y, output_shape)
-
-    return y
 
 
 ##############
