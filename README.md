@@ -30,13 +30,15 @@ is aligned with [Black](https://github.com/psf/black) format.
 
 ## Installation
 
-Python 3.7+ and Tensorflow 2.4 is required.
+Python 3.7+ and Tensorflow 2.4 is required. We recommend to manage your python version using 
+[asdf](https://asdf-vm.com/#/core-manage-asdf)
+
 Before you run any examples, please install `Decomon` first:
 
 ```
-git clone https://github.com/???/decomon
+git clone https://github.com/airbus/decomon
 cd decomon
-python setup.py install
+poetry build
 ```
 
 This library is still under heavy development.
@@ -77,7 +79,8 @@ Pytest is required to run unit tests (pip install pytest).
 
 Make sure you are in the `decomon` root directory and run unit tests (the "-v" verbose mode is optional but gives additional details):
 
+```
 cd YOUR_LOCAL_PATH_TO_GIT_CLONED_DECOMON
 
-pytest tests -v
-
+poetry run pytest tests -v
+```
