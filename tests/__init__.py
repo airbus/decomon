@@ -384,8 +384,8 @@ def build_image_from_1D_box(odd=0, m=0, dc_decomp=True):
     w_l_ = w_l_.reshape((-1, 1, n, n))
 
     if dc_decomp:
-        return x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_
-    return x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_
+        return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
+    return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
 
 def build_image_from_2D_box(odd=0, m0=0, m1=1, dc_decomp=True):
@@ -475,8 +475,8 @@ def build_image_from_2D_box(odd=0, m0=0, m1=1, dc_decomp=True):
             "image from 2D",
         )
 
-        return x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_
-    return x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_
+        return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
+    return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
 
 def get_standard_values_images_box(data_format="channels_last", odd=0, m0=0, m1=1, dc_decomp=True):
@@ -570,9 +570,9 @@ def get_standard_values_images_box(data_format="channels_last", odd=0, m0=0, m1=
             )
 
     if dc_decomp:
-        return x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_
+        return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
     else:
-        return x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_
+        return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
 
 def get_tensor_decomposition_images_box(data_format, odd, dc_decomp=True):
@@ -619,7 +619,7 @@ def get_tensor_decomposition_images_box(data_format, odd, dc_decomp=True):
     return output
 
 
-def assert_output_properties_box(x_, y_, h_, g_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, name, decimal=6):
+def assert_output_properties_box(x_, y_, h_, g_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, name, decimal=5):
 
     assert_almost_equal(
         h_ + g_,

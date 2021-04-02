@@ -5,3 +5,4 @@ from __future__ import absolute_import
 # from . import decomon_layers
 # from . import utils
 # from . import maxpooling
+from .utils import get_upper, get_lower

@@ -176,6 +176,11 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         else:
             y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: self.nb_tensors]
 
+        # check for linearity
+        x_max = get_upper(x_0, w_u - w_l, b_u - b_l, self.convex_domain)
+        mask_b = 1.0 - K.sign(x_max)
+        mask_a = 1.0 - mask_b
+
         y_ = conv2d(
             y,
             self.kernel,
@@ -209,9 +214,12 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             h_ = conv_pos(h) + conv_neg(g)
             g_ = conv_pos(g) + conv_neg(h)
 
-        b_u_ = conv_pos(b_u) + conv_neg(b_l)
-
-        b_l_ = conv_pos(b_l) + conv_neg(b_u)
+        b_u_a = conv_pos(mask_a * b_u) + conv_neg(mask_a * b_l)
+        b_u_b = conv_pos(mask_b * b_u) + conv_neg(mask_b * b_u)
+        b_l_a = conv_pos(b_l) + conv_neg(b_u)
+        b_l_b = conv_pos(b_l) + conv_neg(b_u)
+        b_u_ = b_u_a + b_u_b
+        b_l_ = b_l_a + b_l_b
 
         u_c_ = conv_pos(u_c) + conv_neg(l_c)
 
@@ -220,20 +228,30 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         input_dim = w_u.shape[1]
         w_u_list = tf.split(w_u, input_dim, 1)
         w_l_list = tf.split(w_l, input_dim, 1)
-        w_u_ = K.concatenate(
+        w_u_a = K.concatenate(
             [
-                K.expand_dims(conv_pos(w_u_i[:, 0]) + conv_neg(w_l_i[:, 0]), 1)
+                K.expand_dims(conv_pos(mask_a * w_u_i[:, 0]) + conv_neg(mask_a * w_l_i[:, 0]), 1)
                 for (w_u_i, w_l_i) in zip(w_u_list, w_l_list)
             ],
             1,
         )
-        w_l_ = K.concatenate(
+        w_u_b = K.concatenate(
+            [K.expand_dims(conv_pos(mask_b * w_u_i[:, 0]) + conv_neg(mask_b * w_u_i[:, 0]), 1) for w_u_i in w_u_list],
+            1,
+        )
+        w_u_ = w_u_a + w_u_b
+        w_l_a = K.concatenate(
             [
-                K.expand_dims(conv_pos(w_l_i[:, 0]) + conv_neg(w_u_i[:, 0]), 1)
+                K.expand_dims(conv_pos(mask_a * w_l_i[:, 0]) + conv_neg(mask_a * w_u_i[:, 0]), 1)
                 for (w_u_i, w_l_i) in zip(w_u_list, w_l_list)
             ],
             1,
         )
+        w_l_b = K.concatenate(
+            [K.expand_dims(conv_pos(mask_b * w_l_i[:, 0]) + conv_neg(mask_b * w_l_i[:, 0]), 1) for w_l_i in w_l_list],
+            1,
+        )
+        w_l_ = w_l_a + w_l_b
 
         # add bias
         if self.use_bias:
@@ -518,6 +536,14 @@ class DecomonDense(Dense, DecomonLayer):
 
         if not isinstance(inputs, list):
             raise ValueError("A merge layer should be called " "on a list of inputs.")
+
+        # check for linearity
+        y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:8]
+        x_max = get_upper(x_0, w_u - w_l, b_u - b_l, self.convex_domain)
+        mask_b = 1.0 - K.sign(x_max)
+        mask_a = 1.0 - mask_b
+        kernel = self.kernel_pos + self.kernel_neg
+
         if self.dc_decomp:
             y, x_0, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs[: self.nb_tensors]
             h_ = K.dot(h, self.kernel_pos) + K.dot(g, self.kernel_neg)
@@ -526,47 +552,25 @@ class DecomonDense(Dense, DecomonLayer):
             y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: self.nb_tensors]
 
         y_ = K.dot(y, self.kernel_pos) + K.dot(y, self.kernel_neg)
-        b_u_ = K.dot(b_u, self.kernel_pos) + K.dot(b_l, self.kernel_neg)
-        b_l_ = K.dot(b_l, self.kernel_pos) + K.dot(b_u, self.kernel_neg)
-
         u_c_ = K.dot(u_c, self.kernel_pos) + K.dot(l_c, self.kernel_neg)
         l_c_ = K.dot(l_c, self.kernel_pos) + K.dot(u_c, self.kernel_neg)
 
-        w_u_ = K.dot(w_u, self.kernel_pos) + K.dot(w_l, self.kernel_neg)
-        w_l_ = K.dot(w_l, self.kernel_pos) + K.dot(w_u, self.kernel_neg)
+        b_u_a = K.dot(mask_a * b_u, self.kernel_pos) + K.dot(mask_a * b_l, self.kernel_neg)
+        b_l_a = K.dot(mask_a * b_l, self.kernel_pos) + K.dot(mask_a * b_u, self.kernel_neg)
+        b_u_b = K.dot(mask_b * b_u, kernel)
+        b_l_b = K.dot(mask_b * b_l, kernel)
 
-        # gradient descent: optional
-        # w_u_tensor = (
-        #    K.expand_dims(w_u, -1) * self.kernel_pos[None, None]
-        #    + K.expand_dims(w_l, -1) * self.kernel_neg[None, None]
-        # )
-        # b_u_tensor = (
-        #    K.expand_dims(b_u, -1) * self.kernel_pos[None]
-        #    + K.expand_dims(b_l, -1) * self.kernel_neg[None]
-        # )
-        # u_tensor = (
-        #    K.expand_dims(u_c, -1) * self.kernel_pos[None]
-        #    + K.expand_dims(l_c, -1) * self.kernel_neg[None]
-        # )
-        # w_l_tensor = (
-        #    K.expand_dims(w_l, -1) * self.kernel_pos[None, None]
-        #    + K.expand_dims(w_u, -1) * self.kernel_neg[None, None]
-        # )
-        # b_l_tensor = (
-        #    K.expand_dims(b_l, -1) * self.kernel_pos[None]
-        #    + K.expand_dims(b_u, -1) * self.kernel_neg[None]
-        # )
-        # l_tensor = (
-        #    K.expand_dims(l_c, -1) * self.kernel_pos[None]
-        #    + K.expand_dims(u_c, -1) * self.kernel_neg[None]
-        # )
+        mask_a = K.expand_dims(mask_a, 1)
+        mask_b = K.expand_dims(mask_b, 1)
+        w_u_a = K.dot(mask_a * w_u, self.kernel_pos) + K.dot(mask_a * w_l, self.kernel_neg)
+        w_l_a = K.dot(mask_a * w_l, self.kernel_pos) + K.dot(mask_a * w_u, self.kernel_neg)
+        w_u_b = K.dot(mask_b * w_u, kernel)
+        w_l_b = K.dot(mask_b * w_l, kernel)
 
-        # upper_grad = -grad_descent(
-        #    x_0, -u_tensor, -w_u_tensor, -b_u_tensor, self.convex_domain, n_iter=30
-        # )
-        # lower_grad = grad_descent(
-        #    x_0, l_tensor, w_l_tensor, b_l_tensor, self.convex_domain, n_iter=30
-        # )
+        b_u_ = b_u_a + b_u_b
+        b_l_ = b_l_a + b_l_b
+        w_u_ = w_u_a + w_u_b
+        w_l_ = w_l_a + w_l_b
 
         if self.use_bias:
             b_u_ = K.bias_add(b_u_, self.bias, data_format="channels_last")
