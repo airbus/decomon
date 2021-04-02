@@ -156,13 +156,14 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         self.built = True
 
-    def call(self, inputs, **kwargs):
+    def call_linear(self, inputs, **kwargs):
         """
-
-        :param inputs: list of at least 10 tensors [h, g, x_min, x_max, u_c, W_u, b_u, l_c, W_l, b_l]
+        computing the perturbation analysis of the operator without the activation function
+        :param inputs: list of at least 8 to 10 tensors [h, g, x_min, x_max, u_c, W_u, b_u, l_c, W_l, b_l]
+        :param kwargs:
         :return: List of at least 8 tensors
-
         """
+
         if self.grad_bounds:
             raise NotImplementedError()
 
@@ -242,6 +243,17 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         if self.dc_decomp:
             output += [h_, g_]
+
+        return output
+
+    def call(self, inputs, **kwargs):
+        """
+
+        :param inputs: list of 8 to 10 tensors [h, g, x_min, x_max, u_c, W_u, b_u, l_c, W_l, b_l]
+        :return: List of at least 8 tensors
+
+        """
+        output = self.call_linear(inputs, **kwargs)
 
         # temporary fix until all activations are ready
         if self.activation is not None:
@@ -481,13 +493,13 @@ class DecomonDense(Dense, DecomonLayer):
 
         self.built = True
 
-    def call(self, inputs):
+    def call_linear(self, inputs):
         """
-
-        :param inputs: list of tensors
+        computing the perturbation analysis of the operator
+        without the activation function
+        :param inputs:
         :return:
         """
-
         if self.grad_bounds:
             raise NotImplementedError()
 
@@ -567,6 +579,17 @@ class DecomonDense(Dense, DecomonLayer):
 
         if self.dc_decomp:
             output += [h_, g_]
+
+        return output
+
+    def call(self, inputs):
+        """
+
+        :param inputs: list of tensors
+        :return:
+        """
+
+        output = self.call_linear(inputs)
 
         if self.activation is not None:
             output = self.activation(

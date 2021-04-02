@@ -18,7 +18,6 @@ from . import (
     get_tensor_decomposition_multid_box,
 )
 import tensorflow.python.keras.backend as K
-import numpy as np
 
 
 @pytest.mark.parametrize("n", [0, 1, 2, 3, 4, 5])
@@ -46,7 +45,7 @@ def test_convert_model_1d_box(n):
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_clone([x_i, z_i, h_i, g_i])
     y_ref = f_ref(inputs_)
 
-    assert np.allclose(y_, y_ref)
+    assert_almost_equal(y_, y_ref, decimal=5)
     assert_output_properties_box(
         x_i,
         y_,
@@ -90,7 +89,7 @@ def test_convert_model_1d_nodc(n):
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_clone([x_i, z_i])
     y_ref = f_ref(inputs_)
 
-    assert np.allclose(y_, y_ref)
+    assert_almost_equal(y_, y_ref, decimal=5)
 
 
 # testing that the cloning function is working
@@ -119,7 +118,7 @@ def test_clone_sequential_model_1d_box(n):
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_clone(inputs_[1:])
     y_ref = f_ref(inputs_)
 
-    assert np.allclose(y_, y_ref)
+    assert_almost_equal(y_, y_ref, decimal=5)
     assert_output_properties_box(
         x,
         y_,
@@ -162,7 +161,7 @@ def test_clone_sequential_model_1d_box_nodc(n):
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_clone(inputs_[1:])
     y_ref = f_ref(inputs_)
 
-    assert np.allclose(y_, y_ref)
+    assert_almost_equal(y_, y_ref, decimal=5)
 
 
 @pytest.mark.parametrize("odd", [0, 1])
@@ -236,4 +235,4 @@ def test_clone_sequential_model_multid_box_nodc(odd):
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_clone(inputs_[1:])
     y_ref = f_ref(inputs_)
 
-    assert np.allclose(y_, y_ref)
+    assert_almost_equal(y_, y_ref, decimal=5)
