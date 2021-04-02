@@ -83,10 +83,10 @@ def test_Decomon_conv_box_nodc(data_format, odd, m_0, m_1):
     f_conv = K.function(inputs[1:], output)
 
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_conv(inputs_[1:])
-    assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, 'nodc')
+    assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc")
     monotonic_layer.set_weights([W_neg, np.zeros_like(W_pos), W_neg, bias])
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_conv(inputs_[1:])
-    assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, 'nodc')
+    assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc")
 
 
 @pytest.mark.parametrize("data_format, odd, m_0, m_1", [("channels_last", 0, 0, 1)])
@@ -151,4 +151,4 @@ def test_Decomon_conv_to_monotonic_box_nodc(data_format, odd, m_0, m_1):
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_conv(inputs_[1:])
 
     assert np.allclose(y_, y_ref)
-    assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, 'nodc')
+    assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc")
