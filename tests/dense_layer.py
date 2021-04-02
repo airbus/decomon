@@ -2,7 +2,6 @@
 from __future__ import absolute_import
 import pytest
 import numpy as np
-import tensorflow.python.keras.backend as K
 from decomon.layers.decomon_layers import DecomonDense, to_monotonic
 from tensorflow.keras.layers import Dense
 from . import (
@@ -144,8 +143,7 @@ def test_DecomonDense_1D_box(n, activation):
 
 
 @pytest.mark.parametrize(
-    "odd, activation",
-    [(0, None), (1, None), (0, "linear"), (1, "linear"), (0, "relu"), (1, "relu")],
+    "odd, activation", [(0, None), (1, None), (0, "linear"), (1, "linear"), (0, "relu"), (1, "relu")]
 )
 def test_DecomonDense_multiD_box(odd, activation):
 
@@ -296,8 +294,7 @@ def test_DecomonDense_1D_to_monotonic_box(n, activation):
 
 
 @pytest.mark.parametrize(
-    "odd, activation",
-    [(0, None), (1, None), (0, "linear"), (1, "linear"), (0, "relu"), (1, "relu")],
+    "odd, activation", [(0, None), (1, None), (0, "linear"), (1, "linear"), (0, "relu"), (1, "relu")]
 )
 def test_DecomonDense_multiD_to_monotonic_box(odd, activation):
 
@@ -358,7 +355,7 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation):
     )
 
 
-###### DC_DECOMP = FALSE #######
+# DC DECOMP = FALSE
 
 
 @pytest.mark.parametrize(
@@ -423,8 +420,7 @@ def test_DecomonDense_1D_box_nodc(n, activation):
 
 
 @pytest.mark.parametrize(
-    "odd, activation",
-    [(0, None), (1, None), (0, "linear"), (1, "linear"), (0, "relu"), (1, "relu")],
+    "odd, activation", [(0, None), (1, None), (0, "linear"), (1, "linear"), (0, "relu"), (1, "relu")]
 )
 def test_DecomonDense_multiD_to_monotonic_box_nodc(odd, activation):
 
@@ -541,8 +537,7 @@ def test_DecomonDense_1D_box_dc(n, activation):
 
 
 @pytest.mark.parametrize(
-    "odd, activation",
-    [(0, None), (1, None), (0, "linear"), (1, "linear"), (0, "relu"), (1, "relu")],
+    "odd, activation", [(0, None), (1, None), (0, "linear"), (1, "linear"), (0, "relu"), (1, "relu")]
 )
 def test_DecomonDense_multiD_box_dc(odd, activation):
 

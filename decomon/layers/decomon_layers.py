@@ -6,27 +6,18 @@ import numpy as np
 from tensorflow.keras.constraints import NonNeg
 from tensorflow.python.keras.engine.base_layer import InputSpec
 from tensorflow.keras.layers import (
-    Layer,
     Conv2D,
     Dense,
     Activation,
     Flatten,
     Reshape,
     Dot,
-    Add,
     Input,
 )
 from decomon.layers import activations
-from decomon.layers.utils import (
-    NonPos,
-    MultipleConstraint,
-    Project_initializer_pos,
-    Project_initializer_neg,
-    grad_descent,
-)
+from decomon.layers.utils import NonPos, MultipleConstraint, Project_initializer_pos, Project_initializer_neg
 from tensorflow.python.keras.utils import conv_utils
-from decomon.layers.utils import time_distributed, get_upper, get_lower, relu_
-from tensorflow.python.keras.utils.generic_utils import to_list
+from decomon.layers.utils import time_distributed, get_upper, get_lower
 from .maxpooling import DecomonMaxPooling2D
 
 
@@ -403,7 +394,7 @@ class DecomonDense(Dense, DecomonLayer):
     """
 
     def __init__(self, units, **kwargs):
-        if not "activation" in kwargs:
+        if "activation" not in kwargs:
             kwargs["activation"] = None
         activation = kwargs["activation"]
         kwargs["units"] = units
@@ -568,13 +559,9 @@ class DecomonDense(Dense, DecomonLayer):
 
         upper_ = get_upper(x_0, w_u_, b_u_, self.convex_domain)
         u_c_ = K.minimum(upper_, u_c_)
-        # u_c_ = K.minimum(u_c_, upper_grad)
 
         lower_ = get_lower(x_0, w_l_, b_l_, self.convex_domain)
         l_c_ = K.maximum(lower_, l_c_)
-        # l_c_ = K.maximum(l_c_, lower_grad)
-
-        ### OPTIONAL: use gradient descent to improve the upper and lower bound
 
         output = [y_, x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
@@ -582,7 +569,6 @@ class DecomonDense(Dense, DecomonLayer):
             output += [h_, g_]
 
         if self.activation is not None:
-            # output = relu_(output, dc_decomp=self.dc_decomp, grad_bounds=self.grad_bounds, convex_domain=self.convex_domain)
             output = self.activation(
                 output,
                 dc_decomp=self.dc_decomp,
@@ -719,7 +705,7 @@ class DecomonFlatten(Flatten, DecomonLayer):
             raise NotImplementedError()
 
         y_input_shape = input_shape[0]
-        output_shape = super(DecomonFlatten, self).build(y_input_shape)
+        super(DecomonFlatten, self).build(y_input_shape)
 
         # return output_shape
 
@@ -794,9 +780,8 @@ class DecomonReshape(Reshape, DecomonLayer):
             raise NotImplementedError()
 
         y_input_shape = input_shape[0]
-        output_shape = super(DecomonReshape, self).build(y_input_shape)
-        x_dim = input_shape[2]
-        input_dim = x_dim[-1]
+        super(DecomonReshape, self).build(y_input_shape)
+        # x_dim = input_shape[2]
 
         # import pdb; pdb.set_trace()
         # w_dim = [list(output_shape)[0], input_dim, list(output_shape)[1:]]

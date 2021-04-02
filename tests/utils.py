@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 import pytest
 import numpy as np
-from numpy.testing import assert_allclose, assert_array_less, assert_almost_equal
+from numpy.testing import assert_allclose, assert_almost_equal
 from . import (
     get_tensor_decomposition_1d_box,
     get_standart_values_1d_box,
@@ -12,17 +12,7 @@ from . import (
 )
 import tensorflow.python.keras.backend as K
 
-from decomon.layers.utils import (
-    get_upper,
-    get_lower,
-    relu_,
-    max_,
-    maximum,
-    add,
-    minus,
-    get_upper_box,
-    get_lower_box,
-)
+from decomon.layers.utils import get_upper, get_lower, relu_, max_, maximum, add, minus
 
 
 def test_get_upper_multi_box(odd=0):
@@ -324,9 +314,6 @@ def test_add(odd):
     f_add = K.function(inputs_0 + inputs_1, output)
 
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_add(inputs_ + inputs_)
-
-    # import pdb; pdb.set_trace()
-
     y_ = f_ref(inputs_ + inputs_)
 
     assert_output_properties_box(
@@ -446,7 +433,7 @@ def test_max_(odd):
     )
 
 
-############## DC_DECOMP = FALSE ######################
+# DC_DECOMP = FALSE
 
 
 @pytest.mark.parametrize("odd", [0, 1])
@@ -454,12 +441,10 @@ def test_max_nodc(odd):
 
     inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
     inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     output = max_(inputs[1:], dc_decomp=False)
-    f_ref = K.function(inputs, K.max(inputs[1], -1))
     f_max = K.function(inputs, output)
-    y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_max(inputs_)
+    assert_allclose(len(f_max(inputs_)), 8)
 
 
 @pytest.mark.parametrize("odd", [0, 1])
@@ -469,16 +454,13 @@ def test_maximum_nodc(odd):
     inputs_1 = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
 
     inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
-
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     output = maximum(inputs_0[1:], inputs_1[1:], dc_decomp=False)
 
     f_ref = K.function(inputs_0 + inputs_1, K.maximum(inputs_0[1], inputs_1[1]))
     f_maximum = K.function(inputs_0 + inputs_1, output)
 
-    y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_maximum(inputs_ + inputs_)
-
-    y_ = f_ref(inputs_ + inputs_)
+    assert_allclose(len(f_maximum(inputs_ + inputs_)), 8)
+    f_ref(inputs_ + inputs_)
 
 
 @pytest.mark.parametrize("odd", [0, 1])
@@ -488,16 +470,13 @@ def test_minus_nodc(odd):
     inputs_1 = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
 
     inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
-
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     output = minus(inputs_0[1:], inputs_1[1:], dc_decomp=False)
 
     f_ref = K.function(inputs_0 + inputs_1, inputs_0[1] - inputs_1[1])
     f_minus = K.function(inputs_0 + inputs_1, output)
 
-    y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_minus(inputs_ + inputs_)
-
-    y_ = f_ref(inputs_ + inputs_)
+    assert_allclose(len(f_minus(inputs_ + inputs_)), 8)
+    f_ref(inputs_ + inputs_)
 
 
 @pytest.mark.parametrize("odd", [0, 1])
@@ -506,12 +485,11 @@ def test_add_nodc(odd):
     inputs_0 = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
     inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
-    x, y, z, u_c, W_u, b_u, l_c_, W_l, b_l = inputs_
     output = add(inputs_0[1:], inputs_1[1:], dc_decomp=False)
     f_ref = K.function(inputs_0 + inputs_1, inputs_0[1] + inputs_1[1])
     f_add = K.function(inputs_0 + inputs_1, output)
-    y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_add(inputs_ + inputs_)
-    y_ = f_ref(inputs_ + inputs_)
+    assert_allclose(len(f_add(inputs_ + inputs_)), 8)
+    f_ref(inputs_ + inputs_)
 
 
 @pytest.mark.parametrize("n", [1, 2, 3, 4, 5, 6, 7, 8, 9])
@@ -520,7 +498,6 @@ def test_relu_1D_box_nodc(n):
     inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
-    x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0 = inputs_  # numpy values
 
     output = relu_(inputs[1:], dc_decomp=False)
     lower = get_lower(z, W_l, b_l)
@@ -529,9 +506,8 @@ def test_relu_1D_box_nodc(n):
     f_lower = K.function(inputs, lower)
     f_upper = K.function(inputs, upper)
 
-    lower_ = np.min(f_lower(inputs_))
-    upper_ = np.max(f_upper(inputs_))
+    np.min(f_lower(inputs_))
+    np.max(f_upper(inputs_))
 
     f_relu_ = K.function(inputs[1:], output)
-
-    y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_relu_(inputs_[1:])
+    assert_allclose(len(f_relu_(inputs_[1:])), 8)

@@ -1,20 +1,11 @@
 from __future__ import absolute_import
 from .core import DecomonLayer
 import tensorflow.keras.backend as K
-from tensorflow.keras.backend import bias_add, conv2d
+from tensorflow.keras.backend import conv2d
 import numpy as np
-from tensorflow.keras.constraints import NonNeg
 from tensorflow.python.keras.engine.base_layer import InputSpec
 from tensorflow.keras.layers import MaxPooling2D
-from decomon.layers import activations
-from decomon.layers.utils import (
-    NonPos,
-    MultipleConstraint,
-    Project_initializer_pos,
-    Project_initializer_neg,
-)
-from tensorflow.python.keras.utils import conv_utils
-from decomon.layers.utils import time_distributed, max_
+from decomon.layers.utils import max_
 import tensorflow as tf
 
 
@@ -186,12 +177,6 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
         b_l_list = K.concatenate([self.internal_op(elem) for elem in tf.split(b_l, input_shape[-1], -1)], -2)
         u_c_list = K.concatenate([self.internal_op(elem) for elem in tf.split(u_c, input_shape[-1], -1)], -2)
         l_c_list = K.concatenate([self.internal_op(elem) for elem in tf.split(l_c, input_shape[-1], -1)], -2)
-
-        output_shape = list(K.int_shape(b_u_list[0]))[1:]
-
-        # w_u_list = K.concatenate([time_distributed(elem, self.internal_op, output_shape) for elem in tf.split(w_u, input_shape[-1], -1)], -2)
-        # w_l_list = K.concatenate(
-        #    [time_distributed(elem, self.internal_op, output_shape) for elem in tf.split(w_l, input_shape[-1], -1)], -2)
 
         w_u_list = K.concatenate([self.internal_op(elem) for elem in tf.split(w_u, input_shape[-1], -1)], -2)
         w_l_list = K.concatenate([self.internal_op(elem) for elem in tf.split(w_l, input_shape[-1], -1)], -2)

@@ -413,7 +413,6 @@ def increase_alpha(decomon_model, x_min, x_alpha, x_max, label, fast=False, alph
     X_min_[np.arange(n_dim), np.arange(n_dim)] = x_alpha_
     X_min = X_min_.reshape(tuple([-1] + input_shape))
     x_alpha = x_alpha_.reshape(tuple([-1] + input_shape))
-    found = False
     upper_low = get_adv_box(decomon_model, X_min, x_alpha + 0 * X_min, source_label=label, fast=fast)
 
     index_keep = np.array(
@@ -462,7 +461,6 @@ def increase_alpha(decomon_model, x_min, x_alpha, x_max, label, fast=False, alph
 
             pdb.set_trace()
         print(upper_.min(), upper_.argmin(), toto.max())
-        found = True
         # index_keep = np.where(score[0] < 0 and x_alpha[0]<x_max[0])[0]
         index_keep = np.array(
             [i for i in range(n_dim) if (i in np.where(upper_dir < 0)[0]) and (i in np.where(x_alpha[0] < x_max[0])[0])]

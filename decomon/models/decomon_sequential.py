@@ -11,13 +11,12 @@ from tensorflow.keras.models import Sequential, Model
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Lambda
 from ..layers.decomon_layers import to_monotonic
-from ..layers.core import Box, Ball, Vertex
-from tensorflow.keras.layers import InputLayer, Input, Layer, Subtract
+from ..layers.core import Box
+from tensorflow.keras.layers import InputLayer, Input, Layer
 from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
 from copy import deepcopy
 import numpy as np
 from decomon.layers.utils import softmax_to_linear, get_upper, get_lower
-import tensorflow.keras as keras
 
 
 def include_dim_layer_fn(layer_fn, input_dim, dc_decomp=False, grad_bounds=False, convex_domain={}):
@@ -62,13 +61,17 @@ def include_dim_layer_fn(layer_fn, input_dim, dc_decomp=False, grad_bounds=False
             else:
                 if convex_domain["name"] == Box.name and not isinstance(input_dim, tuple):
                     input_dim = (2, input_dim)
-            layer_fn = lambda x: to_monotonic(
-                x,
-                input_dim=input_dim,
-                dc_decomp=dc_decomp,
-                grad_bounds=grad_bounds,
-                convex_domain=convex_domain,
-            )
+
+            def func(x):
+                return to_monotonic(
+                    x,
+                    input_dim=input_dim,
+                    dc_decomp=dc_decomp,
+                    grad_bounds=grad_bounds,
+                    convex_domain=convex_domain,
+                )
+
+            layer_fn = func
 
     return layer_fn
 
@@ -389,7 +392,7 @@ def clone_functional_model(
                 # Cache newly created input layer.
                 original_input_layer = x._keras_history[0]
                 newly_created_input_layer = input_tensor._keras_history[0]
-                if not original_input_layer in layer_map.keys():
+                if original_input_layer not in layer_map.keys():
                     layer_map[original_input_layer] = newly_created_input_layer
                 else:
                     if isinstance(layer_map[original_input_layer], list):
@@ -447,8 +450,6 @@ def clone_functional_model(
             for x in reference_input_tensors:
                 if id(x) in tensor_map:
                     # import pdb; pdb.set_trace()
-                    input_tmp = tensor_map[id(x)][0]
-                    # computed_data.append([[elem[:,0] for elem in input_tmp], tensor_map[id(x)][1]])
                     computed_data.append(tensor_map[id(x)])
             if len(computed_data) == len(reference_input_tensors):
 
@@ -528,7 +529,8 @@ def convert(
     :param model: Keras model
     :param input_tensors: input_tensors: List of input tensors to be used as inputs of our model or None
     :param layer_fn: layer_fn: cloning function to translate a layer into its decomon decomposition
-    :param dc_decomp: dc_decomp: boolean that indicates whether we return a difference of convex decomposition of our layer
+    :param dc_decomp: dc_decomp: boolean that indicates whether we return a
+    difference of convex decomposition of our layer
     :param grad_bounds: boolean that indicates whether we propagate upper and lower bounds on the values of the gradient
     :param convex_domain: convex_domain: the type of convex domain
     :return: a decomon model

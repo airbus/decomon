@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 from tensorflow.keras.applications import vgg16
-from tensorflow.keras.models import Model, Sequential
+from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Layer
 import tensorflow.keras as keras
 import tensorflow.keras.backend as K
@@ -11,7 +11,7 @@ from ..layers.core import DecomonLayer
 from ..layers.decomon_layers import to_monotonic
 from ..layers.utils import softmax_to_linear
 from tensorflow.python.keras.engine.base_layer import InputSpec
-from ..models.decomon_sequential import clone_to_monotonic, convert_to_monotonic
+from ..models.decomon_sequential import convert_to_monotonic
 
 VGG_DIM = 224 * 224 * 3
 

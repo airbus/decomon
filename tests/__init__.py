@@ -1,17 +1,19 @@
 from __future__ import absolute_import
 import numpy as np
 from tensorflow.keras import Input
-from numpy.testing import assert_allclose, assert_array_less, assert_almost_equal
+from numpy.testing import assert_almost_equal
 
 
 def get_standart_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
     """
 
-    :param n: A set of functions with their monotonic decomposition for testing the activations
+    :param n: A set of functions with their monotonic
+    decomposition for testing the activations
     :return:
     """
     """
-    A set of functions with their monotonic decomposition for testing the activations
+    A set of functions with their monotonic decomposition
+    for testing the activations
     """
 
     w_u_ = np.ones(nb)
@@ -100,8 +102,6 @@ def get_standart_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
 
     u_c_ = np.max(y_) * np.ones((nb,))
     l_c_ = np.min(y_) * np.ones((nb,))
-
-    # assert_allclose(h_ + g_, y_, err_msg='decomposition error for function {}'.format(n))
 
     if dc_decomp:
 

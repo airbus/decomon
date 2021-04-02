@@ -50,12 +50,16 @@ class DecomonLayer(ABC, Layer):
     def __init__(self, convex_domain={}, dc_decomp=False, grad_bounds=False, first_layer=False, **kwargs):
         """
 
-        :param convex_domain: a dictionary that indicates the type of convex domain we are working on (possible options
+        :param convex_domain: a dictionary that indicates the type of convex
+        domain we are working on (possible options
         to be determined
-        :param dc_decomp: boolean that indicates whether we return a difference of convex decomposition of our layer
-        :param grad_bounds: boolean that indicates whether we propagate upper and lower bounds on the values of the
+        :param dc_decomp: boolean that indicates whether we return a
+        difference of convex decomposition of our layer
+        :param grad_bounds: boolean that indicates whether we propagate upper
+        and lower bounds on the values of the
         gradient
-        :param first_layer: boolean that indicates whether there are previous layers or not in the computational graph
+        :param first_layer: boolean that indicates whether there are previous
+        layers or not in the computational graph
         :param kwargs:
         """
         super(DecomonLayer, self).__init__(**kwargs)

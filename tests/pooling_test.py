@@ -2,19 +2,13 @@
 from __future__ import absolute_import
 import pytest
 import numpy as np
-from numpy.testing import assert_allclose, assert_array_less, assert_almost_equal
 from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
     assert_output_properties_box,
-    get_tensor_decomposition_multid_box,
-    get_standard_values_multid_box,
     get_tensor_decomposition_images_box,
     get_standard_values_images_box,
 )
 import tensorflow.python.keras.backend as K
 from tensorflow.keras.layers import MaxPooling2D
-import tensorflow as tf
 from decomon.layers.decomon_layers import to_monotonic
 
 from decomon.layers.maxpooling import DecomonMaxPooling2D

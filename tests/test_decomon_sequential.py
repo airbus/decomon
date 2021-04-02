@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 import pytest
 from decomon.models.decomon_sequential import (
-    clone_functional_model,
     clone_sequential_model,
     convert,
     DecomonModel,
@@ -9,8 +8,8 @@ from decomon.models.decomon_sequential import (
 
 # from ..models.monotonic_sequential import clone_sequential_model, clone_functional_model
 from numpy.testing import assert_almost_equal
-from tensorflow.keras.layers import Dense, Add, Input
-from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Sequential
 from . import (
     get_tensor_decomposition_1d_box,
     get_standart_values_1d_box,

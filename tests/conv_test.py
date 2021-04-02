@@ -3,8 +3,6 @@ from __future__ import absolute_import
 import pytest
 import numpy as np
 from . import (
-    build_image_from_1D_box,
-    build_image_from_2D_box,
     get_standard_values_images_box,
     get_tensor_decomposition_images_box,
     assert_output_properties_box,
