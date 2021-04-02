@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+import tensorflow as tf
 from .core import DecomonLayer
 import tensorflow.keras.backend as K
 from tensorflow.keras.backend import bias_add, conv2d
@@ -217,10 +218,13 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         l_c_ = conv_pos(l_c) + conv_neg(u_c)
 
         output_shape = b_u_.shape.as_list()[1:]
-
-        w_u_ = time_distributed(w_u, conv_pos, output_shape) + time_distributed(w_l, conv_neg, output_shape)
-
-        w_l_ = time_distributed(w_l, conv_pos, output_shape) + time_distributed(w_u, conv_neg, output_shape)
+        input_dim = w_u.shape[1]
+        w_u_list = tf.split(w_u, input_dim, 1)
+        w_l_list = tf.split(w_l, input_dim, 1)
+        w_u_ = K.concatenate([K.expand_dims(conv_pos(w_u_i[:, 0]) + conv_neg(w_l_i[:, 0]), 1) for (w_u_i, w_l_i) in
+                              zip(w_u_list, w_l_list)], 1)
+        w_l_ = K.concatenate([K.expand_dims(conv_pos(w_l_i[:, 0]) + conv_neg(w_u_i[:, 0]), 1) for (w_u_i, w_l_i) in
+                              zip(w_u_list, w_l_list)], 1)
 
         # add bias
         if self.use_bias:
