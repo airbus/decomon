@@ -20,6 +20,7 @@ from decomon.layers.utils import NonPos, MultipleConstraint, Project_initializer
 from tensorflow.python.keras.utils import conv_utils
 from decomon.layers.utils import get_upper, get_lower
 from .maxpooling import DecomonMaxPooling2D
+from .utils import grad_descent
 
 
 class DecomonConv2D(Conv2D, DecomonLayer):
@@ -542,7 +543,6 @@ class DecomonDense(Dense, DecomonLayer):
         x_max = get_upper(x_0, w_u - w_l, b_u - b_l, self.convex_domain)
         mask_b = 1.0 - K.sign(x_max)
         mask_a = 1.0 - mask_b
-        kernel = self.kernel_pos + self.kernel_neg
 
         if self.dc_decomp:
             y, x_0, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs[: self.nb_tensors]
@@ -552,25 +552,71 @@ class DecomonDense(Dense, DecomonLayer):
             y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: self.nb_tensors]
 
         y_ = K.dot(y, self.kernel_pos) + K.dot(y, self.kernel_neg)
-        u_c_ = K.dot(u_c, self.kernel_pos) + K.dot(l_c, self.kernel_neg)
-        l_c_ = K.dot(l_c, self.kernel_pos) + K.dot(u_c, self.kernel_neg)
 
-        b_u_a = K.dot(mask_a * b_u, self.kernel_pos) + K.dot(mask_a * b_l, self.kernel_neg)
-        b_l_a = K.dot(mask_a * b_l, self.kernel_pos) + K.dot(mask_a * b_u, self.kernel_neg)
-        b_u_b = K.dot(mask_b * b_u, kernel)
-        b_l_b = K.dot(mask_b * b_l, kernel)
+        kernel_pos_ = K.expand_dims(self.kernel_pos, 0)
+        kernel_neg_ = K.expand_dims(self.kernel_neg, 0)
+        u_c_0_a = K.expand_dims(u_c, -1) * kernel_pos_
+        u_c_0_ = K.sum(u_c_0_a, 1)  # K.dot(u_c, self.kernel_pos)
+        u_c_1_a = K.expand_dims(l_c, -1) * kernel_neg_
+        u_c_1_ = K.sum(u_c_1_a, 1)
+        u_c_ = u_c_0_ + u_c_1_
+
+        l_c_0_a = K.expand_dims(l_c, -1) * kernel_pos_
+        l_c_0_ = K.sum(l_c_0_a, 1)
+        l_c_1_a = K.expand_dims(u_c, -1) * kernel_neg_
+        l_c_1_ = K.sum(l_c_1_a, 1)
+        l_c_ = l_c_0_ + l_c_1_
+
+        b_u_0_a = K.expand_dims(mask_a * b_u + mask_b * b_u, -1) * kernel_pos_
+        b_u_0_ = K.sum(b_u_0_a, 1)
+        b_u_1_a = K.expand_dims(mask_a * b_l + mask_b * b_u, -1) * kernel_neg_
+        b_u_1_ = K.sum(b_u_1_a, 1)
+        b_u_ = b_u_0_ + b_u_1_
+
+        b_l_0_a = K.expand_dims(mask_a * b_l + mask_b * b_l, -1) * kernel_pos_
+        b_l_0_ = K.sum(b_l_0_a, 1)
+        b_l_1_a = K.expand_dims(mask_a * b_u + mask_b * b_l, -1) * kernel_neg_
+        b_l_1_ = K.sum(b_l_1_a, 1)
+        b_l_ = b_l_0_ + b_l_1_
 
         mask_a = K.expand_dims(mask_a, 1)
         mask_b = K.expand_dims(mask_b, 1)
-        w_u_a = K.dot(mask_a * w_u, self.kernel_pos) + K.dot(mask_a * w_l, self.kernel_neg)
-        w_l_a = K.dot(mask_a * w_l, self.kernel_pos) + K.dot(mask_a * w_u, self.kernel_neg)
-        w_u_b = K.dot(mask_b * w_u, kernel)
-        w_l_b = K.dot(mask_b * w_l, kernel)
 
-        b_u_ = b_u_a + b_u_b
-        b_l_ = b_l_a + b_l_b
-        w_u_ = w_u_a + w_u_b
-        w_l_ = w_l_a + w_l_b
+        kernel_pos_ = K.expand_dims(kernel_pos_, -1)
+        kernel_neg_ = K.expand_dims(kernel_neg_, -1)
+        w_u_0_a = K.expand_dims(mask_a * w_u + mask_b * w_u, -2) * kernel_pos_
+        w_u_0_a = K.permute_dimensions(w_u_0_a, (0, 1, 3, 2))
+        w_u_0_ = K.sum(w_u_0_a, 1)
+        w_u_1_a = K.expand_dims(mask_a * w_l + mask_b * w_u, -2) * kernel_neg_
+        w_u_1_a = K.permute_dimensions(w_u_1_a, (0, 1, 3, 2))
+        w_u_1_ = K.sum(w_u_1_a, 1)
+        w_u_ = w_u_0_ + w_u_1_
+
+        w_l_0_a = K.expand_dims(mask_a * w_l + mask_b * w_l, -2) * kernel_pos_
+        w_l_0_a = K.permute_dimensions(w_l_0_a, (0, 1, 3, 2))
+        w_l_0_ = K.sum(w_l_0_a, 1)
+        w_l_1_a = K.expand_dims(mask_a * w_u + mask_b * w_l, -2) * kernel_neg_
+        w_l_1_a = K.permute_dimensions(w_l_1_a, (0, 1, 3, 2))
+        w_l_1_ = K.sum(w_l_1_a, 1)
+        w_l_ = w_l_0_ + w_l_1_
+
+        # here you can use subgradient descent method to optimize
+        # the upper and lower bounds
+        # import pdb; pdb.set_trace()
+
+        if self.n_subgrad:
+            # test whether the layer is linear:
+            # if it is: no need to use subgrad
+            convex_l_0 = (l_c_0_a, w_l_0_a, b_l_0_a)
+            convex_l_1 = (l_c_1_a, w_l_1_a, b_l_1_a)
+            convex_u_0 = (-u_c_0_a, -w_u_0_a, -b_u_0_a)
+            convex_u_1 = (-u_c_1_a, -w_u_1_a, -b_u_1_a)
+            # import pdb; pdb.set_trace()
+            l_sub = grad_descent(x_0, convex_l_0, convex_l_1, self.convex_domain, n_iter=self.n_subgrad)
+            u_sub = -grad_descent(x_0, convex_u_0, convex_u_1, self.convex_domain, n_iter=self.n_subgrad)
+
+            u_c_ = K.minimum(u_c_, u_sub)
+            l_c_ = K.maximum(l_c_, l_sub)
 
         if self.use_bias:
             b_u_ = K.bias_add(b_u_, self.bias, data_format="channels_last")
@@ -578,9 +624,6 @@ class DecomonDense(Dense, DecomonLayer):
             u_c_ = K.bias_add(u_c_, self.bias, data_format="channels_last")
             l_c_ = K.bias_add(l_c_, self.bias, data_format="channels_last")
             y_ = K.bias_add(y_, self.bias, data_format="channels_last")
-
-            # upper_grad = K.bias_add(upper_grad, self.bias, data_format="channels_last")
-            # lower_grad = K.bias_add(lower_grad, self.bias, data_format="channels_last")
 
             if self.dc_decomp:
                 h_ = K.bias_add(h_, K.maximum(0.0, self.bias), data_format="channels_last")

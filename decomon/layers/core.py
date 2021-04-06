@@ -47,7 +47,7 @@ class DecomonLayer(ABC, Layer):
     Abstract class that contains the common information of every implemented layers
     """
 
-    def __init__(self, convex_domain={}, dc_decomp=False, grad_bounds=False, first_layer=False, **kwargs):
+    def __init__(self, convex_domain={}, dc_decomp=False, grad_bounds=False, n_subgrad=1, **kwargs):
         """
 
         :param convex_domain: a dictionary that indicates the type of convex
@@ -58,8 +58,8 @@ class DecomonLayer(ABC, Layer):
         :param grad_bounds: boolean that indicates whether we propagate upper
         and lower bounds on the values of the
         gradient
-        :param first_layer: boolean that indicates whether there are previous
-        layers or not in the computational graph
+        :param n_subgrad: integer that indicates the number of
+        subgradient descent steps for linear layers
         :param kwargs:
         """
         super(DecomonLayer, self).__init__(**kwargs)
@@ -67,8 +67,8 @@ class DecomonLayer(ABC, Layer):
         self.nb_tensors = StaticVariables(dc_decomp, grad_bounds).nb_tensors
         self.dc_decomp = dc_decomp
         self.grad_bounds = grad_bounds
-        self.first_layer = first_layer
         self.convex_domain = convex_domain
+        self.n_subgrad = n_subgrad
 
     def build(self, input_shape):
         """
