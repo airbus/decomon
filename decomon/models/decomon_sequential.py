@@ -19,7 +19,7 @@ import numpy as np
 from decomon.layers.utils import softmax_to_linear, get_upper, get_lower
 
 
-def include_dim_layer_fn(layer_fn, input_dim, dc_decomp=False, grad_bounds=False, convex_domain={}):
+def include_dim_layer_fn(layer_fn, input_dim, dc_decomp=False, grad_bounds=False, convex_domain={}, n_subgrad=0):
     """
     include external parameters inside the translation of a layer to its decomon counterpart
     :param layer_fn:
@@ -27,10 +27,26 @@ def include_dim_layer_fn(layer_fn, input_dim, dc_decomp=False, grad_bounds=False
     :param dc_decomp:
     :param grad_bounds:
     :param convex_domain:
+    :param n_subgrad
     :return:
     """
     if input_dim <= 0:
-        return layer_fn
+        if n_subgrad and "n_subgrad" in inspect.signature(layer_fn).parameters:
+            layer_fn_copy = deepcopy(layer_fn)
+
+            def func(x):
+                return layer_fn_copy(
+                    x,
+                    input_dim,
+                    dc_decomp=dc_decomp,
+                    grad_bounds=grad_bounds,
+                    convex_domain=convex_domain,
+                    n_subgrad=n_subgrad,
+                )
+
+            layer_fn = func
+        else:
+            return layer_fn
     else:
         if "input_dim" in inspect.signature(layer_fn).parameters:
             layer_fn_copy = deepcopy(layer_fn)
@@ -47,6 +63,7 @@ def include_dim_layer_fn(layer_fn, input_dim, dc_decomp=False, grad_bounds=False
                     dc_decomp=dc_decomp,
                     grad_bounds=grad_bounds,
                     convex_domain=convex_domain,
+                    n_subgrad=n_subgrad,
                 )
 
             layer_fn = func
@@ -69,6 +86,7 @@ def include_dim_layer_fn(layer_fn, input_dim, dc_decomp=False, grad_bounds=False
                     dc_decomp=dc_decomp,
                     grad_bounds=grad_bounds,
                     convex_domain=convex_domain,
+                    n_subgrad=n_subgrad,
                 )
 
             layer_fn = func
@@ -84,6 +102,7 @@ def clone(
     dc_decomp=False,
     grad_bounds=False,
     convex_domain={},
+    n_subgrad=0,
 ):
     """
     :param model: Keras model
@@ -93,6 +112,7 @@ def clone(
     :param dc_decomp: boolean that indicates whether we return a difference of convex decomposition of our layer
     :param grad_bounds: boolean that indicates whether we propagate upper and lower bounds on the values of the gradient
     :param convex_domain: the type of convex domain
+    :param n_subgrad: integer
     :return: a decomon model
     """
 
@@ -108,6 +128,7 @@ def clone(
             dc_decomp=dc_decomp,
             grad_bounds=grad_bounds,
             convex_domain=convex_domain,
+            n_subgrad=n_subgrad,
         )
 
     return clone_functional_model(
@@ -118,6 +139,7 @@ def clone(
         dc_decomp=dc_decomp,
         grad_bounds=grad_bounds,
         convex_domain=convex_domain,
+        n_subgrad=n_subgrad,
     )
 
 
@@ -129,7 +151,7 @@ def clone_sequential_model(
     dc_decomp=False,
     grad_bounds=False,
     convex_domain={},
-    affine_bounds=False,
+    n_subgrad=0,
 ):
     """Clone a `Sequential` model instance.
     Model cloning is similar to calling a model on new inputs,
@@ -147,7 +169,7 @@ def clone_sequential_model(
     :param dc_decomp: boolean that indicates whether we return a difference of convex decomposition of our layer
     :param grad_bounds: boolean that indicates whether we propagate upper and lower bounds on the values of the gradient
     :param convex_domain: the type of convex domain
-    :param affine_bounds: whether the previous layers were linear so that the composition is exact
+    :param n_subgrad: integer
     :return: An instance of `Sequential` reproducing the behavior of the original model with decomon layers.
     :raises: ValueError: in case of invalid `model` argument value or `layer_fn` argument value.
     """
@@ -157,6 +179,7 @@ def clone_sequential_model(
         dc_decomp=dc_decomp,
         grad_bounds=grad_bounds,
         convex_domain=convex_domain,
+        n_subgrad=n_subgrad,
     )
 
     model = softmax_to_linear(model)
@@ -276,6 +299,7 @@ def clone_functional_model(
     dc_decomp=False,
     grad_bounds=False,
     convex_domain={},
+    n_subgrad=0,
 ):
     """
 
@@ -287,6 +311,7 @@ def clone_functional_model(
     :param dc_decomp: boolean that indicates whether we return a difference of convex decomposition of our layer
     :param grad_bounds: boolean that indicates whether we propagate upper and lower bounds on the values of the gradient
     :param convex_domain: the type of convex domain
+    :param n_subgrad: integer
     :return:
     """
 
@@ -307,6 +332,7 @@ def clone_functional_model(
         dc_decomp=dc_decomp,
         grad_bounds=grad_bounds,
         convex_domain=convex_domain,
+        n_subgrad=n_subgrad,
     )
     model = softmax_to_linear(model)
 
@@ -523,6 +549,7 @@ def convert(
     dc_decomp=False,
     grad_bounds=False,
     convex_domain={},
+    n_subgrad=0,
 ):
     """
 
@@ -533,6 +560,7 @@ def convert(
     difference of convex decomposition of our layer
     :param grad_bounds: boolean that indicates whether we propagate upper and lower bounds on the values of the gradient
     :param convex_domain: convex_domain: the type of convex domain
+    :param n_subgrad: integer for optimizing linear bounds
     :return: a decomon model
     """
 
@@ -626,11 +654,30 @@ def convert(
         dc_decomp=dc_decomp,
         grad_bounds=grad_bounds,
         convex_domain=convex_domain,
+        n_subgrad=n_subgrad,
     )
 
     output = model_monotonic(input_tensors_)
 
     return DecomonModel(input_tensors, output, convex_domain=convex_domain)
+
+
+def set_domain_priv(convex_domain_prev, convex_domain):
+    msg = "we can only change the parameters of the convex domain, not its nature"
+
+    convex_domain_ = convex_domain
+    if convex_domain == {}:
+        convex_domain = {"name": Box.name}
+
+    if len(convex_domain_prev) == 0 or convex_domain_prev["name"] == Box.name:
+        # Box
+        if convex_domain["name"] != Box.name:
+            raise NotImplementedError(msg)
+
+    if convex_domain_prev["name"] != convex_domain["name"]:
+        raise NotImplementedError(msg)
+
+    return convex_domain_
 
 
 class DecomonModel(tf.keras.Model):
@@ -640,6 +687,8 @@ class DecomonModel(tf.keras.Model):
         self.optimize = optimize
 
     def set_domain(self, convex_domain):
+        set_domain_priv(self.convex_domain, convex_domain)
+        """
         msg = "we can only change the parameters of the convex domain, not its nature"
 
         convex_domain_ = convex_domain
@@ -655,3 +704,14 @@ class DecomonModel(tf.keras.Model):
             raise NotImplementedError(msg)
 
         self.convex_domain = convex_domain_
+        """
+
+
+class DecomonSequential(tf.keras.Sequential):
+    def __init__(self, layers=None, convex_domain={}, optimize="False", name=None, **kwargs):
+        super(DecomonSequential, self).__init__(layers=layers, name=name, **kwargs)
+        self.convex_domain = convex_domain
+        self.optimize = optimize
+
+    def set_domain(self, convex_domain):
+        set_domain_priv(self.convex_domain, convex_domain)

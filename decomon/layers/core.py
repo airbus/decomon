@@ -47,7 +47,7 @@ class DecomonLayer(ABC, Layer):
     Abstract class that contains the common information of every implemented layers
     """
 
-    def __init__(self, convex_domain={}, dc_decomp=False, grad_bounds=False, n_subgrad=1, **kwargs):
+    def __init__(self, convex_domain={}, dc_decomp=False, grad_bounds=False, n_subgrad=0, **kwargs):
         """
 
         :param convex_domain: a dictionary that indicates the type of convex

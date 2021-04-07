@@ -272,10 +272,12 @@ def get_grad(x, constant, W, b):
     # x_ = K.expand_dims(x, 2)  # (None, n_dim, 1, 1)
     # z = K.sum(W * x_, 1) + b
 
-    x_ = K.expand_dims(x, 1)
-    z = K.sum(W * x_, 1) + b
+    x_ = K.expand_dims(x, -2)
+    # y_ = K.expand_dims(x, 2)
     # import pdb; pdb.set_trace()
-    grad_ = K.sum(K.expand_dims(-K.sign(constant - K.maximum(constant, z)), 1) * W, 1)  # (None, n_dim, ...)
+    z = K.sum(W * x_, 1) + b
+
+    grad_ = K.sum(K.expand_dims(-K.sign(constant - K.maximum(constant, z)), 1) * W, 2)  # (None, n_dim, ...)
 
     return grad_
 
@@ -300,34 +302,11 @@ def compute_R(z, convex_domain):
 
     if len(convex_domain) == 0:
         # compute the L2 distance z[:, 0], z[:, 1]
-        dist_ = K.sqrt(K.sum(K.pow(z[:, 1] - z[:, 0], 2), -1))
+        dist_ = K.sqrt(K.sum(K.pow((z[:, 1] - z[:, 0]) / 2.0, 2), -1))
     elif convex_domain["name"] == Box.name:  # to improve
-        dist_ = K.sqrt(K.sum(K.pow(z[:, 1] - z[:, 0], 2), -1))
+        dist_ = K.sqrt(K.sum(K.pow((z[:, 1] - z[:, 0]) / 2.0, 2), -1))
     elif convex_domain["name"] == Ball.name and convex_domain["p"] == np.inf:
         dist_ = K.sqrt(K.sum(K.pow(z - z + convex_domain["eps"], 2), -1))
-    elif convex_domain["name"] == Ball.name and convex_domain["p"] == 2:
-        dist_ = convex_domain["eps"] * K.ones_like(z)
-    else:
-        raise NotImplementedError()
-
-    return dist_
-
-
-def compute_R_old(z, convex_domain):
-    """
-    We compute the largest L2 distance of the starting point with the global optimum
-    :param z: Keras Tensor
-    :param convex_domain: Dictionnary to complement z on the convex domain
-    :return: Keras Tensor an upper bound on the distance
-    """
-
-    if len(convex_domain) == 0:
-        # compute the L2 distance z[:, 0], z[:, 1]
-        dist_ = K.sqrt(K.sum(K.pow((z[:, 1] - z[:, 0]) / 2.0, -1), -1))
-    elif convex_domain["name"] == Box.name:  # to improve
-        dist_ = K.sqrt(K.sum(K.pow(z[:, 1] - z[:, 0], 2), -1)) / 2.0
-    elif convex_domain["name"] == Ball.name and convex_domain["p"] == np.inf:
-        dist_ = K.sqrt(K.sum(K.pow(z - z + convex_domain["eps"], 2), -1)) / 2.0
     elif convex_domain["name"] == Ball.name and convex_domain["p"] == 2:
         dist_ = convex_domain["eps"] * K.ones_like(z)
     else:
@@ -371,6 +350,21 @@ def get_coeff_grad(R, k, g):
     return R[:, None] / K.maximum(K.epsilon(), denum)
 
 
+def grad_descent_conv(z, concave_upper, convex_lower, op_pos, ops_neg, n_iter):
+    """
+
+    :param z:
+    :param concave_upper:
+    :param convex_lower:
+    :param op_pos:
+    :param ops_neg:
+    :param n_iter:
+    :return:
+    """
+
+    raise NotImplementedError()
+
+
 def grad_descent(z, convex_0, convex_1, convex_domain, n_iter=5):
     """
 
@@ -388,6 +382,7 @@ def grad_descent(z, convex_0, convex_1, convex_domain, n_iter=5):
     # x_k = K.expand_dims(z[:, 0], -1)
 
     # init
+    # x_k = get_start_point(z, convex_domain)
     x_k = K.expand_dims(get_start_point(z, convex_domain), -1)
     R = compute_R(z, convex_domain)
 
@@ -409,7 +404,7 @@ def grad_descent(z, convex_0, convex_1, convex_domain, n_iter=5):
     # 1 -> we have not yet converged
     # 0 -> we have converged
     # import pdb; pdb.set_trace()
-    x_k = K.expand_dims(x_k, 1)
+    x_k = K.expand_dims(x_k, -2)
     z_0 = K.sum(W_0 * x_k, 1) + b_0  # (None, 10, 1)
     z_1 = K.sum(W_1 * x_k, 1) + b_1
     # f_x_k = K.sum(K.maximum(constant_0, z_0), 1) + K.sum(K.maximum(constant_1, z_1), 1)

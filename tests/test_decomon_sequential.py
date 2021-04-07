@@ -21,8 +21,30 @@ from . import (
 import tensorflow.python.keras.backend as K
 
 
-@pytest.mark.parametrize("n", [0, 1, 2, 3, 4, 5])
-def test_convert_model_1d_box(n):
+@pytest.mark.parametrize(
+    "n, n_subgrad",
+    [
+        (0, 0),
+        (1, 0),
+        (2, 0),
+        (3, 0),
+        (4, 0),
+        (5, 0),
+        (0, 1),
+        (1, 1),
+        (2, 1),
+        (3, 1),
+        (4, 1),
+        (5, 1),
+        (0, 5),
+        (1, 5),
+        (2, 5),
+        (3, 5),
+        (4, 5),
+        (5, 5),
+    ],
+)
+def test_convert_model_1d_box(n, n_subgrad):
 
     # build a simple sequential model from keras
     # start with 1D
@@ -30,7 +52,11 @@ def test_convert_model_1d_box(n):
     sequential.add(Dense(10, activation="relu", input_dim=1))
     sequential.add(Dense(1, activation="linear"))
 
-    monotonic_model = convert(sequential, dc_decomp=True)
+    monotonic_model = convert(sequential, dc_decomp=True, n_subgrad=n_subgrad)
+
+    for layer in monotonic_model.layers:
+        if hasattr(layer, "n_subgrad"):
+            assert layer.n_subgrad == n_subgrad
 
     inputs = get_tensor_decomposition_1d_box()
     inputs_ = get_standart_values_1d_box(n)
@@ -65,8 +91,30 @@ def test_convert_model_1d_box(n):
     )
 
 
-@pytest.mark.parametrize("n", [0, 1, 2, 3, 4, 5])
-def test_convert_model_1d_nodc(n):
+@pytest.mark.parametrize(
+    "n, n_subgrad",
+    [
+        (0, 0),
+        (1, 0),
+        (2, 0),
+        (3, 0),
+        (4, 0),
+        (5, 0),
+        (0, 1),
+        (1, 1),
+        (2, 1),
+        (3, 1),
+        (4, 1),
+        (5, 1),
+        (0, 5),
+        (1, 5),
+        (2, 5),
+        (3, 5),
+        (4, 5),
+        (5, 5),
+    ],
+)
+def test_convert_model_1d_nodc(n, n_subgrad):
 
     # build a simple sequential model from keras
     # start with 1D
@@ -74,7 +122,11 @@ def test_convert_model_1d_nodc(n):
     sequential.add(Dense(10, activation="relu", input_dim=1))
     sequential.add(Dense(1, activation="linear"))
 
-    monotonic_model = convert(sequential)
+    monotonic_model = convert(sequential, n_subgrad=n_subgrad)
+
+    for layer in monotonic_model.layers:
+        if hasattr(layer, "n_subgrad"):
+            assert layer.n_subgrad == n_subgrad
 
     inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
@@ -96,14 +148,52 @@ def test_convert_model_1d_nodc(n):
 
 # testing that the cloning function is working
 # assuming that the function to_monotonic is working correctly and has been tested throughly
-@pytest.mark.parametrize("n", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-def test_clone_sequential_model_1d_box(n):
+@pytest.mark.parametrize(
+    "n, n_subgrad",
+    [
+        (0, 0),
+        (1, 0),
+        (2, 0),
+        (3, 0),
+        (4, 0),
+        (5, 0),
+        (6, 0),
+        (7, 0),
+        (8, 0),
+        (9, 0),
+        (0, 1),
+        (1, 1),
+        (2, 1),
+        (3, 1),
+        (4, 1),
+        (5, 1),
+        (6, 1),
+        (7, 1),
+        (8, 1),
+        (9, 1),
+        (0, 5),
+        (1, 5),
+        (2, 5),
+        (3, 5),
+        (4, 5),
+        (5, 5),
+        (6, 5),
+        (7, 5),
+        (8, 5),
+        (9, 5),
+    ],
+)
+def test_clone_sequential_model_1d_box(n, n_subgrad):
     # build a simple sequential model from keras
     # start with 1D
     sequential = Sequential()
     sequential.add(Dense(10, activation="relu", input_dim=1))
     sequential.add(Dense(1, activation="linear"))
-    monotonic_model = clone_sequential_model(sequential, input_dim=1, dc_decomp=True)
+    monotonic_model = clone_sequential_model(sequential, input_dim=1, dc_decomp=True, n_subgrad=n_subgrad)
+
+    for layer in monotonic_model.layers:
+        if hasattr(layer, "n_subgrad"):
+            assert layer.n_subgrad == n_subgrad
 
     assert isinstance(monotonic_model, DecomonModel)
     assert not isinstance(sequential, DecomonModel)
@@ -139,14 +229,52 @@ def test_clone_sequential_model_1d_box(n):
     )
 
 
-@pytest.mark.parametrize("n", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-def test_clone_sequential_model_1d_box_nodc(n):
+@pytest.mark.parametrize(
+    "n, n_subgrad",
+    [
+        (0, 0),
+        (1, 0),
+        (2, 0),
+        (3, 0),
+        (4, 0),
+        (5, 0),
+        (6, 0),
+        (7, 0),
+        (8, 0),
+        (9, 0),
+        (0, 1),
+        (1, 1),
+        (2, 1),
+        (3, 1),
+        (4, 1),
+        (5, 1),
+        (6, 1),
+        (7, 1),
+        (8, 1),
+        (9, 1),
+        (0, 5),
+        (1, 5),
+        (2, 5),
+        (3, 5),
+        (4, 5),
+        (5, 5),
+        (6, 5),
+        (7, 5),
+        (8, 5),
+        (9, 5),
+    ],
+)
+def test_clone_sequential_model_1d_box_nodc(n, n_subgrad):
     # build a simple sequential model from keras
     # start with 1D
     sequential = Sequential()
     sequential.add(Dense(10, activation="relu", input_dim=1))
     sequential.add(Dense(1, activation="linear"))
-    monotonic_model = clone_sequential_model(sequential, input_dim=1, dc_decomp=False)
+    monotonic_model = clone_sequential_model(sequential, input_dim=1, dc_decomp=False, n_subgrad=n_subgrad)
+
+    for layer in monotonic_model.layers:
+        if hasattr(layer, "n_subgrad"):
+            assert layer.n_subgrad == n_subgrad
 
     assert isinstance(monotonic_model, DecomonModel)
     assert not isinstance(sequential, DecomonModel)
@@ -167,8 +295,8 @@ def test_clone_sequential_model_1d_box_nodc(n):
     assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc")
 
 
-@pytest.mark.parametrize("odd", [0, 1])
-def test_clone_sequential_model_multid_box(odd):
+@pytest.mark.parametrize("odd, n_subgrad", [(0, 0), (1, 0), (0, 1), (1, 1), (0, 5), (1, 5)])
+def test_clone_sequential_model_multid_box(odd, n_subgrad):
 
     inputs = get_tensor_decomposition_multid_box(odd)
     inputs_ = get_standard_values_multid_box(odd)
@@ -180,7 +308,11 @@ def test_clone_sequential_model_multid_box(odd):
     sequential = Sequential()
     sequential.add(Dense(10, activation="relu", input_dim=y.shape[-1]))
     sequential.add(Dense(1, activation="linear"))
-    monotonic_model = clone_sequential_model(sequential, input_dim=input_dim, dc_decomp=True)
+    monotonic_model = clone_sequential_model(sequential, input_dim=input_dim, dc_decomp=True, n_subgrad=n_subgrad)
+
+    for layer in monotonic_model.layers:
+        if hasattr(layer, "n_subgrad"):
+            assert layer.n_subgrad == n_subgrad
 
     assert isinstance(monotonic_model, DecomonModel)
     assert not isinstance(sequential, DecomonModel)
@@ -212,8 +344,8 @@ def test_clone_sequential_model_multid_box(odd):
     )
 
 
-@pytest.mark.parametrize("odd", [0, 1])
-def test_clone_sequential_model_multid_box_nodc(odd):
+@pytest.mark.parametrize("odd, n_subgrad", [(0, 0), (1, 0), (0, 1), (1, 1), (0, 5), (1, 5)])
+def test_clone_sequential_model_multid_box_nodc(odd, n_subgrad):
 
     inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
     inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
@@ -225,7 +357,11 @@ def test_clone_sequential_model_multid_box_nodc(odd):
     sequential = Sequential()
     sequential.add(Dense(10, activation="relu", input_dim=y.shape[-1]))
     sequential.add(Dense(1, activation="linear"))
-    monotonic_model = clone_sequential_model(sequential, input_dim=input_dim)
+    monotonic_model = clone_sequential_model(sequential, input_dim=input_dim, n_subgrad=n_subgrad)
+
+    for layer in monotonic_model.layers:
+        if hasattr(layer, "n_subgrad"):
+            assert layer.n_subgrad == n_subgrad
 
     assert isinstance(monotonic_model, DecomonModel)
     assert not isinstance(sequential, DecomonModel)
