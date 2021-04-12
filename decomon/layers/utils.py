@@ -190,7 +190,7 @@ def get_upper(x, w, b, convex_domain={}):
     :return: a constant upper bound of the affine function
     """
 
-    if len(convex_domain) == 0:
+    if convex_domain is None or len(convex_domain) == 0:
         # box
         x_min = x[:, 0]
         x_max = x[:, 1]

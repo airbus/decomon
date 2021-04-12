@@ -3,28 +3,94 @@
 from .models import DecomonModel, convert
 import numpy as np
 from .layers.core import Ball, Box
+from .models.decomon_sequential import Backward, Forward
+import scipy.optimize as opt
+
+
+def convex_optimize(lc, w_1, b_1, w_2, b_2, z):
+
+    # flatten u, w_1 and b_1
+    lc = l.reshape((lc.shape[0], -1))
+    w_1 = w_1.reshape((w_1.shape[0], w_1.shape[1], -1))
+    b_1 = b_1.reshape((b_1.shape[0], -1))
+    w_2 = w_2[:, 0]
+    b_2 = b_2[:, 0]
+
+    batch = len(z)
+    x_0_ = np.expand_dims(0.5 * np.sum(z, 1), -1) + np.zeros_like(w_1)
+    x_0 = x_0_.flatten()
+
+    def func_(x_0):
+        x_0_ = x_0.reshape((batch, z.shape[-1], -1))
+        f_0 = lc
+        f_1 = np.sum(w_1 * x_0_, 1) + b_1
+        f_2 = np.sum(w_2 * x_0_, 1) + b_2
+
+        f_ = np.maximum(np.maximum(f_0, f_1), f_2)
+        return f_
+
+    def func(x_0):
+        f_ = np.sum(func_(x_0))
+        return f_
+
+    def grad(x_0):
+        x_0_ = x_0.reshape((batch, z.shape[-1], -1))
+        f_0 = lc
+        f_1 = np.sum(w_1 * x_0_, 1) + b_1
+        f_2 = np.sum(w_2 * x_0_, 1) + b_2
+
+        f_0 = f_0.flatten()
+        f_1 = f_1.flatten()
+        f_2 = f_2.flatten()
+
+        index_0 = np.where(f_0 >= np.maximum(f_1, f_2))[0]
+        index_1 = np.where(f_1 >= np.maximum(f_0, f_2))[0]
+        index_2 = np.where(f_2 >= np.maximum(f_0, f_1))[0]
+
+        grad_x_ = np.zeros_like(w_1).reshape((batch, z.shape[-1], -1))
+        grad_x_[index_2] = w_2[index_2]
+        grad_x_[index_1] = w_1[index_1]
+        grad_x_[index_0] *= 0
+
+        return grad_x_.flatten().astype(np.float64)
+
+    result = opt.minimize(
+        fun=func,
+        jac=grad,
+        x0=x_0,
+        method="L-BFGS-B",
+        bounds=opt.Bounds(z[:, 0].flatten() + 0 * x_0, z[:, 1].flatten() + 0 * x_0),
+    )
+
+    if result["success"]:
+        return func_(result["x"])
+    else:
+        return lc.reshape((batch, z.shape[-1], -1))
 
 
 # get upper bound in a box
-def get_upper_box(model, x_min, x_max):
+def get_upper_box(model, x_min, x_max, mode=Backward.name, fast=True):
     """
 
 
     :param model: either a Keras model or a Decomon model
     :param x_min: numpy array for the extramal lower corner of the boxes
     :param x_max: numpy array for the extremal upper corner of the boxes
+    :param mode: forward or backward
     :return: numpy array, vector with upper bounds of
     the range of values taken by the model inside every boxes
     """
 
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
+
     if not isinstance(model, DecomonModel):
         model_ = convert(model)
         input_dim = np.prod(model.input_shape[1:])
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
         model_ = model
+        mode = model.mode
         input_dim = np.prod(model.input_shape[0][1:])
 
     if len(x_min.shape) == 1:
@@ -41,11 +107,21 @@ def get_upper_box(model, x_min, x_max):
     z = np.concatenate([x_min[:, None], x_max[:, None]], 1)
     output = model_.predict([x_min, z])
 
-    return output[2]
+    if fast or mode == Forward.name:
+        return output[2]
+    else:
+        # fast optimization
+        u = output[2]
+        w_1 = output[3]
+        b_1 = output[4]
+        w_2 = output[-4]
+        b_2 = output[-3]
+
+        return -convex_optimize(-u, -w_1, -b_1, -w_2, -b_2, z)
 
 
 # get lower box in a box
-def get_lower_box(model, x_min, x_max):
+def get_lower_box(model, x_min, x_max, mode=Backward.name, fast=True):
     """
 
     :param model: either a Keras model or a Decomon model
@@ -57,11 +133,12 @@ def get_lower_box(model, x_min, x_max):
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
     if not isinstance(model, DecomonModel):
-        model_ = convert(model)
+        model_ = convert(model, mode=mode)
         input_dim = np.prod(model.input_shape[1:])
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
         model_ = model
+        mode = model.mode
         input_dim = np.prod(model.input_shape[0][1:])
 
     if len(x_min.shape) == 1:
@@ -78,11 +155,21 @@ def get_lower_box(model, x_min, x_max):
     z = np.concatenate([x_min[:, None], x_max[:, None]], 1)
     output = model_.predict([x_min, z])
 
-    return output[5]
+    if fast or mode == Forward.name:
+        return output[5]
+    else:
+        # fast optimization
+        l = output[5]
+        w_1 = output[6]
+        b_1 = output[7]
+        w_2 = output[-2]
+        b_2 = output[-1]
+
+        return convex_optimize(l, w_1, b_1, w_2, b_2, z)
 
 
 # get interval in a box
-def get_range_box(model, x_min, x_max):
+def get_range_box(model, x_min, x_max, mode=Backward.name, fast=True):
     """
 
     :param model: either a Keras model or a Decomon model
@@ -94,11 +181,12 @@ def get_range_box(model, x_min, x_max):
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
     if not isinstance(model, DecomonModel):
-        model_ = convert(model)
+        model_ = convert(model, mode=mode)
         input_dim = np.prod(model.input_shape[1:])
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
         model_ = model
+        mode = model_.mode
         input_dim = np.prod(model.input_shape[0][1:])
 
     if len(x_min.shape) == 1:
@@ -115,7 +203,28 @@ def get_range_box(model, x_min, x_max):
     z = np.concatenate([x_min[:, None], x_max[:, None]], 1)
     output = model_.predict([x_min, z])
 
-    return output[2], output[5]
+    if fast or mode == Forward.name:
+        return output[2], output[5]
+    else:
+        # fast optimization
+        u = output[2]
+        w_1 = output[3]
+        b_1 = output[4]
+        w_2 = output[-4]
+        b_2 = output[-3]
+
+        upper = -convex_optimize(-u, -w_1, -b_1, -w_2, -b_2, z)
+
+        # fast optimization
+        lc = output[5]
+        w_1 = output[6]
+        b_1 = output[7]
+        w_2 = output[-2]
+        b_2 = output[-1]
+
+        lower = convex_optimize(lc, w_1, b_1, w_2, b_2, z)
+
+        return upper, lower
 
 
 # get upper bound of a sample with bounded noise

@@ -13,6 +13,7 @@ from . import (
     get_standard_values_multid_box,
     get_tensor_decomposition_multid_box,
 )
+from tensorflow.keras.models import Model
 
 
 @pytest.mark.parametrize(
@@ -254,3 +255,28 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, n_subgrad):
         + np.sum(np.minimum(w_l_[:, 0], 0) * b_u[:, :, None], 1),
         "dense_{}".format(odd),
     )
+
+
+@pytest.mark.parametrize(
+    "n, activation, n_subgrad",
+    [
+        (0, "relu", 0),
+    ],
+)
+def test_Backward_DecomonDense_1D_box_model(n, activation, n_subgrad):
+    layer = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=False, n_subgrad=n_subgrad)
+
+    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
+
+    output = layer(inputs[1:])
+    y_0, z_0, u_c_0, _, _, l_c_0, _, _ = output
+
+    w_out = Input((1, 1, 1))
+    b_out = Input((1, 1))
+    # get backward layer
+    layer_backward = get_backward(layer)
+    w_out_u_, b_out_u_, w_out_l_, b_out_l_ = layer_backward(inputs[1:] + [w_out, b_out, w_out, b_out])
+
+    Model(inputs[1:] + [w_out, b_out], [w_out_u_, b_out_u_, w_out_l_, b_out_l_])

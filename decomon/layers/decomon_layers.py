@@ -526,24 +526,11 @@ class DecomonDense(Dense, DecomonLayer):
         self.built = True
 
     def call_linear(self, inputs):
-        """
-        computing the perturbation analysis of the operator
-        without the activation function
-        :param inputs:
-        :return:
-        """
         if self.grad_bounds:
             raise NotImplementedError()
 
         if not isinstance(inputs, list):
             raise ValueError("A merge layer should be called " "on a list of inputs.")
-
-        # check for linearity
-        y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:8]
-        x_max = get_upper(x_0, w_u - w_l, b_u - b_l, self.convex_domain)
-        mask_b = 1.0 - K.sign(x_max)
-        mask_a = 1.0 - mask_b
-
         if self.dc_decomp:
             y, x_0, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs[: self.nb_tensors]
             h_ = K.dot(h, self.kernel_pos) + K.dot(g, self.kernel_neg)
@@ -552,6 +539,15 @@ class DecomonDense(Dense, DecomonLayer):
             y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: self.nb_tensors]
 
         y_ = K.dot(y, self.kernel_pos) + K.dot(y, self.kernel_neg)
+
+        x_max = get_upper(x_0, w_u - w_l, b_u - b_l, self.convex_domain)
+        mask_b = 1.0 - K.sign(x_max)
+        mask_a = 1.0 - mask_b
+        # mask_b = 0*mask_b
+        # mask_a = K.ones_like(mask_a)
+
+        # u_c_ = K.dot(u_c, self.kernel_pos) + K.dot(l_c, self.kernel_neg)
+        # l_c_ = K.dot(l_c, self.kernel_pos) + K.dot(u_c, self.kernel_neg)
 
         kernel_pos_ = K.expand_dims(self.kernel_pos, 0)
         kernel_neg_ = K.expand_dims(self.kernel_neg, 0)
@@ -567,7 +563,12 @@ class DecomonDense(Dense, DecomonLayer):
         l_c_1_ = K.sum(l_c_1_a, 1)
         l_c_ = l_c_0_ + l_c_1_
 
-        b_u_0_a = K.expand_dims(mask_a * b_u + mask_b * b_u, -1) * kernel_pos_
+        #######
+
+        b_u_ = K.dot(b_u, self.kernel_pos) + K.dot(mask_a * b_l, self.kernel_neg) + K.dot(mask_b * b_u, self.kernel_neg)
+        b_l_ = K.dot(b_l, self.kernel_pos) + K.dot(mask_a * b_u, self.kernel_neg) + K.dot(mask_b * b_l, self.kernel_neg)
+
+        b_u_0_a = K.expand_dims(b_u, -1) * kernel_pos_
         b_u_0_ = K.sum(b_u_0_a, 1)
         b_u_1_a = K.expand_dims(mask_a * b_l + mask_b * b_u, -1) * kernel_neg_
         b_u_1_ = K.sum(b_u_1_a, 1)
@@ -581,28 +582,23 @@ class DecomonDense(Dense, DecomonLayer):
 
         mask_a = K.expand_dims(mask_a, 1)
         mask_b = K.expand_dims(mask_b, 1)
+        kernel_pos_ = K.expand_dims(kernel_pos_, 1)
+        kernel_neg_ = K.expand_dims(kernel_neg_, 1)
 
-        kernel_pos_ = K.expand_dims(kernel_pos_, -1)
-        kernel_neg_ = K.expand_dims(kernel_neg_, -1)
-        w_u_0_a = K.expand_dims(mask_a * w_u + mask_b * w_u, -2) * kernel_pos_
-        w_u_0_a = K.permute_dimensions(w_u_0_a, (0, 1, 3, 2))
-        w_u_0_ = K.sum(w_u_0_a, 1)
-        w_u_1_a = K.expand_dims(mask_a * w_l + mask_b * w_u, -2) * kernel_neg_
-        w_u_1_a = K.permute_dimensions(w_u_1_a, (0, 1, 3, 2))
-        w_u_1_ = K.sum(w_u_1_a, 1)
+        w_u_ = K.dot(w_u, self.kernel_pos) + K.dot(mask_a * w_l, self.kernel_neg) + K.dot(mask_b * w_u, self.kernel_neg)
+        w_l_ = K.dot(w_l, self.kernel_pos) + K.dot(mask_a * w_u, self.kernel_neg) + K.dot(mask_b * w_l, self.kernel_neg)
+
+        w_u_0_a = K.expand_dims(w_u, -1) * kernel_pos_
+        w_u_0_ = K.sum(w_u_0_a, 2)
+        w_u_1_a = K.expand_dims(mask_a * w_l + mask_b * w_u, -1) * kernel_neg_
+        w_u_1_ = K.sum(w_u_1_a, 2)
         w_u_ = w_u_0_ + w_u_1_
 
-        w_l_0_a = K.expand_dims(mask_a * w_l + mask_b * w_l, -2) * kernel_pos_
-        w_l_0_a = K.permute_dimensions(w_l_0_a, (0, 1, 3, 2))
-        w_l_0_ = K.sum(w_l_0_a, 1)
-        w_l_1_a = K.expand_dims(mask_a * w_u + mask_b * w_l, -2) * kernel_neg_
-        w_l_1_a = K.permute_dimensions(w_l_1_a, (0, 1, 3, 2))
-        w_l_1_ = K.sum(w_l_1_a, 1)
+        w_l_0_a = K.expand_dims(w_l, -1) * kernel_pos_
+        w_l_0_ = K.sum(w_l_0_a, 2)
+        w_l_1_a = K.expand_dims(mask_a * w_u + mask_b * w_l, -1) * kernel_neg_
+        w_l_1_ = K.sum(w_l_1_a, 2)
         w_l_ = w_l_0_ + w_l_1_
-
-        # here you can use subgradient descent method to optimize
-        # the upper and lower bounds
-        # import pdb; pdb.set_trace()
 
         if self.n_subgrad:
             # test whether the layer is linear:
@@ -618,6 +614,8 @@ class DecomonDense(Dense, DecomonLayer):
             u_c_ = K.minimum(u_c_, u_sub)
             l_c_ = K.maximum(l_c_, l_sub)
 
+        ########
+
         if self.use_bias:
             b_u_ = K.bias_add(b_u_, self.bias, data_format="channels_last")
             b_l_ = K.bias_add(b_l_, self.bias, data_format="channels_last")
@@ -625,15 +623,20 @@ class DecomonDense(Dense, DecomonLayer):
             l_c_ = K.bias_add(l_c_, self.bias, data_format="channels_last")
             y_ = K.bias_add(y_, self.bias, data_format="channels_last")
 
+            # upper_grad = K.bias_add(upper_grad, self.bias, data_format="channels_last")
+            # lower_grad = K.bias_add(lower_grad, self.bias, data_format="channels_last")
+
             if self.dc_decomp:
                 h_ = K.bias_add(h_, K.maximum(0.0, self.bias), data_format="channels_last")
                 g_ = K.bias_add(g_, K.minimum(0.0, self.bias), data_format="channels_last")
 
         upper_ = get_upper(x_0, w_u_, b_u_, self.convex_domain)
         u_c_ = K.minimum(upper_, u_c_)
+        # u_c_ = K.minimum(u_c_, upper_grad)
 
         lower_ = get_lower(x_0, w_l_, b_l_, self.convex_domain)
         l_c_ = K.maximum(lower_, l_c_)
+        # l_c_ = K.maximum(l_c_, lower_grad)
 
         output = [y_, x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
@@ -905,7 +908,7 @@ class DecomonReshape(Reshape, DecomonLayer):
         return output
 
 
-def to_monotonic(layer, input_dim, dc_decomp=False, grad_bounds=False, convex_domain={}):
+def to_monotonic(layer, input_dim, dc_decomp=False, grad_bounds=False, n_subgrad=0, convex_domain={}):
     """Transform a standard keras layer into a decomon layer.
 
     Type of layer is tested to know how to transform it into a MonotonicLayer of the good type.
@@ -936,6 +939,7 @@ def to_monotonic(layer, input_dim, dc_decomp=False, grad_bounds=False, convex_do
     config_layer["dc_decomp"] = dc_decomp
     config_layer["grad_bounds"] = grad_bounds
     config_layer["convex_domain"] = convex_domain
+    config_layer["n_subgrad"] = n_subgrad
     layer_monotonic = globals()[monotonic_class_name].from_config(config_layer)
 
     input_shape = list(layer.input_shape)[1:]

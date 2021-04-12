@@ -779,3 +779,128 @@ def assert_output_properties_box_linear(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_
     # import pdb; pdb.set_trace()
     assert_almost_equal(np.clip(lower_ - y_, 0.0, np.inf), np.zeros_like(y_), decimal=decimal, err_msg="l_c >y")
     assert_almost_equal(np.clip(y_ - upper_, 0.0, 1e6), np.zeros_like(y_), decimal=decimal, err_msg="u_c <y")
+
+
+# multi decomposition for convert
+def get_standard_values_multid_box_convert(odd=1, dc_decomp=True):
+
+    if dc_decomp:
+        (
+            x_0,
+            y_0,
+            z_0,
+            u_c_0,
+            w_u_0,
+            b_u_0,
+            l_c_0,
+            w_l_0,
+            b_l_0,
+            h_0,
+            g_0,
+        ) = get_standart_values_1d_box(0, dc_decomp)
+        (
+            x_1,
+            y_1,
+            z_1,
+            u_c_1,
+            w_u_1,
+            b_u_1,
+            l_c_1,
+            w_l_1,
+            b_l_1,
+            h_1,
+            g_1,
+        ) = get_standart_values_1d_box(1, dc_decomp)
+    else:
+        (
+            x_0,
+            y_0,
+            z_0,
+            u_c_0,
+            w_u_0,
+            b_u_0,
+            l_c_0,
+            w_l_0,
+            b_l_0,
+        ) = get_standart_values_1d_box(0, dc_decomp)
+        (
+            x_1,
+            y_1,
+            z_1,
+            u_c_1,
+            w_u_1,
+            b_u_1,
+            l_c_1,
+            w_l_1,
+            b_l_1,
+        ) = get_standart_values_1d_box(1, dc_decomp)
+
+    if not odd:
+
+        # output (x_0+x_1, x_0+2*x_0) (x_0, x_1)
+        x_ = np.concatenate([x_0, x_1], -1)
+        z_min_ = np.concatenate([z_0[:, 0], z_1[:, 0]], -1)
+        z_max_ = np.concatenate([z_0[:, 1], z_1[:, 1]], -1)
+        z_ = np.concatenate([z_min_[:, None], z_max_[:, None]], 1)
+        y_ = np.concatenate([y_0, y_1], -1)
+        b_u_ = np.concatenate([b_u_0, b_u_1], -1)
+        u_c_ = np.concatenate([u_c_0, u_c_1], -1)
+        b_l_ = np.concatenate([b_l_0, b_l_1], -1)
+        l_c_ = np.concatenate([l_c_0, l_c_1], -1)
+
+        if dc_decomp:
+            h_ = np.concatenate([h_0, h_1], -1)
+            g_ = np.concatenate([g_0, g_1], -1)
+
+        w_u_ = np.zeros((len(x_), 2, 2))
+        w_u_[:, 0, 0] = w_u_0[:, 0, 0]
+        w_u_[:, 1, 1] = w_u_1[:, 0, 0]
+
+        w_l_ = np.zeros((len(x_), 2, 2))
+        w_l_[:, 0, 0] = w_l_0[:, 0, 0]
+        w_l_[:, 1, 1] = w_l_1[:, 0, 0]
+
+    else:
+        if dc_decomp:
+            (
+                x_2,
+                y_2,
+                z_2,
+                u_c_2,
+                w_u_2,
+                b_u_2,
+                l_c_2,
+                w_l_2,
+                b_l_2,
+                h_2,
+                g_2,
+            ) = get_standart_values_1d_box(2, dc_decomp)
+        else:
+            (x_2, y_2, z_2, u_c_2, w_u_2, b_u_2, l_c_2, w_l_2, b_l_2) = get_standart_values_1d_box(2, dc_decomp)
+        x_ = np.concatenate([x_0, x_1, x_2], -1)
+        z_min_ = np.concatenate([z_0[:, 0], z_1[:, 0], z_2[:, 0]], -1)
+        z_max_ = np.concatenate([z_0[:, 1], z_1[:, 1], z_2[:, 1]], -1)
+        z_ = np.concatenate([z_min_[:, None], z_max_[:, None]], 1)
+        y_ = np.concatenate([y_0, y_1, y_2], -1)
+        b_u_ = np.concatenate([b_u_0, b_u_1, b_u_2], -1)
+        b_l_ = np.concatenate([b_l_0, b_l_1, b_l_2], -1)
+        u_c_ = np.concatenate([u_c_0, u_c_1, u_c_2], -1)
+        l_c_ = np.concatenate([l_c_0, l_c_1, l_c_2], -1)
+
+        if dc_decomp:
+            h_ = np.concatenate([h_0, h_1, h_2], -1)
+            g_ = np.concatenate([g_0, g_1, g_2], -1)
+
+        w_u_ = np.zeros((len(x_), 3, 3))
+        w_u_[:, 0, 0] = w_u_0[:, 0, 0]
+        w_u_[:, 1, 1] = w_u_1[:, 0, 0]
+        w_u_[:, 2, 2] = w_u_2[:, 0, 0]
+
+        w_l_ = np.zeros((len(x_), 3, 3))
+        w_l_[:, 0, 0] = w_l_0[:, 0, 0]
+        w_l_[:, 1, 1] = w_l_1[:, 0, 0]
+        w_l_[:, 2, 2] = w_l_2[:, 0, 0]
+
+    if dc_decomp:
+        return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
+    return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]

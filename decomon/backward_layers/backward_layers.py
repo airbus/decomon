@@ -20,7 +20,7 @@ class BackwardDense(Layer):
 
     def call(self, inputs):
 
-        x = inputs[:-4]
+        x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
         # start with the activation: determine the upper and lower bounds before the weights
@@ -28,7 +28,7 @@ class BackwardDense(Layer):
         bias = self.layer.bias
 
         # here update x
-        x = self.layer.call_linear(x)
+        x = self.layer.call_linear(x_)
 
         if self.activation_name != "linear":
             w_act_u, b_act_u, w_act_l, b_act_l = self.activation(
@@ -55,6 +55,7 @@ class BackwardDense(Layer):
 
         op_perm = Permute((2, 1))
         # here
+
         w_out_u_ = K.sum(Dot(-2)([K.expand_dims(op_perm(weights_u), 1), K.maximum(w_out_u, 0)]), -2) + K.sum(
             Dot(-2)([K.expand_dims(op_perm(weights_l), 1), K.minimum(w_out_u, 0)]), -2
         )

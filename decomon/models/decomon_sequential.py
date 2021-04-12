@@ -9,14 +9,25 @@ import warnings
 import tensorflow as tf
 from tensorflow.keras.models import Sequential, Model
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Lambda
+from tensorflow.keras.layers import Lambda, Flatten
 from ..layers.decomon_layers import to_monotonic
-from ..layers.core import Box
+from ..layers.core import Box, StaticVariables
 from tensorflow.keras.layers import InputLayer, Input, Layer
 from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
 from copy import deepcopy
 import numpy as np
 from decomon.layers.utils import softmax_to_linear, get_upper, get_lower
+from ..backward_layers.backward_layers import get_backward as get_backward_
+from ..backward_layers.utils import backward_linear_prod
+
+
+# create static variables for varying convex domain
+class Backward:
+    name = "backward"
+
+
+class Forward:
+    name = "forward"
 
 
 def include_dim_layer_fn(layer_fn, input_dim, dc_decomp=False, grad_bounds=False, convex_domain={}, n_subgrad=0):
@@ -103,6 +114,7 @@ def clone(
     grad_bounds=False,
     convex_domain={},
     n_subgrad=0,
+    mode="forward",
 ):
     """
     :param model: Keras model
@@ -113,14 +125,29 @@ def clone(
     :param grad_bounds: boolean that indicates whether we propagate upper and lower bounds on the values of the gradient
     :param convex_domain: the type of convex domain
     :param n_subgrad: integer
+    :param mode: forward of backward
     :return: a decomon model
     """
 
     if grad_bounds:
         raise NotImplementedError()
 
+    if mode.lower() not in [Forward.name, Backward.name]:
+        raise NotImplementedError()
+
     if isinstance(model, Sequential):
-        return clone_sequential_model(
+        decomon_model = clone_sequential_model(
+            model,
+            input_tensors,
+            layer_fn,
+            input_dim=input_dim,
+            dc_decomp=dc_decomp,
+            grad_bounds=grad_bounds,
+            convex_domain=convex_domain,
+            n_subgrad=n_subgrad,
+        )
+    else:
+        decomon_model = clone_functional_model(
             model,
             input_tensors,
             layer_fn,
@@ -131,16 +158,10 @@ def clone(
             n_subgrad=n_subgrad,
         )
 
-    return clone_functional_model(
-        model,
-        input_tensors,
-        layer_fn,
-        input_dim=input_dim,
-        dc_decomp=dc_decomp,
-        grad_bounds=grad_bounds,
-        convex_domain=convex_domain,
-        n_subgrad=n_subgrad,
-    )
+    if mode.lower() == Backward.name:
+        decomon_model = get_backward(decomon_model)
+
+    return decomon_model
 
 
 def clone_sequential_model(
@@ -173,6 +194,7 @@ def clone_sequential_model(
     :return: An instance of `Sequential` reproducing the behavior of the original model with decomon layers.
     :raises: ValueError: in case of invalid `model` argument value or `layer_fn` argument value.
     """
+
     layer_fn = include_dim_layer_fn(
         layer_fn,
         input_dim,
@@ -209,7 +231,8 @@ def clone_sequential_model(
                 for layer_ in layer._layers:
                     list_layer += _get_layer(layer_)
                 return list_layer
-            return [clone_functional_model(layer, layer_fn=layer_fn)]
+            # return [clone_functional_model(layer, layer_fn=layer_fn)]
+            return [clone(layer, layer_fn=layer_fn)]
 
         if isinstance(layer, Layer):
             return [layer_fn(layer)]
@@ -288,7 +311,9 @@ def clone_sequential_model(
         output = layer(output)
 
     # return Model(input_tensors, output)
-    return DecomonModel(input_tensors, output, convex_domain=convex_domain)
+    return DecomonModel(
+        input_tensors, output, dc_decomp=dc_decomp, grad_bounds=grad_bounds, convex_domain=convex_domain
+    )
 
 
 def clone_functional_model(
@@ -539,7 +564,9 @@ def clone_functional_model(
         else:
             output_tensors.append(tensor)
 
-    return DecomonModel(input_tensors, output_tensors, convex_domain=convex_domain)
+    return DecomonModel(
+        input_tensors, output_tensors, dc_decomp=dc_decomp, grad_bounds=grad_bounds, convex_domain=convex_domain
+    )
 
 
 def convert(
@@ -550,6 +577,7 @@ def convert(
     grad_bounds=False,
     convex_domain={},
     n_subgrad=0,
+    mode="forward",
 ):
     """
 
@@ -565,6 +593,8 @@ def convert(
     """
 
     # raise NotImplementedError()
+    if not mode.lower() in [Forward.name, Backward.name]:
+        raise NotImplementedError()
 
     if grad_bounds:
         raise NotImplementedError()
@@ -610,8 +640,10 @@ def convert(
                 y_tensor, z_tensor = input_
 
             # create b_u, b_l, u_c, l_c from the previous tensors (with a lambda layer)
-            b_u_tensor = K.zeros_like(y_tensor)
-            b_l_tensor = K.zeros_like(y_tensor)
+            b_tensor = K.zeros_like(y_tensor)
+            # b_l_tensor = K.zeros_like(y_tensor)
+
+            """
 
             toto = K.reshape(
                 K.cast(tf.linalg.diag([1.0] * input_dim_), y_tensor.dtype),
@@ -619,20 +651,23 @@ def convert(
             )[None]
             w_u_tensor = K.expand_dims(K.zeros_like(y_tensor), 1) + toto
             w_l_tensor = K.expand_dims(K.zeros_like(y_tensor), 1) + toto
+            """
+            w_tensor = tf.linalg.diag(K.ones_like(Flatten()(y_tensor)))
+            w_tensor = K.reshape(w_tensor, tuple([-1] + list(input_shape_w)))
 
             # compute upper and lower bound
-            l_c_tensor = get_lower(z_tensor, w_l_tensor, b_l_tensor, convex_domain=convex_domain)
-            u_c_tensor = get_upper(z_tensor, w_u_tensor, b_u_tensor, convex_domain=convex_domain)
+            l_c_tensor = get_lower(z_tensor, w_tensor, b_tensor, convex_domain=convex_domain)
+            u_c_tensor = get_upper(z_tensor, w_tensor, b_tensor, convex_domain=convex_domain)
 
             output = [
                 y_tensor,
                 z_tensor,
                 u_c_tensor,
-                w_l_tensor,
-                b_u_tensor,
+                w_tensor,
+                b_tensor,
                 l_c_tensor,
-                w_l_tensor,
-                b_l_tensor,
+                w_tensor,
+                b_tensor,
             ]
             if dc_decomp:
                 output += [h_tensor, g_tensor]
@@ -645,7 +680,6 @@ def convert(
         lambda_layer = Lambda(lambda x: x)
 
     input_tensors_ = lambda_layer(input_tensors)
-
     model_monotonic = clone(
         model,
         input_tensors=None,
@@ -659,7 +693,12 @@ def convert(
 
     output = model_monotonic(input_tensors_)
 
-    return DecomonModel(input_tensors, output, convex_domain=convex_domain)
+    decomon_model = DecomonModel(input_tensors, output, convex_domain=convex_domain)
+
+    if mode.lower() == Backward.name:
+        decomon_model = get_backward(decomon_model)
+
+    return decomon_model
 
 
 def set_domain_priv(convex_domain_prev, convex_domain):
@@ -681,37 +720,213 @@ def set_domain_priv(convex_domain_prev, convex_domain):
 
 
 class DecomonModel(tf.keras.Model):
-    def __init__(self, input, output, convex_domain={}, optimize="True", **kwargs):
+    def __init__(
+        self,
+        input,
+        output,
+        convex_domain={},
+        dc_decomp=False,
+        grad_bounds=False,
+        mode=Forward.name,
+        optimize="True",
+        **kwargs,
+    ):
         super(DecomonModel, self).__init__(input, output, **kwargs)
         self.convex_domain = convex_domain
         self.optimize = optimize
+        self.nb_tensors = StaticVariables(dc_decomp, grad_bounds).nb_tensors
+        self.dc_decomp = dc_decomp
+        self.grad_bounds = grad_bounds
+        self.mode = mode
 
     def set_domain(self, convex_domain):
         set_domain_priv(self.convex_domain, convex_domain)
-        """
-        msg = "we can only change the parameters of the convex domain, not its nature"
-
-        convex_domain_ = convex_domain
-        if convex_domain == {}:
-            convex_domain = {"name": Box.name}
-
-        if len(self.convex_domain) == 0 or self.convex_domain["name"] == Box.name:
-            # Box
-            if convex_domain["name"] != Box.name:
-                raise NotImplementedError(msg)
-
-        if self.convex_domain["name"] != convex_domain["name"]:
-            raise NotImplementedError(msg)
-
-        self.convex_domain = convex_domain_
-        """
 
 
 class DecomonSequential(tf.keras.Sequential):
-    def __init__(self, layers=None, convex_domain={}, optimize="False", name=None, **kwargs):
+    def __init__(
+        self,
+        layers=None,
+        convex_domain={},
+        dc_decomp=False,
+        grad_bounds=False,
+        mode=Forward.name,
+        optimize="False",
+        name=None,
+        **kwargs,
+    ):
         super(DecomonSequential, self).__init__(layers=layers, name=name, **kwargs)
         self.convex_domain = convex_domain
         self.optimize = optimize
+        self.nb_tensors = StaticVariables(dc_decomp, grad_bounds).nb_tensors
+        self.dc_decomp = dc_decomp
+        self.grad_bounds = grad_bounds
+        self.mode = mode
 
     def set_domain(self, convex_domain):
         set_domain_priv(self.convex_domain, convex_domain)
+
+
+# BACKWARD MODE
+def get_backward(model, back_bounds=None):
+    """
+
+    :param model:
+    :return:
+    """
+    assert isinstance(model, DecomonModel) or isinstance(model, DecomonSequential)
+
+    # create inputs for back_bounds
+    # the convert mode for an easy use has been activated
+    # it implies that the bounds are on the input of the network directly
+
+    input_backward = model.input
+    output_forward = model.output
+
+    if back_bounds is None:
+        y_pred = output_forward[0]
+
+        def get_init_backward(y_pred):
+            # create identity matrix to init the backward pass
+            w_out_ = K.expand_dims(tf.linalg.diag(K.ones_like(y_pred)), 1)
+            b_out_ = K.expand_dims(K.zeros_like(y_pred), 1)
+
+            return [w_out_, b_out_, w_out_, b_out_]
+
+        lambda_backward = Lambda(lambda x: get_init_backward(x))
+
+        back_bounds = lambda_backward(y_pred)
+
+    back_bounds = list(get_backward_model(model, back_bounds, input_backward))
+
+    # incorporate the linear relaxation
+    if len(input_backward) == 2:
+        return DecomonModel(
+            input_backward,
+            output_forward + list(back_bounds),
+            dc_decomp=model.dc_decomp,
+            grad_bounds=model.grad_bounds,
+            convex_domain=model.convex_domain,
+            mode=Backward.name,
+        )
+    if len(input_backward) < 8:
+        raise NotImplementedError()
+
+    lambda_process_input = Lambda(lambda x: backward_linear_prod(x[0], x[1:5], x[5:9], model.convex_domain))
+
+    output = lambda_process_input([input_backward[i] for i in [1, 3, 4, 6, 7]] + back_bounds)
+
+    return DecomonModel(
+        input_backward,
+        output_forward + output,
+        dc_decomp=model.dc_decomp,
+        grad_bounds=model.grad_bounds,
+        convex_domain=model.convex_domain,
+        mode=Backward.name,
+    )
+
+
+def get_backward_model(model, back_bounds, input_model):
+    """
+
+    :param model:
+    :param back_bounds:
+    :return:
+    """
+    # retrieve all layers inside
+    if model.dc_decomp:
+        raise NotImplementedError()
+    if model.grad_bounds:
+        raise NotImplementedError()
+
+    # store the input-output relationships between layers
+    input_neighbors = {}
+    names = [l.name for l in model.layers]
+    for layer in model.layers:
+        for n_ in layer._outbound_nodes:
+            if n_.layer.name not in names:
+                continue
+            if n_.layer.name in input_neighbors:
+                input_neighbors[n_.layer.name] += [layer]
+            else:
+                input_neighbors[n_.layer.name] = [layer]
+
+    # remove redundant layers
+    for layer in model.layers:
+        if layer.name not in input_neighbors.keys():
+            continue
+        if hasattr(layer, "nb_tensors"):
+            input_neighbors[layer.name] = input_neighbors[layer.name][:: layer.nb_tensors]
+
+    x = input_model
+    dict_layers = {}
+    layers = model.layers
+    for layer in layers:
+        if layer.name in input_neighbors:
+            dict_layers[layer.name] = x
+        x = layer(x)
+
+    # get output layers
+    layers_output = [n.layer for n in model._nodes_by_depth[0]]
+
+    # so far backward mode is only for Sequential-like models
+    if len(layers_output) != 1:
+        raise NotImplementedError()
+
+    output_bounds = get_backward_layer(
+        layer=layers_output[0], back_bounds=back_bounds, edges=input_neighbors, input_layers=dict_layers
+    )
+    return output_bounds
+
+
+def get_backward_layer(layer, back_bounds, edges={}, input_layers=None):
+    """
+
+    :param layer:
+    :param back_bounds:
+    :param edges:
+    :return:
+    """
+    # if we cannot find layer in edges, it means that we reach an input layer
+    # then we just return back bounds
+
+    if layer.name not in edges:
+        return back_bounds
+    if isinstance(layer, Model):
+        input_model = input_layers[layer.name]
+        back_bounds = get_backward_model(layer, back_bounds=back_bounds, input_model=input_model)
+    elif isinstance(layer, Layer):
+        inputs = input_layers[layer.name]
+
+        if layer.__class__.__name__[:7] == "Decomon":
+            backward_layer = get_backward_(layer)
+            if isinstance(back_bounds, tuple):
+                back_bounds = list(back_bounds)
+
+            back_bounds = list(backward_layer(inputs + back_bounds))
+        else:
+            if layer.name not in edges.keys():
+                return back_bounds
+            elif isinstance(layer, Lambda):
+                edges_layers = edges[layer.name]
+                check = np.min([layer_i.name not in edges.keys() for layer_i in edges_layers])
+                if check:
+                    return back_bounds
+                else:
+                    raise KeyError
+            else:
+                raise KeyError
+    else:
+        raise NotImplementedError()
+
+    if layer.name in edges.keys():
+        # retrieve input layers:
+        edges_layers = edges[layer.name]
+        if len(edges_layers) > 1:
+            raise NotImplementedError()
+
+        back_bounds = get_backward_layer(
+            edges_layers[0], back_bounds=back_bounds, edges=edges, input_layers=input_layers
+        )
+
+    return back_bounds
