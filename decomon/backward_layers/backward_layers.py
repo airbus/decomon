@@ -194,7 +194,7 @@ class BackwardReshape(Layer):
 # TO DO: decomonActivation and MaxPooling
 
 
-def get_backward(layer, **kwargs):
+def get_backward(layer, slope=V_slope.name, **kwargs):
 
     # do it better
     class_name = "".join(layer.__class__.__name__.split("Decomon")[1:])
@@ -202,4 +202,4 @@ def get_backward(layer, **kwargs):
     backward_class_name = "Backward{}".format(class_name)
     class_ = globals()[backward_class_name]
 
-    return class_(layer)
+    return class_(layer, slope=slope)
