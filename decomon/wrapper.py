@@ -10,15 +10,20 @@ import scipy.optimize as opt
 def convex_optimize(lc, w_1, b_1, w_2, b_2, z):
 
     # flatten u, w_1 and b_1
-    lc = l.reshape((lc.shape[0], -1))
+    lc = lc.reshape((lc.shape[0], -1))
     w_1 = w_1.reshape((w_1.shape[0], w_1.shape[1], -1))
     b_1 = b_1.reshape((b_1.shape[0], -1))
     w_2 = w_2[:, 0]
     b_2 = b_2[:, 0]
 
+    w_1_ = w_1.transpose((0, 2, 1)).reshape((-1, z.shape[-1]))
+    w_2_ = w_2.transpose((0, 2, 1)).reshape((-1, z.shape[-1]))
+
     batch = len(z)
     x_0_ = np.expand_dims(0.5 * np.sum(z, 1), -1) + np.zeros_like(w_1)
     x_0 = x_0_.flatten()
+    x_min = (np.expand_dims(z[:, 0], -1) + np.zeros_like(w_1)).flatten()
+    x_max = (np.expand_dims(z[:, 1], -1) + np.zeros_like(w_1)).flatten()
 
     def func_(x_0):
         x_0_ = x_0.reshape((batch, z.shape[-1], -1))
@@ -35,11 +40,12 @@ def convex_optimize(lc, w_1, b_1, w_2, b_2, z):
 
     def grad(x_0):
         x_0_ = x_0.reshape((batch, z.shape[-1], -1))
+        n_out = x_0_.shape[-1]
         f_0 = lc
         f_1 = np.sum(w_1 * x_0_, 1) + b_1
         f_2 = np.sum(w_2 * x_0_, 1) + b_2
 
-        f_0 = f_0.flatten()
+        f_0 = f_0.flatten()  # (batch*n_out)
         f_1 = f_1.flatten()
         f_2 = f_2.flatten()
 
@@ -47,19 +53,21 @@ def convex_optimize(lc, w_1, b_1, w_2, b_2, z):
         index_1 = np.where(f_1 >= np.maximum(f_0, f_2))[0]
         index_2 = np.where(f_2 >= np.maximum(f_0, f_1))[0]
 
-        grad_x_ = np.zeros_like(w_1).reshape((batch, z.shape[-1], -1))
-        grad_x_[index_2] = w_2[index_2]
-        grad_x_[index_1] = w_1[index_1]
-        grad_x_[index_0] *= 0
+        grad_x_ = np.zeros((batch * n_out, z.shape[-1]))
+        grad_x_[index_2] = w_2_[index_2]
+        grad_x_[index_1] = w_1_[index_1]
+        grad_x_[index_0] *= 0.0
 
-        return grad_x_.flatten().astype(np.float64)
+        grad_x_ = (grad_x_.reshape((batch, n_out, z.shape[-1]))).transpose((0, 2, 1)).flatten()
+
+        return grad_x_.astype(np.float64)
 
     result = opt.minimize(
         fun=func,
         jac=grad,
         x0=x_0,
         method="L-BFGS-B",
-        bounds=opt.Bounds(z[:, 0].flatten() + 0 * x_0, z[:, 1].flatten() + 0 * x_0),
+        bounds=opt.Bounds(x_min, x_max),
     )
 
     if result["success"]:

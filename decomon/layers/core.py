@@ -70,6 +70,8 @@ class DecomonLayer(ABC, Layer):
         self.convex_domain = convex_domain
         self.n_subgrad = n_subgrad
 
+        # the user can picke the type of linear relaxation  in used
+
     def build(self, input_shape):
         """
 

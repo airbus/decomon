@@ -2,7 +2,24 @@ from decomon.layers import get_lower, get_upper
 from tensorflow.python.keras import backend as K
 
 
-def backward_relu_(x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}):
+# create static variables for varying convex domain
+class V_slope:
+    name = "volume-slope"
+
+
+class S_slope:
+    name = "same-slope"
+
+
+class Z_slope:
+    name = "zero-lb"
+
+
+class O_slope:
+    name = "one-lb"
+
+
+def backward_relu_(x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=S_slope.name):
 
     # get input bounds
     _, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
@@ -34,8 +51,18 @@ def backward_relu_(x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}):
 
     # lower bound
     b_l_ = K.zeros_like(b_u_)
-    w_l_ = K.zeros_like(w_u_)
-    w_l_ += K.maximum(index_b, index_linear) * K.ones_like(w_l_)
+    if slope == V_slope.name:
+        w_l_ = K.zeros_like(w_u_)
+        w_l_ += K.maximum(index_b, index_linear) * K.ones_like(w_l_)
+
+    if slope == Z_slope.name:
+        w_l_ = K.zeros_like(w_u_)
+
+    if slope == O_slope.name:
+        w_l_ = K.ones_like(w_u_)
+
+    if slope == S_slope.name:
+        w_l_ = w_u_
 
     return w_u_, b_u_, w_l_, b_l_
 

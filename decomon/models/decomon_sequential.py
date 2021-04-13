@@ -19,6 +19,7 @@ import numpy as np
 from decomon.layers.utils import softmax_to_linear, get_upper, get_lower
 from ..backward_layers.backward_layers import get_backward as get_backward_
 from ..backward_layers.utils import backward_linear_prod
+from ..backward_layers.utils import V_slope, S_slope
 
 
 # create static variables for varying convex domain
@@ -115,6 +116,7 @@ def clone(
     convex_domain={},
     n_subgrad=0,
     mode="forward",
+    slope_backward=V_slope.name,
 ):
     """
     :param model: Keras model
@@ -159,7 +161,7 @@ def clone(
         )
 
     if mode.lower() == Backward.name:
-        decomon_model = get_backward(decomon_model)
+        decomon_model = get_backward(decomon_model, slope=slope_backward)
 
     return decomon_model
 
@@ -578,6 +580,7 @@ def convert(
     convex_domain={},
     n_subgrad=0,
     mode="forward",
+    slope_backward=V_slope.name,
 ):
     """
 
@@ -642,16 +645,6 @@ def convert(
             # create b_u, b_l, u_c, l_c from the previous tensors (with a lambda layer)
             b_tensor = K.zeros_like(y_tensor)
             # b_l_tensor = K.zeros_like(y_tensor)
-
-            """
-
-            toto = K.reshape(
-                K.cast(tf.linalg.diag([1.0] * input_dim_), y_tensor.dtype),
-                input_shape_w,
-            )[None]
-            w_u_tensor = K.expand_dims(K.zeros_like(y_tensor), 1) + toto
-            w_l_tensor = K.expand_dims(K.zeros_like(y_tensor), 1) + toto
-            """
             w_tensor = tf.linalg.diag(K.ones_like(Flatten()(y_tensor)))
             w_tensor = K.reshape(w_tensor, tuple([-1] + list(input_shape_w)))
 
@@ -696,7 +689,7 @@ def convert(
     decomon_model = DecomonModel(input_tensors, output, convex_domain=convex_domain)
 
     if mode.lower() == Backward.name:
-        decomon_model = get_backward(decomon_model)
+        decomon_model = get_backward(decomon_model, slope=slope_backward)
 
     return decomon_model
 
@@ -768,7 +761,7 @@ class DecomonSequential(tf.keras.Sequential):
 
 
 # BACKWARD MODE
-def get_backward(model, back_bounds=None):
+def get_backward(model, back_bounds=None, slope=V_slope.name):
     """
 
     :param model:
@@ -797,7 +790,7 @@ def get_backward(model, back_bounds=None):
 
         back_bounds = lambda_backward(y_pred)
 
-    back_bounds = list(get_backward_model(model, back_bounds, input_backward))
+    back_bounds = list(get_backward_model(model, back_bounds, input_backward, slope=slope))
 
     # incorporate the linear relaxation
     if len(input_backward) == 2:
@@ -826,7 +819,7 @@ def get_backward(model, back_bounds=None):
     )
 
 
-def get_backward_model(model, back_bounds, input_model):
+def get_backward_model(model, back_bounds, input_model, slope=S_slope.name):
     """
 
     :param model:
@@ -874,12 +867,12 @@ def get_backward_model(model, back_bounds, input_model):
         raise NotImplementedError()
 
     output_bounds = get_backward_layer(
-        layer=layers_output[0], back_bounds=back_bounds, edges=input_neighbors, input_layers=dict_layers
+        layer=layers_output[0], back_bounds=back_bounds, edges=input_neighbors, input_layers=dict_layers, slope=slope
     )
     return output_bounds
 
 
-def get_backward_layer(layer, back_bounds, edges={}, input_layers=None):
+def get_backward_layer(layer, back_bounds, edges={}, input_layers=None, slope=V_slope.name):
     """
 
     :param layer:
@@ -894,12 +887,12 @@ def get_backward_layer(layer, back_bounds, edges={}, input_layers=None):
         return back_bounds
     if isinstance(layer, Model):
         input_model = input_layers[layer.name]
-        back_bounds = get_backward_model(layer, back_bounds=back_bounds, input_model=input_model)
+        back_bounds = get_backward_model(layer, back_bounds=back_bounds, input_model=input_model, slope=slope)
     elif isinstance(layer, Layer):
         inputs = input_layers[layer.name]
 
         if layer.__class__.__name__[:7] == "Decomon":
-            backward_layer = get_backward_(layer)
+            backward_layer = get_backward_(layer, slope=slope)
             if isinstance(back_bounds, tuple):
                 back_bounds = list(back_bounds)
 
@@ -926,7 +919,7 @@ def get_backward_layer(layer, back_bounds, edges={}, input_layers=None):
             raise NotImplementedError()
 
         back_bounds = get_backward_layer(
-            edges_layers[0], back_bounds=back_bounds, edges=edges, input_layers=input_layers
+            edges_layers[0], back_bounds=back_bounds, edges=edges, input_layers=input_layers, slope=slope
         )
 
     return back_bounds

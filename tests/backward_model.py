@@ -17,29 +17,47 @@ import tensorflow.python.keras.backend as K
 
 
 @pytest.mark.parametrize(
-    "n, n_subgrad",
+    "n, n_subgrad, slope",
     [
-        (0, 0),
-        (1, 0),
-        (2, 0),
-        (3, 0),
-        (4, 0),
-        (5, 0),
-        (0, 1),
-        (1, 1),
-        (2, 1),
-        (3, 1),
-        (4, 1),
-        (5, 1),
-        (0, 5),
-        (1, 5),
-        (2, 5),
-        (3, 5),
-        (4, 5),
-        (5, 5),
+        (0, 0, "volume-slope"),
+        (1, 0, "volume-slope"),
+        (2, 0, "volume-slope"),
+        (3, 0, "volume-slope"),
+        (4, 0, "volume-slope"),
+        (5, 0, "volume-slope"),
+        (0, 1, "volume-slope"),
+        (1, 1, "volume-slope"),
+        (2, 1, "volume-slope"),
+        (3, 1, "volume-slope"),
+        (4, 1, "volume-slope"),
+        (5, 1, "volume-slope"),
+        (0, 5, "volume-slope"),
+        (1, 5, "volume-slope"),
+        (2, 5, "volume-slope"),
+        (3, 5, "volume-slope"),
+        (4, 5, "volume-slope"),
+        (5, 5, "volume-slope"),
+        (0, 0, "same-slope"),
+        (1, 0, "same-slope"),
+        (2, 0, "same-slope"),
+        (3, 0, "same-slope"),
+        (4, 0, "same-slope"),
+        (5, 0, "same-slope"),
+        (0, 1, "same-slope"),
+        (1, 1, "same-slope"),
+        (2, 1, "same-slope"),
+        (3, 1, "same-slope"),
+        (4, 1, "same-slope"),
+        (5, 1, "same-slope"),
+        (0, 5, "same-slope"),
+        (1, 5, "same-slope"),
+        (2, 5, "same-slope"),
+        (3, 5, "same-slope"),
+        (4, 5, "same-slope"),
+        (5, 5, "same-slope"),
     ],
 )
-def test_convert_backward_model_1d_box_nodc(n, n_subgrad):
+def test_convert_backward_model_1d_box_nodc(n, n_subgrad, slope):
 
     # build a simple sequential model from keras
     # start with 1D
@@ -55,7 +73,7 @@ def test_convert_backward_model_1d_box_nodc(n, n_subgrad):
 
     output_ref = sequential(inputs[1])
     f_ref = K.function(inputs, output_ref)
-    backward_model = get_backward(monotonic_model)
+    backward_model = get_backward(monotonic_model, slope=slope)
 
     output = backward_model(inputs[1:])
 

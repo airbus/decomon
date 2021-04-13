@@ -2,6 +2,7 @@ from __future__ import absolute_import
 import warnings
 import six
 from ..backward_layers.utils import backward_relu_
+from .utils import V_slope
 from tensorflow.keras.layers import Layer
 
 
@@ -26,6 +27,7 @@ def backward_relu(
     alpha=0.0,
     max_value=None,
     threshold=0.0,
+    slope=V_slope.name,
 ):
     """Rectified Linear Unit.
     With default values, it returns element-wise `max(x, 0)`.
@@ -61,7 +63,7 @@ def backward_relu(
     raise NotImplementedError()
 
 
-def backward_sigmoid(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
+def backward_sigmoid(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
     """Sigmoid activation function .
 
     `1 / (1 + exp(-x))`.
@@ -81,7 +83,7 @@ def backward_sigmoid(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
     raise NotImplementedError()
 
 
-def backward_tanh(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
+def backward_tanh(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
     """Hyperbolic activation function.
 
     `tanh(x)=2*sigmoid(2*x)+1`
@@ -102,7 +104,7 @@ def backward_tanh(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
     raise NotImplementedError()
 
 
-def bacward_hard_sigmoid(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
+def bacward_hard_sigmoid(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
     """Hard sigmoid activation function.
        Faster to compute than sigmoid activation.
 
@@ -122,7 +124,7 @@ def bacward_hard_sigmoid(x, dc_decomp=False, grad_bounds=False, convex_domain={}
     raise NotImplementedError()
 
 
-def backward_elu(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
+def backward_elu(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
     """Exponential linear unit.
 
     Fast and Accurate Deep Network Learning
@@ -145,7 +147,7 @@ def backward_elu(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
     raise NotImplementedError()
 
 
-def backward_selu(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
+def backward_selu(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
     """Scaled Exponential Linear Unit (SELU).
 
     SELU is equal to: `scale * elu(x, alpha)`, where alpha and scale
@@ -171,7 +173,7 @@ def backward_selu(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
     raise NotImplementedError()
 
 
-def backward_linear(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
+def backward_linear(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
     """Linear (i.e. identity) activation function.
 
     :param x: list of input tensors
@@ -186,7 +188,7 @@ def backward_linear(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
     return x
 
 
-def backward_exponential(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
+def backward_exponential(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
     """Exponential activation function.
 
     :param x: list of input tensors
@@ -205,7 +207,7 @@ def backward_exponential(x, dc_decomp=False, grad_bounds=False, convex_domain={}
     raise NotImplementedError()
 
 
-def backward_softplus(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
+def backward_softplus(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
     """Softplus activation function `log(exp(x) + 1)`.
 
     :param x: list of input tensors
@@ -224,7 +226,7 @@ def backward_softplus(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
     raise NotImplementedError()
 
 
-def backward_softsign(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
+def backward_softsign(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
     """Softsign activation function `x / (abs(x) + 1)`.
 
     :param x: list of input tensors
@@ -243,7 +245,7 @@ def backward_softsign(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
     raise NotImplementedError()
 
 
-def backward_softmax(x, dc_decomp=False, grad_bounds=False, convex_domain={}, axis=-1):
+def backward_softmax(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name, axis=-1):
     """Softmax activation function.
 
     :param x: list of input tensors

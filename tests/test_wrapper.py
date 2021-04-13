@@ -54,7 +54,12 @@ def test_get_upper_multid_box(odd, n_subgrad, mode, fast):
     upper = get_upper_box(backward_model, z[:, 0], z[:, 1], fast=fast)
     y_ref = sequential.predict(y)
 
-    assert (upper - y_ref).min() + 1e-6 >= 0.0
+    try:
+        assert (upper - y_ref).min() + 1e-6 >= 0.0
+    except AssertionError:
+        import pdb
+
+        pdb.set_trace()
 
 
 @pytest.mark.parametrize(

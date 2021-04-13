@@ -8,6 +8,23 @@ import numpy as np
 from .core import Ball, Box, Vertex
 
 
+# create static variables for varying convex domain
+class V_slope:
+    name = "volume-slope"
+
+
+class S_slope:
+    name = "same-slope"
+
+
+class Z_slope:
+    name = "zero-lb"
+
+
+class O_slope:
+    name = "one-lb"
+
+
 def _get_shape_tuple(init_tuple, tensor, start_idx, int_shape=None):
     """Finds non-specific dimensions in the static shapes.
     The static shapes are replaced with the corresponding dynamic shapes of the
@@ -464,7 +481,7 @@ class Project_initializer_neg(Initializer):
         return K.minimum(0.0, w_)
 
 
-def relu_(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
+def relu_(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
     """
     :param x: list of input tensors
     :param dc_decomp: boolean that indicates
@@ -518,14 +535,29 @@ def relu_(x, dc_decomp=False, grad_bounds=False, convex_domain={}):
     w_u_ = K.expand_dims(alpha, 1) * w_u
     b_u_ = alpha * (b_u - lower)
 
-    w_l_b = w_l
-    b_l_b = b_l
+    if slope == V_slope.name:
 
-    w_l_a = 0 * w_l
-    b_l_a = 0 * b_l
+        w_l_b = w_l
+        b_l_b = b_l
 
-    w_l_ = K.expand_dims(index_a, 1) * w_l_a + K.expand_dims(index_b, 1) * w_l_b
-    b_l_ = index_a * b_l_a + index_b * b_l_b
+        w_l_a = 0 * w_l
+        b_l_a = 0 * b_l
+
+        w_l_ = K.expand_dims(index_a, 1) * w_l_a + K.expand_dims(index_b, 1) * w_l_b
+        b_l_ = index_a * b_l_a + index_b * b_l_b
+
+    if slope == Z_slope.name:
+        w_l_ = 0 * w_l
+        b_l_ = 0 * b_l
+
+    if slope == O_slope.name:
+
+        w_l_ = w_l
+        b_l_ = b_l
+
+    if slope == S_slope.name:
+        w_l_ = K.expand_dims(alpha, 1) * w_l
+        b_l_ = alpha * b_l
 
     # set everything to zero if the relu is inactive
     w_u_ = K.expand_dims(1 - index_dead, 1) * w_u_

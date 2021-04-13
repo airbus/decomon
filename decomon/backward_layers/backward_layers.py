@@ -6,10 +6,11 @@ from tensorflow.keras.layers import Layer, Flatten, Dot, Permute
 from decomon.layers.decomon_layers import DecomonDense, DecomonConv2D
 from ..backward_layers.activations import get
 from tensorflow.keras.backend import conv2d
+from .utils import V_slope
 
 
 class BackwardDense(Layer):
-    def __init__(self, layer, **kwargs):
+    def __init__(self, layer, slope=V_slope.name, **kwargs):
         super(BackwardDense, self).__init__(**kwargs)
         if not isinstance(layer, DecomonDense):
             raise NotImplementedError()
@@ -17,6 +18,7 @@ class BackwardDense(Layer):
         self.layer = layer
         self.activation = get(layer.get_config()["activation"])  # ??? not sur
         self.activation_name = layer.get_config()["activation"]
+        self.slope = slope
 
     def call(self, inputs):
 
@@ -32,7 +34,7 @@ class BackwardDense(Layer):
 
         if self.activation_name != "linear":
             w_act_u, b_act_u, w_act_l, b_act_l = self.activation(
-                x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=self.layer.convex_domain
+                x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=self.layer.convex_domain, slope=self.slope
             )
 
             weights_u = w_act_u[:, None, :] * weights
@@ -78,7 +80,7 @@ class BackwardDense(Layer):
 
 
 class BackwardConv2D(Layer):
-    def __init__(self, layer, **kwargs):
+    def __init__(self, layer, slope=V_slope.name, **kwargs):
         super(BackwardConv2D, self).__init__(**kwargs)
         if not isinstance(layer, DecomonConv2D):
             raise NotImplementedError()
@@ -86,6 +88,7 @@ class BackwardConv2D(Layer):
         self.layer = layer
         self.activation = get(layer.get_config()["activation"])  # ??? not sur
         self.activation_name = layer.get_config()["activation"]
+        self.slope = slope
 
     def call(self, inputs):
 
@@ -129,7 +132,7 @@ class BackwardConv2D(Layer):
         if self.activation_name != "linear":
 
             w_act_u, b_act_u, w_act_l, b_act_l = self.activation(
-                x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=self.layer.convex_domain
+                x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=self.layer.convex_domain, slope=self.slope
             )
             w_act_u = op_flat(w_act_u)
             b_act_u = op_flat(b_act_u)
@@ -178,13 +181,13 @@ class BackwardConv2D(Layer):
 
 
 class BackwardFlatten(Layer):
-    def call(self, inputs):
+    def call(self, inputs, slope=V_slope.name):
 
         return inputs[-4:]
 
 
 class BackwardReshape(Layer):
-    def call(self, inputs):
+    def call(self, inputs, slope=V_slope.name):
         return inputs[-4:]
 
 
