@@ -4,7 +4,7 @@
 
 **What is Decomon?** `Decomon` is a library for automatically deriving upper and lower bounds 
 for a Tensorflow/Keras neural network
-with perturbed inputs. These bounds are represented as piecewise linear convex and concave functions
+with perturbed inputs. These bounds are represented as affine functions
 with respect to some variable under perturbation.
 Since previous works that tackled certified robustness with backward propagation still relied on forward
 upper and lower bounds, in `Decomon`we studied various ways to tighten forward upper and
@@ -13,8 +13,8 @@ lower bounds, while remaining backpropagation compatible
 
 Our algorithm improves existing forward linear relaxation algorithms for general
 Keras based Neural Networks without manual derivation. Our implementation is also automatically
-**differentiable**. So far we support only forward mode perturbation but the next release will incorporate both
-backward mode perturbation and hybrid approaches as well. `Decomon is compatible with a wider range of perturbation:
+**differentiable**. So far we support interval bound propagation, forward mode perturbation, backward mode perturbation and their hybrid approaches as well. 
+`Decomon is compatible with a wider range of perturbation:
 boxes, $L_{\inf, 1, 2}$ norms or general convex sets described by their vertices.
 
 Decomon appeared to us as a complementary tool to existing libraries for the certification of neural networks. 
