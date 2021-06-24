@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import pytest
 from decomon.models.decomon_sequential import clone, clone_sequential_model, convert, get_backward
-
+import numpy as np
 from numpy.testing import assert_almost_equal
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.models import Sequential
@@ -123,7 +123,7 @@ def test_convert_backward_model_1d_box(n, n_subgrad):
     sequential.add(Dense(10, activation="relu", input_dim=1))
     sequential.add(Dense(1, activation="linear"))
 
-    monotonic_model = convert(sequential, dc_decomp=False, n_subgrad=n_subgrad)
+    monotonic_model = convert(sequential, dc_decomp=False, n_subgrad=n_subgrad, mode="forward", forward=True)
     backward_model = get_backward(monotonic_model)
 
     inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
@@ -213,17 +213,35 @@ def test_clone_backward_sequential_model_multid_box(odd, n_subgrad):
         decimal=5,
     )
 
+    w_u_ = np.sum(np.maximum(w_u_b, 0) * np.expand_dims(W_u, -1), 2) + np.sum(
+        np.minimum(w_u_b, 0) * np.expand_dims(W_l, -1), 2
+    )
+    b_u_ = (
+        np.sum(np.maximum(w_u_b, 0) * np.expand_dims(np.expand_dims(b_u, -1), -1), (1, 2))
+        + np.sum(np.minimum(w_u_b, 0) * np.expand_dims(np.expand_dims(b_l, -1), -1), (1, 2))
+        + b_u_b[:, 0]
+    )
+
+    w_l_ = np.sum(np.maximum(w_l_b, 0) * np.expand_dims(W_l, -1), 2) + np.sum(
+        np.minimum(w_l_b, 0) * np.expand_dims(W_u, -1), 2
+    )
+    b_l_ = (
+        np.sum(np.maximum(w_l_b, 0) * np.expand_dims(np.expand_dims(b_l, -1), -1), (1, 2))
+        + np.sum(np.minimum(w_l_b, 0) * np.expand_dims(np.expand_dims(b_u, -1), -1), (1, 2))
+        + b_l_b[:, 0]
+    )
+
     assert_output_properties_box_linear(
         x,
         y_,
         z_[:, 0],
         z_[:, 1],
         u_c_,
-        w_u_b[:, 0],
-        b_u_b[:, 0],
+        w_u_,
+        b_u_,
         l_c_,
-        w_l_b[:, 0],
-        b_l_b[:, 0],
+        w_l_,
+        b_l_,
         "clone_sequential_{}".format(odd),
         decimal=5,
     )
@@ -320,7 +338,7 @@ def test_convert_backward_model_1d_box_mode(n, n_subgrad):
     sequential.add(Dense(10, activation="relu", input_dim=1))
     sequential.add(Dense(1, activation="linear"))
 
-    backward_model = convert(sequential, dc_decomp=False, n_subgrad=n_subgrad, mode="backward")
+    backward_model = convert(sequential, dc_decomp=False, n_subgrad=n_subgrad, mode="backward", forward=True)
 
     inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
@@ -408,75 +426,35 @@ def test_clone_backward_sequential_model_multid_box_mode(odd, n_subgrad):
         decimal=5,
     )
 
+    w_u_ = np.sum(np.maximum(w_u_b, 0) * np.expand_dims(W_u, -1), 2) + np.sum(
+        np.minimum(w_u_b, 0) * np.expand_dims(W_l, -1), 2
+    )
+    b_u_ = (
+        np.sum(np.maximum(w_u_b, 0) * np.expand_dims(np.expand_dims(b_u, -1), -1), (1, 2))
+        + np.sum(np.minimum(w_u_b, 0) * np.expand_dims(np.expand_dims(b_l, -1), -1), (1, 2))
+        + b_u_b[:, 0]
+    )
+
+    w_l_ = np.sum(np.maximum(w_l_b, 0) * np.expand_dims(W_l, -1), 2) + np.sum(
+        np.minimum(w_l_b, 0) * np.expand_dims(W_u, -1), 2
+    )
+    b_l_ = (
+        np.sum(np.maximum(w_l_b, 0) * np.expand_dims(np.expand_dims(b_l, -1), -1), (1, 2))
+        + np.sum(np.minimum(w_l_b, 0) * np.expand_dims(np.expand_dims(b_u, -1), -1), (1, 2))
+        + b_l_b[:, 0]
+    )
+
     assert_output_properties_box_linear(
         x,
         y_,
         z_[:, 0],
         z_[:, 1],
         u_c_,
-        w_u_b[:, 0],
-        b_u_b[:, 0],
+        w_u_,
+        b_u_,
         l_c_,
-        w_l_b[:, 0],
-        b_l_b[:, 0],
-        "clone_sequential_{}".format(odd),
-        decimal=5,
-    )
-
-
-# @pytest.mark.parametrize("odd, n_subgrad", [(0, 0), (1, 0), (0, 1), (1, 1), (0, 5), (1, 5)])
-@pytest.mark.parametrize("odd, n_subgrad", [(0, 0)])
-def test_convert_backward_sequential_model_multid_box_mode(odd, n_subgrad):
-
-    inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = get_standard_values_multid_box_convert(odd, dc_decomp=False)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
-
-    # build a simple sequential model from keras
-    # start with 1D
-    sequential = Sequential()
-    sequential.add(Dense(1, activation="relu", input_dim=y.shape[-1]))
-    sequential.add(Dense(1, activation="linear"))
-    backward_model = convert(sequential, dc_decomp=False, n_subgrad=n_subgrad, mode="backward")
-
-    output_ref = sequential(inputs[1])
-    f_ref = K.function(inputs, output_ref)
-
-    output = backward_model([y, z])
-
-    f_clone = K.function([y, z], output)
-
-    y_, z_, u_c_, w_u_f, b_u_f, l_c_, w_l_f, b_l_f, w_u_b, b_u_b, w_l_b, b_l_b = f_clone(inputs_[1:3])
-    # y_, z_, u_c_, w_u_f, b_u_f, l_c_, w_l_f, b_l_f = f_clone(inputs_[1:3])
-    y_ref = f_ref(inputs_)
-
-    assert_almost_equal(y_, y_ref, decimal=6, err_msg="reconstruction error")
-    assert_output_properties_box_linear(
-        inputs_[0],
-        y_,
-        z_[:, 0],
-        z_[:, 1],
-        u_c_,
-        w_u_f,
-        b_u_f,
-        l_c_,
-        w_l_f,
-        b_l_f,
-        "clone_sequential_{}".format(odd),
-        decimal=5,
-    )
-
-    assert_output_properties_box_linear(
-        inputs_[0],
-        y_,
-        z_[:, 0],
-        z_[:, 1],
-        u_c_,
-        w_u_b[:, 0],
-        b_u_b[:, 0],
-        l_c_,
-        w_l_b[:, 0],
-        b_l_b[:, 0],
+        w_l_,
+        b_l_,
         "clone_sequential_{}".format(odd),
         decimal=5,
     )

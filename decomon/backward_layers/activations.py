@@ -4,6 +4,9 @@ import six
 from ..backward_layers.utils import backward_relu_
 from .utils import V_slope
 from tensorflow.keras.layers import Layer
+from ..layers import F_FORWARD, F_IBP, F_HYBRID
+from ..layers.utils import sigmoid_prime, get_linear_hull_s_shape, softsign_prime, tanh_prime
+import tensorflow.keras.backend as K
 
 
 ELU = "elu"
@@ -28,6 +31,7 @@ def backward_relu(
     max_value=None,
     threshold=0.0,
     slope=V_slope.name,
+    mode=F_HYBRID.name,
 ):
     """Rectified Linear Unit.
     With default values, it returns element-wise `max(x, 0)`.
@@ -56,14 +60,14 @@ def backward_relu(
 
     if not (alpha) and max_value is None:
         # default values: return relu_(x) = max(x, 0)
-        y = x[:-2]
+        y = x[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = x[-4:]
 
-        return backward_relu_(y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain)
+        return backward_relu_(y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, mode=mode)
     raise NotImplementedError()
 
 
-def backward_sigmoid(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
+def backward_sigmoid(x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name):
     """Sigmoid activation function .
 
     `1 / (1 + exp(-x))`.
@@ -76,18 +80,24 @@ def backward_sigmoid(x, dc_decomp=False, grad_bounds=False, convex_domain={}, sl
     :return: the updated list of tensors
 
     """
-    if dc_decomp or grad_bounds:
-        raise NotImplementedError()
+    w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
+        x, func=K.sigmoid, f_prime=sigmoid_prime, convex_domain=convex_domain, mode=mode
+    )
 
-    # TO DO linear relaxation
-    raise NotImplementedError()
+    w_u_0 = K.expand_dims(K.expand_dims(w_u_0, 1), -1)
+    w_l_0 = K.expand_dims(K.expand_dims(w_l_0, 1), -1)
+    w_out_u_ = K.maximum(0.0, w_out_u) * w_u_0 + K.minimum(0.0, w_out_u) * w_l_0
+    w_out_l_ = K.maximum(0.0, w_out_l) * w_l_0 + K.minimum(0.0, w_out_l) * w_u_0
+    b_out_u_ = K.sum(K.maximum(0.0, w_out_u) * b_u_0 + K.minimum(0.0, w_out_u) * b_l_0, 2) + b_out_u
+    b_out_l_ = K.sum(K.maximum(0.0, w_out_l) * b_l_0 + K.minimum(0.0, w_out_l) * b_u_0, 2) + b_out_l
+
+    return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
 
 
-def backward_tanh(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
-    """Hyperbolic activation function.
+def backward_tanh(x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name):
+    """Sigmoid activation function .
 
-    `tanh(x)=2*sigmoid(2*x)+1`
-
+    `1 / (1 + exp(-x))`.
     :param x: list of input tensors
     :param dc_decomp: boolean that indicates
     whether we return a difference of convex decomposition of our layer
@@ -97,14 +107,23 @@ def backward_tanh(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope
     :return: the updated list of tensors
 
     """
-    if dc_decomp or grad_bounds:
-        raise NotImplementedError()
+    w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
+        x, func=K.tanh, f_prime=tanh_prime, convex_domain=convex_domain, mode=mode
+    )
 
-    # TO DO linear relaxation
-    raise NotImplementedError()
+    w_u_0 = K.expand_dims(K.expand_dims(w_u_0, 1), -1)
+    w_l_0 = K.expand_dims(K.expand_dims(w_l_0, 1), -1)
+    w_out_u_ = K.maximum(0.0, w_out_u) * w_u_0 + K.minimum(0.0, w_out_u) * w_l_0
+    w_out_l_ = K.maximum(0.0, w_out_l) * w_l_0 + K.minimum(0.0, w_out_l) * w_u_0
+    b_out_u_ = K.sum(K.maximum(0.0, w_out_u) * b_u_0 + K.minimum(0.0, w_out_u) * b_l_0, 2) + b_out_u
+    b_out_l_ = K.sum(K.maximum(0.0, w_out_l) * b_l_0 + K.minimum(0.0, w_out_l) * b_u_0, 2) + b_out_l
+
+    return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
 
 
-def bacward_hard_sigmoid(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
+def bacward_hard_sigmoid(
+    x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name
+):
     """Hard sigmoid activation function.
        Faster to compute than sigmoid activation.
 
@@ -124,7 +143,7 @@ def bacward_hard_sigmoid(x, dc_decomp=False, grad_bounds=False, convex_domain={}
     raise NotImplementedError()
 
 
-def backward_elu(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
+def backward_elu(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name):
     """Exponential linear unit.
 
     Fast and Accurate Deep Network Learning
@@ -147,7 +166,7 @@ def backward_elu(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=
     raise NotImplementedError()
 
 
-def backward_selu(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
+def backward_selu(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name):
     """Scaled Exponential Linear Unit (SELU).
 
     SELU is equal to: `scale * elu(x, alpha)`, where alpha and scale
@@ -173,7 +192,7 @@ def backward_selu(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope
     raise NotImplementedError()
 
 
-def backward_linear(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
+def backward_linear(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name):
     """Linear (i.e. identity) activation function.
 
     :param x: list of input tensors
@@ -188,7 +207,9 @@ def backward_linear(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slo
     return x
 
 
-def backward_exponential(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
+def backward_exponential(
+    x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name
+):
     """Exponential activation function.
 
     :param x: list of input tensors
@@ -207,7 +228,7 @@ def backward_exponential(x, dc_decomp=False, grad_bounds=False, convex_domain={}
     raise NotImplementedError()
 
 
-def backward_softplus(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
+def backward_softplus(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name):
     """Softplus activation function `log(exp(x) + 1)`.
 
     :param x: list of input tensors
@@ -226,9 +247,10 @@ def backward_softplus(x, dc_decomp=False, grad_bounds=False, convex_domain={}, s
     raise NotImplementedError()
 
 
-def backward_softsign(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name):
-    """Softsign activation function `x / (abs(x) + 1)`.
+def backward_softsign(x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name):
+    """Sigmoid activation function .
 
+    `1 / (1 + exp(-x))`.
     :param x: list of input tensors
     :param dc_decomp: boolean that indicates
     whether we return a difference of convex decomposition of our layer
@@ -238,14 +260,25 @@ def backward_softsign(x, dc_decomp=False, grad_bounds=False, convex_domain={}, s
     :return: the updated list of tensors
 
     """
-    if dc_decomp or grad_bounds:
-        raise NotImplementedError()
+    w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
+        x, func=K.softsign, f_prime=softsign_prime, convex_domain=convex_domain, mode=mode
+    )
 
-    # TO DO linear relaxation
-    raise NotImplementedError()
+    w_u_0 = K.expand_dims(K.expand_dims(w_u_0, 1), -1)
+    w_l_0 = K.expand_dims(K.expand_dims(w_l_0, 1), -1)
+    b_u_0 = K.expand_dims(K.expand_dims(b_u_0, 1), -1)
+    b_l_0 = K.expand_dims(K.expand_dims(b_l_0, 1), -1)
+    w_out_u_ = K.maximum(0.0, w_out_u) * w_u_0 + K.minimum(0.0, w_out_u) * w_l_0
+    w_out_l_ = K.maximum(0.0, w_out_l) * w_l_0 + K.minimum(0.0, w_out_l) * w_u_0
+    b_out_u_ = K.sum(K.maximum(0.0, w_out_u) * b_u_0 + K.minimum(0.0, w_out_u) * b_l_0, 2) + b_out_u
+    b_out_l_ = K.sum(K.maximum(0.0, w_out_l) * b_l_0 + K.minimum(0.0, w_out_l) * b_u_0, 2) + b_out_l
+
+    return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
 
 
-def backward_softmax(x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name, axis=-1):
+def backward_softmax(
+    x, dc_decomp=False, grad_bounds=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, axis=-1
+):
     """Softmax activation function.
 
     :param x: list of input tensors

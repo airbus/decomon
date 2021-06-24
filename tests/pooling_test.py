@@ -15,8 +15,8 @@ from decomon.layers.decomon_layers import to_monotonic
 from decomon.layers.maxpooling import DecomonMaxPooling2D
 
 
-@pytest.mark.parametrize("data_format, odd, m_0, m_1", [("channels_last", 0, 0, 1)])
-def test_MaxPooling2D_box(data_format, odd, m_0, m_1):
+@pytest.mark.parametrize("data_format, odd, m_0, m_1, fast", [("channels_last", 0, 0, 1, False)])
+def test_MaxPooling2D_box(data_format, odd, m_0, m_1, fast):
 
     inputs = get_tensor_decomposition_images_box(data_format, odd)
     inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1)
@@ -25,7 +25,7 @@ def test_MaxPooling2D_box(data_format, odd, m_0, m_1):
     output_ref = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid")(inputs[1])
     f_ref = K.function(inputs, output_ref)
 
-    layer = DecomonMaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid", dc_decomp=True)
+    layer = DecomonMaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid", dc_decomp=True, fast=fast)
 
     output = layer(inputs[1:])
 
@@ -54,8 +54,10 @@ def test_MaxPooling2D_box(data_format, odd, m_0, m_1):
     )
 
 
-@pytest.mark.parametrize("data_format, odd, m_0, m_1", [("channels_last", 0, 0, 1)])
-def test_MaxPooling2D_box_nodc(data_format, odd, m_0, m_1):
+@pytest.mark.parametrize(
+    "data_format, odd, m_0, m_1, fast", [("channels_last", 0, 0, 1, True), ("channels_last", 0, 0, 1, False)]
+)
+def test_MaxPooling2D_box_nodc(data_format, odd, m_0, m_1, fast):
 
     inputs = get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)
     inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
@@ -64,7 +66,7 @@ def test_MaxPooling2D_box_nodc(data_format, odd, m_0, m_1):
     output_ref = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid")(inputs[1])
     f_ref = K.function(inputs, output_ref)
 
-    layer = DecomonMaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid", dc_decomp=False)
+    layer = DecomonMaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid", dc_decomp=False, fast=fast)
 
     output = layer(inputs[1:])
 
@@ -91,7 +93,7 @@ def test_MaxPooling2D_to_monotonic(data_format, odd, m_0, m_1):
     f_ref = K.function(inputs, output_ref)
 
     input_dim = x.shape[-1]
-    layer = to_monotonic(layer_ref, input_dim=(2, input_dim), dc_decomp=True)
+    layer = to_monotonic(layer_ref, input_dim=(2, input_dim), dc_decomp=True, fast=False)
     output = layer(inputs[1:])
 
     f_pooling = K.function(inputs, output)
@@ -120,8 +122,8 @@ def test_MaxPooling2D_to_monotonic(data_format, odd, m_0, m_1):
     )
 
 
-@pytest.mark.parametrize("data_format, odd, m_0, m_1", [("channels_last", 0, 0, 1)])
-def test_MaxPooling2D_to_monotonic_nodc(data_format, odd, m_0, m_1):
+@pytest.mark.parametrize("data_format, odd, m_0, m_1, fast", [("channels_last", 0, 0, 1, True)])
+def test_MaxPooling2D_to_monotonic_nodc(data_format, odd, m_0, m_1, fast):
 
     inputs = get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)
     inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
@@ -132,7 +134,7 @@ def test_MaxPooling2D_to_monotonic_nodc(data_format, odd, m_0, m_1):
     f_ref = K.function(inputs, output_ref)
 
     input_dim = x.shape[-1]
-    layer = to_monotonic(layer_ref, input_dim=(2, input_dim), dc_decomp=False)
+    layer = to_monotonic(layer_ref, input_dim=(2, input_dim), dc_decomp=False, fast=fast)
     output = layer(inputs[1:])
 
     f_pooling = K.function(inputs, output)

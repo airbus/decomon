@@ -162,7 +162,7 @@ def test_Backward_DecomonDense_1D_box(n, activation, n_subgrad, slope):
     output_ = f_dense(inputs_ + [np.ones((len(x), 1, 1, 1)), np.zeros((len(x), 1, 1))])
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = output_
 
-    W_pos, W_neg, bias = layer.get_weights()
+    W_, bias = layer.get_weights()
 
     assert_output_properties_box_linear(
         x,
@@ -182,7 +182,7 @@ def test_Backward_DecomonDense_1D_box(n, activation, n_subgrad, slope):
         "dense_{}".format(n),
     )
 
-    layer.set_weights([2 * np.ones_like(W_pos), np.zeros_like(W_neg), np.ones_like(bias)])
+    layer.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
 
     assert_output_properties_box_linear(
         x,
@@ -202,7 +202,7 @@ def test_Backward_DecomonDense_1D_box(n, activation, n_subgrad, slope):
         "dense_{}".format(n),
     )
 
-    layer.set_weights([np.zeros_like(W_neg), -2 * np.ones_like(W_pos), np.ones_like(bias)])
+    layer.set_weights([-2 * np.ones_like(W_), np.ones_like(bias)])
 
     assert_output_properties_box_linear(
         x,
@@ -266,7 +266,7 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, n_subgrad):
     output_ = f_dense(inputs_ + [np.ones((len(x), 1, 1, 1)), np.zeros((len(x), 1, 1))])
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = output_
 
-    W_pos, W_neg, bias = layer.get_weights()
+    W_, bias = layer.get_weights()
 
     assert_output_properties_box_linear(
         x,

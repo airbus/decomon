@@ -53,7 +53,7 @@ def test_convert_model_1d_box(n, n_subgrad):
     sequential.add(Dense(10, activation="relu", input_dim=1))
     sequential.add(Dense(1, activation="linear"))
 
-    monotonic_model = convert(sequential, dc_decomp=True, n_subgrad=n_subgrad)
+    monotonic_model = convert(sequential, dc_decomp=True, n_subgrad=n_subgrad, IBP=True, forward=True)
 
     for layer in monotonic_model.layers:
         if hasattr(layer, "n_subgrad"):
@@ -66,7 +66,6 @@ def test_convert_model_1d_box(n, n_subgrad):
 
     output_ref = sequential(inputs[0])
     f_ref = K.function(inputs, output_ref)
-
     output = monotonic_model([x, z, h, g])
 
     f_clone = K.function([x, z, h, g], output)
@@ -123,7 +122,7 @@ def test_convert_model_1d_nodc(n, n_subgrad):
     sequential.add(Dense(10, activation="relu", input_dim=1))
     sequential.add(Dense(1, activation="linear"))
 
-    monotonic_model = convert(sequential, n_subgrad=n_subgrad)
+    monotonic_model = convert(sequential, n_subgrad=n_subgrad, IBP=True, forward=True)
 
     for layer in monotonic_model.layers:
         if hasattr(layer, "n_subgrad"):
@@ -190,7 +189,9 @@ def test_clone_sequential_model_1d_box(n, n_subgrad):
     sequential = Sequential()
     sequential.add(Dense(10, activation="relu", input_dim=1))
     sequential.add(Dense(1, activation="linear"))
-    monotonic_model = clone_sequential_model(sequential, input_dim=1, dc_decomp=True, n_subgrad=n_subgrad)
+    monotonic_model = clone_sequential_model(
+        sequential, input_dim=1, dc_decomp=True, n_subgrad=n_subgrad, IBP=True, forward=True
+    )
 
     for layer in monotonic_model.layers:
         if hasattr(layer, "n_subgrad"):
@@ -271,7 +272,9 @@ def test_clone_sequential_model_1d_box_nodc(n, n_subgrad):
     sequential = Sequential()
     sequential.add(Dense(10, activation="relu", input_dim=1))
     sequential.add(Dense(1, activation="linear"))
-    monotonic_model = clone_sequential_model(sequential, input_dim=1, dc_decomp=False, n_subgrad=n_subgrad)
+    monotonic_model = clone_sequential_model(
+        sequential, input_dim=1, dc_decomp=False, n_subgrad=n_subgrad, IBP=True, forward=True
+    )
 
     for layer in monotonic_model.layers:
         if hasattr(layer, "n_subgrad"):
@@ -309,7 +312,9 @@ def test_clone_sequential_model_multid_box(odd, n_subgrad):
     sequential = Sequential()
     sequential.add(Dense(10, activation="relu", input_dim=y.shape[-1]))
     sequential.add(Dense(1, activation="linear"))
-    monotonic_model = clone_sequential_model(sequential, input_dim=input_dim, dc_decomp=True, n_subgrad=n_subgrad)
+    monotonic_model = clone_sequential_model(
+        sequential, input_dim=input_dim, dc_decomp=True, n_subgrad=n_subgrad, IBP=True, forward=True
+    )
 
     for layer in monotonic_model.layers:
         if hasattr(layer, "n_subgrad"):
@@ -358,7 +363,9 @@ def test_clone_sequential_model_multid_box_nodc(odd, n_subgrad):
     sequential = Sequential()
     sequential.add(Dense(10, activation="relu", input_dim=y.shape[-1]))
     sequential.add(Dense(1, activation="linear"))
-    monotonic_model = clone_sequential_model(sequential, input_dim=input_dim, n_subgrad=n_subgrad)
+    monotonic_model = clone_sequential_model(
+        sequential, input_dim=input_dim, n_subgrad=n_subgrad, IBP=True, forward=True
+    )
 
     for layer in monotonic_model.layers:
         if hasattr(layer, "n_subgrad"):
@@ -391,7 +398,7 @@ def test_convert_sequential_model_multid_box(odd, n_subgrad):
     sequential = Sequential()
     sequential.add(Dense(10, activation="relu", input_dim=y.shape[-1]))
     sequential.add(Dense(1, activation="linear"))
-    monotonic_model = convert(sequential, dc_decomp=True, n_subgrad=n_subgrad)
+    monotonic_model = convert(sequential, dc_decomp=True, n_subgrad=n_subgrad, IBP=True, forward=True)
 
     for layer in monotonic_model.layers:
         if hasattr(layer, "n_subgrad"):
@@ -440,7 +447,7 @@ def test_clone_sequential_model_multid_box_nodc_0(odd, n_subgrad):
     sequential = Sequential()
     sequential.add(Dense(10, activation="relu", input_dim=y.shape[-1]))
     sequential.add(Dense(1, activation="linear"))
-    monotonic_model = convert(sequential, n_subgrad=n_subgrad)
+    monotonic_model = convert(sequential, n_subgrad=n_subgrad, IBP=True, forward=True)
 
     for layer in monotonic_model.layers:
         if hasattr(layer, "n_subgrad"):
@@ -459,3 +466,92 @@ def test_clone_sequential_model_multid_box_nodc_0(odd, n_subgrad):
 
     assert_almost_equal(y_, y_ref, decimal=5)
     assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc")
+
+
+# testing the different options in the forward mode
+@pytest.mark.parametrize(
+    "n, IBP, forward",
+    [(0, True, False), (1, False, True)],
+)
+def test_clone_sequential_model_1d_box_forward_prop(n, IBP, forward):
+    # build a simple sequential model from keras
+    # start with 1D
+    sequential = Sequential()
+    sequential.add(Dense(10, activation="relu", input_dim=1))
+    sequential.add(Dense(1, activation="linear"))
+    monotonic_model = clone_sequential_model(sequential, input_dim=1, dc_decomp=True, IBP=IBP, forward=forward)
+
+    assert isinstance(monotonic_model, DecomonModel)
+    assert not isinstance(sequential, DecomonModel)
+
+    inputs = get_tensor_decomposition_1d_box()
+    inputs_ = get_standart_values_1d_box(n)
+
+    if not IBP and forward:
+        inputs_ = [inputs_[i] for i in [0, 1, 2, 4, 5, 7, 8, 9, 10]]
+        inputs = [inputs[i] for i in [0, 1, 2, 4, 5, 7, 8, 9, 10]]
+    if IBP and not forward:
+        inputs_ = [inputs_[i] for i in [0, 1, 2, 3, 6, 9, 10]]
+        inputs = [inputs[i] for i in [0, 1, 2, 3, 6, 9, 10]]
+
+    output_ref = sequential(inputs[1])
+    f_ref = K.function(inputs, output_ref)
+    output = monotonic_model(inputs[1:])
+
+    f_clone = K.function(inputs[1:], output)
+    f_clone(inputs_[1:])
+
+
+@pytest.mark.parametrize(
+    "n, IBP, forward, dc_decomp, mode",
+    [
+        (0, True, False, True, "forward"),
+        (0, False, True, True, "forward"),
+        (0, True, False, False, "forward"),
+        (0, False, True, False, "forward"),
+        (0, True, True, False, "forward"),
+        (0, True, True, True, "forward"),
+        (1, True, False, True, "forward"),
+        (1, False, True, True, "forward"),
+        (1, True, False, False, "forward"),
+        (1, False, True, False, "forward"),
+        (1, True, True, False, "forward"),
+        (1, True, True, True, "forward"),
+        (0, True, False, False, "backward"),
+        (0, False, True, False, "backward"),
+        (0, True, True, False, "backward"),
+    ],
+)
+def test_convert_model_1d_box_forward_prop(n, IBP, forward, dc_decomp, mode):
+
+    # build a simple sequential model from keras
+    # start with 1D
+    sequential = Sequential()
+    sequential.add(Dense(10, activation="linear", input_dim=1))
+    sequential.add(Dense(3, activation="linear"))
+
+    monotonic_model = convert(sequential, dc_decomp=dc_decomp, IBP=IBP, forward=forward, mode=mode)
+
+    inputs = get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    inputs_ = get_standart_values_1d_box(n, dc_decomp=dc_decomp)
+
+    if dc_decomp:
+        h, g = inputs[-2:]
+        h_i, g_i = inputs_[-2:]
+
+    x = inputs[0]
+    z = inputs[2]
+
+    x_i = inputs_[0]
+    z_i = inputs_[2]
+
+    if dc_decomp:
+        output = monotonic_model([x, z, h, g])
+
+        f_clone = K.function([x, z, h, g], output)
+        output_ = f_clone([x_i, z_i, h_i, g_i])
+    else:
+        output = monotonic_model([x, z])
+
+        f_clone = K.function([x, z], output)
+        output_ = f_clone([x_i, z_i])

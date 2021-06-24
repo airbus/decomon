@@ -1,5 +1,3 @@
-# Set of functions that make it easy to use the library in a black box manner
-# No need to understand the technical aspects or to code
 from .models import DecomonModel, convert
 import numpy as np
 from .layers.core import Ball, Box
@@ -10,11 +8,8 @@ import scipy.optimize as opt
 def convex_optimize(lc, w_1, b_1, w_2, b_2, z):
 
     # flatten u, w_1 and b_1
-    lc = lc.reshape((lc.shape[0], -1))
     w_1 = w_1.reshape((w_1.shape[0], w_1.shape[1], -1))
     b_1 = b_1.reshape((b_1.shape[0], -1))
-    w_2 = w_2[:, 0]
-    b_2 = b_2[:, 0]
 
     w_1_ = w_1.transpose((0, 2, 1)).reshape((-1, z.shape[-1]))
     w_2_ = w_2.transpose((0, 2, 1)).reshape((-1, z.shape[-1]))
@@ -76,167 +71,787 @@ def convex_optimize(lc, w_1, b_1, w_2, b_2, z):
         return lc.reshape((batch, z.shape[-1], -1))
 
 
-# get upper bound in a box
-def get_upper_box(model, x_min, x_max, mode=Backward.name, fast=True):
+##### ADVERSARIAL ROBUSTTNESS #####
+def get_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_size=-1, fast=True):
     """
-
-
+    if the constant is negative, then it is a formal guarantee that there is no adversarial examples
     :param model: either a Keras model or a Decomon model
-    :param x_min: numpy array for the extramal lower corner of the boxes
+    :param x_min: numpy array for the extremal lower corner of the boxes
     :param x_max: numpy array for the extremal upper corner of the boxes
-    :param mode: forward or backward
-    :return: numpy array, vector with upper bounds of
-    the range of values taken by the model inside every boxes
+    :param source_labels: the list of label that should be predicted all the time in the box (either an integer, either an array that can contain multiple source labels for each sample)
+    :param target_labels:the list of label that should never be predicted in the box (either an integer, either an array that can contain multiple target labels for each sample)
+    :param batch_size: for computational efficiency, one can split the calls to minibatches
+    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
+    :return: numpy array, vector with upper bounds for adversarial attacks
     """
 
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
-
     if not isinstance(model, DecomonModel):
-        model_ = convert(model)
-        input_dim = np.prod(model.input_shape[1:])
+        model_ = convert(model, IBP=True, mode="backward")
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
         model_ = model
-        mode = model.mode
-        input_dim = np.prod(model.input_shape[0][1:])
 
-    if len(x_min.shape) == 1:
-        if x_min.shape[0] != input_dim:
-            x_min = x_min[:, None]
+    # reshape x_mmin, x_max
+    input_shape = list(model_.input_shape[0][1:])
+    input_dim = np.prod(input_shape)
+    x_ = x_min + 0 * x_min
+    x_ = x_.reshape([-1] + input_shape)
+    x_min = x_min.reshape((-1, 1, input_dim))
+    x_max = x_max.reshape((-1, 1, input_dim))
+
+    z = np.concatenate([x_min, x_max], 1)
+    if isinstance(source_labels, int) or isinstance(source_labels, np.int64):
+        source_labels = np.zeros((len(x_), 1)) + source_labels
+
+    if isinstance(source_labels, list):
+        source_labels = np.array(source_labels).reshape((len(x_), -1))
+
+    source_labels = source_labels.reshape((len(x_), -1))
+    source_labels = source_labels.astype("int64")
+
+    if batch_size > 0:
+        # split
+        r = 0
+        if len(x_) % batch_size > 0:
+            r += 1
+        X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        S_ = [source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        if (
+            (target_labels is not None)
+            and (not isinstance(target_labels, int))
+            and (str(target_labels.dtype)[:3] != "int")
+        ):
+            T_ = [target_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         else:
-            x_min = x_min[None]
-    if len(x_max.shape) == 1:
-        if x_max.shape[0] != input_dim:
-            x_max = x_max[:, None]
+            T_ = [target_labels] * (len(x_) // batch_size + r)
+
+        results = [get_adv_box(model_, X_min_[i], X_max_[i], S_[i], T_[i], -1, fast=fast) for i in range(len(X_min_))]
+
+        return np.concatenate(results)
+
+    mode = model_.mode
+    IBP = model_.IBP
+    forward = model_.forward
+
+    output = model_.predict([x_, z])
+
+    n_label = source_labels.shape[-1]
+
+    if mode == Backward.name:
+
+        w_u_b, b_u_b, w_l_b, b_l_b = output[-4:]
+        w_u_b = w_u_b[:, 0]
+        b_u_b = b_u_b[:, 0]
+        w_l_b = w_l_b[:, 0]
+        b_l_b = b_l_b[:, 0]
+
+        for i in range(n_label):
+            w_u_b = w_u_b - w_l_b[np.arange(len(w_u_b)), :, source_labels[:, i]][:, :, None]
+            b_u_b = b_u_b - b_l_b[np.arange(len(b_u_b)), source_labels[:, i]][:, None]
+
+        u_b = (
+            np.sum(np.maximum(w_u_b, 0) * x_max[:, 0, :, None], 1)
+            + np.sum(np.minimum(w_u_b, 0) * x_min[:, 0, :, None], 1)
+            + b_u_b
+        )
+
+    if forward:
+        if not IBP:
+            _, _, w_u_f, b_u_f, w_l_f, b_l_f = output[:6]
         else:
-            x_max = x_max[None]
+            _, _, _, w_u_f, b_u_f, _, w_l_f, b_l_f = output[:8]
 
-    z = np.concatenate([x_min[:, None], x_max[:, None]], 1)
-    output = model_.predict([x_min, z])
+        # reshape if necessary
+        if len(w_u_f.shape) > 3:
+            w_u_f = np.reshape(w_u_f, (w_u_f.shape[0], w_u_f.shape[1], -1))
+            w_l_f = np.reshape(w_l_f, (w_l_f.shape[0], w_l_f.shape[1], -1))
+            b_u_f = np.reshape(b_u_f, (len(b_u_f), -1))
+            b_l_f = np.reshape(b_l_f, (len(b_l_f), -1))
 
-    if fast or mode == Forward.name:
-        return output[2]
+        for i in range(n_label):
+            w_u_f = w_u_f - w_l_f[np.arange(len(w_u_f)), :, source_labels[:, i]][:, :, None]
+            b_u_f = b_u_f - b_l_f[np.arange(len(b_u_f)), source_labels[:, i]][:, None]
+
+        u_f = (
+            np.sum(np.maximum(w_u_f, 0) * x_max[:, 0, :, None], 1)
+            + np.sum(np.minimum(w_u_f, 0) * x_min[:, 0, :, None], 1)
+            + b_u_f
+        )
+
+        if IBP:
+            u_i = output[2]
+            l_i = output[5]
+
+            if len(u_i.shape) > 2:
+                u_i = np.reshape(u_i, (len(u_i), -1))
+                l_i = np.reshape(l_i, (len(l_i), -1))
+            for i in range(n_label):
+                u_i = u_i - l_i[np.arange(len(u_i)), source_labels[:, i]][:, None]
+
     else:
-        # fast optimization
-        u = output[2]
-        w_1 = output[3]
-        b_1 = output[4]
-        w_2 = output[-4]
-        b_2 = output[-3]
+        u_i = output[2]
+        l_i = output[3]
+        if len(u_i.shape) > 2:
+            u_i = np.reshape(u_i, (len(u_i), -1))
+            l_i = np.reshape(l_i, (len(l_i), -1))
+            ######
+        for i in range(n_label):
+            u_i = u_i - l_i[np.arange(len(u_i)), source_labels[:, i]][:, None]
 
-        return -convex_optimize(-u, -w_1, -b_1, -w_2, -b_2, z)
+    if IBP and forward:
+        u_ = np.minimum(u_i, u_f)
+    if IBP and not forward:
+        u_ = u_i
+    if not IBP and forward:
+        u_ = u_f
+
+    if mode == Backward.name:
+        u_ = np.minimum(u_, u_b)
+
+    for i in range(n_label):
+        u_[np.arange(len(u_)), source_labels[:, i]] = -np.inf
+
+    if not fast:
+        if mode == Backward.name and forward:
+            u_ = -convex_optimize(-u_, -w_u_f, -b_u_f, -w_u_b, -b_u_b, z)
+    #####
+    if target_labels is None:
+        return np.max(u_, -1)
+
+    if isinstance(target_labels, int):
+        target_labels = np.zeros((len(x_), 1)) + target_labels
+
+    if isinstance(target_labels, list):
+        target_labels = np.array(target_labels).reshape((len(x_), -1))
+
+    target_labels = target_labels.reshape((len(x_), -1))
+    target_labels = target_labels.astype("int64")
+
+    n_target = target_labels.shape[-1]
+    upper = u_[np.arange(len(u_)), target_labels[:, 0]]
+    for i in range(n_target - 1):
+        upper = np.maximum(upper, u_[np.arange(len(u_)), target_labels[:, i + 1]])
+
+    return upper
 
 
-# get lower box in a box
-def get_lower_box(model, x_min, x_max, mode=Backward.name, fast=True):
+def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_size=-1, fast=True):
     """
-
+    if the constant is positive, then it is a formal guarantee that there IS adversarial examples
     :param model: either a Keras model or a Decomon model
-    :param x_min: numpy array for the extramal lower corner of the boxes
+    :param x_min: numpy array for the extremal lower corner of the boxes
     :param x_max: numpy array for the extremal upper corner of the boxes
-    :return: numpy array, vector with upper bounds of the
-    range of values taken by the model inside every boxes
+    :param source_labels: the list of label that should be predicted all the time in the box (either an integer, either an array that can contain multiple source labels for each sample)
+    :param target_labels:the list of label that should never be predicted in the box (either an integer, either an array that can contain multiple target labels for each sample)
+    :param batch_size: for computational efficiency, one can split the calls to minibatches
+    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
+    :return: numpy array, vector with upper bounds for adversarial attacks
     """
+
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, mode=mode)
-        input_dim = np.prod(model.input_shape[1:])
+        model_ = convert(model, IBP=True, mode="backward")
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
         model_ = model
-        mode = model.mode
-        input_dim = np.prod(model.input_shape[0][1:])
 
-    if len(x_min.shape) == 1:
-        if x_min.shape[0] != input_dim:
-            x_min = x_min[:, None]
+    # reshape x_mmin, x_max
+    input_shape = list(model_.input_shape[0][1:])
+    input_dim = np.prod(input_shape)
+    x_ = x_min + 0 * x_min
+    x_ = x_.reshape([-1] + input_shape)
+    x_min = x_min.reshape((-1, 1, input_dim))
+    x_max = x_max.reshape((-1, 1, input_dim))
+
+    z = np.concatenate([x_min, x_max], 1)
+
+    if isinstance(source_labels, int):
+        source_labels = np.zeros((len(x_), 1)) + source_labels
+
+    if isinstance(source_labels, list):
+        source_labels = np.array(source_labels).reshape((len(x_), -1))
+
+    source_labels = source_labels.reshape((len(x_), -1))
+    source_labels = source_labels.astype("int64")
+
+    if batch_size > 0:
+        # split
+        r = 0
+        if len(x_) % batch_size > 0:
+            r += 1
+        X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        S_ = [source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        if (
+            (target_labels is not None)
+            and (not isinstance(target_labels, int))
+            and (str(target_labels.dtype)[:3] != "int")
+        ):
+            T_ = [target_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         else:
-            x_min = x_min[None]
-    if len(x_max.shape) == 1:
-        if x_max.shape[0] != input_dim:
-            x_max = x_max[:, None]
+            T_ = [target_labels] * (len(x_) // batch_size + r)
+
+        results = [get_adv_box(model_, X_min_[i], X_max_[i], S_[i], T_[i], -1, fast=fast) for i in range(len(X_min_))]
+
+        return np.concatenate(results)
+
+    mode = model_.mode
+    IBP = model_.IBP
+    forward = model_.forward
+
+    output = model_.predict([x_, z])
+
+    n_label = source_labels.shape[-1]
+
+    if mode == Backward.name:
+
+        w_u_b, b_u_b, w_l_b, b_l_b = output[-4:]
+        w_u_b = w_u_b[:, 0]
+        b_u_b = b_u_b[:, 0]
+        w_l_b = w_l_b[:, 0]
+        b_l_b = b_l_b[:, 0]
+
+        for i in range(n_label):
+            w_l_b = w_l_b - w_u_b[np.arange(len(w_l_b)), :, source_labels[:, i]][:, :, None]
+            b_l_b = b_l_b - b_u_b[np.arange(len(b_l_b)), source_labels[:, i]][:, None]
+
+        u_b = (
+            np.sum(np.maximum(w_l_b, 0) * x_max[:, 0, :, None], 1)
+            + np.sum(np.minimum(w_l_b, 0) * x_min[:, 0, :, None], 1)
+            + b_l_b
+        )
+
+    if forward:
+        if not IBP:
+            _, _, w_u_f, b_u_f, w_l_f, b_l_f = output[:6]
         else:
-            x_max = x_max[None]
+            _, _, _, w_u_f, b_u_f, _, w_l_f, b_l_f = output[:8]
 
-    z = np.concatenate([x_min[:, None], x_max[:, None]], 1)
-    output = model_.predict([x_min, z])
+        # reshape if necessary
+        if len(w_u_f.shape) > 3:
+            w_u_f = np.reshape(w_u_f, (w_u_f.shape[0], w_u_f.shape[1], -1))
+            w_l_f = np.reshape(w_l_f, (w_l_f.shape[0], w_l_f.shape[1], -1))
+            b_u_f = np.reshape(b_u_f, (len(b_u_f), -1))
+            b_l_f = np.reshape(b_l_f, (len(b_l_f), -1))
 
-    if fast or mode == Forward.name:
-        return output[5]
+        for i in range(n_label):
+            w_l_f = w_l_f - w_u_f[np.arange(len(w_l_f)), :, source_labels[:, i]][:, :, None]
+            b_l_f = b_l_f - b_u_f[np.arange(len(b_l_f)), source_labels[:, i]][:, None]
+
+        u_f = (
+            np.sum(np.maximum(w_l_f, 0) * x_max[:, 0, :, None], 1)
+            + np.sum(np.minimum(w_l_f, 0) * x_min[:, 0, :, None], 1)
+            + b_l_f
+        )
+
+        if IBP:
+            u_i = output[2]
+            l_i = output[5]
+
+            if len(u_i.shape) > 2:
+                u_i = np.reshape(u_i, (len(u_i), -1))
+                l_i = np.reshape(l_i, (len(l_i), -1))
+            for i in range(n_label):
+                l_i = l_i - u_i[np.arange(len(u_i)), source_labels[:, i]][:, None]
+
     else:
-        # fast optimization
-        l = output[5]
-        w_1 = output[6]
-        b_1 = output[7]
-        w_2 = output[-2]
-        b_2 = output[-1]
+        u_i = output[2]
+        l_i = output[3]
+        if len(u_i.shape) > 2:
+            u_i = np.reshape(u_i, (len(u_i), -1))
+            l_i = np.reshape(l_i, (len(l_i), -1))
+            ######
+        for i in range(n_label):
+            l_i = l_i - u_i[np.arange(len(u_i)), source_labels[:, i]][:, None]
 
-        return convex_optimize(l, w_1, b_1, w_2, b_2, z)
+    if IBP and forward:
+        u_ = np.minimum(l_i, u_f)
+    if IBP and not forward:
+        u_ = l_i
+    if not IBP and forward:
+        u_ = u_f
+
+    if mode == Backward.name:
+        u_ = np.minimum(u_, u_b)
+
+    for i in range(n_label):
+        u_[np.arange(len(u_)), source_labels[:, i]] = -np.inf
+
+    if not fast:
+        if mode == Backward.name and forward:
+            u_ = -convex_optimize(-u_, -w_l_f, -b_l_f, -w_l_b, -b_l_b, z)
+    #####
+    if target_labels is None:
+        return np.max(u_, -1)
+
+    if isinstance(target_labels, int):
+        target_labels = np.zeros((len(x_), 1)) + target_labels
+
+    if isinstance(target_labels, list):
+        target_labels = np.array(target_labels).reshape((len(x_), -1))
+
+    target_labels = target_labels.reshape((len(x_), -1))
+    target_labels = target_labels.astype("int64")
+
+    n_target = target_labels.shape[-1]
+    upper = u_[np.arange(len(u_)), target_labels[:, 0]]
+    for i in range(n_target - 1):
+        upper = np.maximum(upper, u_[np.arange(len(u_)), target_labels[:, i + 1]])
+
+    return upper
 
 
-# get interval in a box
-def get_range_box(model, x_min, x_max, mode=Backward.name, fast=True):
+#### FORMAL BOUNDS ######
+
+
+def get_upper_box(model, x_min, x_max, batch_size=-1, fast=True):
     """
-
+    if the constant is negative, then it is a formal guarantee that there is no adversarial examples
     :param model: either a Keras model or a Decomon model
-    :param x_min: numpy array for the extramal lower corner of the boxes
+    :param x_min: numpy array for the extremal lower corner of the boxes
     :param x_max: numpy array for the extremal upper corner of the boxes
-    :return: numpy array, 2D vector with upper bounds and lower bounds
-     of the range of values taken by the model inside the box
+    :param batch_size: for computational efficiency, one can split the calls to minibatches
+    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
+    :return: numpy array, vector with upper bounds for adversarial attacks
     """
+
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, mode=mode)
-        input_dim = np.prod(model.input_shape[1:])
+        model_ = convert(model, IBP=True, mode="backward")
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
         model_ = model
-        mode = model_.mode
-        input_dim = np.prod(model.input_shape[0][1:])
 
-    if len(x_min.shape) == 1:
-        if x_min.shape[0] != input_dim:
-            x_min = x_min[:, None]
+    # reshape x_mmin, x_max
+    input_shape = list(model_.input_shape[0][1:])
+    input_dim = np.prod(input_shape)
+    x_ = x_min + 0 * x_min
+    x_ = x_.reshape([-1] + input_shape)
+    x_min = x_min.reshape((-1, 1, input_dim))
+    x_max = x_max.reshape((-1, 1, input_dim))
+
+    z = np.concatenate([x_min, x_max], 1)
+
+    if batch_size > 0:
+        # split
+        r = 0
+        if len(x_) % batch_size > 0:
+            r += 1
+        X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+
+        results = [get_upper_box(model_, X_min_[i], X_max_[i], -1, fast=fast) for i in range(len(X_min_))]
+
+        return np.concatenate(results)
+
+    mode = model_.mode
+    IBP = model_.IBP
+    forward = model_.forward
+
+    output = model_.predict([x_, z])
+
+    if mode == Backward.name:
+
+        w_u_b, b_u_b, _, _ = output[-4:]
+        w_u_b = w_u_b[:, 0]
+        b_u_b = b_u_b[:, 0]
+
+        u_b = (
+            np.sum(np.maximum(w_u_b, 0) * x_max[:, 0, :, None], 1)
+            + np.sum(np.minimum(w_u_b, 0) * x_min[:, 0, :, None], 1)
+            + b_u_b
+        )
+    if forward:
+        if not IBP:
+            _, _, w_u_f, b_u_f, _, _ = output[:6]
         else:
-            x_min = x_min[None]
-    if len(x_max.shape) == 1:
-        if x_max.shape[0] != input_dim:
-            x_max = x_max[:, None]
-        else:
-            x_max = x_max[None]
+            _, _, _, w_u_f, b_u_f, _, _, _ = output[:8]
 
-    z = np.concatenate([x_min[:, None], x_max[:, None]], 1)
-    output = model_.predict([x_min, z])
+        # reshape if necessary
+        if len(w_u_f.shape) > 3:
+            w_u_f = np.reshape(w_u_f, (w_u_f.shape[0], w_u_f.shape[1], -1))
+            b_u_f = np.reshape(b_u_f, (len(b_u_f), -1))
 
-    if fast or mode == Forward.name:
-        return output[2], output[5]
+        u_f = (
+            np.sum(np.maximum(w_u_f, 0) * x_max[:, 0, :, None], 1)
+            + np.sum(np.minimum(w_u_f, 0) * x_min[:, 0, :, None], 1)
+            + b_u_f
+        )
+
+        if IBP:
+            u_i = output[2]
+
+            if len(u_i.shape) > 2:
+                u_i = np.reshape(u_i, (len(u_i), -1))
+
     else:
-        # fast optimization
-        u = output[2]
-        w_1 = output[3]
-        b_1 = output[4]
-        w_2 = output[-4]
-        b_2 = output[-3]
+        u_i = output[2]
+        if len(u_i.shape) > 2:
+            u_i = np.reshape(u_i, (len(u_i), -1))
+            ######
 
-        upper = -convex_optimize(-u, -w_1, -b_1, -w_2, -b_2, z)
+    if IBP and forward:
+        u_ = np.minimum(u_i, u_f)
+    if IBP and not forward:
+        u_ = u_i
+    if not IBP and forward:
+        u_ = u_f
 
-        # fast optimization
-        lc = output[5]
-        w_1 = output[6]
-        b_1 = output[7]
-        w_2 = output[-2]
-        b_2 = output[-1]
+    if mode == Backward.name:
+        u_ = np.minimum(u_, u_b)
 
-        lower = convex_optimize(lc, w_1, b_1, w_2, b_2, z)
+    if not fast:
+        if mode == Backward.name and forward:
+            u_ = -convex_optimize(-u_, -w_u_f, -b_u_f, -w_u_b, -b_u_b, z)
 
-        return upper, lower
+    return u_
+
+
+def get_lower_box(model, x_min, x_max, batch_size=-1, fast=True):
+    """
+    if the constant is negative, then it is a formal guarantee that there is no adversarial examples
+    :param model: either a Keras model or a Decomon model
+    :param x_min: numpy array for the extremal lower corner of the boxes
+    :param x_max: numpy array for the extremal upper corner of the boxes
+    :param batch_size: for computational efficiency, one can split the calls to minibatches
+    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
+    :return: numpy array, vector with lower bounds for adversarial attacks
+    """
+
+    # check that the model is a DecomonModel, else do the conversion
+    # input_dim = 0
+    if not isinstance(model, DecomonModel):
+        model_ = convert(model, IBP=True, mode="backward")
+    else:
+        assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
+        model_ = model
+
+    # reshape x_mmin, x_max
+    input_shape = list(model_.input_shape[0][1:])
+    input_dim = np.prod(input_shape)
+    x_ = x_min + 0 * x_min
+    x_ = x_.reshape([-1] + input_shape)
+    x_min = x_min.reshape((-1, 1, input_dim))
+    x_max = x_max.reshape((-1, 1, input_dim))
+
+    z = np.concatenate([x_min, x_max], 1)
+
+    if batch_size > 0:
+        # split
+        r = 0
+        if len(x_) % batch_size > 0:
+            r += 1
+        X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+
+        results = [get_lower_box(model_, X_min_[i], X_max_[i], -1, fast=fast) for i in range(len(X_min_))]
+
+        return np.concatenate(results)
+
+    mode = model_.mode
+    IBP = model_.IBP
+    forward = model_.forward
+
+    output = model_.predict([x_, z])
+
+    if mode == Backward.name:
+
+        _, _, w_l_b, b_l_b = output[-4:]
+        w_l_b = w_l_b[:, 0]
+        b_l_b = b_l_b[:, 0]
+
+        l_b = (
+            np.sum(np.maximum(w_l_b, 0) * x_min[:, 0, :, None], 1)
+            + np.sum(np.minimum(w_l_b, 0) * x_max[:, 0, :, None], 1)
+            + b_l_b
+        )
+
+    if forward:
+        if not IBP:
+            _, _, _, _, w_l_f, b_l_f = output[:6]
+        else:
+            _, _, _, _, _, _, w_l_f, b_l_f = output[:8]
+
+        # reshape if necessary
+        if len(w_l_f.shape) > 3:
+            w_l_f = np.reshape(w_l_f, (w_l_f.shape[0], w_l_f.shape[1], -1))
+            b_l_f = np.reshape(b_l_f, (len(b_l_f), -1))
+
+        l_f = (
+            np.sum(np.maximum(w_l_f, 0) * x_min[:, 0, :, None], 1)
+            + np.sum(np.minimum(w_l_f, 0) * x_max[:, 0, :, None], 1)
+            + b_l_f
+        )
+
+        if IBP:
+            l_i = output[5]
+
+            if len(l_i.shape) > 2:
+                l_i = np.reshape(l_i, (len(l_i), -1))
+
+    else:
+        l_i = output[3]
+        if len(l_i.shape) > 2:
+            l_i = np.reshape(l_i, (len(l_i), -1))
+            ######
+
+    if IBP and forward:
+        l_ = np.maximum(l_i, l_f)
+    if IBP and not forward:
+        l_ = l_i
+    if not IBP and forward:
+        l_ = l_f
+
+    if mode == Backward.name:
+        l_ = np.maximum(l_, l_b)
+
+    if not fast:
+        if mode == Backward.name and forward:
+            l_ = convex_optimize(l_, w_l_f, b_l_f, w_l_b, b_l_b, z)
+
+    return l_
+
+
+def get_range_box(model, x_min, x_max, batch_size=-1, fast=True):
+    """
+    if the constant is negative, then it is a formal guarantee that there is no adversarial examples
+    :param model: either a Keras model or a Decomon model
+    :param x_min: numpy array for the extremal lower corner of the boxes
+    :param x_max: numpy array for the extremal upper corner of the boxes
+    :param batch_size: for computational efficiency, one can split the calls to minibatches
+    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
+    :return: 2 numpy array, vector with upper bounds and vector with lower bounds
+    """
+
+    # check that the model is a DecomonModel, else do the conversion
+    # input_dim = 0
+    if not isinstance(model, DecomonModel):
+        model_ = convert(model, IBP=True, mode="backward")
+    else:
+        assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
+        model_ = model
+
+    # reshape x_mmin, x_max
+    input_shape = list(model_.input_shape[0][1:])
+    input_dim = np.prod(input_shape)
+    x_ = x_min + 0 * x_min
+    x_ = x_.reshape([-1] + input_shape)
+    x_min = x_min.reshape((-1, 1, input_dim))
+    x_max = x_max.reshape((-1, 1, input_dim))
+
+    z = np.concatenate([x_min, x_max], 1)
+
+    if batch_size > 0:
+        # split
+        r = 0
+        if len(x_) % batch_size > 0:
+            r += 1
+        X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        results = [get_range_box(model_, X_min_[i], X_max_[i], -1, fast=fast) for i in range(len(X_min_))]
+
+        u_ = [r[0] for r in results]
+        l_ = [r[1] for r in results]
+
+        return np.concatenate(u_), np.concatenate(l_)
+
+    mode = model_.mode
+    IBP = model_.IBP
+    forward = model_.forward
+
+    output = model_.predict([x_, z])
+
+    if mode == Backward.name:
+
+        w_u_b, b_u_b, w_l_b, b_l_b = output[-4:]
+        w_u_b = w_u_b[:, 0]
+        b_u_b = b_u_b[:, 0]
+        w_l_b = w_l_b[:, 0]
+        b_l_b = b_l_b[:, 0]
+
+        u_b = (
+            np.sum(np.maximum(w_u_b, 0) * x_max[:, 0, :, None], 1)
+            + np.sum(np.minimum(w_u_b, 0) * x_min[:, 0, :, None], 1)
+            + b_u_b
+        )
+
+        l_b = (
+            np.sum(np.maximum(w_l_b, 0) * x_min[:, 0, :, None], 1)
+            + np.sum(np.minimum(w_l_b, 0) * x_max[:, 0, :, None], 1)
+            + b_l_b
+        )
+
+    if forward:
+        if not IBP:
+            _, _, w_u_f, b_u_f, w_l_f, b_l_f = output[:6]
+        else:
+            _, _, _, w_u_f, b_u_f, _, w_l_f, b_l_f = output[:8]
+
+        # reshape if necessary
+        if len(w_u_f.shape) > 3:
+            w_u_f = np.reshape(w_u_f, (w_u_f.shape[0], w_u_f.shape[1], -1))
+            w_l_f = np.reshape(w_l_f, (w_l_f.shape[0], w_l_f.shape[1], -1))
+            b_u_f = np.reshape(b_u_f, (len(b_u_f), -1))
+            b_l_f = np.reshape(b_l_f, (len(b_l_f), -1))
+
+        u_f = (
+            np.sum(np.maximum(w_u_f, 0) * x_max[:, 0, :, None], 1)
+            + np.sum(np.minimum(w_u_f, 0) * x_min[:, 0, :, None], 1)
+            + b_u_f
+        )
+        l_f = (
+            np.sum(np.maximum(w_l_f, 0) * x_min[:, 0, :, None], 1)
+            + np.sum(np.minimum(w_l_f, 0) * x_max[:, 0, :, None], 1)
+            + b_l_f
+        )
+
+        if IBP:
+            u_i = output[2]
+            l_i = output[5]
+
+            if len(u_i.shape) > 2:
+                u_i = np.reshape(u_i, (len(u_i), -1))
+                l_i = np.reshape(l_i, (len(l_i), -1))
+
+    else:
+        u_i = output[2]
+        l_i = output[3]
+        if len(u_i.shape) > 2:
+            u_i = np.reshape(u_i, (len(u_i), -1))
+            l_i = np.reshape(l_i, (len(l_i), -1))
+            ######
+
+    if IBP and forward:
+        u_ = np.minimum(u_i, u_f)
+        l_ = np.maximum(l_i, l_f)
+    if IBP and not forward:
+        u_ = u_i
+        l_ = l_i
+    if not IBP and forward:
+        u_ = u_f
+        l_ = l_f
+
+    if mode == Backward.name:
+        u_ = np.minimum(u_, u_b)
+        l_ = np.maximum(l_, l_b)
+
+    if not fast:
+        if mode == Backward.name and forward:
+            u_ = -convex_optimize(-u_, -w_u_f, -b_u_f, -w_u_b, -b_u_b, z)
+            l_ = convex_optimize(l_, w_l_f, b_l_f, w_l_b, b_l_b, z)
+    #####
+    return u_, l_
 
 
 # get upper bound of a sample with bounded noise
-def get_upper_noise(model, x, eps, p=np.inf):
+def get_upper_noise(model, x, eps=-1, p=np.inf, batch_size=-1, fast=True):
+    """
+
+    :param model: either a Keras model or a Decomon model
+    :param x: numpy array, the example around
+    which the impact of noise is assessed
+    :param eps:
+    :param p:
+    :return: numpy array, vector with upper bounds
+     of the range of values taken by the model inside the box
+    """
+    # check that the model is a DecomonModel, else do the conversion
+    convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
+
+    # check that the model is a DecomonModel, else do the conversion
+    # input_dim = 0
+    if not isinstance(model, DecomonModel):
+        model_ = convert(model, IBP=True, mode="backward", convex_domain=convex_domain)
+    else:
+        model_ = model
+        if eps >= 0:
+            model_.set_domain(convex_domain)
+
+    # reshape x_mmin, x_max
+    input_shape = list(model_.input_shape[0][1:])
+    input_dim = np.prod(input_shape)
+    x_ = x + 0 * x
+    x_ = x_.reshape([-1] + input_shape)
+
+    if batch_size > 0:
+        # split
+        r = 0
+        if len(x_) % batch_size > 0:
+            r += 1
+        X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        results = [get_upper_noise(model_, X_[i], eps=eps, p=p, batch_size=-1, fast=fast) for i in range(len(X_))]
+
+        return np.concatenate(results)
+
+    mode = model_.mode
+    IBP = model_.IBP
+    forward = model_.forward
+
+    output = model_.predict([x_, x_.reshape((len(x_), -1))])
+
+    x_ = x_.reshape((len(x_), -1))
+    if not p in [1, 2, np.inf]:
+        raise NotImplementedError()
+
+    if p == np.inf:
+        ord = 1
+    if p == 1:
+        ord = np.inf
+    if p == 2:
+        ord = 2
+
+    if mode == Backward.name:
+
+        w_u_b, b_u_b, _, _ = output[-4:]
+        w_u_b = w_u_b[:, 0]
+        b_u_b = b_u_b[:, 0]
+        u_b = eps * np.linalg.norm(w_u_b, ord=ord, axis=1) + np.sum(w_u_b * x_[:, :, None], 1) + b_u_b
+
+    if forward:
+        if not IBP:
+            _, _, w_u_f, b_u_f, _, _ = output[:6]
+        else:
+            _, _, _, w_u_f, b_u_f, _, _, _ = output[:8]
+
+        # reshape if necessary
+        if len(w_u_f.shape) > 3:
+            w_u_f = np.reshape(w_u_f, (w_u_f.shape[0], w_u_f.shape[1], -1))
+            b_u_f = np.reshape(b_u_f, (len(b_u_f), -1))
+
+        u_f = eps * np.linalg.norm(w_u_f, ord=ord, axis=1) + np.sum(w_u_f * x_[:, :, None], 1) + b_u_f
+
+        if IBP:
+            u_i = output[2]
+
+            if len(u_i.shape) > 2:
+                u_i = np.reshape(u_i, (len(u_i), -1))
+
+    else:
+        u_i = output[2]
+        if len(u_i.shape) > 2:
+            u_i = np.reshape(u_i, (len(u_i), -1))
+            ######
+
+    if IBP and forward:
+        u_ = np.minimum(u_i, u_f)
+    if IBP and not forward:
+        u_ = u_i
+    if not IBP and forward:
+        u_ = u_f
+
+    if mode == Backward.name:
+        u_ = np.minimum(u_, u_b)
+
+    return u_
+
+
+# get upper bound of a sample with bounded noise
+def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
     """
 
     :param model: either a Keras model or a Decomon model
@@ -250,450 +865,297 @@ def get_upper_noise(model, x, eps, p=np.inf):
     # check that the model is a DecomonModel, else do the conversion
     convex_domain = {"name": Ball.name, "p": p, "eps": eps}
 
+    # check that the model is a DecomonModel, else do the conversion
+    # input_dim = 0
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, convex_domain=convex_domain)
+        model_ = convert(model, IBP=True, mode="backward", convex_domain=convex_domain)
     else:
         model_ = model
         model_.set_domain(convex_domain)
 
-    output = model_.predict([x, x])
-    return output[2]
+    # reshape x_mmin, x_max
+    input_shape = list(model_.input_shape[0][1:])
+    input_dim = np.prod(input_shape)
+    x_ = x + 0 * x
+    x_ = x_.reshape([-1] + input_shape)
+
+    if batch_size > 0:
+        # split
+        r = 0
+        if len(x_) % batch_size > 0:
+            r += 1
+        X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        results = [get_lower_noise(model_, X_[i], eps=eps, p=p, batch_size=-1, fast=fast) for i in range(len(X_))]
+
+        return np.concatenate(results)
+
+    mode = model_.mode
+    IBP = model_.IBP
+    forward = model_.forward
+
+    output = model_.predict([x_, x_.reshape((len(x_), -1))])
+
+    x_ = x_.reshape((len(x_), -1))
+    if not p in [1, 2, np.inf]:
+        raise NotImplementedError()
+
+    if p == np.inf:
+        ord = 1
+    if p == 1:
+        ord = np.inf
+    if p == 2:
+        ord = 2
+
+    if mode == Backward.name:
+
+        _, _, w_l_b, b_l_b = output[-4:]
+        w_l_b = w_l_b[:, 0]
+        b_l_b = b_l_b[:, 0]
+
+        l_b = -eps * np.linalg.norm(w_l_b, ord=ord, axis=1) + np.sum(w_l_b * x_[:, :, None], 1) + b_l_b
+
+    if forward:
+        if not IBP:
+            _, _, _, _, w_l_f, b_l_f = output[:6]
+        else:
+            _, _, _, _, _, _, w_l_f, b_l_f = output[:8]
+
+        # reshape if necessary
+        if len(w_l_f.shape) > 3:
+            w_l_f = np.reshape(w_l_f, (w_l_f.shape[0], w_l_f.shape[1], -1))
+            b_l_f = np.reshape(b_l_f, (len(b_l_f), -1))
+
+        l_f = -eps * np.linalg.norm(w_l_f, ord=ord, axis=-1) + np.sum(w_l_f * x_[:, 0, :, None], 1) + b_l_f
+
+        if IBP:
+            l_i = output[3]
+
+            if len(l_i.shape) > 2:
+                l_i = np.reshape(l_i, (len(l_i), -1))
+
+    else:
+        l_i = output[3]
+        if len(l_i.shape) > 2:
+            l_i = np.reshape(l_i, (len(l_i), -1))
+            ######
+
+    if IBP and forward:
+        l_ = np.maximum(l_i, l_f)
+    if IBP and not forward:
+        l_ = l_i
+    if not IBP and forward:
+        l_ = l_f
+
+    if mode == Backward.name:
+        l_ = np.maximum(l_, l_b)
+
+    return l_
 
 
-# get lower bound of a sample with bounded noise
-def get_lower_noise(model, x, eps, p=np.inf):
+# get upper bound of a sample with bounded noise
+def get_range_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
     """
 
     :param model: either a Keras model or a Decomon model
     :param x: numpy array, the example around
     which the impact of noise is assessed
-    :param eps: float, the magnitude of the noise
-    :param p: Lp norm
-    :return: numpy array, 2D vector with lower bounds
+    :param eps:
+    :param p:
+    :return: numpy array, vector with upper bounds
      of the range of values taken by the model inside the box
     """
     # check that the model is a DecomonModel, else do the conversion
     convex_domain = {"name": Ball.name, "p": p, "eps": eps}
 
+    # check that the model is a DecomonModel, else do the conversion
+    # input_dim = 0
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, convex_domain=convex_domain)
+        model_ = convert(model, IBP=True, mode="backward", convex_domain=convex_domain)
     else:
         model_ = model
         model_.set_domain(convex_domain)
 
-    output = model_.predict([x, x])
-    return output[5]
+    # reshape x_mmin, x_max
+    input_shape = list(model_.input_shape[0][1:])
+    input_dim = np.prod(input_shape)
+    x_ = x + 0 * x
+    x_ = x_.reshape([-1] + input_shape)
 
+    if batch_size > 0:
+        # split
+        r = 0
+        if len(x_) % batch_size > 0:
+            r += 1
+        X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        results = [get_range_noise(model_, X_[i], eps=eps, p=p, batch_size=-1, fast=fast) for i in range(len(X_))]
 
-# get range bound of a sample with bounded noise
-def get_range_noise(model, x, eps, p=np.inf):
-    """
+        u_ = [r[0] for r in results]
+        l_ = [r[1] for r in results]
 
-    :param model: either a Keras model or a Decomon model
-    :param x: numpy array, the example around
-    which the impact of noise is assessed
-    :param eps: numpy array, the example around
-    which the impact of noise is assessed
-    :param p: Lp norm
-    :return: numpy array, 2D vector with upper bounds and lower bounds
-     of the range of values taken by the model inside the box
-    """
-    convex_domain = {"name": Ball.name, "p": p, "eps": eps}
+        return np.concatenate(u_), np.concatenate(l_)
 
-    if not isinstance(model, DecomonModel):
-        model_ = convert(model, convex_domain=convex_domain)
+    mode = model_.mode
+    IBP = model_.IBP
+    forward = model_.forward
+
+    output = model_.predict([x_, x_.reshape((len(x_), -1))])
+
+    x_ = x_.reshape((len(x_), -1))
+    if not p in [1, 2, np.inf]:
+        raise NotImplementedError()
+
+    if p == np.inf:
+        ord = 1
+    if p == 1:
+        ord = np.inf
+    if p == 2:
+        ord = 2
+
+    if mode == Backward.name:
+
+        w_u_b, b_u_b, w_l_b, b_l_b = output[-4:]
+        w_u_b = w_u_b[:, 0]
+        b_u_b = b_u_b[:, 0]
+        w_l_b = w_l_b[:, 0]
+        b_l_b = b_l_b[:, 0]
+
+        u_b = eps * np.linalg.norm(w_u_b, ord=ord, axis=1) + np.sum(w_u_b * x_[:, :, None], 1) + b_u_b
+        l_b = -eps * np.linalg.norm(w_l_b, ord=ord, axis=1) + np.sum(w_l_b * x_[:, :, None], 1) + b_l_b
+
+    if forward:
+        if not IBP:
+            _, _, w_u_f, b_u_f, w_l_f, b_l_f = output[:6]
+        else:
+            _, _, _, w_u_f, b_u_f, _, w_l_f, b_l_f = output[:8]
+
+        # reshape if necessary
+        if len(w_u_f.shape) > 3:
+            w_u_f = np.reshape(w_u_f, (w_u_f.shape[0], w_u_f.shape[1], -1))
+            b_u_f = np.reshape(b_u_f, (len(b_u_f), -1))
+            w_l_f = np.reshape(w_l_f, (w_l_f.shape[0], w_l_f.shape[1], -1))
+            b_l_f = np.reshape(b_l_f, (len(b_l_f), -1))
+
+        u_f = eps * np.linalg.norm(w_u_f, ord=ord, axis=-1) + np.sum(w_u_f * x_[:, 0, :, None], 1) + b_u_f
+        l_f = -eps * np.linalg.norm(w_l_f, ord=ord, axis=-1) + np.sum(w_l_f * x_[:, 0, :, None], 1) + b_l_f
+
+        if IBP:
+            u_i = output[2]
+            l_i = output[3]
+
+            if len(u_i.shape) > 2:
+                u_i = np.reshape(u_i, (len(u_i), -1))
+                l_i = np.reshape(l_i, (len(l_i), -1))
+
     else:
-        model_ = model
-        model_.set_domain(convex_domain)
+        u_i = output[2]
+        l_i = output[3]
+        if len(u_i.shape) > 2:
+            u_i = np.reshape(u_i, (len(u_i), -1))
+            l_i = np.reshape(l_i, (len(l_i), -1))
+            ######
 
-    output = model_.predict([x, x])
-    return output[2], output[5]
+    if IBP and forward:
+        u_ = np.minimum(u_i, u_f)
+        l_ = np.maximum(l_i, l_f)
+    if IBP and not forward:
+        u_ = u_i
+        l_ = l_i
+    if not IBP and forward:
+        u_ = u_f
+        l_ = l_f
+
+    if mode == Backward.name:
+        u_ = np.minimum(u_, u_b)
+        l_ = np.maximum(l_, l_b)
+
+    return u_, l_
 
 
-def get_adv_box(model, x_min, x_max, source_label, target_labels=None, fast=True):
-    """
+def refine_box(func, model, x_min, x_max, n_split, source_labels=None, target_labels=None, batch_size=-1, random=True):
 
-    :param model: either a Keras model or a Decomon model
-    :param x_min: numpy array for the extramal lower corner of the boxes
-    :param x_max: numpy array for the extremal upper corner of the boxes
-    :param source_label: the list of label
-    that should be predicted all the time in the box
-    :param target_labels: the label against which we want
-    to assess robustness. If set to None, check for every other labels
-    than source_label
-    :param fast: boolean to have faster but less tight results
-    :return: numpy array, vector with upper bounds for adversarial attacks
-    """
+    if not func.__name__ in [
+        elem.__name__ for elem in [get_upper_box, get_lower_box, get_adv_box, check_adv_box, get_range_box]
+    ]:
+        raise NotImplementedError()
+
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
     if not isinstance(model, DecomonModel):
-        model_ = convert(model)
+        model_ = convert(model, IBP=True, mode="backward")
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
         model_ = model
 
-    if len(x_min.shape) == 1:
-        x_min = x_min[None]
-    if len(x_max.shape) == 1:
-        x_max = x_max[None]
+    # reshape x_mmin, x_max
+    input_shape = list(model_.input_shape[0][1:])
+    input_dim = np.prod(input_shape)
+    x_min = x_min.reshape((-1, input_dim))
+    x_max = x_max.reshape((-1, input_dim))
 
-    if not isinstance(source_label, int):
-        source_label = np.array(source_label)
+    n_x = len(x_min)
 
-    z = np.concatenate([x_min[:, None], x_max[:, None]], 1)
-    output = model_.predict([x_min, z])
+    # split
+    X_min = np.zeros((n_x, n_split, input_dim))
+    X_max = np.zeros((n_x, n_split, input_dim))
 
-    u_, w_u, b_u, l_, w_l, b_l = output[2:8]
+    X_min[:, 0] = x_min
+    X_max[:, 0] = x_max
 
-    if isinstance(source_label, int) or len(source_label.shape) == 0:
-        upper = u_ - l_[:, source_label : source_label + 1]
-        upper[:, source_label] = -np.inf
-    else:
-        upper = u_ - l_[range(len(source_label)), source_label][:, None]
-        upper[range(len(source_label)), source_label] = -np.inf
+    index_max = np.zeros((n_x, n_split, input_dim))
+    # init
+    index_max[:, 0] = x_max - x_min
 
-    if not fast:
+    for n_i in range(n_x):
+        count = 1
 
-        if isinstance(source_label, int) or len(source_label.shape) == 0:
-            w_ = w_u - w_l[:, :, source_label : source_label + 1]
-            b_ = b_u - b_l[:, source_label : source_label + 1]
+        while count < n_split:
 
-        else:
-            w_ = w_u - w_l[:, :, source_label]
-            b_ = b_u - b_l[:, source_label]
+            if not random:
+                i = np.argmax(np.max(index_max[n_i, :count], -1))
+                j = np.argmax(index_max[n_i, i])
+            else:
+                i = np.random.randint(count)
+                j = np.random.randint(input_dim)
 
-        x_min_ = x_min
-        x_max_ = x_max
-        n_expand = len(w_.shape) - len(x_min_.shape)
-        for _i in range(n_expand):
-            x_min_ = np.expand_dims(x_min_, -1)
-            x_max_ = np.expand_dims(x_max_, -1)
+            z_min = X_min[n_i, i]
+            z_max = X_max[n_i, i]
+            X_min[n_i, count] = z_min + 0.0
+            X_max[n_i, count] = z_max + 0.0
 
-        upper_ = np.sum(np.maximum(w_, 0) * x_max_, 1) + np.sum(np.minimum(w_, 0) * x_min_, 1) + b_
-        upper_[:, source_label] = -np.inf
+            X_max[n_i, i, j] = (z_min[j] + z_max[j]) / 2.0
+            X_min[n_i, count, j] = (z_min[j] + z_max[j]) / 2.0
 
-        upper = np.minimum(upper, upper_)
+            index_max[n_i, count] = index_max[n_i, i]
+            index_max[n_i, i, j] /= 2.0
+            index_max[n_i, count, j] /= 2.0
 
-    if target_labels is None:
-        return np.max(upper, -1)
-    else:
-        if isinstance(target_labels, int):
-            return np.max(upper[:, target_labels], -1)
-        else:
-            return np.max(upper[:, np.array(target_labels)], -1)
+            count += 1
 
+    X_min_ = X_min.reshape((-1, input_dim))
+    X_max_ = X_max.reshape((-1, input_dim))
 
-def check_adv_box(model, x_min, x_max, source_label, target_labels=None, fast=True):
-    """
+    if func.__name__ in [elem.__name__ for elem in [get_upper_box, get_lower_box, get_range_box]]:
 
-    :param model: either a Keras model or a Decomon model
-    :param x_min: numpy array for the extramal lower corner of the boxes
-    :param x_max: numpy array for the extremal upper corner of the boxes
-    :param source_label: the list of label that should
-    be predicted all the time in the box
-    :param target_labels: the label against which we want
-    to assess robustness. If set to None, check for every other labels
-    than source_label
-    :param fast: boolean to have faster but less tight results
-    :return: numpy array, vector with upper bounds for adversarial attacks
-    """
-    # check that the model is a DecomonModel, else do the conversion
-    # input_dim = 0
-    if not isinstance(model, DecomonModel):
-        model_ = convert(model)
-    else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
-        model_ = model
+        results = func(model_, x_min=X_min_, x_max=X_max_, batch_size=batch_size)
 
-    if len(x_min.shape) == 1:
-        x_min = x_min[None]
-    if len(x_max.shape) == 1:
-        x_max = x_max[None]
+        if func.__name__ == get_upper_box.__name__:
+            return np.max(results.reshape((n_x, n_split, -1)), 1)
+        if func.__name__ == get_lower_box.__name__:
+            return np.min(results.reshape((n_x, n_split, -1)), 1)
+        u_, l_ = results
+        u_ = u_.reshape((n_x, n_split, -1))
+        l_ = l_.reshape((n_x, n_split, -1))
+        return np.max(u_, 1), np.min(l_, 1)
 
-    if not isinstance(source_label, int):
-        source_label = np.array(source_label)
+    if func.__name__ in [elem.__name__ for elem in [get_adv_box, check_adv_box]]:
 
-    z = np.concatenate([x_min[:, None], x_max[:, None]], 1)
-    output = model_.predict([x_min, z])
-
-    """
-    preds = output[0]
-    if isinstance(source_label, int) or len(source_label.shape) == 0:
-    preds_label = preds[:, source_label:source_label+1][:, 0]
-    preds -= preds_label[:, None]
-    preds[:, label] = -1
-
-    if preds.max() > 0:
-        return 1, 0.
-    """
-    u_, w_u, b_u, l_, w_l, b_l = output[2:8]
-
-    if isinstance(source_label, int) or len(source_label.shape) == 0:
-        lower = l_ - u_[:, source_label : source_label + 1]
-        lower[:, source_label] = -np.inf
-    else:
-        lower = l_ - u_[range(len(source_label)), source_label][:, None]
-        lower[range(len(source_label)), source_label] = -np.inf
-
-    if not fast:
-
-        if isinstance(source_label, int) or len(source_label.shape) == 0:
-            w_ = w_l - w_u[:, :, source_label : source_label + 1]
-            b_ = b_l - b_u[:, source_label : source_label + 1]
-
-        else:
-            w_ = w_l - w_u[:, :, source_label]
-            b_ = b_l - b_u[:, source_label]
-
-        x_min_ = x_min
-        x_max_ = x_max
-        n_expand = len(w_.shape) - len(x_min_.shape)
-        for _i in range(n_expand):
-            x_min_ = np.expand_dims(x_min_, -1)
-            x_max_ = np.expand_dims(x_max_, -1)
-
-        lower_ = np.sum(np.maximum(w_, 0) * x_max_, 1) + np.sum(np.minimum(w_, 0) * x_min_, 1) + b_
-        lower_[:, source_label] = -np.inf
-
-        lower = np.minimum(lower, lower_)
-
-    if target_labels is None:
-        return np.max(lower, -1)
-    else:
-        if isinstance(target_labels, int):
-            return np.max(lower[:, target_labels], -1)
-        else:
-            return np.max(lower[:, np.array(target_labels)], -1)
-
-
-def init_alpha(model, decomon_model, x_min, x_max, label, fast=False, n_sub=1000):
-    """Sampling a robust box along the diagonal of x_min and x_max
-
-    :param model: Keras Model
-    :param decomon_model: DecomonModel
-    :param x_min: the extremal lower corner of the box
-    :param x_max: the extremal upper corner of the box
-    :param label: assessing that the model always predict label
-    :param fast: boolean to have faster but less tight results
-    :param n_sub: the number of subdivisions computed along the diagonal
-    :return: a tuple (integer, numpy array) that indicates
-    whether we found a robust zone along the diagonal and this
-    sample along the diagonal
-    """
-    # assert that there is no adversarial examples
-    # assert there is not adversarial examples
-    z = np.concatenate([x_min, x_max], 0)
-    preds = model.predict(z)
-    preds_label = preds[:, label]
-    preds -= preds_label[:, None]
-    preds[:, label] = -1
-
-    if preds.max() > 0:
-        return 1, 0.0
-
-    # check that the whole domain is not working
-    upper_high = get_adv_box(decomon_model, x_min, x_max, source_label=label, fast=fast)[0]
-    if upper_high <= 0:
-        return -1, 1.0
-
-    # test in // multiple values of splitting along the diagonal
-    alpha = np.linspace(0.0, 1.0, n_sub)[:, None]
-    X_alpha = (1 - alpha) * x_min + alpha * x_max
-
-    upper = get_adv_box(decomon_model, x_min + 0 * X_alpha, X_alpha, source_label=label, fast=fast)
-    index = np.where(upper < 0)[0][-1]
-    return -1, alpha[index]
-
-
-def increase_alpha(decomon_model, x_min, x_alpha, x_max, label, fast=False, alpha_=1):
-    """Improving the current safe box coordinate wise
-
-    :param decomon_model: DecomonModel
-    :param x_min: the extremal lower corner of the box
-    :param x_max: the extremal upper corner of the box
-    :param x_alpha: the extremal corner of a robust box [x_min, x_alpha]
-    :param label: assessing that the model always predict label
-    :param fast: boolean to have faster but less tight results
-    :param alpha_: controlling the ratio between x_max
-    and x_alpha to increase a component of x_alpha
-    :return: a tuple (numpy array, bool) with the update
-    (or not) value of x_alpha and a boolean to assess whether
-    we asucceed in enlarging the box
-    """
-    n_dim = np.prod(x_min.shape)
-    input_shape = list(x_min.shape)[1:]
-    X_min = np.concatenate([x_min] * n_dim, 0)
-
-    # flatten X_min and x_alpha
-    x_alpha_ = x_alpha.reshape((-1, n_dim))
-    X_min_ = X_min.reshape((-1, n_dim))
-    X_min_[np.arange(n_dim), np.arange(n_dim)] = x_alpha_
-    X_min = X_min_.reshape(tuple([-1] + input_shape))
-    x_alpha = x_alpha_.reshape(tuple([-1] + input_shape))
-    upper_low = get_adv_box(decomon_model, X_min, x_alpha + 0 * X_min, source_label=label, fast=fast)
-
-    index_keep = np.array(
-        [i for i in range(n_dim) if (i in np.where(upper_low < 0)[0]) and (i in np.where(x_alpha[0] < x_max[0])[0])]
-    )
-    score = np.min(upper_low)
-    j = 0
-    while score.min() < 0:
-
-        x_alpha_ = x_alpha.reshape((-1, n_dim))
-        A = np.concatenate([x_min] * n_dim, 0)
-        A_ = A.reshape((-1, n_dim))
-        A_[np.arange(n_dim), np.arange(n_dim)] = x_alpha_[0]
-        A = A_.reshape(tuple([-1] + input_shape))
-
-        X_alpha = np.concatenate([x_alpha] * n_dim, 0)
-        X_alpha_ = X_alpha.reshape((-1, n_dim))
-        X_alpha_[np.arange(n_dim), np.arange(n_dim)] = alpha_ * x_max.reshape((-1, n_dim)) + (
-            1 - alpha_
-        ) * x_alpha.reshape((-1, n_dim))
-        X_alpha = X_alpha_.reshape(tuple([-1] + input_shape))
-
-        toto = get_adv_box(decomon_model, A, x_max + 0 * A, label, fast=fast)
-
-        upper_dir = get_adv_box(
-            decomon_model,
-            A[index_keep],
-            X_alpha[index_keep],
-            source_label=label,
-            fast=fast,
+        results = func(
+            model_,
+            x_min=X_min_,
+            x_max=X_max_,
+            source_labels=source_labels,
+            target_labels=target_labels,
+            batch_size=batch_size,
         )
-        score = x_max - x_alpha
-        score[0, index_keep] = upper_dir * score[0, index_keep]
 
-        upper_ = np.ones((784,))
-        upper_[index_keep] = upper_dir
-
-        # upper_[np.where(x_max[0]==x_alpha[0])[0]]= 1
-        if upper_.min() >= 0:
-            break
-        index = upper_.argmin()
-        x_alpha[0, index] = alpha_ * x_max[0, index] + (1 - alpha_) * x_alpha[0, index]
-        tata = get_adv_box(decomon_model, x_min, x_max, source_label=label, fast=fast)
-        if tata < toto.max():
-            import pdb
-
-            pdb.set_trace()
-        print(upper_.min(), upper_.argmin(), toto.max())
-        # index_keep = np.where(score[0] < 0 and x_alpha[0]<x_max[0])[0]
-        index_keep = np.array(
-            [i for i in range(n_dim) if (i in np.where(upper_dir < 0)[0]) and (i in np.where(x_alpha[0] < x_max[0])[0])]
-        )
-        j += 1
-
-    x_alpha_ = x_alpha.reshape((-1, n_dim))
-    A = np.concatenate([x_min] * n_dim, 0)
-    A_ = A.reshape((-1, n_dim))
-    A_[np.arange(n_dim), np.arange(n_dim)] = x_alpha_[0]
-    A = A_.reshape(tuple([-1] + input_shape))
-    index_keep = np.where(x_alpha[0] < x_max[0])[0]
-    toto = get_adv_box(
-        decomon_model,
-        A[index_keep],
-        x_alpha + 0 * A[index_keep],
-        source_label=label,
-        fast=True,
-    )
-    return x_alpha, toto.min() < 0
-
-
-def search_space(
-    model,
-    x_min,
-    x_max,
-    label,
-    decomon_model=None,
-    fast=False,
-    n_sub=1000,
-    n_iter=4,
-    n_step=2,
-):
-    """
-
-    :param model: Keras model
-    :param x_min: the extremal lower corner of the box
-    :param x_max: the extremal upper corner of the box
-    :param decomon_model: DecomonModel or None,
-    if set to None the convertion is done automatically
-    :param fast: boolean to have faster but less tight results
-    :param n_sub: ??
-    :param n_iter: ??
-    :param n_step: number of allowed recursive calls
-    :return:
-    """
-
-    if decomon_model is None:
-        decomon_model = convert(model)
-
-    # first test on the whole domain
-    lower = check_adv_box(decomon_model, x_min, x_max, source_label=label, fast=fast)
-    if lower >= 0:
-        return 1  # we found an adversarial example
-    upper = get_adv_box(decomon_model, x_min, x_max, source_label=label, fast=fast)
-    print("--", upper)
-    if upper <= 0:
-        return -1  # robust box
-
-    if n_step == 0:
-        return 0  # no more budget and the evaluation
-        # of the cell with decomon was not sufficient
-
-    n_dim = np.prod(x_min.shape)
-    input_shape = list(x_min.shape)[1:]
-
-    # find the best granularity
-    sanity_test_0, alpha_ = init_alpha(model, decomon_model, x_min, x_max, label)
-    if sanity_test_0 == 1:
-        return 1  # we found an adversarial example (either x_min or x_max)
-    if alpha_ == 1.0:
-        return -1  # robust box
-
-    x_alpha = (1 - alpha_) * x_min + alpha_ * x_max
-
-    found = True
-    i = 0
-    alpha_tmp = np.linspace(0.5, 1.0, 4)[::-1]
-    while found and i < len(alpha_tmp):
-        # print(i, alpha_tmp[i])
-        x_alpha, found = increase_alpha(decomon_model, x_min, x_alpha, x_max, label, alpha_=alpha_tmp[i])
-        if np.allclose(x_max, x_alpha):
-            return -1
-        break
-
-    X_min = np.concatenate([x_min] * n_dim, 0)
-    X_min_ = X_min.reshape((-1, n_dim))
-    X_min_[np.arange(n_dim), np.arange(n_dim)] = x_alpha.reshape((-1, n_dim))
-    X_min = X_min_.reshape(tuple([-1] + input_shape))
-    z = np.concatenate([X_min, x_alpha], 0)
-    preds = model.predict(z)
-    preds_label = preds[:, label]
-    preds -= preds_label[:, None]
-    preds[:, label] = -1
-
-    if preds.max() > 0:
-        return 1
-
-    # work sequentially (not optimal but ok for now)
-    for i in range(n_dim):
-        if x_alpha[0, i] == x_max[0, i]:
-            continue
-        sanity_test_i = search_space(
-            model,
-            X_min[i : i + 1],
-            x_max,
-            label,
-            decomon_model,
-            fast,
-            n_sub,
-            n_iter,
-            n_step - 1,
-        )
-        if sanity_test_i == 1:
-            return 1  # we found an adversarial example
-        if sanity_test_i == 0:
-            return 0  # undetermined region
-
-    return -1  # we validate every subdomains
+        return np.max(results.reshape((n_x, n_split)), 1)

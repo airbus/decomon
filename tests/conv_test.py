@@ -24,8 +24,8 @@ def test_Decomon_conv_box(data_format, odd, m_0, m_1):
 
     output = monotonic_layer(inputs[1:])
 
-    W_, W_pos, W_neg, bias = monotonic_layer.get_weights()
-    monotonic_layer.set_weights([W_pos, W_pos, np.zeros_like(W_neg), bias])
+    W_, bias = monotonic_layer.get_weights()
+    monotonic_layer.set_weights([np.maximum(0.0, W_), bias])
     f_conv = K.function(inputs[1:], output)
 
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_conv(inputs_[1:])
@@ -46,7 +46,7 @@ def test_Decomon_conv_box(data_format, odd, m_0, m_1):
         "conv_{}_{}_{}_{}".format(data_format, odd, m_0, m_1),
         decimal=5,
     )
-    monotonic_layer.set_weights([W_neg, np.zeros_like(W_pos), W_neg, bias])
+    monotonic_layer.set_weights([np.minimum(0.0, W_), bias])
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_conv(inputs_[1:])
 
     assert_output_properties_box(
@@ -78,13 +78,13 @@ def test_Decomon_conv_box_nodc(data_format, odd, m_0, m_1):
 
     output = monotonic_layer(inputs[1:])
 
-    W_, W_pos, W_neg, bias = monotonic_layer.get_weights()
-    monotonic_layer.set_weights([W_pos, W_pos, np.zeros_like(W_neg), bias])
+    W_, bias = monotonic_layer.get_weights()
+    monotonic_layer.set_weights([np.maximum(0.0, W_), bias])
     f_conv = K.function(inputs[1:], output)
 
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_conv(inputs_[1:])
     assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc")
-    monotonic_layer.set_weights([W_neg, np.zeros_like(W_pos), W_neg, bias])
+    monotonic_layer.set_weights([np.minimum(0.0, W_), bias])
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_conv(inputs_[1:])
     assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc")
 

@@ -123,10 +123,10 @@ def test_DecomonDense_1D_box(n, activation, n_subgrad):
     output = monotonic_dense(inputs[1:])
     ref_dense(inputs[1])
 
-    W_pos, W_neg, bias = monotonic_dense.get_weights()
+    W_, bias = monotonic_dense.get_weights()
 
-    monotonic_dense.set_weights([2 * np.ones_like(W_pos), np.zeros_like(W_neg), np.ones_like(bias)])
-    ref_dense.set_weights([2 * np.ones_like(W_pos), np.ones_like(bias)])
+    monotonic_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
+    ref_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
 
     f_dense = K.function(inputs[1:], output)
     f_ref = K.function(inputs, ref_dense(inputs[1]))
@@ -165,8 +165,8 @@ def test_DecomonDense_1D_box(n, activation, n_subgrad):
         "dense_{}".format(n),
     )
 
-    monotonic_dense.set_weights([np.zeros_like(W_pos), -3 * np.ones_like(W_neg), np.ones_like(bias)])
-    ref_dense.set_weights([-3 * np.ones_like(W_pos), np.ones_like(bias)])
+    monotonic_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
+    ref_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[1:])
 
     y_ref = f_ref(inputs_)
@@ -238,10 +238,10 @@ def test_DecomonDense_multiD_box(odd, activation, n_subgrad):
     output = monotonic_dense(inputs[1:])
     ref_dense(inputs[1])
 
-    W_pos, W_neg, bias = monotonic_dense.get_weights()
+    W_, bias = monotonic_dense.get_weights()
 
-    monotonic_dense.set_weights([2 * np.ones_like(W_pos), np.zeros_like(W_neg), np.ones_like(bias)])
-    ref_dense.set_weights([2 * np.ones_like(W_pos), np.ones_like(bias)])
+    monotonic_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
+    ref_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
     f_dense = K.function(inputs[1:], output)
     f_ref = K.function(inputs, ref_dense(inputs[1]))
 
@@ -265,8 +265,8 @@ def test_DecomonDense_multiD_box(odd, activation, n_subgrad):
     )
     assert np.allclose(y_ref, y_)
 
-    monotonic_dense.set_weights([np.zeros_like(W_pos), -3 * np.ones_like(W_neg), np.ones_like(bias)])
-    ref_dense.set_weights([-3 * np.ones_like(W_pos), np.ones_like(bias)])
+    monotonic_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
+    ref_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[1:])
     y_ref = f_ref(inputs_)
 
@@ -399,16 +399,10 @@ def test_DecomonDense_1D_to_monotonic_box(n, activation, n_subgrad):
 
     assert monotonic_dense.n_subgrad == n_subgrad
 
-    W_pos, W_neg, bias = monotonic_dense.get_weights()
+    W_, bias = monotonic_dense.get_weights()
     W_0, b_0 = dense_ref.get_weights()
 
-    assert_almost_equal(W_pos + W_neg, W_0, decimal=6, err_msg="wrong decomposition")
-    assert_almost_equal(
-        np.minimum(W_pos, -W_neg),
-        np.zeros_like(W_pos),
-        decimal=6,
-        err_msg="wrong decomposition",
-    )
+    assert_almost_equal(W_, W_0, decimal=6, err_msg="wrong decomposition")
     assert_almost_equal(bias, b_0, decimal=6, err_msg="wrong decomposition")
 
     output = monotonic_dense(inputs[1:])
@@ -485,16 +479,10 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation, n_subgrad):
 
     assert monotonic_dense.n_subgrad == n_subgrad
 
-    W_pos, W_neg, bias = monotonic_dense.get_weights()
+    W_, bias = monotonic_dense.get_weights()
     W_0, b_0 = dense_ref.get_weights()
 
-    assert_almost_equal(W_pos + W_neg, W_0, decimal=6, err_msg="wrong decomposition")
-    assert_almost_equal(
-        np.minimum(W_pos, -W_neg),
-        np.zeros_like(W_pos),
-        decimal=6,
-        err_msg="wrong decomposition",
-    )
+    assert_almost_equal(W_, W_0, decimal=6, err_msg="wrong decomposition")
     assert_almost_equal(bias, b_0, decimal=6, err_msg="wrong decomposition")
 
     output = monotonic_dense(inputs[1:])
@@ -633,10 +621,10 @@ def test_DecomonDense_1D_box_nodc(n, activation, n_subgrad):
     output = monotonic_dense(inputs[1:])
     ref_dense(inputs[1])
 
-    W_pos, W_neg, bias = monotonic_dense.get_weights()
+    W_, bias = monotonic_dense.get_weights()
 
-    monotonic_dense.set_weights([2 * np.ones_like(W_pos), np.zeros_like(W_neg), np.ones_like(bias)])
-    ref_dense.set_weights([2 * np.ones_like(W_pos), np.ones_like(bias)])
+    monotonic_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
+    ref_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
 
     f_dense = K.function(inputs[1:], output)
     f_ref = K.function(inputs, ref_dense(inputs[1]))
@@ -695,16 +683,10 @@ def test_DecomonDense_multiD_to_monotonic_box_nodc(odd, activation, n_subgrad):
     monotonic_dense = to_monotonic(dense_ref, (2, input_dim), dc_decomp=False, n_subgrad=n_subgrad)
     assert monotonic_dense.n_subgrad == n_subgrad
 
-    W_pos, W_neg, bias = monotonic_dense.get_weights()
+    W_, bias = monotonic_dense.get_weights()
     W_0, b_0 = dense_ref.get_weights()
 
-    assert_almost_equal(W_pos + W_neg, W_0, decimal=6, err_msg="wrong decomposition")
-    assert_almost_equal(
-        np.minimum(W_pos, -W_neg),
-        np.zeros_like(W_pos),
-        decimal=6,
-        err_msg="wrong decomposition",
-    )
+    assert_almost_equal(W_, W_0, decimal=6, err_msg="wrong decomposition")
     assert_almost_equal(bias, b_0, decimal=6, err_msg="wrong decomposition")
 
     output = monotonic_dense(inputs[1:])
@@ -751,10 +733,10 @@ def test_DecomonDense_multiD_box_dc(odd, activation, n_subgrad):
     output = monotonic_dense(inputs[1:])
     ref_dense(inputs[1])
 
-    W_pos, W_neg, bias = monotonic_dense.get_weights()
+    W_, bias = monotonic_dense.get_weights()
 
-    monotonic_dense.set_weights([2 * np.ones_like(W_pos), np.zeros_like(W_neg), np.ones_like(bias)])
-    ref_dense.set_weights([2 * np.ones_like(W_pos), np.ones_like(bias)])
+    monotonic_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
+    ref_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
     f_dense = K.function(inputs[1:], output)
     f_ref = K.function(inputs, ref_dense(inputs[1]))
 
@@ -764,8 +746,8 @@ def test_DecomonDense_multiD_box_dc(odd, activation, n_subgrad):
     assert_almost_equal(y_, y_ref)
     assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc")
 
-    monotonic_dense.set_weights([np.zeros_like(W_pos), -3 * np.ones_like(W_neg), np.ones_like(bias)])
-    ref_dense.set_weights([-3 * np.ones_like(W_pos), np.ones_like(bias)])
+    monotonic_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
+    ref_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
     y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[1:])
     y_ref = f_ref(inputs_)
 
