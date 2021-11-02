@@ -45,6 +45,10 @@ def get_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_si
     source_labels = source_labels.reshape((len(x_), -1))
     source_labels = source_labels.astype("int64")
 
+    if target_labels is not None:
+        target_labels = target_labels.reshape((len(x_), -1))
+        target_labels = target_labels.astype("int64")
+
     if batch_size > 0:
         # split
         r = 0
@@ -185,6 +189,10 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
 
     source_labels = source_labels.reshape((len(x_), -1))
     source_labels = source_labels.astype("int64")
+
+    if target_labels is not None:
+        target_labels = target_labels.reshape((len(x_), -1))
+        target_labels = target_labels.astype("int64")
 
     if batch_size > 0:
         # split

@@ -21,6 +21,7 @@ from tensorflow.keras.layers import (
     Lambda,
     InputSpec,
 )
+
 try:
     from keras.layers.merge import _Merge as Merge
 except ModuleNotFoundError:

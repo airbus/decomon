@@ -119,7 +119,7 @@ def clone(
     input_dim=-1,
     dc_decomp=False,
     convex_domain={},
-    mode="forward",
+    mode="backward",
     slope_backward=V_slope.name,
     IBP=True,
     forward=True,
@@ -242,7 +242,17 @@ def clone_sequential_model(
                     list_layer += _get_layer(layer_)
                 return list_layer
             # return [clone_functional_model(layer, layer_fn=layer_fn)]
-            return [clone(layer, layer_fn=layer_fn)]
+            return [
+                clone(
+                    layer,
+                    layer_fn=layer_fn,
+                    dc_decomp=dc_decomp,
+                    convex_domain=convex_domain,
+                    IBP=IBP,
+                    forward=forward,
+                    finetune=finetune,
+                )
+            ]
 
         if isinstance(layer, Layer):
             return [layer_fn(layer)]
@@ -584,9 +594,28 @@ def clone_functional_model(
                 # Clone layer.
                 if isinstance(layer_, Model):
                     if isinstance(layer_, Sequential):
-                        new_layer = clone_sequential_model(layer_, layer_fn=layer_fn)
+                        new_layer = clone_sequential_model(
+                            layer_,
+                            layer_fn=layer_fn,
+                            input_dim=-1,
+                            dc_decomp=dc_decomp,
+                            convex_domain=convex_domain,
+                            IBP=IBP,
+                            forward=forward,
+                            finetune=finetune,
+                        )
+
                     else:
-                        new_layer = clone_functional_model(layer_, layer_fn=layer_fn)
+                        new_layer = clone_functional_model(
+                            layer_,
+                            layer_fn=layer_fn,
+                            input_dim=-1,
+                            dc_decomp=dc_decomp,
+                            convex_domain=convex_domain,
+                            IBP=IBP,
+                            forward=forward,
+                            finetune=finetune,
+                        )
                 else:
                     new_layer = layer_fn(layer_)
 
@@ -735,6 +764,7 @@ def convert(
         convex_domain=convex_domain,
         IBP=IBP,
         forward=forward,
+        mode="forward",
         finetune=finetune,
     )
 
