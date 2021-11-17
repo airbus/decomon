@@ -12,6 +12,9 @@ def get_adv_brightness(
     model, x, bright_min, bright_max, source_labels, target_labels=None, x_min=None, x_max=None, batch_size=-1
 ):
 
+    if np.min(bright_max - bright_min) < 0:
+        raise UserWarning("Inconsistency Error: bright_max < bright_min")
+
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
     if not isinstance(model, DecomonModel):
