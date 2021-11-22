@@ -617,6 +617,7 @@ def clone_functional_model(
                             finetune=finetune,
                         )
                 else:
+                    # attention this could be a list
                     new_layer = layer_fn(layer_)
 
                 layer_map[layer_] = new_layer

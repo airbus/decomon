@@ -585,4 +585,4 @@ def to_monotonic_merge(
     layer_monotonic(input_list)
     layer_monotonic.reset_layer(layer)
 
-    return layer_monotonic
+    return [layer_monotonic]

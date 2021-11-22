@@ -515,7 +515,7 @@ class Project_initializer_neg(Initializer):
         return K.minimum(0.0, w_)
 
 
-def relu_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, slope=V_slope.name):
+def relu_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, slope=V_slope.name, **kwargs):
     """
     LiRPA implementation of relu(x)=max(x, 0)
 
@@ -601,6 +601,14 @@ def relu_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, slope=V_slop
         if slope == S_slope.name:
             w_l_ = K.expand_dims(alpha, 1) * w_l
             b_l_ = alpha * b_l
+
+        if "finetune" in kwargs:
+            # weighted linear combination
+            alpha_l = kwargs["finetune"]
+            alpha_l_ = alpha_l[None]
+
+            w_l_ = alpha_l_ * w_l_
+            b_l_ = alpha_l_ * b_l_ + (1.0 - alpha_l_) * K.maximum(lower, 0.0)
 
         # set everything to the initial state if relu_ is linear
         index_linear_b = 1.0 - index_linear

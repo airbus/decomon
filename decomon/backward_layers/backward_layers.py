@@ -51,13 +51,22 @@ class BackwardDense(Layer):
             # here update x
             x = self.layer.call_linear(x_)
             if self.layer.finetune:
-                w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                    x + [w_out_u, b_out_u, w_out_l, b_out_l],
-                    convex_domain=self.layer.convex_domain,
-                    slope=self.slope,
-                    mode=self.mode,
-                    finetune=self.alpha_b_l,
-                )
+                if self.activation_name[:4]!="relu":
+                    w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
+                        x + [w_out_u, b_out_u, w_out_l, b_out_l],
+                        convex_domain=self.layer.convex_domain,
+                        slope=self.slope,
+                        mode=self.mode,
+                        finetune=[self.alpha_b_u, self.alpha_b_l],
+                    )
+                else:
+                    w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
+                        x + [w_out_u, b_out_u, w_out_l, b_out_l],
+                        convex_domain=self.layer.convex_domain,
+                        slope=self.slope,
+                        mode=self.mode,
+                        finetune=self.alpha_b_l,
+                    )
             else:
                 w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
                     x + [w_out_u, b_out_u, w_out_l, b_out_l],
@@ -93,6 +102,11 @@ class BackwardDense(Layer):
             self.alpha_b_l = self.add_weight(
                 shape=(units,), initializer="ones", name="alpha_l_b", regularizer=None, constraint=ClipAlpha()
             )
+
+            if self.activation_name[:4]!="relu":
+                self.alpha_b_u = self.add_weight(
+                    shape=(units,), initializer="ones", name="alpha_u_b", regularizer=None, constraint=ClipAlpha()
+                )
         self.built = True
 
     def freeze_alpha(self):
@@ -105,8 +119,10 @@ class BackwardDense(Layer):
 
     def reset_finetuning(self):
         if self.layer.finetune and self.activation_name != "linear":
-
             K.set_value(self.alpha_b_l, np.ones_like(self.alpha_b_l.value()))
+
+            if self.activation_name[:4]!="relu":
+                K.set_value(self.alpha_b_u, np.ones_like(self.alpha_b_u.value()))
 
 
 class BackwardConv2D(Layer):

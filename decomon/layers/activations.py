@@ -32,7 +32,7 @@ HARD_SIGMOID = "hard_sigmoid"
 LINEAR = "linear"
 
 
-def relu(x, dc_decomp=False, convex_domain={}, alpha=0.0, max_value=None, threshold=0.0, mode=F_HYBRID.name):
+def relu(x, dc_decomp=False, convex_domain={}, alpha=0.0, max_value=None, threshold=0.0, mode=F_HYBRID.name, **kwargs):
     """Rectified Linear Unit.
     With default values, it returns element-wise `max(x, 0)`.
     Otherwise, it follows:
@@ -55,7 +55,7 @@ def relu(x, dc_decomp=False, convex_domain={}, alpha=0.0, max_value=None, thresh
 
     if not (alpha) and max_value is None:
         # default values: return relu_(x) = max(x, 0)
-        return relu_(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
+        return relu_(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, **kwargs)
 
     raise NotImplementedError()
 

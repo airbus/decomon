@@ -146,6 +146,26 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             self.bias = None
 
         if self.finetune and self.mode == F_HYBRID.name:
+            # create extra parameters that can be optimized
+
+            self.alpha_ = self.add_weight(
+                shape=kernel_shape,
+                initializer="ones",
+                name="alpha_f",
+                regularizer=None,
+                constraint=ClipAlpha(),
+            )
+
+            self.gamma_ = self.add_weight(
+                shape=kernel_shape,
+                initializer="ones",
+                name="gamma_f",
+                regularizer=None,
+                constraint=ClipAlpha(),
+            )
+
+
+            """
             dim_alpha = tuple(input_shape[0][1:])
             # create extra parameters that can be optimized
 
@@ -155,6 +175,8 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             self.alpha_l_f = self.add_weight(
                 shape=dim_alpha, initializer="ones", name="alpha_l_f", regularizer=None, constraint=ClipAlpha()
             )
+            """
+
 
         if self.mode == F_HYBRID.name:
             # inputs tensors: h, g, x_min, x_max, W_u, b_u, W_l, b_l
@@ -275,6 +297,45 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                 dilation_rate=self.dilation_rate,
             )
 
+        if self.finetune:
+            def conv_pos_alpha(x):
+                return conv2d(
+                    x,
+                    K.maximum(0.0, self.kernel*self.alpha_),
+                    strides=self.strides,
+                    padding=self.padding,
+                    data_format=self.data_format,
+                    dilation_rate=self.dilation_rate,
+                )
+            def conv_pos_gamma(x):
+                return conv2d(
+                    x,
+                    K.maximum(0.0, self.kernel*self.gamma_),
+                    strides=self.strides,
+                    padding=self.padding,
+                    data_format=self.data_format,
+                    dilation_rate=self.dilation_rate,
+                )
+
+            def conv_neg_alpha(x):
+                return conv2d(
+                    x,
+                    K.minimum(0.0, self.kernel*self.alpha_),
+                    strides=self.strides,
+                    padding=self.padding,
+                    data_format=self.data_format,
+                    dilation_rate=self.dilation_rate,
+                )
+            def conv_neg_gamma(x):
+                return conv2d(
+                    x,
+                    K.minimum(0.0, self.kernel*self.gamma_),
+                    strides=self.strides,
+                    padding=self.padding,
+                    data_format=self.data_format,
+                    dilation_rate=self.dilation_rate,
+                )
+
         if self.dc_decomp:
             h_ = conv_pos(h) + conv_neg(g)
             g_ = conv_pos(g) + conv_neg(h)
@@ -315,6 +376,13 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                 mask_a = 1.0 - mask_b
 
                 if self.mode == F_HYBRID.name and self.finetune:
+
+                    b_u_ = conv_pos_alpha(b_u-u_c) + conv_neg_alpha(mask_a*(b_l-l_c) + mask_b*(b_u-u_c)) +\
+                           conv_pos(u_c) + conv_neg(mask_a*l_c + mask_b*u_c)
+
+                    b_l_ = conv_pos_gamma(b_l-l_c) + conv_neg_gamma(mask_a*(b_u-u_c) + mask_b*(b_l-l_c)) +\
+                           conv_pos(l_c) + conv_neg(mask_a*u_c + mask_b*l_c)
+                    """
                     b_u_ = conv_pos(self.alpha_u_f * b_u + (1 - self.alpha_u_f) * u_c) + conv_neg(
                         mask_a * (self.alpha_l_f * b_l + (1 - self.alpha_l_f) * l_c)
                         + mask_b * (self.alpha_u_f * b_u + (1 - self.alpha_u_f) * u_c)
@@ -324,6 +392,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                         mask_a * (self.alpha_u_f * b_u + (1 - self.alpha_u_f) * u_c)
                         + mask_b * (self.alpha_l_f * b_l + (1 - self.alpha_l_f) * l_c)
                     )
+                    """
                 else:
                     b_u_ = conv_pos(b_u) + conv_neg(mask_a * b_l + mask_b * b_u)
 
@@ -338,7 +407,31 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                 def step_neg(x, _):
                     return conv_neg(x), []
 
+
                 if self.mode == F_HYBRID.name and self.finetune:
+
+                    def step_pos_alpha(x, _):
+                        return conv_pos_alpha(x), []
+
+                    def step_neg_alpha(x, _):
+                        return conv_neg_alpha(x), []
+
+                    def step_pos_gamma(x, _):
+                        return conv_pos_gamma(x), []
+
+                    def step_neg_gamma(x, _):
+                        return conv_neg_gamma(x), []
+
+                    w_u_ = (
+                            K.rnn(step_function=step_pos_alpha, inputs=w_u, initial_states=[], unroll=False)[1]
+                          + K.rnn(step_function=step_neg_alpha,inputs=mask_a * w_l + mask_b * w_u, initial_states=[],
+                            unroll=False)[1])
+
+                    w_l_ = (
+                            K.rnn(step_function=step_pos_gamma, inputs=w_l, initial_states=[], unroll=False)[1]
+                            + K.rnn(step_function=step_neg_gamma, inputs=mask_a * w_u + mask_b * w_l, initial_states=[],
+                                    unroll=False)[1])
+                    """
                     alpha_u_ = self.alpha_u_f[None, None, :]
                     alpha_l_ = self.alpha_l_f[None, None, :]
 
@@ -360,6 +453,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                             unroll=False,
                         )[1]
                     )
+                    """
                 else:
                     w_u_ = (
                         K.rnn(step_function=step_pos, inputs=w_u, initial_states=[], unroll=False)[1]
@@ -516,14 +610,14 @@ class DecomonConv2D(Conv2D, DecomonLayer):
     def unfreeze_alpha(self):
         if not self.frozen_alpha:
             if self.finetune and self.mode == F_HYBRID.name:
-                self._trainable_weights += [self.alpha_u_f, self.alpha_l_f]
+                self._trainable_weights += [self.alpha_, self.gamma_]
             self.frozen_alpha = False
 
     def reset_finetuning(self):
         if self.finetune and self.mode == F_HYBRID.name:
 
-            K.set_value(self.alpha_u_f, np.ones_like(self.alpha_u_f.value()))
-            K.set_value(self.alpha_l_f, np.ones_like(self.alpha_l_f.value()))
+            K.set_value(self.alpha_, np.ones_like(self.alpha_.value()))
+            K.set_value(self.gamma_, np.ones_like(self.gamma_.value()))
 
 
 class DecomonDense(Dense, DecomonLayer):
@@ -551,6 +645,10 @@ class DecomonDense(Dense, DecomonLayer):
         self.activation = activations.get(activation)
         self.dot_op = Dot(axes=(1, 2))
         self.n_subgrad = 0  # deprecated optimization scheme
+        if activation is None:
+            self.activation_name = 'linear'
+        else:
+            self.activation_name = activation
 
     def build(self, input_shape):
         """
@@ -588,12 +686,25 @@ class DecomonDense(Dense, DecomonLayer):
         if self.finetune and self.mode == F_HYBRID.name:
             # create extra parameters that can be optimized
 
-            self.alpha_u_f = self.add_weight(
-                shape=(input_dim,), initializer="ones", name="alpha_u_f", regularizer=None, constraint=ClipAlpha()
+            if self.activation_name!='linear':
+
+                if self.activation_name[:4]!='relu':
+                    self.beta_u_f_ = self.add_weight(
+                        shape=(self.units,), initializer="ones", name="beta_u_f", regularizer=None, constraint=ClipAlpha()
+                    )
+                self.beta_l_f_ = self.add_weight(
+                    shape=(self.units,), initializer="ones", name="beta_l_f", regularizer=None, constraint=ClipAlpha()
+                )
+
+
+            self.alpha_ = self.add_weight(
+                shape=(input_dim, self.units), initializer="ones", name="alpha_", regularizer=None, constraint=ClipAlpha()
             )
-            self.alpha_l_f = self.add_weight(
-                shape=(input_dim,), initializer="ones", name="alpha_l_f", regularizer=None, constraint=ClipAlpha()
+            self.gamma_ = self.add_weight(
+                shape=(input_dim, self.units), initializer="ones", name="gamma_", regularizer=None, constraint=ClipAlpha()
             )
+
+
 
         # False
         # 6 inputs tensors :  h, g, x_min, x_max, W_u, b_u, W_l, b_l
@@ -645,6 +756,14 @@ class DecomonDense(Dense, DecomonLayer):
         kernel_pos = K.maximum(0.0, self.kernel)
         kernel_neg = K.minimum(0.0, self.kernel)
 
+        if self.finetune:
+
+            kernel_pos_alpha = K.maximum(0., self.kernel*self.alpha_)
+            kernel_pos_gamma = K.maximum(0., self.kernel*self.gamma_)
+            kernel_neg_alpha = K.minimum(0., self.kernel*self.alpha_)
+            kernel_neg_gamma = K.minimum(0., self.kernel * self.gamma_)
+
+
         if self.dc_decomp:
             h, g = inputs[-2:]
             h_ = K.dot(h, kernel_pos) + K.dot(g, kernel_neg)
@@ -683,12 +802,21 @@ class DecomonDense(Dense, DecomonLayer):
                 b_l_ = b_u_
                 if self.finetune and self.mode == F_HYBRID.name:
                     self.frozen_alpha = True
-                    self._trainable_weights = self._trainable_weights[:-2]
+                    self._trainable_weights = self._trainable_weights[:-2] # not optimal
 
             if len(w_u.shape) != len(b_u.shape):
                 # first layer, it is necessary linear
 
                 if self.finetune and self.mode == F_HYBRID.name:
+
+                    b_u_ = K.dot(b_u-u_c, kernel_pos_alpha) +\
+                           K.dot(mask_a * (b_l-l_c) + mask_b * (b_u-u_c), kernel_neg_alpha) +\
+                           K.dot(u_c, kernel_pos) + K.dot(mask_a*l_c + mask_b*u_c, kernel_neg)
+
+                    b_l_ = K.dot(b_l-l_c, kernel_pos_gamma) +\
+                           K.dot(mask_a * (b_u-u_c) + mask_b * (b_l-l_c), kernel_neg_gamma) +\
+                           K.dot(l_c, kernel_pos)+ K.dot(mask_a*u_c + mask_b*l_c, kernel_neg)
+                    """
                     b_u_ = K.dot(self.alpha_u_f * b_u + (1 - self.alpha_u_f) * u_c, kernel_pos) + K.dot(
                         mask_a * (self.alpha_l_f * b_l + (1 - self.alpha_l_f) * l_c)
                         + mask_b * (self.alpha_u_f * b_u + (1 - self.alpha_u_f) * u_c),
@@ -700,6 +828,7 @@ class DecomonDense(Dense, DecomonLayer):
                         + mask_b * (self.alpha_l_f * b_l + (1 - self.alpha_l_f) * l_c),
                         kernel_neg,
                     )
+                    """
                 else:
                     # if not self.n_subgrad or self.mode == F_FORWARD.name:
                     b_u_ = K.dot(b_u, kernel_pos) + K.dot(mask_a * b_l + mask_b * b_u, kernel_neg)
@@ -725,17 +854,26 @@ class DecomonDense(Dense, DecomonLayer):
 
                 # if not self.n_subgrad or self.mode == F_FORWARD.name:
                 if self.finetune and self.mode == F_HYBRID.name:
+
+                    w_u_ = K.dot(w_u, kernel_pos_alpha) + K.dot(mask_a * w_l + mask_b * w_u, kernel_neg_alpha)
+                    w_l_ = K.dot(w_l, kernel_pos_gamma) + K.dot(mask_a * w_u + mask_b * w_l, kernel_neg_gamma)
+
+
+                    """
                     w_u_ = K.dot(self.alpha_u_f * w_u, kernel_pos) + K.dot(
                         mask_a * self.alpha_l_f * w_l + mask_b * self.alpha_u_f * w_u, kernel_neg
                     )
                     w_l_ = K.dot(self.alpha_l_f * w_l, kernel_pos) + K.dot(
                         mask_a * self.alpha_u_f * w_u + mask_b * self.alpha_l_f * w_l, kernel_neg
                     )
+                    """
                 else:
                     w_u_ = K.dot(w_u, kernel_pos) + K.dot(mask_a * w_l + mask_b * w_u, kernel_neg)
                     w_l_ = K.dot(w_l, kernel_pos) + K.dot(mask_a * w_u + mask_b * w_l, kernel_neg)
 
+
                 # else:
+                """
                 if self.n_subgrad and self.mode == F_HYBRID.name:
                     kernel_pos_ = K.expand_dims(kernel_pos_, 1)
                     kernel_neg_ = K.expand_dims(kernel_neg_, 1)
@@ -768,6 +906,7 @@ class DecomonDense(Dense, DecomonLayer):
                     u_c_ = u_sub
                     # u_c_ = K.minimum(u_c_, u_sub)
                     # l_c_ = K.maximum(l_c_, l_sub)
+                """
 
         if self.use_bias:
             if self.mode in [F_HYBRID.name, F_IBP.name]:
@@ -810,13 +949,33 @@ class DecomonDense(Dense, DecomonLayer):
 
         output = self.call_linear(inputs)
 
-        if self.activation is not None:
-            output = self.activation(
-                output,
-                dc_decomp=self.dc_decomp,
-                convex_domain=self.convex_domain,
-                mode=self.mode,
-            )
+        if self.activation is not None and self.activation_name!='linear':
+
+            if self.finetune:
+                if self.activation_name[:4]!='relu':
+
+                    output = self.activation(
+                        output,
+                        dc_decomp=self.dc_decomp,
+                        convex_domain=self.convex_domain,
+                        mode=self.mode,
+                        finetune=[self.beta_u_f_, self.beta_l_f_]
+                    )
+                else:
+                    output = self.activation(
+                        output,
+                        dc_decomp=self.dc_decomp,
+                        convex_domain=self.convex_domain,
+                        mode=self.mode,
+                        finetune=self.beta_l_f_
+                    )
+            else:
+                output = self.activation(
+                    output,
+                    dc_decomp=self.dc_decomp,
+                    convex_domain=self.convex_domain,
+                    mode=self.mode,
+                )
 
         return output
 
@@ -884,20 +1043,38 @@ class DecomonDense(Dense, DecomonLayer):
     def freeze_alpha(self):
         if not self.frozen_alpha:
             if self.finetune and self.mode == F_HYBRID.name:
-                self._trainable_weights = self._trainable_weights[:-2]
+                if self.activation_name=='linear':
+                    self._trainable_weights = self._trainable_weights[:-2]
+                else:
+                    if self.activation_name[:4]=='relu':
+                        self._trainable_weights = self._trainable_weights[:-3]
+                    else:
+                        self._trainable_weights = self._trainable_weights[:-4]
                 self.frozen_alpha = True
 
     def unfreeze_alpha(self):
         if not self.frozen_alpha:
             if self.finetune and self.mode == F_HYBRID.name:
-                self._trainable_weights += [self.alpha_u_f, self.alpha_l_f]
+                self._trainable_weights += [self.alpha_, self.gamma_]
+                if self.activation_name!='linear':
+                    if self.activation_name[:4]=='relu':
+                        self._trainable_weights += [self.beta_u_f_, self.beta_l_f_]
+                    else:
+                        self._trainable_weights += [self.beta_u_f_, self.beta_l_f_]
             self.frozen_alpha = False
 
     def reset_finetuning(self):
         if self.finetune and self.mode == F_HYBRID.name:
 
-            K.set_value(self.alpha_u_f, np.ones_like(self.alpha_u_f.value()))
-            K.set_value(self.alpha_l_f, np.ones_like(self.alpha_l_f.value()))
+            K.set_value(self.alpha_, np.ones_like(self.alpha_.value()))
+            K.set_value(self.gamma_, np.ones_like(self.gamma_.value()))
+
+            if self.activation_name!='linear':
+                if self.activation_name[:4]=='relu':
+                    K.set_value(self.beta_l_f_, np.ones_like(self.beta_l_f_.value()))
+                else:
+                    K.set_value(self.beta_u_f_, np.ones_like(self.beta_u_f_.value()))
+                    K.set_value(self.beta_l_f_, np.ones_like(self.beta_l_f_.value()))
 
 
 class DecomonActivation(Activation, DecomonLayer):
@@ -912,10 +1089,41 @@ class DecomonActivation(Activation, DecomonLayer):
         activation = kwargs["activation"]
         self.supports_masking = True
         self.activation = activations.get(activation)
+        self.activation_name = activation
+
+    def build(self, input_shape):
+
+        if self.finetune:
+            n_dim = len(input_shape[0])-1
+            shape = [input_shape[0][i] for i in range(1, n_dim)]
+
+            if self.activation_name != 'linear':
+
+                if self.activation_name[:4] != 'relu':
+                    self.beta_u_f = self.add_weight(
+                        shape=shape,
+                        initializer="ones",
+                        name="beta_u_f",
+                        regularizer=None,
+                        constraint=ClipAlpha(),
+                    )
+                self.beta_l_f = self.add_weight(
+                    shape=shape,
+                    initializer="ones",
+                    name="beta_l_f",
+                    regularizer=None,
+                    constraint=ClipAlpha(),
+                )
 
     def call(self, input):
 
-        return self.activation(input, mode=self.mode)
+        if self.finetune:
+            if self.activation_name[:4] != 'relu':
+                return self.activation(input, mode=self.mode, finetune=self.beta_l_f_)
+            else:
+                return self.activation(input, mode=self.mode, finetune=[self.beta_u_f, self.beta_l_f_])
+        else:
+            return self.activation(input, mode=self.mode)
 
 
 class DecomonFlatten(Flatten, DecomonLayer):
@@ -1265,6 +1473,7 @@ def to_monotonic(
 
     # get class name
     class_name = layer.__class__.__name__
+
     # check if layer has a built argument that built is set to True
     if hasattr(layer, "built"):
         if not layer.built:
@@ -1272,6 +1481,8 @@ def to_monotonic(
 
     if isinstance(layer, Merge):
         return to_monotonic_merge(layer, input_dim, dc_decomp, convex_domain, finetune, IBP, forward)
+
+    # do case by case for optimizing
 
     for k in range(3):
         # two runs before sending a failure
