@@ -27,6 +27,7 @@ def get_adv_box(
     :return: numpy array, vector with upper bounds for adversarial attacks
     """
     if np.min(x_max - x_min) < 0:
+        import pdb; pdb.set_trace()
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion
@@ -120,7 +121,8 @@ def get_adv_box(
             t_tensor_ = np.reshape(target_tensor, (-1, shape))
             s_tensor_ = np.reshape(source_tensor, (-1, shape))
 
-            score_u = np.min(u_c_ * t_tensor_ + (u_c_.max() + 1e6) * (1 - t_tensor_), -1)
+            #score_u = np.min(u_c_ * t_tensor_ + (u_c_.max() + 1e6) * (1 - t_tensor_), -1)
+            score_u = np.max(u_c * t_tensor_ + (u_c_.min() - 1e6) * (1 - t_tensor_), -1)
             score_l = np.max(l_c * s_tensor_ + (l_c_.min() - 1e6) * (1 - s_tensor_), -1)
 
             return score_u - score_l
@@ -144,19 +146,17 @@ def get_adv_box(
             b_u_f = b_u_ - b_l_
 
             # add penalties on biases
-            b_u_f = b_u_f  # - 1e6 * (1 - source_tensor)[:, None, :] # ob penalties ....
-            b_u_f = b_u_f  # - 1e6 * (1 - target_tensor)[:, :, None]
-
             upper = (
                 np.sum(np.maximum(w_u_f, 0) * z_tensor[:, 1, :, None, None], 1)
                 + np.sum(np.minimum(w_u_f, 0) * z_tensor[:, 0, :, None, None], 1)
                 + b_u_f
             )  # (-1, shape, shape)
-            const = upper.min()
-            upper = upper * s_tensor_[:, :, None] + (const - 1e6) * (1.0 - s_tensor_[:, :, None])
-            upper = upper * t_tensor_[:, None, :] + (const - 1e6) * (1 - t_tensor_[:, None, :])
+            const = upper.max()
+            upper = upper*s_tensor_[:,None, :] + (const+1e6)*(1. - s_tensor_[:,None,:])
+            upper = upper*t_tensor_[:,:,None ] + (const+1e6)*(1. - t_tensor_[:,:,None])
 
-            return np.max(upper, (-1, -2))
+            return np.max(np.min(upper, -2), -1)
+
 
         def get_backward_score(z_tensor, w_u, b_u, w_l, b_l, y_tensor, target_tensor=None):
             return get_forward_score(z_tensor, w_u[:, 0], b_u[:, 0], w_l[:, 0], b_l[:, 0], y_tensor, target_tensor)
@@ -204,6 +204,7 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
     :return: numpy array, vector with upper bounds for adversarial attacks
     """
     if np.min(x_max - x_min) < 0:
+        import pdb; pdb.set_trace()
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion
@@ -311,8 +312,9 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
                 + b_u_f
             )  # (-1, shape, shape)
             const = upper.min()
-            upper = upper * s_tensor_[:, :, None] + (const - 1e6) * (1.0 - s_tensor_[:, :, None])
-            upper = upper * t_tensor_[:, None, :] + (const - 1e6) * (1 - t_tensor_[:, None, :])
+            upper = upper * s_tensor_[:, None, :] + (const - 1e6) * (1. - s_tensor_[:, None, :])
+            upper = upper * t_tensor_[:, :, None] + (const - 1e6) * (1. - t_tensor_[:, :, None])
+
 
             # flatten everything
             argmax_ = np.reshape(argmax_, (argmax_.shape[0], argmax_.shape[1], -1))
@@ -362,7 +364,7 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
             get_adv_box(
                 model,
                 candidates_f_up,
-                candidates_f_up,
+                candidates_f_low,
                 source_labels,
                 target_labels=target_labels,
                 batch_size=batch_size,
@@ -370,7 +372,7 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
             ),
             get_adv_box(
                 model,
-                candidates_f_low,
+                candidates_f_up,
                 candidates_f_low,
                 source_labels,
                 target_labels=target_labels,
@@ -379,11 +381,13 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
             ),
         )
     if mode == "backward":
+
+
         adv_score_b = np.maximum(
             get_adv_box(
                 model,
                 candidates_b_up,
-                candidates_b_up,
+                candidates_b_low,
                 source_labels,
                 target_labels=target_labels,
                 batch_size=batch_size,
@@ -391,7 +395,7 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
             ),
             get_adv_box(
                 model,
-                candidates_b_low,
+                candidates_b_up,
                 candidates_b_low,
                 source_labels,
                 target_labels=target_labels,
