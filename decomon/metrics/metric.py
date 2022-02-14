@@ -28,6 +28,9 @@ class Adversarial_score(Layer):
         self.convex_domain = convex_domain
 
     def linear_adv(self, z_tensor, y_tensor, w_u, b_u, w_l, b_l):
+
+        t_tensor = 1 - y_tensor
+        mask = K.expand_dims(t_tensor, -1) * K.expand_dims(y_tensor)
         w_upper = w_u * (1 - y_tensor[:, None]) - K.expand_dims(K.sum(w_l * y_tensor[:, None], -1), -1)
         b_upper = b_u * (1 - y_tensor) - b_l * y_tensor
 

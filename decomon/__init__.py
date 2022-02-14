@@ -16,4 +16,8 @@ from .wrapper import (
     refine_box,
 )
 
+from .wrapper_with_tuning import get_upper_box_tuning, get_lower_box_tuning
+
 from .metrics import build_formal_adv_model, build_formal_upper_model
+
+from .metrics.loss import get_model

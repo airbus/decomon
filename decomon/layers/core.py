@@ -50,13 +50,19 @@ class StaticVariables:
 
         if self.mode == F_HYBRID.name:
             # y, z, u_c, w_u, b_u, l_c, w_l, b_l
-            nb_tensors = 8
+            # nb_tensors = 8
+            # z, u_c, w_u, b_u, l_c, w_l, b_l
+            nb_tensors = 7
         elif self.mode == F_IBP.name:
             # y, z, u_c, l_c
-            nb_tensors = 4
+            # nb_tensors = 4
+            # u_c, l_c
+            nb_tensors = 2
         elif self.mode == F_FORWARD.name:
             # y, z, w_u, b_u, w_l, b_l
-            nb_tensors = 6
+            # nb_tensors = 6
+            # z, w_u, b_u, w_l, b_l
+            nb_tensors = 5
         else:
             raise NotImplementedError("unknown forward mode {}".format(mode))
 
@@ -71,7 +77,9 @@ class DecomonLayer(ABC, Layer):
     Abstract class that contains the common information of every implemented layers
     """
 
-    def __init__(self, convex_domain={}, dc_decomp=False, mode=F_HYBRID.name, finetune=False, n_subgrad=0, **kwargs):
+    def __init__(
+        self, convex_domain={}, dc_decomp=False, mode=F_HYBRID.name, finetune=False, shared=False, fast=True, **kwargs
+    ):
         """
 
         :param convex_domain: a dictionary that indicates the type of convex
@@ -91,6 +99,9 @@ class DecomonLayer(ABC, Layer):
         self.finetune = finetune  # extra optimization with hyperparameters
         self.frozen_weights = False
         self.frozen_alpha = False
+        self.shared = shared
+        self.fast = fast
+        self.init_layer = False
 
     def build(self, input_shape):
         """
@@ -148,3 +159,13 @@ class DecomonLayer(ABC, Layer):
 
     def reset_finetuning(self):
         pass
+
+    def shared_weights(self, layer):
+        pass
+
+    def split_kwargs(self, **kwargs):
+        # necessary for InputLayer
+        # 'mode', 'dc_decomp', 'convex_domain', 'finetune', 'shared', 'fast'])
+        import pdb
+
+        pdb.set_trace()

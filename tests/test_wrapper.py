@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 import pytest
-from decomon.models.decomon_sequential import convert
+from decomon.models.decomon_sequential import clone as convert
 
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.models import Sequential

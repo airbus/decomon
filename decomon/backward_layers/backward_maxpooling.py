@@ -15,10 +15,19 @@ class BackwardMaxPooling2D(Layer):
     Backward  LiRPA of MaxPooling2D
     """
 
-    def __init__(self, layer, slope=V_slope.name, **kwargs):
+    def __init__(
+        self,
+        layer,
+        slope=V_slope.name,
+        previous=True,
+        mode=F_HYBRID.name,
+        convex_domain={},
+        finetune=False,
+        input_dim=-1,
+        **kwargs,
+    ):  # __init__(self, layer, slope=V_slope.name,
         super(BackwardMaxPooling2D, self).__init__(**kwargs)
-        if not isinstance(layer, MaxPooling2D):
-            raise NotImplementedError()
+        raise NotImplementedError()
         self.mode = layer.mode
         self.pool_size = layer.pool_size
         self.strides = layer.strides
@@ -92,16 +101,16 @@ class BackwardMaxPooling2D(Layer):
     ):
 
         if self.mode == F_HYBRID.name:
-            y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:8]
+            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:7]
         if self.mode == F_FORWARD.name:
-            y, x_0, w_u, b_u, w_l, b_l = inputs[:6]
+            x_0, w_u, b_u, w_l, b_l = inputs[:5]
         if self.mode == F_IBP.name:
-            y, x_0, u_c, l_c = inputs[:4]
+            u_c, l_c = inputs[:2]
 
         if self.mode == F_FORWARD.name:
 
-            u_c = get_upper(x_0, w_u, b_u)
-            l_c = get_lower(x_0, w_l, b_l)
+            u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
+            l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
         op_flat = Flatten()
 
         b_u_ = K.pool2d(u_c, pool_size, strides, padding, data_format, pool_mode="max")
@@ -110,7 +119,8 @@ class BackwardMaxPooling2D(Layer):
         b_u_ = K.expand_dims(K.expand_dims(op_flat(b_u_), 1), -1)
         b_l_ = K.expand_dims(K.expand_dims(op_flat(b_l_), 1), -1)
 
-        n_in = np.prod(y.shape[1:])
+        y = inputs[-1]
+        n_in = np.prod(inputs[-1].shape[1:])
         n_out = w_out_u.shape[-1]
 
         w_out_u_ = K.concatenate([K.expand_dims(K.expand_dims(0 * (op_flat(y)), 1), -1)] * n_out, -1)
@@ -147,11 +157,13 @@ class BackwardMaxPooling2D(Layer):
         """
 
         if self.mode == F_HYBRID.name:
-            y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:8]
+            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:7]
         if self.mode == F_FORWARD.name:
-            y, x_0, w_u, b_u, w_l, b_l = inputs[:6]
+            x_0, w_u, b_u, w_l, b_l = inputs[:5]
         if self.mode == F_IBP.name:
-            y, x_0, u_c, l_c = inputs[:4]
+            u_c, l_c = inputs[:2]
+
+        y = inputs[-1]
 
         input_shape = K.int_shape(y)
 
@@ -176,14 +188,11 @@ class BackwardMaxPooling2D(Layer):
 
         if self.mode == F_IBP.name:
             output_list = [
-                y_list,
-                x_0,
                 u_c_list,
                 l_c_list,
             ]
         if self.mode == F_HYBRID.name:
             output_list = [
-                y_list,
                 x_0,
                 u_c_list,
                 w_u_list,
@@ -194,7 +203,6 @@ class BackwardMaxPooling2D(Layer):
             ]
         if self.mode == F_FORWARD.name:
             output_list = [
-                y_list,
                 x_0,
                 u_c_list,
                 w_u_list,
@@ -270,11 +278,11 @@ class BackwardMaxPooling2D(Layer):
 
         # create fake bounds given the pre-activations
         if self.mode == F_IBP.name:
-            y, z, u_c, l_c = inputs_[:4]
+            u_c, l_c = inputs_[:2]
         if self.mode == F_FORWARD.name:
-            y, z, w_u, b_u, w_l, b_l = inputs_[:6]
+            z, w_u, b_u, w_l, b_l = inputs_[:5]
         if self.mode == F_HYBRID.name:
-            y, z, u_c, w_u, b_u, l_c, w_l, b_l = inputs_[:8]
+            z, u_c, w_u, b_u, l_c, w_l, b_l = inputs_[:7]
 
         if self.mode in [F_FORWARD.name, F_HYBRID.name]:
             u_c_ = get_upper(z, w_u, b_u, convex_domain=self.layer.convex_domain)
@@ -288,12 +296,14 @@ class BackwardMaxPooling2D(Layer):
             u_c = u_c_
             l_c = l_c_
 
+        y = inputs_[-1]
+
         n_dim = np.prod(y.shape[1:])
         w_u_tmp = K.concatenate([0 * y[:, None]] * n_dim, 1)
 
-        x_tmp = [y, z, u_c, w_u_tmp, l_c, w_u_tmp, l_c]
+        x_tmp = [z, u_c, w_u_tmp, l_c, w_u_tmp, l_c]
 
-        _, _, _, w_u_0, b_u_0, _, w_l_0, b_l_0 = self._pooling_function(
+        _, _, w_u_0, b_u_0, _, w_l_0, b_l_0 = self._pooling_function(
             self,
             x_tmp,
             self.layer.pool_size,

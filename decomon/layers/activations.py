@@ -13,7 +13,7 @@ from .utils import (
 import warnings
 import six
 from decomon.layers.core import DecomonLayer
-from .core import F_HYBRID, F_FORWARD, F_IBP
+from .core import F_HYBRID, F_FORWARD, F_IBP, StaticVariables
 import tensorflow.keras.backend as K
 import numpy as np
 import tensorflow as tf
@@ -84,11 +84,14 @@ def linear_hull_s_shape(
         raise NotImplementedError()
 
     if mode == F_IBP.name:
-        y, x_0, u_c, l_c = x[:4]
+        # y, x_0, u_c, l_c = x[:4]
+        u_c, l_c = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
     if mode == F_HYBRID.name:
-        y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
+        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
     if mode == F_FORWARD.name:
-        y, x_0, w_u, b_u, w_l, b_l = x[:6]
+        # y, x_0, w_u, b_u, w_l, b_l = x[:6]
+        x_0, w_u, b_u, w_l, b_l = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
         u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
         l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
 
@@ -96,7 +99,7 @@ def linear_hull_s_shape(
         u_c_ = func(u_c)
         l_c_ = func(l_c)
 
-        output = [y, x_0, u_c_, l_c_]
+        # output = [y, x_0, u_c_, l_c_]
 
     if mode in [F_FORWARD.name, F_HYBRID.name]:
 
@@ -107,7 +110,9 @@ def linear_hull_s_shape(
         if len(w_u.shape) == len(b_u.shape):
             # it happens with the convert function to spare memory footprint
             n_dim = np.prod(w_u.shape[1:])
-            M = np.reshape(np.diag([1] * n_dim), [1, n_dim] + list(w_u.shape[1:]))
+            M = np.reshape(
+                np.diag([K.cast(1, dtype=K.floatx())] * n_dim), [1, n_dim] + list(w_u.shape[1:])
+            )  # usage de numpy pb pour les types
             w_u_ = M * K.concatenate([K.expand_dims(w_u_0, 1)] * n_dim, 1)
             w_l_ = M * K.concatenate([K.expand_dims(w_l_0, 1)] * n_dim, 1)
             b_u_ = b_u_0
@@ -120,13 +125,16 @@ def linear_hull_s_shape(
             b_l_ = b_l_0 + w_l_0 * b_l
 
     if mode == F_IBP.name:
-        output = [func(y), x_0, u_c_, l_c_]
+        # output = [func(y), x_0, u_c_, l_c_]
+        output = [u_c_, l_c_]
 
     if mode == F_HYBRID.name:
-        output = [func(y), x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+        # output = [func(y), x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+        output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
     if mode == F_FORWARD.name:
-        output = [func(y), x_0, w_u_, b_u_, w_l_, b_l_]
+        # output = [func(y), x_0, w_u_, b_u_, w_l_, b_l_]
+        output = [x_0, w_u_, b_u_, w_l_, b_l_]
 
     return output
     # TO DO linear relaxation

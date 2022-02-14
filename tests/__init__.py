@@ -2,6 +2,7 @@ from __future__ import absolute_import
 import numpy as np
 from tensorflow.keras import Input
 from numpy.testing import assert_almost_equal
+import tensorflow.python.keras.backend as K
 
 
 def get_standart_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
@@ -136,7 +137,7 @@ def get_tensor_decomposition_1d_box(dc_decomp=True):
 
     if dc_decomp:
         return [
-            Input((1,)),
+            Input((1,), dtype=K.floatx()),
             Input((1,)),
             Input((2, 1)),
             Input((1,)),
@@ -532,42 +533,20 @@ def get_standard_values_images_box(data_format="channels_last", odd=0, m0=0, m1=
             )
 
     else:
-        y_0 = y_0[:, None, :, :]
-        b_u_0 = b_u_0[:, None, :, :]
-        b_l_0 = b_l_0[:, None, :, :]
-        u_c_0 = u_c_0[:, None, :, :]
-        l_c_0 = l_c_0[:, None, :, :]
-        w_u_0 = w_u_0[:, :, None, :, :]
-        w_l_0 = w_l_0[:, :, None, :, :]
+        output = get_standard_values_images_box(data_format="channels_last", odd=odd, m0=m0, m1=m1, dc_decomp=dc_decomp)
 
-        y_ = np.concatenate([y_0, y_0], 1)
-        b_u_ = np.concatenate([b_u_0, b_u_0], 2)
-        b_l_ = np.concatenate([b_l_0, b_l_0], 2)
-        u_c_ = np.concatenate([u_c_0, u_c_0], 2)
-        l_c_ = np.concatenate([l_c_0, l_c_0], 2)
-        w_u_ = np.concatenate([w_u_0, w_u_0], 2)
-        w_l_ = np.concatenate([w_l_0, w_l_0], 2)
-
+        x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = output[:9]
         if dc_decomp:
-            h_0 = h_0[:, None, :, :]
-            g_0 = g_0[:, None, :, :]
-            h_ = np.concatenate([h_0, h_0], 1)
-            g_ = np.concatenate([g_0, g_0], 1)
-            assert_output_properties_box(
-                x_,
-                y_,
-                h_,
-                g_,
-                z_min_,
-                z_max_,
-                u_c_,
-                w_u_,
-                b_u_,
-                l_c_,
-                w_l_,
-                b_l_,
-                "images {},{},{},{}".format(data_format, odd, m0, m1),
-            )
+            h_, g_ = output[-2:]
+            h_ = np.transpose(h_, (0, 3, 1, 2))
+            g_ = np.transpose(g_, (0, 3, 1, 2))
+        y_ = np.transpose(y_, (0, 3, 1, 2))
+        u_c_ = np.transpose(u_c_, (0, 3, 1, 2))
+        l_c_ = np.transpose(l_c_, (0, 3, 1, 2))
+        b_u_ = np.transpose(b_u_, (0, 3, 1, 2))
+        b_l_ = np.transpose(b_l_, (0, 3, 1, 2))
+        w_u_ = np.transpose(w_u_, (0, 1, 4, 2, 3))
+        w_l_ = np.transpose(w_l_, (0, 1, 4, 2, 3))
 
     if dc_decomp:
         return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
@@ -621,12 +600,17 @@ def get_tensor_decomposition_images_box(data_format, odd, dc_decomp=True):
 
 def assert_output_properties_box(x_, y_, h_, g_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, name, decimal=5):
 
-    assert_almost_equal(
-        h_ + g_,
-        y_,
-        decimal=decimal,
-        err_msg="decomposition error for function {}".format(name),
-    )
+    if y_ is None:
+        y_ = h_ + g_
+    if h_ is not None:
+
+        assert_almost_equal(
+            h_ + g_,
+            y_,
+            decimal=decimal,
+            err_msg="decomposition error for function {}".format(name),
+        )
+
     assert np.min(x_min_ <= x_max_), "x_min >x_max for function {}".format(name)
 
     assert_almost_equal(
@@ -641,96 +625,104 @@ def assert_output_properties_box(x_, y_, h_, g_, x_min_, x_max_, u_c_, w_u_, b_u
         decimal=decimal,
         err_msg="x_max < x_  for function {}".format(name),
     )
+    if w_u_ is not None:
+        x_expand = x_ + np.zeros_like(x_)
+        n_expand = len(w_u_.shape) - len(x_expand.shape)
+        for i in range(n_expand):
+            x_expand = np.expand_dims(x_expand, -1)
 
-    x_expand = x_ + np.zeros_like(x_)
-    n_expand = len(w_u_.shape) - len(x_expand.shape)
-    for i in range(n_expand):
-        x_expand = np.expand_dims(x_expand, -1)
-
-    lower_ = np.sum(w_l_ * x_expand, 1) + b_l_
-    upper_ = np.sum(w_u_ * x_expand, 1) + b_u_
+        lower_ = np.sum(w_l_ * x_expand, 1) + b_l_
+        upper_ = np.sum(w_u_ * x_expand, 1) + b_u_
 
     # check that the functions h_ and g_ remains monotonic
-
-    assert_almost_equal(
-        np.clip(h_[:-1] - h_[1:], 0, np.inf),
-        np.zeros_like(h_[1:]),
-        decimal=decimal,
-        err_msg="h is not increasing for function {}".format(name),
-    )
-    assert_almost_equal(
-        np.clip(g_[1:] - g_[:-1], 0, np.inf),
-        np.zeros_like(g_[1:]),
-        decimal=decimal,
-        err_msg="g is not increasing for function {}".format(name),
-    )
-
-    assert_almost_equal(
-        np.clip(l_c_ - y_, 0.0, np.inf),
-        np.zeros_like(y_),
-        decimal=decimal,
-        err_msg="l_c >y",
-    )
-    assert_almost_equal(
-        np.clip(y_ - u_c_, 0.0, 1e6),
-        np.zeros_like(y_),
-        decimal=decimal,
-        err_msg="u_c <y",
-    )
+    if h_ is not None:
+        assert_almost_equal(
+            np.clip(h_[:-1] - h_[1:], 0, np.inf),
+            np.zeros_like(h_[1:]),
+            decimal=decimal,
+            err_msg="h is not increasing for function {}".format(name),
+        )
+        assert_almost_equal(
+            np.clip(g_[1:] - g_[:-1], 0, np.inf),
+            np.zeros_like(g_[1:]),
+            decimal=decimal,
+            err_msg="g is not increasing for function {}".format(name),
+        )
 
     #
+    if w_u_ is not None:
+        assert_almost_equal(
+            np.clip(lower_ - y_, 0.0, np.inf),
+            np.zeros_like(y_),
+            decimal=decimal,
+            err_msg="lower_ >y",
+        )
 
-    assert_almost_equal(
-        np.clip(lower_ - y_, 0.0, np.inf),
-        np.zeros_like(y_),
-        decimal=decimal,
-        err_msg="lower_ >y",
-    )
-    assert_almost_equal(
-        np.clip(y_ - upper_, 0.0, 1e6),
-        np.zeros_like(y_),
-        decimal=decimal,
-        err_msg="upper <y",
-    )
+        assert_almost_equal(
+            np.clip(y_ - upper_, 0.0, 1e6),
+            np.zeros_like(y_),
+            decimal=decimal,
+            err_msg="upper <y",
+        )
 
-    # computer lower bounds on the domain
+    if l_c_ is not None:
+        assert_almost_equal(
+            np.clip(l_c_ - y_, 0.0, np.inf),
+            np.zeros_like(y_),
+            decimal=decimal,
+            err_msg="l_c >y",
+        )
+        assert_almost_equal(
+            np.clip(y_ - u_c_, 0.0, 1e6),
+            np.zeros_like(y_),
+            decimal=decimal,
+            err_msg="u_c <y",
+        )
 
-    x_expand_min = x_min_ + np.zeros_like(x_)
-    x_expand_max = x_max_ + np.zeros_like(x_)
-    n_expand = len(w_u_.shape) - len(x_expand_min.shape)
-    for i in range(n_expand):
-        x_expand_min = np.expand_dims(x_expand_min, -1)
-        x_expand_max = np.expand_dims(x_expand_max, -1)
+        # computer lower bounds on the domain
+    if w_u_ is not None and l_c_ is not None:
+        x_expand_min = x_min_ + np.zeros_like(x_)
+        x_expand_max = x_max_ + np.zeros_like(x_)
+        n_expand = len(w_u_.shape) - len(x_expand_min.shape)
+        for i in range(n_expand):
+            x_expand_min = np.expand_dims(x_expand_min, -1)
+            x_expand_max = np.expand_dims(x_expand_max, -1)
 
-    lower_ = np.sum(np.maximum(0, w_l_) * x_expand_min, 1) + np.sum(np.minimum(0, w_l_) * x_expand_max, 1) + b_l_
-    upper_ = np.sum(np.maximum(0, w_u_) * x_expand_max, 1) + np.sum(np.minimum(0, w_u_) * x_expand_min, 1) + b_u_
+        lower_ = np.sum(np.maximum(0, w_l_) * x_expand_min, 1) + np.sum(np.minimum(0, w_l_) * x_expand_max, 1) + b_l_
+        upper_ = np.sum(np.maximum(0, w_u_) * x_expand_max, 1) + np.sum(np.minimum(0, w_u_) * x_expand_min, 1) + b_u_
 
-    assert_almost_equal(
-        np.clip(lower_.min(0) - l_c_.max(0), 0.0, np.inf),
-        np.zeros_like(y_.min(0)),
-        decimal=decimal,
-        err_msg="lower_ >l_c",
-    )
-    assert_almost_equal(
-        np.clip(u_c_.min(0) - upper_.max(0), 0.0, 1e6),
-        np.zeros_like(y_.min(0)),
-        decimal=decimal,
-        err_msg="upper <u_c",
-    )
+        """
+        assert_almost_equal(
+            np.clip(lower_.min(0) - l_c_.max(0), 0.0, np.inf),
+            np.zeros_like(y_.min(0)),
+            decimal=decimal,
+            err_msg="lower_ >l_c",
+        )
+        assert_almost_equal(
+            np.clip(u_c_.min(0) - upper_.max(0), 0.0, 1e6),
+            np.zeros_like(y_.min(0)),
+            decimal=decimal,
+            err_msg="upper <u_c",
+        )
+        """
 
 
 def assert_output_properties_box_linear(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, name, decimal=5):
 
     # flatten everything
     # flatten everyting
-    n = len(y_)
-    y_ = y_.reshape((n, -1))
-    u_c_ = u_c_.reshape((n, -1))
-    l_c_ = l_c_.reshape((n, -1))
-    w_u_ = w_u_.reshape((n, w_u_.shape[1], -1))
-    w_l_ = w_l_.reshape((n, w_l_.shape[1], -1))
-    b_u_ = b_u_.reshape((n, -1))
-    b_l_ = b_l_.reshape((n, -1))
+    n = len(x_)
+    if y_ is not None:
+        n = len(y_)
+        y_ = y_.reshape((n, -1))
+    if l_c_ is not None:
+        u_c_ = u_c_.reshape((n, -1))
+        l_c_ = l_c_.reshape((n, -1))
+    if w_u_ is not None:
+        w_u_ = w_u_.reshape((n, w_u_.shape[1], -1))
+        w_l_ = w_l_.reshape((n, w_l_.shape[1], -1))
+        b_u_ = b_u_.reshape((n, -1))
+        b_l_ = b_l_.reshape((n, -1))
 
     # assert_almost_equal(h_ + g_, y_, decimal=decimal, err_msg='decomposition error for function {}'.format(name))
     assert np.min(x_min_ <= x_max_), "x_min >x_max for function {}".format(name)
@@ -741,14 +733,14 @@ def assert_output_properties_box_linear(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_
     assert_almost_equal(
         np.clip(x_ - x_max_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_max < x_  for function {}".format(name)
     )
+    if w_u_ is not None:
+        x_expand = x_ + np.zeros_like(x_)
+        n_expand = len(w_u_.shape) - len(x_expand.shape)
+        for i in range(n_expand):
+            x_expand = np.expand_dims(x_expand, -1)
 
-    x_expand = x_ + np.zeros_like(x_)
-    n_expand = len(w_u_.shape) - len(x_expand.shape)
-    for i in range(n_expand):
-        x_expand = np.expand_dims(x_expand, -1)
-
-    lower_ = np.sum(w_l_ * x_expand, 1) + b_l_
-    upper_ = np.sum(w_u_ * x_expand, 1) + b_u_
+        lower_ = np.sum(w_l_ * x_expand, 1) + b_l_
+        upper_ = np.sum(w_u_ * x_expand, 1) + b_u_
 
     # check that the functions h_ and g_ remains monotonic
 
@@ -757,29 +749,32 @@ def assert_output_properties_box_linear(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_
     # assert_almost_equal(np.clip(g_[1:] - g_[:-1], 0, np.inf), np.zeros_like(g_[1:]), decimal=decimal,
     #                    err_msg='g is not increasing for function {}'.format(name))
 
-    assert_almost_equal(np.clip(l_c_ - y_, 0.0, np.inf), np.zeros_like(y_), decimal=decimal, err_msg="l_c >y")
-    assert_almost_equal(np.clip(y_ - u_c_, 0.0, 1e6), np.zeros_like(y_), decimal=decimal, err_msg="u_c <y")
-
-    #
-    # import pdb; pdb.set_trace()
-    assert_almost_equal(np.clip(lower_ - y_, 0.0, np.inf), np.zeros_like(y_), decimal=decimal, err_msg="lower_ >y")
-    assert_almost_equal(np.clip(y_ - upper_, 0.0, 1e6), np.zeros_like(y_), decimal=decimal, err_msg="upper <y")
+    if y_ is not None:
+        if l_c_ is not None:
+            assert_almost_equal(np.clip(l_c_ - y_, 0.0, np.inf), np.zeros_like(y_), decimal=decimal, err_msg="l_c >y")
+            assert_almost_equal(np.clip(y_ - u_c_, 0.0, 1e6), np.zeros_like(y_), decimal=decimal, err_msg="u_c <y")
+        if w_u_ is not None:
+            assert_almost_equal(
+                np.clip(lower_ - y_, 0.0, np.inf), np.zeros_like(y_), decimal=decimal, err_msg="lower_ >y"
+            )
+            assert_almost_equal(np.clip(y_ - upper_, 0.0, 1e6), np.zeros_like(y_), decimal=decimal, err_msg="upper <y")
 
     # computer lower bounds on the domain
+    if w_u_ is not None:
+        x_expand_min = x_min_ + np.zeros_like(x_)
+        x_expand_max = x_max_ + np.zeros_like(x_)
+        n_expand = len(w_u_.shape) - len(x_expand_min.shape)
+        for i in range(n_expand):
+            x_expand_min = np.expand_dims(x_expand_min, -1)
+            x_expand_max = np.expand_dims(x_expand_max, -1)
 
-    x_expand_min = x_min_ + np.zeros_like(x_)
-    x_expand_max = x_max_ + np.zeros_like(x_)
-    n_expand = len(w_u_.shape) - len(x_expand_min.shape)
-    for i in range(n_expand):
-        x_expand_min = np.expand_dims(x_expand_min, -1)
-        x_expand_max = np.expand_dims(x_expand_max, -1)
+        lower_ = np.sum(np.maximum(0, w_l_) * x_expand_min, 1) + np.sum(np.minimum(0, w_l_) * x_expand_max, 1) + b_l_
+        upper_ = np.sum(np.maximum(0, w_u_) * x_expand_max, 1) + np.sum(np.minimum(0, w_u_) * x_expand_min, 1) + b_u_
 
-    lower_ = np.sum(np.maximum(0, w_l_) * x_expand_min, 1) + np.sum(np.minimum(0, w_l_) * x_expand_max, 1) + b_l_
-    upper_ = np.sum(np.maximum(0, w_u_) * x_expand_max, 1) + np.sum(np.minimum(0, w_u_) * x_expand_min, 1) + b_u_
-
-    # import pdb; pdb.set_trace()
-    assert_almost_equal(np.clip(lower_ - y_, 0.0, np.inf), np.zeros_like(y_), decimal=decimal, err_msg="l_c >y")
-    assert_almost_equal(np.clip(y_ - upper_, 0.0, 1e6), np.zeros_like(y_), decimal=decimal, err_msg="u_c <y")
+        # import pdb; pdb.set_trace()
+        if y_ is not None:
+            assert_almost_equal(np.clip(lower_ - y_, 0.0, np.inf), np.zeros_like(y_), decimal=decimal, err_msg="l_c >y")
+            assert_almost_equal(np.clip(y_ - upper_, 0.0, 1e6), np.zeros_like(y_), decimal=decimal, err_msg="u_c <y")
 
 
 # multi decomposition for convert

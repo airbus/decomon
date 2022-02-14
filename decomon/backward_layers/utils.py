@@ -1,6 +1,6 @@
 from decomon.layers import get_lower, get_upper
 from tensorflow.python.keras import backend as K
-from ..layers import F_HYBRID, F_IBP, F_FORWARD
+from ..layers import F_HYBRID, F_IBP, F_FORWARD, StaticVariables
 import tensorflow as tf
 from tensorflow.keras.layers import Flatten
 from ..layers.utils import (
@@ -17,6 +17,7 @@ from ..layers.utils import (
     multiply,
     sort,
 )
+from decomon.utils import get_linear_hull_relu, get_linear_softplus_hull
 import numpy as np
 
 
@@ -52,18 +53,18 @@ def backward_add(inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, con
     """
 
     op_flat = Flatten()  # pas terrible  a revoir
-
+    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_IBP.name:
-        _, _, u_c_0, l_c_0 = inputs_0
-        _, _, u_c_1, l_c_1 = inputs_1
+        u_c_0, l_c_0 = inputs_0[:nb_tensors]
+        u_c_1, l_c_1 = inputs_1[:nb_tensors]
 
     if mode == F_HYBRID.name:
-        _, x, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0 = inputs_0[:8]
-        _, x, u_c_1, w_u_1, b_u_1, l_c_1, w_l_1, b_l_1 = inputs_1[:8]
+        x, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0 = inputs_0[:nb_tensors]
+        x, u_c_1, w_u_1, b_u_1, l_c_1, w_l_1, b_l_1 = inputs_1[:nb_tensors]
 
     if mode == F_FORWARD.name:
-        _, x, w_u_0, b_u_0, w_l_0, b_l_0 = inputs_0[:6]
-        _, x, w_u_1, b_u_1, w_l_1, b_l_1 = inputs_1[:6]
+        x, w_u_0, b_u_0, w_l_0, b_l_0 = inputs_0[:nb_tensors]
+        x, w_u_1, b_u_1, w_l_1, b_l_1 = inputs_1[:nb_tensors]
 
     if mode in [F_HYBRID.name, F_FORWARD.name]:
         u_c_0_ = get_upper(x, w_u_0, b_u_0, convex_domain=convex_domain)
@@ -75,7 +76,7 @@ def backward_add(inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, con
         u_c_0 = u_c_0_
         u_c_1 = u_c_1_
         l_c_0 = l_c_0_
-        l_c_1 = l_c_1
+        l_c_1 = l_c_1_
 
     if mode == F_HYBRID.name:
         u_c_0 = K.minimum(u_c_0, u_c_0_)
@@ -125,87 +126,44 @@ def backward_relu_(
     :return:
     """
 
-    op_flat = Flatten()
-
-    # get input bounds
+    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_HYBRID.name:
-        _, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
-
-        # compute upper and lower bounds
-        # and keep the minimum between the constant and the computed upper bounds
-        # and keep the maximum between the constant and the computer lower bounds
-        if not fast:
-            upper = K.minimum(u_c, get_upper(x_0, w_u, b_u, convex_domain))
-            lower = K.maximum(l_c, get_lower(x_0, w_l, b_l, convex_domain))
-        else:
-            upper = u_c
-            lower = l_c
+        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensors]
     elif mode == F_IBP.name:
-        _, x_0, u_c, l_c = x
-        upper = u_c
-        lower = l_c
+        # y, x_0, u_c, l_c = x[:4]
+        u_c, l_c = x[:nb_tensors]
     elif mode == F_FORWARD.name:
-        _, x_0, w_u, b_u, w_l, b_l = x
+        # y, x_0, w_u, b_u, w_l, b_l = x[:6]
+        x_0, w_u, b_u, w_l, b_l = x[:nb_tensors]
+
+    if mode == F_FORWARD.name:
         upper = get_upper(x_0, w_u, b_u, convex_domain)
         lower = get_lower(x_0, w_l, b_l, convex_domain)
+    if mode == F_HYBRID.name:
+        upper = u_c
+        lower = l_c
+    if mode == F_IBP.name:
+        upper = u_c
+        lower = l_c
 
-    # check inactive relu state: u<=0
-    index_dead = -K.clip(K.sign(upper), -1, 0)
-    index_linear = K.clip(K.sign(lower) + 1, 0, 1)
+    shape = np.prod(upper.shape[1:])
+    upper = K.reshape(upper, [-1, shape])
+    lower = K.reshape(lower, [-1, shape])
 
-    # 1 if upper<=-lower else 0
-    index_a = -K.clip(K.sign(upper + lower) - 1, -1.0, 0.0)
-    # 1 if upper>-lower else 0
-    index_b = K.ones_like(index_a) - index_a
+    z_value = K.cast(0.0, K.floatx())
 
-    # in case upper=lower, this cases are
-    # considered with index_dead and index_linear
-    w_u_0 = upper / K.maximum(K.epsilon(), upper - lower)
-    b_u_0 = -upper * lower / K.maximum(K.epsilon(), upper - lower)
+    #############
+    w_u_, b_u_, w_l_, b_l_ = get_linear_hull_relu(upper, lower, slope=slope, **kwargs)
 
-    w_u_ = (
-        index_dead * K.zeros_like(w_u_0) + index_linear * K.ones_like(w_u_0) + (1.0 - index_dead - index_linear) * w_u_0
-    )
-    b_u_ = (index_dead + index_linear) * K.zeros_like(b_u_0) + (1 - index_linear - index_dead) * b_u_0
-
-    # lower bound
-    b_l_ = K.zeros_like(b_u_)
-    if slope == V_slope.name:
-        w_l_ = K.zeros_like(w_u_)
-        w_l_ += K.maximum(index_b, index_linear) * K.ones_like(w_l_)
-
-    if slope == Z_slope.name:
-        w_l_ = K.zeros_like(w_u_)
-
-    if slope == O_slope.name:
-        w_l_ = K.ones_like(w_u_)
-
-    if slope == S_slope.name:
-        w_l_ = w_u_
-
-    w_u_ = op_flat(w_u_)
-    w_l_ = op_flat(w_l_)
-    b_u_ = op_flat(b_u_)
-    b_l_ = op_flat(b_l_)
-
-    if "finetune" in kwargs:
-        # weighted linear combination
-        alpha_l = kwargs["finetune"]
-        alpha_l_ = alpha_l[None]
-
-        w_l_ = alpha_l_ * w_l_
-        b_l_ = alpha_l_ * b_l_ + (1.0 - alpha_l_) * op_flat(K.maximum(lower, 0.0))
-
-    # here balance the results for convex linear relaxations
-    w_u_ = K.expand_dims(K.expand_dims(w_u_, 1), -1)
-    w_l_ = K.expand_dims(K.expand_dims(w_l_, 1), -1)
-    b_u_ = K.expand_dims(K.expand_dims(b_u_, 1), -1)
-    b_l_ = K.expand_dims(K.expand_dims(b_l_, 1), -1)
-
-    w_out_u_ = K.maximum(w_out_u, 0.0) * w_u_ + K.minimum(w_out_u, 0.0) * w_l_
-    w_out_l_ = K.maximum(w_out_l, 0.0) * w_l_ + K.minimum(w_out_l, 0.0) * w_u_
-    b_out_u_ = K.sum(K.maximum(w_out_u, 0.0) * b_u_ + K.minimum(w_out_u, 0.0) * b_l_, 2) + b_out_u
-    b_out_l_ = K.sum(K.maximum(w_out_l, 0.0) * b_l_ + K.minimum(w_out_l, 0.0) * b_u_, 2) + b_out_l
+    w_u_ = K.expand_dims(w_u_, -1)
+    w_l_ = K.expand_dims(w_l_, -1)
+    b_u_ = K.expand_dims(b_u_, -1)
+    b_l_ = K.expand_dims(b_l_, -1)
+    w_out_u_ = K.maximum(w_out_u, z_value) * w_u_ + K.minimum(w_out_u, z_value) * w_l_
+    w_out_l_ = K.maximum(w_out_l, z_value) * w_l_ + K.minimum(w_out_l, z_value) * w_u_
+    b_out_u_ = K.sum(K.maximum(w_out_u, z_value) * b_u_ + K.minimum(w_out_u, z_value) * b_l_, 1) + b_out_u
+    b_out_l_ = K.sum(K.maximum(w_out_l, z_value) * b_l_ + K.minimum(w_out_l, z_value) * b_u_, 1) + b_out_l
 
     return w_out_u_, b_out_u_, w_out_l_, b_out_l_
 
@@ -227,74 +185,48 @@ def backward_softplus_(
     :return:
     """
 
-    op_flat = Flatten()
-
-    # get input bounds
+    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_HYBRID.name:
-        _, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
-        upper = u_c
-        lower = l_c
+        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensors]
     elif mode == F_IBP.name:
-        _, x_0, u_c, l_c = x
-        upper = u_c
-        lower = l_c
+        # y, x_0, u_c, l_c = x[:4]
+        u_c, l_c = x[:nb_tensors]
     elif mode == F_FORWARD.name:
-        _, x_0, w_u, b_u, w_l, b_l = x
+        # y, x_0, w_u, b_u, w_l, b_l = x[:6]
+        x_0, w_u, b_u, w_l, b_l = x[:nb_tensors]
+
+    if mode == F_FORWARD.name:
         upper = get_upper(x_0, w_u, b_u, convex_domain)
         lower = get_lower(x_0, w_l, b_l, convex_domain)
+    if mode == F_HYBRID.name:
+        upper = u_c
+        lower = l_c
+    if mode == F_IBP.name:
+        upper = u_c
+        lower = l_c
 
-    index_linear = K.clip(K.sign(lower) + 1, 0, 1)
+    shape = np.prod(upper.shape[1:])
+    upper = K.reshape(upper, [-1, shape])
+    lower = K.reshape(lower, [-1, shape])
 
-    # 1 if upper<=-lower else 0
-    index_a = -K.clip(K.sign(upper + lower) - 1, -1.0, 0.0)
-    # 1 if upper>-lower else 0
-    index_b = K.ones_like(index_a) - index_a
+    z_value = K.cast(0.0, K.floatx())
 
-    # in case upper=lower, this cases are
-    # considered with index_dead and index_linear
-    l_c_ = K.softplus(lower)
-    w_u_ = (K.softplus(upper) - l_c_) / K.maximum(K.epsilon(), upper - lower)
-    b_u_ = l_c_ - w_u_ * l_c
+    # w_u_, b_u_, w_l_, b_l_ = get_linear_softplus_hull(upper, lower, slope = slope, **kwargs)
 
-    b_l_ = K.zeros_like(b_u_)
-    if slope == V_slope.name:
-        w_l_ = K.zeros_like(w_u_)
-        w_l_ += K.maximum(index_b, index_linear) * K.ones_like(w_l_)
+    """
+    w_u_ = K.expand_dims(w_u_, -1)
+    w_l_ = K.expand_dims(w_l_, -1)
+    b_u_ = K.expand_dims(b_u_, -1)
+    b_l_ = K.expand_dims(b_l_, -1)
 
-    if slope == Z_slope.name:
-        w_l_ = K.zeros_like(w_u_)
-
-    if slope == O_slope.name:
-        w_l_ = K.ones_like(w_u_)
-
-    if slope == S_slope.name:
-        w_l_ = w_u_
-
-    w_u_ = op_flat(w_u_)
-    w_l_ = op_flat(w_l_)
-    b_u_ = op_flat(b_u_)
-    b_l_ = op_flat(b_l_)
-
-    if "finetune" in kwargs:
-        # weighted linear combination
-        alpha_l = kwargs["finetune"]
-        alpha_l_ = alpha_l[None]
-
-        w_l_ = alpha_l_ * w_l_
-        b_l_ = alpha_l_ * b_l_ + (1.0 - alpha_l_) * op_flat(K.softplus(lower))
-
-    # here balance the results for convex linear relaxations
-    w_u_ = K.expand_dims(K.expand_dims(w_u_, 1), -1)
-    w_l_ = K.expand_dims(K.expand_dims(w_l_, 1), -1)
-    b_u_ = K.expand_dims(K.expand_dims(b_u_, 1), -1)
-    b_l_ = K.expand_dims(K.expand_dims(b_l_, 1), -1)
-
-    w_out_u_ = K.maximum(w_out_u, 0.0) * w_u_ + K.minimum(w_out_u, 0.0) * w_l_
-    w_out_l_ = K.maximum(w_out_l, 0.0) * w_l_ + K.minimum(w_out_l, 0.0) * w_u_
-    b_out_u_ = K.sum(K.maximum(w_out_u, 0.0) * b_u_ + K.minimum(w_out_u, 0.0) * b_l_, 2) + b_out_u
-    b_out_l_ = K.sum(K.maximum(w_out_l, 0.0) * b_l_ + K.minimum(w_out_l, 0.0) * b_u_, 2) + b_out_l
+    w_out_u_ = K.maximum(w_out_u, z_value) * w_u_ + K.minimum(w_out_u, z_value) * w_l_
+    w_out_l_ = K.maximum(w_out_l, z_value) * w_l_ + K.minimum(w_out_l, z_value) * w_u_
+    b_out_u_ = K.sum(K.maximum(w_out_u, z_value) * b_u_ + K.minimum(w_out_u, z_value) * b_l_, 2) + b_out_u
+    b_out_l_ = K.sum(K.maximum(w_out_l, z_value) * b_l_ + K.minimum(w_out_l, z_value) * b_u_, 2) + b_out_l
 
     return w_out_u_, b_out_u_, w_out_l_, b_out_l_
+    """
 
 
 def backward_linear_prod(x_0, bounds_x, back_bounds, convex_domain):
@@ -304,10 +236,14 @@ def backward_linear_prod(x_0, bounds_x, back_bounds, convex_domain):
     :param back_bounds:
     :return:
     """
+
+    z_value = K.cast(0.0, K.floatx())
+    o_value = K.cast(1.0, K.floatx())
+
     w_u_i, b_u_i, w_l_i, b_l_i = bounds_x
     w_u, b_u, w_l, b_l = back_bounds
 
-    if len(w_u_i.shape) > 3:
+    if len(w_u_i.shape) > 3:  # ???
         n_dim = w_u_i.get_input_shape_at(0)[1]
         w_u_i = K.reshape(w_u_i, (-1, n_dim, n_dim))
         w_l_i = K.reshape(w_l_i, (-1, n_dim, n_dim))
@@ -317,8 +253,8 @@ def backward_linear_prod(x_0, bounds_x, back_bounds, convex_domain):
     # reshape bounds_x !!!!
 
     x_max = get_upper(x_0, w_u_i - w_l_i, b_u_i - b_l_i, convex_domain)
-    mask_b = 1.0 - K.sign(x_max)
-    mask_a = 1.0 - mask_b
+    mask_b = o_value - K.sign(x_max)
+    mask_a = o_value - mask_b
 
     w_u_i_ = K.expand_dims(K.expand_dims(w_u_i, 1), -1)
     w_l_i_ = K.expand_dims(K.expand_dims(w_l_i, 1), -1)
@@ -327,10 +263,10 @@ def backward_linear_prod(x_0, bounds_x, back_bounds, convex_domain):
     mask_a = K.expand_dims(K.expand_dims(mask_a, 1), -1)
     mask_b = K.expand_dims(K.expand_dims(mask_b, 1), -1)
 
-    w_u_pos = K.maximum(w_u, 0.0)
-    w_u_neg = K.minimum(w_u, 0.0)
-    w_l_pos = K.maximum(w_l, 0.0)
-    w_l_neg = K.minimum(w_l, 0.0)
+    w_u_pos = K.maximum(w_u, z_value)
+    w_u_neg = K.minimum(w_u, z_value)
+    w_l_pos = K.maximum(w_l, z_value)
+    w_l_neg = K.minimum(w_l, z_value)
 
     w_u_pos_ = K.expand_dims(w_u_pos, 2)
     w_u_neg_ = K.expand_dims(w_u_neg, 2)
@@ -353,7 +289,16 @@ def backward_linear_prod(x_0, bounds_x, back_bounds, convex_domain):
 
 
 def backward_maximum(
-    inputs_0, inputs_1, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name
+    inputs_0,
+    inputs_1,
+    w_out_u,
+    b_out_u,
+    w_out_l,
+    b_out_l,
+    convex_domain={},
+    slope=V_slope.name,
+    mode=F_HYBRID.name,
+    **kwargs,
 ):
     """
     Backward  LiRPA of maximum(inputs_0, inputs_1)
@@ -371,14 +316,14 @@ def backward_maximum(
 
     input_step_a_0 = substract(inputs_0, inputs_1, dc_decomp=False, convex_domain=convex_domain, mode=mode)
 
-    input_step_0_ = relu_(input_step_a_0, dc_decomp=False, convex_domain=convex_domain, mode=mode)
+    input_step_0_ = relu_(input_step_a_0, dc_decomp=False, convex_domain=convex_domain, mode=mode, **kwargs)
 
     _, bounds_1_ = backward_add(
         input_step_0_, inputs_1, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, mode=mode
     )
 
     input_step_a_1 = substract(inputs_1, inputs_0, dc_decomp=False, convex_domain=convex_domain, mode=mode)
-    input_step_1_ = relu_(input_step_a_1, dc_decomp=False, convex_domain=convex_domain, mode=mode)
+    input_step_1_ = relu_(input_step_a_1, dc_decomp=False, convex_domain=convex_domain, mode=mode, **kwargs)
 
     _, bounds_0_ = backward_add(
         input_step_1_, inputs_0, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, mode=mode
@@ -389,7 +334,7 @@ def backward_maximum(
 
 # convex hull of the maximum between two functions
 def backward_max_(
-    x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, axis=-1
+    x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, axis=-1, **kwargs
 ):
     """
     Backward  LiRPA of max
@@ -402,35 +347,39 @@ def backward_max_(
     :param axis: axis to perform the maximum
     :return: max operation  along an axis
     """
-
+    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    z_value = K.cast(0.0, K.floatx())
     if mode == F_HYBRID.name:
-        y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensor]
+        y = u_c
     if mode == F_FORWARD.name:
-        y, x_0, w_u, b_u, w_l, b_l = x[:6]
+        x_0, w_u, b_u, w_l, b_l = x[:nb_tensor]
+        y = b_u
     if mode == F_IBP.name:
-        y, x_0, u_c, l_c = x[:4]
+        u_c, l_c = x[:nb_tensor]
+        y = u_c
 
     input_shape = K.int_shape(y)
     max_dim = input_shape[axis]
 
     # do some transpose so that the last axis is also at the end
 
-    y_list = tf.split(y, max_dim, axis)
-    y_tmp = y_list[0] + K.zeros_like(y_list[0])
+    # y_list = tf.split(y, max_dim, axis)
+    # y_tmp = y_list[0] + K.zeros_like(y_list[0])
 
     if mode in [F_HYBRID.name, F_IBP.name]:
 
         u_c_list = tf.split(u_c, max_dim, axis)
         l_c_list = tf.split(l_c, max_dim, axis)
-        u_c_tmp = u_c_list[0] + K.zeros_like(u_c_list[0])
-        l_c_tmp = l_c_list[0] + K.zeros_like(l_c_list[0])
+        u_c_tmp = u_c_list[0] + z_value * (u_c_list[0])
+        l_c_tmp = l_c_list[0] + z_value * (l_c_list[0])
 
     if mode in [F_HYBRID.name, F_FORWARD.name]:
 
         b_u_list = tf.split(b_u, max_dim, axis)
         b_l_list = tf.split(b_l, max_dim, axis)
-        b_u_tmp = b_u_list[0] + K.zeros_like(b_u_list[0])
-        b_l_tmp = b_l_list[0] + K.zeros_like(b_l_list[0])
+        b_u_tmp = b_u_list[0] + z_value * (b_u_list[0])
+        b_l_tmp = b_l_list[0] + z_value * (b_l_list[0])
 
         if axis == -1:
             w_u_list = tf.split(w_u, max_dim, axis)
@@ -438,14 +387,13 @@ def backward_max_(
         else:
             w_u_list = tf.split(w_u, max_dim, axis + 1)
             w_l_list = tf.split(w_l, max_dim, axis + 1)
-        w_u_tmp = w_u_list[0] + K.zeros_like(w_u_list[0])
-        w_l_tmp = w_l_list[0] + K.zeros_like(w_l_list[0])
+        w_u_tmp = w_u_list[0] + z_value * (w_u_list[0])
+        w_l_tmp = w_l_list[0] + z_value * (w_l_list[0])
 
     outputs = []
     output_tmp = []  # store output at every level
     if mode == F_HYBRID.name:
         output_tmp = [
-            y_tmp,
             x_0,
             u_c_tmp,
             w_u_tmp,
@@ -456,26 +404,23 @@ def backward_max_(
         ]
 
         for i in range(1, max_dim):
-            output_i = [y_list[i], x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
+            output_i = [x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
             outputs.append([[elem for elem in output_tmp], output_i])
             output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
 
     if mode == F_IBP.name:
         output_tmp = [
-            y_tmp,
-            x_0,
             u_c_tmp,
             l_c_tmp,
         ]
 
         for i in range(1, max_dim):
-            output_i = [y_list[i], x_0, u_c_list[i], l_c_list[i]]
+            output_i = [u_c_list[i], l_c_list[i]]
             outputs.append([[elem for elem in output_tmp], output_i])
             output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
 
     if mode == F_FORWARD.name:
         output_tmp = [
-            y_tmp,
             x_0,
             w_u_tmp,
             b_u_tmp,
@@ -484,7 +429,7 @@ def backward_max_(
         ]
 
         for i in range(1, max_dim):
-            output_i = [y_list[i], x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
+            output_i = [x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
             outputs.append([[elem for elem in output_tmp], output_i])
             output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
 
@@ -493,22 +438,43 @@ def backward_max_(
     w_u_, b_u_, w_l_, b_l_ = (w_out_u, b_out_u, w_out_l, b_out_l)
 
     for (input_0, input_1) in outputs:
-        bounds_0, bounds_1 = backward_maximum(input_0, input_1, w_u_, b_u_, w_l_, b_l_, mode=mode)
+        bounds_0, bounds_1 = backward_maximum(input_0, input_1, w_u_, b_u_, w_l_, b_l_, mode=mode, **kwargs)
         bounds.append(bounds_1)
         w_u_, b_u_, w_l_, b_l_ = bounds_0
     bounds.append(bounds_0)
     bounds = bounds[::-1]
 
-    w_u_ = K.concatenate([K.expand_dims(b[0], -1) for b in bounds], -1)
-    w_l_ = K.concatenate([K.expand_dims(b[2], -1) for b in bounds], -1)
-    b_u_ = K.sum(K.concatenate([K.expand_dims(b[1], -1) for b in bounds], -1), -1)
-    b_l_ = K.sum(K.concatenate([K.expand_dims(b[3], -1) for b in bounds], -1), -1)
+    if axis < 0:
+        # w_u_ = K.concatenate([K.expand_dims(b[0], axis-1) for b in bounds], axis-1)
+        # w_l_ = K.concatenate([K.expand_dims(b[2], axis-1) for b in bounds], axis-1)
+
+        w_u_ = K.concatenate([b[0] for b in bounds], axis - 1)
+        w_l_ = K.concatenate([b[2] for b in bounds], axis - 1)
+        b_u_ = K.sum(K.concatenate([K.expand_dims(b[1], axis - 1) for b in bounds], axis - 1), axis - 1)
+        b_l_ = K.sum(K.concatenate([K.expand_dims(b[3], axis - 1) for b in bounds], axis - 1), axis - 1)
+    else:
+        # w_u_ = K.concatenate([K.expand_dims(b[0], axis) for b in bounds], axis)
+        # w_l_ = K.concatenate([K.expand_dims(b[2], axis) for b in bounds], axis)
+
+        w_u_ = K.concatenate([b[0] for b in bounds], axis)
+        w_l_ = K.concatenate([b[2] for b in bounds], axis)
+        b_u_ = K.sum(K.concatenate([K.expand_dims(b[1], axis) for b in bounds], axis), axis)
+        b_l_ = K.sum(K.concatenate([K.expand_dims(b[3], axis) for b in bounds], axis), axis)
 
     return [w_u_, b_u_, w_l_, b_l_]
 
 
 def backward_minimum(
-    inputs_0, inputs_1, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name
+    inputs_0,
+    inputs_1,
+    w_out_u,
+    b_out_u,
+    w_out_l,
+    b_out_l,
+    convex_domain={},
+    slope=V_slope.name,
+    mode=F_HYBRID.name,
+    **kwargs,
 ):
     """
     Backward  LiRPA of minimum(inputs_0, inputs_1)
@@ -528,7 +494,16 @@ def backward_minimum(
         w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, slope=slope, mode=mode
     )
     bounds_0, bounds_1 = backward_maximum(
-        inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain=convex_domain, slope=slope, mode=mode
+        inputs_0,
+        inputs_1,
+        w_out_u_,
+        b_out_u_,
+        w_out_l_,
+        b_out_l_,
+        convex_domain=convex_domain,
+        slope=slope,
+        mode=mode,
+        **kwargs,
     )
 
     w_out_u_0, b_out_u_0, w_out_l_0, b_out_l_0 = bounds_0
@@ -625,21 +600,22 @@ def backward_multiply(
     :return:
     """
 
-    w_out_u = w_out_u[:, 0]
-    w_out_l = w_out_l[:, 0]
-    b_out_u = b_out_u[:, 0]
-    b_out_l = b_out_l[:, 0]
+    # w_out_u = w_out_u[:, 0]
+    # w_out_l = w_out_l[:, 0]
+    # b_out_u = b_out_u[:, 0]
+    # b_out_l = b_out_l[:, 0]
+    z_value = K.cast(0.0, K.floatx())
 
     if mode == F_IBP.name:
-        y_0, x_0, u_0, l_0 = inputs_0
-        y_1, x_1, u_1, l_1 = inputs_1
+        u_0, l_0 = inputs_0
+        u_1, l_1 = inputs_1
     if mode == F_HYBRID.name:
-        y_0, x_0, u_0, w_u_0, b_u_0, l_0, w_l_0, b_l_0 = inputs_0
-        y_1, x_1, u_1, w_u_1, b_u_1, l_1, w_l_1, b_l_1 = inputs_1
+        x_0, u_0, w_u_0, b_u_0, l_0, w_l_0, b_l_0 = inputs_0
+        x_1, u_1, w_u_1, b_u_1, l_1, w_l_1, b_l_1 = inputs_1
 
     if mode == F_FORWARD.name:
-        y_0, x_0, w_u_0, b_u_0, w_l_0, b_l_0 = inputs_0
-        y_1, x_1, w_u_1, b_u_1, w_l_1, b_l_1 = inputs_1
+        x_0, w_u_0, b_u_0, w_l_0, b_l_0 = inputs_0
+        x_1, w_u_1, b_u_1, w_l_1, b_l_1 = inputs_1
 
         u_0 = get_upper(x_0, w_u_0, b_u_0, convex_domain=convex_domain)
         l_0 = get_lower(x_0, w_l_0, b_l_0, convex_domain=convex_domain)
@@ -649,19 +625,19 @@ def backward_multiply(
     n = np.prod(u_0.shape[1:])
     n_shape = [-1, n]
     # broadcast dimensions if needed
-    n_out = len(w_out_u.shape[2:])
+    n_out = len(w_out_u.shape[1:])
     for _ in range(n_out):
         n_shape += [1]
     a_u_0 = K.reshape(u_1, n_shape)
     a_u_1 = K.reshape(u_0, n_shape)
 
-    b_u_0 = K.reshape((K.maximum(l_0, 0.0) * u_1 + K.minimum(l_0, 0.0) * l_1 - u_1 * l_0), n_shape)
-    b_u_1 = K.reshape((K.maximum(l_1, 0.0) * u_0 + K.minimum(l_1, 0.0) * l_0 - u_0 * l_1), n_shape)
+    b_u_0 = K.reshape((K.maximum(l_0, z_value) * u_1 + K.minimum(l_0, z_value) * l_1 - u_1 * l_0), n_shape)
+    b_u_1 = K.reshape((K.maximum(l_1, z_value) * u_0 + K.minimum(l_1, z_value) * l_0 - u_0 * l_1), n_shape)
 
     a_l_0 = K.reshape(l_1, n_shape)
     a_l_1 = K.reshape(l_0, n_shape)
-    b_l_0 = K.reshape((K.maximum(l_0, 0.0) * l_1 + K.minimum(l_0, 0.0) * u_1 - l_1 * l_0), n_shape)
-    b_l_1 = K.reshape((K.maximum(l_1, 0.0) * l_0 + K.minimum(l_1, 0.0) * u_0 - l_0 * l_1), n_shape)
+    b_l_0 = K.reshape((K.maximum(l_0, z_value) * l_1 + K.minimum(l_0, z_value) * u_1 - l_1 * l_0), n_shape)
+    b_l_1 = K.reshape((K.maximum(l_1, z_value) * l_0 + K.minimum(l_1, z_value) * u_0 - l_0 * l_1), n_shape)
 
     """
     for _ in range(n_out):
@@ -672,30 +648,43 @@ def backward_multiply(
     """
 
     # upper
+    w_out_u_max = K.maximum(w_out_u, z_value)
+    w_out_u_min = K.minimum(w_out_u, z_value)
 
-    w_out_u_0 = K.maximum(w_out_u, 0.0) * a_u_0 + K.minimum(w_out_u, 0.0) * a_l_0
-    w_out_u_1 = K.maximum(w_out_u, 0.0) * a_u_1 + K.minimum(w_out_u, 0.0) * a_l_1
+    w_out_u_0 = w_out_u_max * a_u_0 + w_out_u_min * a_l_0
+    w_out_u_1 = w_out_u_max * a_u_1 + w_out_u_min * a_l_1
 
-    b_out_u_0 = K.sum(K.maximum(w_out_u, 0.0) * b_u_0, 1) + K.sum(K.minimum(w_out_u, 0.0) * b_l_0, 1) + b_out_u
-    b_out_u_1 = K.sum(K.maximum(w_out_u, 0.0) * b_u_1, 1) + K.sum(K.minimum(w_out_u, 0.0) * b_l_1, 1) + b_out_u
+    b_out_u_0 = K.sum(w_out_u_max * b_u_0, 1) + K.sum(w_out_u_min * b_l_0, 1) + b_out_u
+    b_out_u_1 = K.sum(w_out_u_max * b_u_1, 1) + K.sum(w_out_u_min * b_l_1, 1) + b_out_u
 
     # lower
+    w_out_l_max = K.maximum(w_out_l, z_value)
+    w_out_l_min = K.minimum(w_out_l, z_value)
 
-    w_out_l_0 = K.maximum(w_out_l, 0.0) * a_l_0 + K.minimum(w_out_l, 0.0) * a_u_0
-    w_out_l_1 = K.maximum(w_out_l, 0.0) * a_l_1 + K.minimum(w_out_l, 0.0) * a_u_1
+    w_out_l_0 = w_out_l_max * a_l_0 + w_out_l_min * a_u_0
+    w_out_l_1 = w_out_l_max * a_l_1 + w_out_l_min * a_u_1
 
-    b_out_l_0 = K.sum(K.maximum(w_out_l, 0.0) * b_l_0, 1) + K.sum(K.minimum(w_out_l, 0.0) * b_u_0, 1) + b_out_l
-    b_out_l_1 = K.sum(K.maximum(w_out_l, 0.0) * b_l_1, 1) + K.sum(K.minimum(w_out_l, 0.0) * b_u_1, 1) + b_out_l
+    b_out_l_0 = K.sum(w_out_l_max * b_l_0, 1) + K.sum(w_out_l_min * b_u_0, 1) + b_out_l
+    b_out_l_1 = K.sum(w_out_l_max * b_l_1, 1) + K.sum(w_out_l_min * b_u_1, 1) + b_out_l
 
-    bounds_0 = [w_out_u_0[:, None], b_out_u_0[:, None], w_out_l_0[:, None], b_out_l_0[:, None]]
-    bounds_1 = [w_out_u_1[:, None], b_out_u_1[:, None], w_out_l_1[:, None], b_out_l_1[:, None]]
+    bounds_0 = [w_out_u_0, b_out_u_0, w_out_l_0, b_out_l_0]
+    bounds_1 = [w_out_u_1, b_out_u_1, w_out_l_1, b_out_l_1]
 
     return bounds_0, bounds_1
 
 
 # we can do someting simpler
 def backward_sort(
-    inputs_, w_out_u, b_out_u, w_out_l, b_out_l, axis=-1, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name
+    inputs_,
+    w_out_u,
+    b_out_u,
+    w_out_l,
+    b_out_l,
+    axis=-1,
+    convex_domain={},
+    slope=V_slope.name,
+    mode=F_HYBRID.name,
+    **kwargs,
 ):
     """
     Backward  LiRPA of sort
@@ -710,15 +699,17 @@ def backward_sort(
     :param mode:
     :return:
     """
-
+    z_value = K.cast(0.0, K.floatx())
     # build the tightest contain bounds for inputs_
     if mode == F_IBP.name:
-        y, x_0, u_c_, l_c_ = inputs_
+        u_c_, l_c_ = inputs_
+        y = u_c_
     if mode == F_FORWARD.name:
-        y, x_0, w_u_, b_u_, w_l_, b_l_ = inputs_
+        x_0, w_u_, b_u_, w_l_, b_l_ = inputs_
+        y = b_u_
     if mode == F_HYBRID.name:
-        y, x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = inputs_
-
+        x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = inputs_
+        y = u_c_
     if mode in [F_FORWARD.name, F_HYBRID.name]:
         # compute linear relaxations
         u_c_0 = get_upper(x_0, w_u_, b_u_, convex_domain=convex_domain)
@@ -734,28 +725,63 @@ def backward_sort(
 
     # build fake inputs with no linearity
     n_dim = np.prod(y.shape[1:])
-    w_tmp = 0 * K.concatenate([y[:, None] * n_dim], 1)
+    w_tmp = z_value * K.concatenate([y[:, None] * n_dim], 1)
 
-    inputs_tmp = [y, x_0, u_c_, w_tmp, u_c_, l_c_, w_tmp, l_c_]
+    inputs_tmp = [x_0, u_c_, w_tmp, u_c_, l_c_, w_tmp, l_c_]
     outputs_tmp = sort(inputs_tmp, axis=axis, convex_domain=convex_domain, mode=F_HYBRID.name)
-    _, _, _, w_u_tmp, b_u_tmp, _, w_l_tmp, b_l_tmp = outputs_tmp
+    _, _, w_u_tmp, b_u_tmp, _, w_l_tmp, b_l_tmp = outputs_tmp
 
     # w_u_tmp (None, n_dim, y.shape[1:)
     # w_out_u (None, 1, n_dim, n_out)
     w_u_tmp = K.reshape(w_u_tmp, [-1, n_dim, n_dim])  # (None, n_dim, n_dim)
     b_u_tmp = K.reshape(b_u_tmp, [-1, n_dim])  # (None, n_dim)
     w_l_tmp = K.reshape(w_l_tmp, [-1, n_dim, n_dim])
-    b_L_tmp = K.reshape(b_l_tmp, [-1, n_dim])
+    b_l_tmp = K.reshape(b_l_tmp, [-1, n_dim])
 
     # combine with backward bounds
-    w_out_u_pos = K.maximum(w_out_u, 0.0)  # (None, 1, n_dim, n_out)
-    w_out_u_neg = K.minimum(w_out_u, 0.0)[:, 0]
-    w_out_l_pos = K.maximum(w_out_l, 0.0)[:, 0]
-    w_out_l_neg = K.minimum(w_out_l, 0.0)[:, 0]
+    w_out_u_pos = K.maximum(w_out_u, z_value)  # (None, 1, n_dim, n_out)
+    w_out_u_neg = K.minimum(w_out_u, z_value)
+    w_out_l_pos = K.maximum(w_out_l, z_value)
+    w_out_l_neg = K.minimum(w_out_l, z_value)
 
-    w_out_u_ = K.sum(w_out_u_pos * K.expand_dims(w_u_tmp, -1) + w_out_u_pos * K.expand_dims(w_l_tmp, -1), 1)[:, None]
-    w_out_l_ = K.sum(w_out_u_pos * K.expand_dims(w_u_tmp, -1) + w_out_u_pos * K.expand_dims(w_l_tmp, -1), 1)[:, None]
-    b_out_u_ = b_out_u + K.sum(w_out_u_pos[:, 0] * b_u_tmp, 1)[:, None] + K.sum(w_out_u_neg[:, 0] * b_l_tmp, 1)[:, None]
-    b_out_l_ = b_out_l + K.sum(w_out_l_pos[:, 0] * b_l_tmp, 1)[:, None] + K.sum(w_out_l_neg[:, 0] * b_u_tmp, 1)[:, None]
+    w_out_u_ = K.sum(w_out_u_pos * K.expand_dims(w_u_tmp, -1) + w_out_u_pos * K.expand_dims(w_l_tmp, -1), 1)
+    w_out_l_ = K.sum(w_out_u_pos * K.expand_dims(w_u_tmp, -1) + w_out_u_pos * K.expand_dims(w_l_tmp, -1), 1)
+    b_out_u_ = b_out_u + K.sum(w_out_u_pos * b_u_tmp, 1) + K.sum(w_out_u_neg * b_l_tmp, 1)
+    b_out_l_ = b_out_l + K.sum(w_out_l_pos * b_l_tmp, 1) + K.sum(w_out_l_neg * b_u_tmp, 1)
 
     return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
+
+
+def get_identity_lirpa(inputs):
+    y_ = inputs[-1]
+    shape = np.prod(y_.shape[1:])
+
+    z_value = K.cast(0.0, K.floatx())
+    o_value = K.cast(1.0, K.floatx())
+    y_flat = K.reshape(y_, [-1, shape])
+
+    w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
+    b_out_u, b_out_l = [z_value * y_flat] * 2
+    w_out_u = tf.linalg.diag(w_out_u)
+    w_out_l = tf.linalg.diag(w_out_l)
+
+    return w_out_u, b_out_u, w_out_l, b_out_l
+
+
+def get_IBP(mode=F_HYBRID.name):
+    if mode in [F_HYBRID.name, F_IBP.name]:
+        return True
+    return False
+
+
+def get_FORWARD(mode=F_HYBRID.name):
+    if mode in [F_HYBRID.name, F_FORWARD.name]:
+        return True
+    return False
+
+
+def get_input_dim(input_dim, convex_domain):
+    if len(convex_domain) == 0:
+        return (2, input_dim)
+    else:
+        return input_dim

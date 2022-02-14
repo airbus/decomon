@@ -5,8 +5,19 @@ from ..backward_layers.utils import backward_relu_, backward_softplus_
 from .utils import V_slope
 from tensorflow.keras.layers import Layer
 from ..layers import F_FORWARD, F_IBP, F_HYBRID
-from ..layers.utils import sigmoid_prime, get_linear_hull_s_shape, softsign_prime, tanh_prime
+from ..layers.utils import (
+    sigmoid_prime,
+    get_linear_hull_s_shape,
+    softsign_prime,
+    tanh_prime,
+    relu_,
+    get_upper,
+    get_lower,
+)
 import tensorflow.keras.backend as K
+from ..utils import get_linear_hull_relu, get_linear_hull_sigmoid, get_linear_hull_tanh
+from ..layers.core import StaticVariables
+import numpy as np
 
 
 ELU = "elu"
@@ -15,6 +26,7 @@ SOFTPLUS = "softplus"
 SOFTSIGN = "softsign"
 SOFTMAX = "softmax"
 RELU = "relu_"
+RELU_ = "relu"
 SIGMOID = "sigmoid"
 TANH = "tanh"
 EXPONENTIAL = "exponential"
@@ -31,6 +43,7 @@ def backward_relu(
     threshold=0.0,
     slope=V_slope.name,
     mode=F_HYBRID.name,
+    previous=True,
     **kwargs,
 ):
     """
@@ -54,14 +67,36 @@ def backward_relu(
 
     if not (alpha) and max_value is None:
         # default values: return relu_(x) = max(x, 0)
-        y = x[:-4]
-        w_out_u, b_out_u, w_out_l, b_out_l = x[-4:]
+        if previous:
+            y = x[:-4]
+            w_out_u, b_out_u, w_out_l, b_out_l = x[-4:]
 
-        return backward_relu_(y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, mode=mode, **kwargs)
+            return backward_relu_(
+                y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, mode=mode, **kwargs
+            )
+        else:
+            nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+
+            if mode == F_IBP.name:
+                upper, lower = x[:nb_tensors]
+            if mode == F_FORWARD.name:
+                z_, w_u_, b_u_, w_l_, b_l_ = x[:nb_tensors]
+                upper = get_upper(z_, w_u_, b_u_)
+                lower = get_lower(z_, w_l_, b_l_)
+            if mode == F_HYBRID.name:
+                _, upper, _, _, lower, _, _ = x[:nb_tensors]
+            bounds = get_linear_hull_relu(upper, lower, slope=slope, **kwargs)
+            shape = np.prod(x[-1].shape[1:])
+            bounds = [K.reshape(elem, (-1, shape)) for elem in bounds]
+
+            return bounds
+
     raise NotImplementedError()
 
 
-def backward_sigmoid(inputs, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, **kwargs):
+def backward_sigmoid(
+    inputs, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+):
     """
     Backward  LiRPA of sigmoid
     :param inputs:
@@ -75,25 +110,40 @@ def backward_sigmoid(inputs, dc_decomp=False, convex_domain={}, slope=V_slope.na
     if dc_decomp:
         raise NotImplementedError()
 
-    x = inputs[:-4]
-    w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-    w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
-        x, func=K.sigmoid, f_prime=sigmoid_prime, convex_domain=convex_domain, mode=mode
-    )
+    if previous:
+        x = inputs[:-4]
+        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
+        w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
+            x, func=K.sigmoid, f_prime=sigmoid_prime, convex_domain=convex_domain, mode=mode
+        )
 
-    w_u_0 = K.expand_dims(K.expand_dims(w_u_0, 1), -1)
-    w_l_0 = K.expand_dims(K.expand_dims(w_l_0, 1), -1)
-    b_u_0 = K.expand_dims(K.expand_dims(b_u_0, 1), -1)
-    b_l_0 = K.expand_dims(K.expand_dims(b_l_0, 1), -1)
-    w_out_u_ = K.maximum(0.0, w_out_u) * w_u_0 + K.minimum(0.0, w_out_u) * w_l_0
-    w_out_l_ = K.maximum(0.0, w_out_l) * w_l_0 + K.minimum(0.0, w_out_l) * w_u_0
-    b_out_u_ = K.sum(K.maximum(0.0, w_out_u) * b_u_0 + K.minimum(0.0, w_out_u) * b_l_0, 2) + b_out_u
-    b_out_l_ = K.sum(K.maximum(0.0, w_out_l) * b_l_0 + K.minimum(0.0, w_out_l) * b_u_0, 2) + b_out_l
+        w_u_0 = K.expand_dims(K.expand_dims(w_u_0, 1), -1)
+        w_l_0 = K.expand_dims(K.expand_dims(w_l_0, 1), -1)
+        b_u_0 = K.expand_dims(K.expand_dims(b_u_0, 1), -1)
+        b_l_0 = K.expand_dims(K.expand_dims(b_l_0, 1), -1)
+        w_out_u_ = K.maximum(0.0, w_out_u) * w_u_0 + K.minimum(0.0, w_out_u) * w_l_0
+        w_out_l_ = K.maximum(0.0, w_out_l) * w_l_0 + K.minimum(0.0, w_out_l) * w_u_0
+        b_out_u_ = K.sum(K.maximum(0.0, w_out_u) * b_u_0 + K.minimum(0.0, w_out_u) * b_l_0, 2) + b_out_u
+        b_out_l_ = K.sum(K.maximum(0.0, w_out_l) * b_l_0 + K.minimum(0.0, w_out_l) * b_u_0, 2) + b_out_l
 
-    return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
+        return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
+    else:
+        nb_tensors = StaticVariables(dc_decomp=False, mode=mode)
+
+        if mode == F_IBP.name:
+            upper, lower = inputs[:nb_tensors]
+        if mode == F_FORWARD.name:
+            z_, w_u_, b_u_, w_l_, b_l_ = inputs[:nb_tensors]
+            upper = get_upper(z_, w_u_, b_u_)
+            lower = get_lower(z_, w_l_, b_l_)
+        if mode == F_HYBRID.name:
+            _, upper, _, _, lower, _, _ = inputs[:nb_tensors]
+        return get_linear_hull_sigmoid(upper, lower, slope=slope, **kwargs)
 
 
-def backward_tanh(inputs, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, **kwargs):
+def backward_tanh(
+    inputs, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+):
     """
     Backward  LiRPA of tanh
     :param inputs:
@@ -107,31 +157,47 @@ def backward_tanh(inputs, dc_decomp=False, convex_domain={}, slope=V_slope.name,
     if dc_decomp:
         raise NotImplementedError()
 
-    x = inputs[:-4]
-    w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-    w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
-        x, func=K.tanh, f_prime=tanh_prime, convex_domain=convex_domain, mode=mode, **kwargs
-    )
+    if previous:
+        x = inputs[:-4]
+        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
+        w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
+            x, func=K.tanh, f_prime=tanh_prime, convex_domain=convex_domain, mode=mode, **kwargs
+        )
 
-    # here balance the results for convex linear relaxations
-    w_u_ = K.expand_dims(K.expand_dims(w_u_, 1), -1)
-    w_l_ = K.expand_dims(K.expand_dims(w_l_, 1), -1)
-    b_u_ = K.expand_dims(K.expand_dims(b_u_, 1), -1)
-    b_l_ = K.expand_dims(K.expand_dims(b_l_, 1), -1)
+        # here balance the results for convex linear relaxations
+        w_u_ = K.expand_dims(K.expand_dims(w_u_, 1), -1)
+        w_l_ = K.expand_dims(K.expand_dims(w_l_, 1), -1)
+        b_u_ = K.expand_dims(K.expand_dims(b_u_, 1), -1)
+        b_l_ = K.expand_dims(K.expand_dims(b_l_, 1), -1)
 
-    w_u_0 = K.expand_dims(K.expand_dims(w_u_0, 1), -1)
-    w_l_0 = K.expand_dims(K.expand_dims(w_l_0, 1), -1)
-    b_u_0 = K.expand_dims(K.expand_dims(b_u_0, 1), -1)
-    b_l_0 = K.expand_dims(K.expand_dims(b_l_0, 1), -1)
-    w_out_u_ = K.maximum(0.0, w_out_u) * w_u_0 + K.minimum(0.0, w_out_u) * w_l_0
-    w_out_l_ = K.maximum(0.0, w_out_l) * w_l_0 + K.minimum(0.0, w_out_l) * w_u_0
-    b_out_u_ = K.sum(K.maximum(0.0, w_out_u) * b_u_0 + K.minimum(0.0, w_out_u) * b_l_0, 2) + b_out_u
-    b_out_l_ = K.sum(K.maximum(0.0, w_out_l) * b_l_0 + K.minimum(0.0, w_out_l) * b_u_0, 2) + b_out_l
+        w_u_0 = K.expand_dims(K.expand_dims(w_u_0, 1), -1)
+        w_l_0 = K.expand_dims(K.expand_dims(w_l_0, 1), -1)
+        b_u_0 = K.expand_dims(K.expand_dims(b_u_0, 1), -1)
+        b_l_0 = K.expand_dims(K.expand_dims(b_l_0, 1), -1)
+        w_out_u_ = K.maximum(0.0, w_out_u) * w_u_0 + K.minimum(0.0, w_out_u) * w_l_0
+        w_out_l_ = K.maximum(0.0, w_out_l) * w_l_0 + K.minimum(0.0, w_out_l) * w_u_0
+        b_out_u_ = K.sum(K.maximum(0.0, w_out_u) * b_u_0 + K.minimum(0.0, w_out_u) * b_l_0, 2) + b_out_u
+        b_out_l_ = K.sum(K.maximum(0.0, w_out_l) * b_l_0 + K.minimum(0.0, w_out_l) * b_u_0, 2) + b_out_l
 
-    return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
+        return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
+    else:
+
+        nb_tensors = StaticVariables(dc_decomp=False, mode=mode)
+
+        if mode == F_IBP.name:
+            upper, lower = inputs[:nb_tensors]
+        if mode == F_FORWARD.name:
+            z_, w_u_, b_u_, w_l_, b_l_ = inputs[:nb_tensors]
+            upper = get_upper(z_, w_u_, b_u_)
+            lower = get_lower(z_, w_l_, b_l_)
+        if mode == F_HYBRID.name:
+            _, upper, _, _, lower, _, _ = inputs[:nb_tensors]
+        return get_linear_hull_tanh(upper, lower, slope=slope, **kwargs)
 
 
-def bacward_hard_sigmoid(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, **kwargs):
+def backward_hard_sigmoid(
+    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+):
     """
     Backward  LiRPA of hard sigmoid
     :param x:
@@ -149,7 +215,7 @@ def bacward_hard_sigmoid(x, dc_decomp=False, convex_domain={}, slope=V_slope.nam
     raise NotImplementedError()
 
 
-def backward_elu(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, **kwargs):
+def backward_elu(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs):
     """
     Backward  LiRPA of Exponential Linear Unit
     :param x:
@@ -167,7 +233,9 @@ def backward_elu(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=
     raise NotImplementedError()
 
 
-def backward_selu(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, **kwargs):
+def backward_selu(
+    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+):
     """
     Backward LiRPA of Scaled Exponential Linear Unit (SELU)
     :param x:
@@ -185,7 +253,9 @@ def backward_selu(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode
     raise NotImplementedError()
 
 
-def backward_linear(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, **kwargs):
+def backward_linear(
+    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+):
     """
     Backward LiRPA of linear
     :param x:
@@ -195,11 +265,15 @@ def backward_linear(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mo
     :param mode:
     :return:
     """
+    if previous:
+        return x[-4:]
 
-    return x
+    raise NotImplementedError()
 
 
-def backward_exponential(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, **kwargs):
+def backward_exponential(
+    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+):
     """
     Backward LiRPAof exponential
     :param x:
@@ -216,7 +290,9 @@ def backward_exponential(x, dc_decomp=False, convex_domain={}, slope=V_slope.nam
     raise NotImplementedError()
 
 
-def backward_softplus(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, **kwargs):
+def backward_softplus(
+    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+):
     """
     Backward LiRPA of softplus
     :param x:
@@ -229,14 +305,30 @@ def backward_softplus(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, 
 
     if dc_decomp:
         raise NotImplementedError()
+    if previous:
+        y = x[:-4]
+        w_out_u, b_out_u, w_out_l, b_out_l = x[-4:]
 
-    y = x[:-4]
-    w_out_u, b_out_u, w_out_l, b_out_l = x[-4:]
+        return backward_softplus_(
+            y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, mode=mode, **kwargs
+        )
+    else:
+        nb_tensors = StaticVariables(dc_decomp=False, mode=mode)
 
-    return backward_softplus_(y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, mode=mode, **kwargs)
+        if mode == F_IBP.name:
+            upper, lower = x[:nb_tensors]
+        if mode == F_FORWARD.name:
+            z_, w_u_, b_u_, w_l_, b_l_ = x[:nb_tensors]
+            upper = get_upper(z_, w_u_, b_u_)
+            lower = get_lower(z_, w_l_, b_l_)
+        if mode == F_HYBRID.name:
+            _, upper, _, _, lower, _, _ = x[:nb_tensors]
+        return get_linear_hull_softplus(upper, lower, slope=slope, **kwargs)
 
 
-def backward_softsign(inputs, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, **kwargs):
+def backward_softsign(
+    inputs, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+):
     """
     Backward LiRPA of softsign
     :param x:
@@ -270,7 +362,9 @@ def backward_softsign(inputs, dc_decomp=False, convex_domain={}, slope=V_slope.n
     return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
 
 
-def backward_softmax(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, axis=-1, **kwargs):
+def backward_softmax(
+    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, axis=-1, **kwargs
+):
     """
     Backward LiRPA of softmax
 
@@ -314,7 +408,7 @@ def deserialize(name):
         return backward_sigmoid
     if name == TANH:
         return backward_tanh
-    if name == RELU:
+    if name in [RELU, RELU_]:
         return backward_relu
     if name == EXPONENTIAL:
         return backward_exponential

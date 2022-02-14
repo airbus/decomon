@@ -3,6 +3,7 @@ import tensorflow.keras.backend as K
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.layers import Layer, Flatten, Dot, Permute
+from tensorflow.python.keras.utils.generic_utils import to_list
 from decomon.layers.decomon_merge_layers import (
     DecomonSubtract,
     DecomonMaximum,
@@ -14,7 +15,15 @@ from decomon.layers.decomon_merge_layers import (
     DecomonDot,
 )
 from ..backward_layers.activations import get
-from .utils import V_slope, backward_add, backward_substract, backward_maximum, backward_minimum, backward_multiply
+from .utils import (
+    V_slope,
+    backward_add,
+    backward_substract,
+    backward_maximum,
+    backward_minimum,
+    backward_multiply,
+    get_identity_lirpa,
+)
 from ..layers.core import F_HYBRID, F_FORWARD, F_IBP
 from ..layers.utils import split, multiply, permute_dimensions, broadcast
 
@@ -24,14 +33,32 @@ class BackwardAdd(Layer):
     Backward  LiRPA of Add
     """
 
-    def __init__(self, layer, slope=V_slope.name, **kwargs):
+    def __init__(
+        self,
+        layer,
+        slope=V_slope.name,
+        previous=True,
+        mode=F_HYBRID.name,
+        convex_domain={},
+        finetune=False,
+        input_dim=-1,
+        **kwargs,
+    ):
         super(BackwardAdd, self).__init__(**kwargs)
         # if not isinstance(layer, DecomonAdd):
         #    raise KeyError()
-
         self.layer = layer
         self.slope = slope
-        self.mode = self.layer.mode
+        if hasattr(self.layer, "mode"):
+            self.mode = self.layer.mode
+            self.convex_domain = self.layer.convex_domain
+        else:
+            self.mode = mode
+            self.convex_domain = convex_domain
+        self.finetune = False
+        self.previous = previous
+
+        self.op = DecomonAdd(mode=self.mode, convex_domain=self.layer.convex_domain, dc_decomp=layer.dc_decomp).call
 
     def call(self, inputs):
 
@@ -98,26 +125,42 @@ class BackwardAverage(Layer):
     Backward  LiRPA of Average
     """
 
-    def __init__(self, layer, slope=V_slope.name, **kwargs):
+    def __init__(
+        self,
+        layer,
+        slope=V_slope.name,
+        previous=True,
+        mode=F_HYBRID.name,
+        convex_domain={},
+        finetune=False,
+        input_dim=-1,
+        **kwargs,
+    ):
         super(BackwardAverage, self).__init__(**kwargs)
-        if not isinstance(layer, DecomonAverage):
-            raise KeyError()
 
         self.layer = layer
         self.slope = slope
-        self.mode = self.layer.mode
-        self.op = DecomonAdd(mode=self.mode, convex_domain=self.layer.convex_domain, dc_decomp=layer.dc_decomp).call
+        if hasattr(self.layer, "mode"):
+            self.mode = self.layer.mode
+            self.convex_domain = self.layer.convex_domain
+        else:
+            self.mode = mode
+            self.convex_domain = convex_domain
+        self.finetune = False
+        self.previous = previous
 
-    def call(self, inputs):
+        self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=False).call
+
+    def call_previous(self, inputs):
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
-        n_comp = 4
+        n_comp = 2
         if self.mode == F_FORWARD.name:
-            n_comp = 6
+            n_comp = 5
         if self.mode == F_HYBRID.name:
-            n_comp = 8
+            n_comp = 7
 
         n_elem = len(x_) // n_comp
         # inputs_list = [inputs[n_comp * i:n_comp * (i + 1)] for i in range(n_elem)]
@@ -142,7 +185,7 @@ class BackwardAverage(Layer):
                         b_out_u,
                         w_out_l,
                         b_out_l,
-                        convex_domain=self.layer.convex_domain,
+                        convex_domain=self.convex_domain,
                         mode=self.mode,
                     )
                 else:
@@ -154,7 +197,7 @@ class BackwardAverage(Layer):
                         b_out_u_,
                         w_out_l_,
                         b_out_l_,
-                        convex_domain=self.layer.convex_domain,
+                        convex_domain=self.convex_domain,
                         mode=self.mode,
                     )
 
@@ -165,8 +208,17 @@ class BackwardAverage(Layer):
 
         input_bounds = input_bounds[::-1]
         input_bounds = [[1.0 / n_elem * elem_i for elem_i in elem] for elem in input_bounds]
-
         return input_bounds
+
+    def call_no_previous(self, inputs):
+        bounds = list(get_identity_lirpa(inputs))
+        return self.call_previous(inputs + bounds)
+
+    def call(self, inputs):
+        if self.previous:
+            return self.call_previous(inputs)
+        else:
+            return self.call_no_previous(inputs)
 
 
 class BackwardSubtract(Layer):
