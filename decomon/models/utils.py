@@ -1,0 +1,471 @@
+from __future__ import absolute_import
+import inspect
+import numpy as np
+import warnings
+import tensorflow as tf
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.layers import InputLayer, Input
+from ..layers.core import Box
+import tensorflow.keras.backend as K
+from decomon.layers.decomon_layers import to_monotonic
+from copy import deepcopy
+from decomon.layers.core import F_FORWARD, F_IBP, F_HYBRID
+from tensorflow.python.keras.utils.generic_utils import to_list
+from tensorflow.keras.layers import Lambda, Concatenate, Flatten, Minimum, Maximum
+from ..utils import get_upper_layer, get_lower_layer
+
+
+def include_dim_layer_fn(
+    layer_fn, input_dim, dc_decomp=False, convex_domain={}, IBP=True, forward=True, finetune=False, shared=True
+):
+    """
+    include external parameters inside the translation of a layer to its decomon counterpart
+    :param layer_fn:
+    :param input_dim:
+    :param dc_decomp:
+    :param convex_domain:
+    :param finetune:
+    :return:
+    """
+
+    if input_dim <= 0:
+        raise ValueError()
+    else:
+        if "input_dim" in inspect.signature(layer_fn).parameters:
+            layer_fn_copy = deepcopy(layer_fn)
+            if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
+                input_dim = (2, input_dim)
+            else:
+                if convex_domain["name"] == Box.name and not isinstance(input_dim, tuple):
+                    input_dim = (2, input_dim)
+
+            def func(x):
+                return layer_fn_copy(
+                    x,
+                    input_dim,
+                    convex_domain=convex_domain,
+                    dc_decomp=dc_decomp,
+                    IBP=IBP,
+                    forward=forward,
+                    finetune=finetune,
+                    shared=shared,
+                )
+
+            layer_fn = func
+
+        else:
+            return layer_fn
+            """
+            warnings.warn(
+                "Expected {} to have an input dim option. " "Henceworth the to_monotonic function will be used instead"
+            )
+            if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
+                input_dim = (2, input_dim)
+            else:
+                if convex_domain["name"] == Box.name and not isinstance(input_dim, tuple):
+                    input_dim = (2, input_dim)
+
+            def func(x):
+                return to_monotonic(
+                    x,
+                    input_dim=input_dim,
+                    dc_decomp=dc_decomp,
+                    convex_domain=convex_domain,
+                    IBP=IBP,
+                    forward=forward,
+                    finetune=finetune,
+                )
+
+            layer_fn = func
+            """
+
+    return layer_fn
+
+
+def check_input_tensors_sequential(
+    model, input_tensors, input_dim, input_dim_init, IBP, forward, dc_decomp, convex_domain
+):
+
+    if input_tensors is None:  # no predefined input tensors
+
+        input_shape = list(K.int_shape(model.input)[1:])
+
+        if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
+            input_dim_ = (2, input_dim)
+            z_tensor = Input(input_dim_)
+        elif convex_domain["name"] == Box.name and not isinstance(input_dim, tuple):
+            input_dim_ = (2, input_dim)
+            z_tensor = Input(input_dim_)
+        else:
+
+            if isinstance(input_dim, tuple):
+                z_tensor = Input(input_dim)
+            else:
+                z_tensor = Input((input_dim,))
+
+        y_tensor = Input(tuple(input_shape))
+        if dc_decomp:
+            h_tensor = Input(tuple(input_shape))
+            g_tensor = Input(tuple(input_shape))
+        if forward:
+            b_u_tensor = Input(tuple(input_shape))
+            b_l_tensor = Input(tuple(input_shape))
+
+        if forward:
+            if input_dim_init > 0:
+                w_u_tensor = Input(tuple([input_dim] + input_shape))
+                w_l_tensor = Input(tuple([input_dim] + input_shape))
+            else:
+                w_u_tensor = Input(tuple(input_shape))
+                w_l_tensor = Input(tuple(input_shape))
+
+        if IBP:
+            u_c_tensor = Input(tuple(input_shape))
+            l_c_tensor = Input(tuple(input_shape))
+
+        if IBP:
+            if forward:  # hybrid mode
+                input_tensors = [
+                    z_tensor,
+                    u_c_tensor,
+                    w_u_tensor,
+                    b_u_tensor,
+                    l_c_tensor,
+                    w_l_tensor,
+                    b_l_tensor,
+                ]
+            else:
+                # only IBP
+                input_tensors = [
+                    u_c_tensor,
+                    l_c_tensor,
+                ]
+        else:
+            # forward mode
+            input_tensors = [
+                z_tensor,
+                w_u_tensor,
+                b_u_tensor,
+                w_l_tensor,
+                b_l_tensor,
+            ]
+
+        if dc_decomp:
+            input_tensors += [h_tensor, g_tensor]
+
+    else:
+        # assert that input_tensors is a List of 6 InputLayer objects
+        # If input tensors are provided, the original model's InputLayer is
+        # overwritten with a different InputLayer.
+        assert isinstance(input_tensors, list), "expected input_tensors to be a List or None, but got dtype={}".format(
+            input_tensors.dtype
+        )
+
+        if dc_decomp:
+            if IBP and forward:
+                assert len(input_tensors) == 9, "wrong number of inputs, expexted 10 but got {}".format(
+                    len(input_tensors)
+                )
+            if IBP and not forward:
+                assert len(input_tensors) == 4, "wrong number of inputs, expexted 6 but got {}".format(
+                    len(input_tensors)
+                )
+            if not IBP and forward:
+                assert len(input_tensors) == 5, "wrong number of inputs, expexted 8 but got {}".format(
+                    len(input_tensors)
+                )
+        else:
+            if IBP and forward:
+                assert len(input_tensors) == 7, "wrong number of inputs, expexted 10 but got {}".format(
+                    len(input_tensors)
+                )
+            if IBP and not forward:
+                assert len(input_tensors) == 2, "wrong number of inputs, expexted 10 but got {}".format(
+                    len(input_tensors)
+                )
+            if not IBP and forward:
+                assert len(input_tensors) == 5, "wrong number of inputs, expexted 10 but got {}".format(
+                    len(input_tensors)
+                )
+        # assert min(
+        #    [isinstance(input_tensor_i, InputLayer) for input_tensor_i in input_tensors]
+        # ), "expected a list of InputLayer"
+
+    return input_tensors
+
+
+def get_input_tensor_x(model, input_tensors, input_dim, input_dim_init, convex_domain):
+
+    input_shape = list(K.int_shape(model.input)[1:])
+
+    if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
+        input_dim_ = (2, input_dim)
+        z_tensor = Input(input_dim_)
+    elif convex_domain["name"] == Box.name and not isinstance(input_dim, tuple):
+        input_dim_ = (2, input_dim)
+        z_tensor = Input(input_dim_)
+    else:
+
+        if isinstance(input_dim, tuple):
+            z_tensor = Input(input_dim)
+        else:
+            z_tensor = Input((input_dim,))
+    return z_tensor
+
+
+def check_input_tensors_functionnal(
+    model, input_tensors, input_dim, input_dim_init, IBP, forward, dc_decomp, convex_domain
+):
+
+    raise NotImplementedError()
+
+
+def get_mode(IBP=True, forward=True):
+
+    if IBP:
+        if forward:
+            return F_HYBRID.name
+        else:
+            return F_IBP.name
+    else:
+        return F_FORWARD.name
+
+
+def get_IBP(mode=F_HYBRID.name):
+    if mode in [F_HYBRID.name, F_IBP.name]:
+        return True
+    return False
+
+
+def get_FORWARD(mode=F_HYBRID.name):
+    if mode in [F_HYBRID.name, F_FORWARD.name]:
+        return True
+    return False
+
+
+def get_node_by_id_(node):
+
+    return "NODE_{}_{}".format(node.flat_output_ids, node.flat_input_ids)
+
+
+def get_node_by_id(node, outbound=False, model=None):
+
+    layer_ = node.outbound_layer
+    layers_i = to_list(node.inbound_layers)
+
+    input_names = str(id(node))
+    if outbound:
+        return "{}_NODE_{}".format(layer_.name, input_names)
+    return "NODE_{}".format(input_names)
+
+    if model is None:
+        input_names = ""
+        for layer_i in layers_i:
+            input_names += layer_i.name
+        if outbound:
+            return "{}_NODE_{}".format(layer_.name, input_names)
+        return "NODE_{}".format(input_names)
+    else:
+        layer_names = [layer.name for layer in model.layers]
+        input_names = ""
+        for layer_i in layers_i:
+            if layer_i.name in layer_names:
+                input_names += layer_i.name
+    input_names = str(id(node))
+    if outbound:
+        return "{}_NODE_{}".format(layer_.name, input_names)
+    return "NODE_{}".format(input_names)
+
+
+def set_name(layer, extra_id):
+
+    layer._name = "{}_{}".format(layer.name, extra_id)
+
+
+def get_inputs(node, tensor_map):
+    output = []
+    # get parents nodes
+    node_prev = node.parent_nodes
+    if len(node_prev) == 0:
+        raise ValueError()
+    key_prev_id = [get_node_by_id(node_p_i, True) for node_p_i in node_prev]
+    for key_p_i in key_prev_id:
+        output += tensor_map[key_p_i]
+    return output
+
+
+def convert_to_backward_bounds(mode, inputs, input_dim):
+
+    if mode == F_HYBRID.name:
+        _, _, w_u, b_u, _, w_l, b_l = inputs
+        # reshaping !
+    if mode == F_FORWARD.name:
+        _, w_u, b_u, w_l, b_l = inputs
+    if mode == F_IBP.name:
+        z_value = K.cast(0.0, K.floatx())
+        u_c, l_c = inputs
+        n_out = np.prod(u_c.shape[1:])
+        b_u = K.reshape(u_c, (-1, n_out))
+        b_l = K.reshape(l_c, (-1, n_out))
+        w_u = K.zeros((1, input_dim, 1)) + z_value * K.expand_dims(b_u, 1)
+        w_l = K.zeros((1, input_dim, 1)) + z_value * K.expand_dims(b_l, 1)
+
+    return w_u, b_u, w_l, b_l
+
+
+def get_input_dim(x_tensor):
+    return x_tensor.shape[-1]
+
+
+def get_original_layer_name(layer, pattern="_monotonic"):
+
+    pattern_layer = (layer.name).split(pattern)
+    if len(pattern_layer) == 1:
+        return []
+    return ["".join(pattern_layer[:-1])]
+
+
+def get_key(layer, id_node, forward_map):
+    layer_name = layer.name
+    n_word = len(layer_name)
+
+    keys = [key for key in forward_map if key[:n_word] == layer_name]
+    if len(keys) == 0:
+        raise KeyError
+    if len(keys) == 1:
+        return keys[0]
+    else:
+        raise NotImplementedError()
+
+
+def get_back_bounds_model(back_bounds, model):
+
+    depth = 0  # start from the beginning
+    nodes = model._nodes_by_depth[depth]
+    back_bounds_list = []
+    n = int(len(back_bounds) / len(nodes))
+    for i in range(len(nodes)):
+        back_bounds_list.append(back_bounds[i * n : (i + 1) * n])
+    return back_bounds_list
+
+
+def fuse_forward_backward(
+    mode, inputs, back_bounds, upper_layer=None, lower_layer=None, convex_domain={}, x_tensor=None
+):
+
+    if mode in [F_IBP.name, F_HYBRID.name]:
+
+        if upper_layer is None:
+            upper_layer = get_upper_layer(convex_domain)
+        if lower_layer is None:
+            lower_layer = get_lower_layer(convex_domain)
+
+    if mode == F_IBP.name:
+        w_out_u, b_out_u, w_out_l, b_out_l = back_bounds
+
+        if x_tensor is None:
+            raise ValueError  # we need some information on the domain
+        u_out_c = upper_layer([x_tensor, w_out_u, b_out_u])
+        l_out_c = lower_layer([x_tensor, w_out_l, b_out_l])
+
+        return [u_out_c, l_out_c]
+
+    if mode == F_HYBRID.name:
+        _, _, w_u, b_u, _, w_l, b_l = inputs
+    if mode == F_FORWARD.name:
+        _, w_u, b_u, w_l, b_l = inputs
+
+    def func(variables):
+
+        w_u, b_u, w_l, b_l, w_out_u, b_out_u, w_out_l, b_out_l = variables
+        if len(w_u.shape) == 2:
+            return w_out_u, b_out_u, w_out_l, b_out_l
+        z_value = 0.0
+        w_u_ = K.reshape(w_u, [-1, w_u.shape[1], np.prod(w_u.shape[2:])])
+        w_l_ = K.reshape(w_l, [-1, w_l.shape[1], np.prod(w_l.shape[2:])])
+        b_u_ = K.reshape(b_u, [-1, np.prod(b_u.shape[1:])])
+        b_l_ = K.reshape(b_l, [-1, np.prod(b_l.shape[1:])])
+
+        w_u_pos = K.maximum(w_out_u, z_value)
+        w_u_neg = K.minimum(w_out_u, z_value)
+        w_l_pos = K.maximum(w_out_l, z_value)
+        w_l_neg = K.minimum(w_out_l, z_value)
+
+        w_out_u_ = K.sum(K.expand_dims(w_u_pos, 1) * K.expand_dims(w_u_, -1), 2) + K.sum(
+            K.expand_dims(w_u_neg, 1) * K.expand_dims(w_l_, -1), 2
+        )
+        w_out_l_ = K.sum(K.expand_dims(w_l_pos, 1) * K.expand_dims(w_l_, -1), 2) + K.sum(
+            K.expand_dims(w_l_neg, 1) * K.expand_dims(w_u_, -1), 2
+        )
+
+        b_out_u_ = K.sum(w_u_pos * K.expand_dims(b_u_, -1), 1) + K.sum(w_u_neg * K.expand_dims(b_l_, -1), 1) + b_out_u
+        b_out_l_ = K.sum(w_l_pos * K.expand_dims(b_l_, -1), 1) + K.sum(w_l_neg * K.expand_dims(b_u_, -1), 1) + b_out_l
+
+        return w_out_u_, b_out_u_, w_out_l_, b_out_l_
+
+    lambda_ = Lambda(lambda var: func(var))
+
+    w_out_u_, b_out_u_, w_out_l_, b_out_l_ = lambda_([w_u, b_u, w_l, b_l] + back_bounds)
+
+    if mode == F_FORWARD.name:
+        return [inputs[0], w_out_u_, b_out_u_, w_out_l_, b_out_l_]
+
+    u_out_c = upper_layer([x_tensor, w_out_u_, b_out_u_])
+    l_out_c = lower_layer([x_tensor, w_out_l_, b_out_l_])
+
+    return [inputs[0], u_out_c, w_out_u_, b_out_u_, l_out_c, w_out_l_, b_out_l_]
+
+
+def pre_process_inputs(input_layer_, mode, **kwargs):
+
+    if mode == F_IBP.name:
+        return input_layer_
+    # convert input_layer_ according
+    if mode in [F_HYBRID.name, F_FORWARD.name]:
+        if "upper_layer" in kwargs:
+            upper_layer = kwargs["upper_layer"]
+            lower_layer = kwargs["lower_layer"]
+        else:
+            if "convex_domain" in kwargs:
+                convex_domain = kwargs["convex_domain"]
+            else:
+                convex_domain = {}
+
+            upper_layer = get_upper_layer(convex_domain)
+            lower_layer = get_lower_layer(convex_domain)
+
+    if mode == F_FORWARD.name:
+        x, w_u, b_u, w_l, b_l = input_layer_
+        u_c_out, l_c_out = [upper_layer([x, w_u, b_u]), lower_layer([x, w_u, b_u])]
+
+    if mode == F_HYBRID.name:
+        x, u_c, w_u, b_u, l_c, w_l, b_l = input_layer_
+        u_c_out, l_c_out = [Minimum()([u_c, upper_layer([x, w_u, b_u])]), Maximum()([l_c, lower_layer([x, w_u, b_u])])]
+
+    if "flatten" in kwargs:
+        op_flatten = kwargs["flatten"]
+    else:
+        op_flatten = Flatten()
+
+    u_c_out_flatten = op_flatten(u_c_out)
+    l_c_out_flatten = op_flatten(l_c_out)
+
+    if "concatenate" in kwargs:
+        op_concat = kwargs["concatenate"]
+    else:
+        op_concat = Concatenate(axis=1)
+
+    x_ = op_concat([l_c_out_flatten[:, None], u_c_out_flatten[:, None]])
+    z_value = K.cast(0.0, K.floatx())
+
+    def func_create_weights(z):
+        return tf.linalg.diag(z_value * z)
+
+    init_weights = Lambda(func_create_weights)
+
+    if mode == F_FORWARD.name:
+        input_model = [x_, init_weights(u_c_out), u_c_out, init_weights(l_c_out), l_c_out]
+    if mode == F_HYBRID.name:
+        input_model = [x_, u_c_out, init_weights(u_c_out), u_c_out, l_c_out, init_weights(l_c_out), l_c_out]
+
+    return input_model
