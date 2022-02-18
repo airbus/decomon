@@ -370,6 +370,15 @@ def get_output_layer(node, layer_map, forward_map, mode, input_dim, **kwargs):
             return output_max[:4] + output_min[-3:]
 
 
+def get_fake_input(layer_, mode):
+    # get input_shape
+    n_in = layer_.get_input_shape_at(0)[1:]
+    vec = K.zeros([1]+to_list(n_in))
+    f = lambda x: vec
+    return [Lambda(f)()] # enough ?
+
+
+
 def get_backward_layer(node, layer_map, forward_map, mode, back_bounds, input_dim, **kwargs):
 
     layer_ = node.outbound_layer
@@ -481,12 +490,17 @@ def get_backward_layer(node, layer_map, forward_map, mode, back_bounds, input_di
 
     else:
         input_layer_ = []
-        for node_i in input_nodes:
-            tmp = get_output_layer(node_i, layer_map, forward_map, mode, input_dim, **kwargs)
 
-            input_layer_ += tmp
-        #if isinstance(layer_, Conv2D):
-        #    import pdb; pdb.set_trace()
+        """
+        if not isinstance(layer_, Conv2D) or layer_.activation_name!='linear' or not len(back_bounds): # Linear layer do not need recursive calls
+            for node_i in input_nodes:
+                tmp = get_output_layer(node_i, layer_map, forward_map, mode, input_dim, **kwargs)
+
+                input_layer_ += tmp
+        else:
+            # generate fake inputs
+            input_layer_ = []
+        """
         back_layer = get_backward_(
             layer_,
             previous=(len(back_bounds) > 0),
@@ -495,6 +509,18 @@ def get_backward_layer(node, layer_map, forward_map, mode, back_bounds, input_di
             convex_domain=convex_domain,
             input_dim=input_dim,
         )
+
+        if not isinstance(layer_, Dense) or not isinstance(layer_, Conv2D) or layer_.get_config()['activation'] != 'linear' or not len(
+                back_bounds):  # Linear layer do not need recursive calls
+            for node_i in input_nodes:
+                tmp = get_output_layer(node_i, layer_map, forward_map, mode, input_dim, **kwargs)
+
+                input_layer_ += tmp
+        else:
+            # generate fake inputs
+            input_layer_ = kwargs['fake_input']
+
+
         back_bounds_ = back_layer(input_layer_ + back_bounds)
     if isinstance(back_bounds_, tuple):
         back_bounds_ = list(back_bounds_)
