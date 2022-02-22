@@ -659,6 +659,34 @@ def get_backward_model(
                     output_i = update_input(
                         output_i, inputs_tensors_i, mode, node_i.outbound_layer.output_shape, **kwargs
                     )
+
+
+                    if "{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i)) in forward_map:
+                        output_tmp_i = forward_map["{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i))]
+                        max_bounds = DecomonMinimum(mode=mode)(output_tmp_i+output_i)
+                        min_bounds = DecomonMaximum(mode=mode)(output_tmp_i+output_i)
+
+                        def func(inputs_):
+                            n = int(len(inputs_) / 2)
+                            inputs_0 = inputs_[:n]
+                            inputs_1 = inputs_[n:]
+
+                            if mode == F_IBP.name:
+                                u_c = inputs_0[0]
+                                l_c = inputs_1[-1]
+                                return [u_c, l_c]
+                            if mode == F_FORWARD.name:
+                                x, w_u, b_u = inputs_0[:3]
+                                w_l, b_l = inputs_1[-2:]
+                                return [x, w_u, b_u, w_l, b_l]
+                            if mode == F_HYBRID.name:
+                                x, u_c, w_u, b_u = inputs_0[:4]
+                                l_c, w_l, b_l = inputs_1[-3:]
+                                return [x, u_c, w_u, b_u, l_c, w_l, b_l]
+
+                        lambda_f = Lambda(lambda x: func(x))
+                        output_i = lambda_f(max_bounds + min_bounds)
+
                     back_bound_i.append(output_i)
 
         output += back_bound_i

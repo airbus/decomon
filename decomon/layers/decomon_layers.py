@@ -168,6 +168,75 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                 constraint=ClipAlpha(),
             )
 
+            n_in_ = input_shape[-1][1:]
+            self.alpha_pos_in = self.add_weight(
+                shape = n_in_,
+                initializer="ones",
+                name="alpha_f_pos_in",
+                regularizer=None,
+                constraint = ClipAlpha(),
+            )
+
+            self.alpha_neg_in = self.add_weight(
+                shape=n_in_,
+                initializer="ones",
+                name="alpha_f_neg_in",
+                regularizer=None,
+                constraint=ClipAlpha(),
+            )
+
+            self.gamma_pos_in = self.add_weight(
+                shape=n_in_,
+                initializer="ones",
+                name="gamma_f_pos_in",
+                regularizer=None,
+                constraint=ClipAlpha(),
+            )
+
+            self.gamma_neg_in = self.add_weight(
+                shape=n_in_,
+                initializer="ones",
+                name="gamma_f_neg_in",
+                regularizer=None,
+                constraint=ClipAlpha(),
+            )
+
+            n_out_ = self.compute_output_shape(input_shape)[-1][1:]
+            self.alpha_pos_out = self.add_weight(
+                shape=n_out_,
+                initializer="ones",
+                name= "alpha_f_pos_out",
+                regularizer =None,
+                constraint=ClipAlpha(),
+            )
+
+            self.alpha_neg_out = self.add_weight(
+                shape=n_out_,
+                initializer="ones",
+                name="alpha_f_neg_out",
+                regularizer=None,
+                constraint=ClipAlpha(),
+            )
+
+            self.gamma_pos_out = self.add_weight(
+                shape=n_out_,
+                initializer="ones",
+                name="gamma_f_pos_out",
+                regularizer=None,
+                constraint=ClipAlpha(),
+            )
+
+            self.gamma_neg_out = self.add_weight(
+                shape=n_out_,
+                initializer="ones",
+                name="gamma_f_neg_out",
+                regularizer=None,
+                constraint=ClipAlpha(),
+            )
+
+
+
+
 
             """
             dim_alpha = tuple(input_shape[0][1:])
@@ -434,7 +503,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                 if self.finetune and self.mode == F_HYBRID.name:
                     self.frozen_alpha = True
                     self.finetune=False
-                    self._trainable_weights = self._trainable_weights[:-2]
+                    self._trainable_weights = self._trainable_weights[:-10]
 
             else:
                 # check for linearity
@@ -447,11 +516,36 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
                 if self.mode == F_HYBRID.name and self.finetune:
 
-                    b_u_ = conv_pos_alpha(b_u-u_c) + conv_neg_alpha(mask_a*(b_l-l_c) + mask_b*(b_u-u_c)) +\
-                           conv_pos(u_c) + conv_neg(mask_a*l_c + mask_b*u_c)
+                    b_u_ = self.alpha_pos_out[None]*conv_pos_alpha(self.alpha_pos_in[None]*(b_u-u_c)) +\
+                            (o_value-self.alpha_pos_out[None])*conv_pos(u_c)+\
+                            self.alpha_neg_out[None] * conv_neg_alpha(self.alpha_neg_in[None] * (b_l - l_c)) + \
+                            (o_value - self.alpha_neg_out[None]) * conv_neg(l_c)
 
-                    b_l_ = conv_pos_gamma(b_l-l_c) + conv_neg_gamma(mask_a*(b_u-u_c) + mask_b*(b_l-l_c)) +\
-                           conv_pos(l_c) + conv_neg(mask_a*u_c + mask_b*l_c)
+                    b_l_ = self.gamma_pos_out[None]*conv_pos_gamma(self.gamma_pos_in[None]*(b_l-l_c)) +\
+                            (o_value-self.gamma_pos_out[None])*conv_pos(l_c)+\
+                            self.gamma_neg_out[None] * conv_neg_gamma(self.gamma_neg_in[None] * (b_u - u_c)) + \
+                            (o_value - self.gamma_neg_out[None]) * conv_neg(u_c)
+
+                    """
+                    b_u_ = self.alpha_pos_out[None]*conv_pos_alpha(self.alpha_pos_in[None]*(b_u-u_c)) +\
+                           self.alpha_neg_out[None]*conv_neg_alpha(self.alpha_neg_in[None]*mask_a*(b_l-l_c) +
+                                          self.alpha_pos_in[None]*mask_b*(b_u-u_c)) +\
+                           (o_value-self)*conv_pos((o_value-self.alpha_pos_in[None])*u_c) +\
+                           conv_neg((o_value-self.alpha_neg_in[None])*mask_a*l_c +
+                                    (o_value - self.alpha_pos_in[None])*mask_b*u_c)
+                    
+                    
+
+                    b_l_ = conv_pos_gamma(self.gamma_pos_in[None]*(b_l-l_c)) +\
+                           conv_neg_gamma(self.gamma_neg_in[None]*mask_a*(b_u-u_c) +
+                                          self.gamma_pos_in[None]*mask_b*(b_l-l_c)) +\
+                           conv_pos((o_value-self.gamma_pos_in[None])*l_c) +\
+                           conv_neg((o_value-self.gamma_neg_in[None])*mask_a*u_c +
+                                    (o_value-self.gamma_pos_in[None])*mask_b*l_c)
+                    """
+
+
+
                     """
                     b_u_ = conv_pos(self.alpha_u_f * b_u + (1 - self.alpha_u_f) * u_c) + conv_neg(
                         mask_a * (self.alpha_l_f * b_l + (1 - self.alpha_l_f) * l_c)
@@ -493,14 +587,23 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                         return conv_neg_gamma(x), []
 
                     w_u_ = (
-                            K.rnn(step_function=step_pos_alpha, inputs=w_u, initial_states=[], unroll=False)[1]
-                          + K.rnn(step_function=step_neg_alpha,inputs=mask_a * w_l + mask_b * w_u, initial_states=[],
+                            self.alpha_pos_out[None,None]*K.rnn(step_function=step_pos_alpha,
+                                                                inputs=self.alpha_pos_in[None,None]*w_u,
+                                                                initial_states=[], unroll=False)[1]
+                          + self.alpha_neg_out*K.rnn(step_function=step_neg_alpha,
+                                                    inputs=self.alpha_neg_in[None, None]*w_l, initial_states=[],
                             unroll=False)[1])
 
                     w_l_ = (
-                            K.rnn(step_function=step_pos_gamma, inputs=w_l, initial_states=[], unroll=False)[1]
-                            + K.rnn(step_function=step_neg_gamma, inputs=mask_a * w_u + mask_b * w_l, initial_states=[],
+                            self.gamma_pos_out[None,None]*K.rnn(step_function=step_pos_gamma,
+                                                                inputs=self.gamma_pos_in[None,None]*w_l,
+                                                                initial_states=[], unroll=False)[1]
+                            + self.gamma_neg_out[None,None]*K.rnn(step_function=step_neg_gamma,
+                                                                  inputs=self.gamma_neg_in[None,None]*w_u,
+                                                                  initial_states=[],
                                     unroll=False)[1])
+
+
 
                     """
                     alpha_u_ = self.alpha_u_f[None, None, :]
@@ -695,13 +798,16 @@ class DecomonConv2D(Conv2D, DecomonLayer):
     def freeze_alpha(self):
         if not self.frozen_alpha:
             if self.finetune and self.mode == F_HYBRID.name:
-                self._trainable_weights = self._trainable_weights[:-2]
+                self._trainable_weights = self._trainable_weights[:-10]
                 self.frozen_alpha = True
 
     def unfreeze_alpha(self):
-        if not self.frozen_alpha:
+        if self.frozen_alpha:
             if self.finetune and self.mode == F_HYBRID.name:
-                self._trainable_weights += [self.alpha_, self.gamma_]
+                self._trainable_weights += [self.alpha_, self.gamma_, self.alpha_pos_in, self.alpha_pos_out,
+                                            self.gamma_pos_in, self.gamma_pos_out,
+                                            self.alpha_pos_out, self.alpha_neg_out,
+                                            self.gamma_pos_out, self.gamma_neg_out]
             self.frozen_alpha = False
 
     def reset_finetuning(self):
@@ -709,6 +815,14 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
             K.set_value(self.alpha_, np.ones_like(self.alpha_.value()))
             K.set_value(self.gamma_, np.ones_like(self.gamma_.value()))
+            K.set_value(self.alpha_in, np.ones_like(self.alpha_pos_in.value()))
+            K.set_value(self.alpha_in, np.ones_like(self.alpha_pos_out.value()))
+            K.set_value(self.gamma_in, np.ones_like(self.gamma_pos_in.value()))
+            K.set_value(self.gamma_in, np.ones_like(self.gamma_pos_out.value()))
+            K.set_value(self.alpha_out, np.ones_like(self.alpha_pos_out.value()))
+            K.set_value(self.alpha_out, np.ones_like(self.alpha_neg_out.value()))
+            K.set_value(self.gamma_out, np.ones_like(self.gamma_pos_out.value()))
+            K.set_value(self.gamma_out, np.ones_like(self.gamma_pos_in.value()))
 
 
 class DecomonDense(Dense, DecomonLayer):
@@ -1164,7 +1278,7 @@ class DecomonDense(Dense, DecomonLayer):
                 self.frozen_alpha = True
 
     def unfreeze_alpha(self):
-        if not self.frozen_alpha:
+        if self.frozen_alpha:
             if self.finetune and self.mode == F_HYBRID.name:
                 self._trainable_weights += [self.alpha_, self.gamma_]
                 if self.activation_name!='linear':
@@ -1245,6 +1359,23 @@ class DecomonActivation(Activation, DecomonLayer):
                 else:
                     K.set_value(self.beta_u_f, np.ones_like(self.beta_u_f.value()))
                     K.set_value(self.beta_l_f, np.ones_like(self.beta_l_f.value()))
+
+    def freeze_alpha(self):
+        if not self.frozen_alpha:
+            if self.finetune and self.mode in [F_FORWARD.name, F_HYBRID.name]:
+                self._trainable_weights = []
+                self.frozen_alpha = True
+
+
+    def unfreeze_alpha(self):
+        if self.frozen_alpha:
+            if self.finetune and self.mode in [F_FORWARD.name, F_HYBRID.name]:
+                if self.activation_name!='linear':
+                    if self.activation_name[:4]!='relu':
+                        self._trainable_weights += [self.beta_u_f, self.beta_l_f]
+                    else:
+                        self._trainable_weights += [self.beta_l_f]
+            self.frozen_alpha = False
 
 
 class DecomonFlatten(Flatten, DecomonLayer):

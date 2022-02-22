@@ -16,7 +16,7 @@ from decomon.layers.decomon_layers import (
 from ..backward_layers.activations import get
 from tensorflow.keras.backend import conv2d, conv2d_transpose
 from .utils import V_slope, backward_sort, get_identity_lirpa, get_IBP, get_FORWARD, get_input_dim
-from ..layers.utils import ClipAlpha, F_HYBRID
+from ..layers.utils import ClipAlpha, F_HYBRID, F_FORWARD
 from ..layers.decomon_layers import to_monotonic
 from .backward_maxpooling import BackwardMaxPooling2D
 from .backward_merge import BackwardAverage
@@ -243,7 +243,7 @@ class BackwardDense(Layer):
         if not self.frozen_weights:
 
             if self.finetune and self.mode == F_HYBRID.name:
-                if self.use_bias:
+                if self.layer.use_bias:
                     self._trainable_weights = self._trainable_weights[2:]
                 else:
                     self._trainable_weights = self._trainable_weights[1:]
@@ -498,7 +498,7 @@ class BackwardConv2D(Layer):
         if not self.frozen_weights:
 
             if self.finetune and self.mode == F_HYBRID.name:
-                if self.use_bias:
+                if self.layer.use_bias:
                     self._trainable_weights = self._trainable_weights[2:]
                 else:
                     self._trainable_weights = self._trainable_weights[1:]
@@ -537,6 +537,8 @@ class BackwardActivation(Layer):
         self.previous = previous
         self.finetune = finetune
         self.finetune_param = []
+        if self.finetune:
+            self.frozen_alpha=False
 
     def build(self, input_shape):
         """
@@ -651,6 +653,23 @@ class BackwardActivation(Layer):
             w_out_u, w_out_l, b_out_u, b_out_l = self.call_no_previous(inputs)
 
         return w_out_u, w_out_l, b_out_u, b_out_l
+
+    def freeze_alpha(self):
+        if not self.frozen_alpha:
+            if self.finetune and self.mode in [F_FORWARD.name,F_HYBRID.name]:
+                self._trainable_weights = []
+                self.frozen_alpha = True
+
+
+    def unfreeze_alpha(self):
+        if self.frozen_alpha:
+            if self.finetune and self.mode in [F_FORWARD.name, F_HYBRID.name]:
+                if self.activation_name!='linear':
+                    if self.activation_name[:4]!='relu':
+                        self._trainable_weights += [self.alpha_b_u, self.alpha_b_l]
+                    else:
+                        self._trainable_weights += [self.alpha_b_l]
+            self.frozen_alpha = False
 
 
 class BackwardFlatten(Layer):
