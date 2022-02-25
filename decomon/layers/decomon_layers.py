@@ -389,7 +389,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                 if self.finetune and self.mode == F_HYBRID.name:
                     self.frozen_alpha = True
                     self.finetune=False
-                    self._trainable_weights = self._trainable_weights[:-10]
+                    self._trainable_weights = self._trainable_weights[:-4]
 
             else:
                 # check for linearity
@@ -653,16 +653,13 @@ class DecomonConv2D(Conv2D, DecomonLayer):
     def freeze_alpha(self):
         if not self.frozen_alpha:
             if self.finetune and self.mode == F_HYBRID.name:
-                self._trainable_weights = self._trainable_weights[:-10]
+                self._trainable_weights = self._trainable_weights[:-4]
                 self.frozen_alpha = True
 
     def unfreeze_alpha(self):
         if self.frozen_alpha:
             if self.finetune and self.mode == F_HYBRID.name:
-                self._trainable_weights += [self.alpha_, self.gamma_, self.alpha_pos_in, self.alpha_pos_out,
-                                            self.gamma_pos_in, self.gamma_pos_out,
-                                            self.alpha_pos_out, self.alpha_neg_out,
-                                            self.gamma_pos_out, self.gamma_neg_out]
+                self._trainable_weights += [self.alpha_, self.gamma_, self.alpha_out, self.gamma_out]
             self.frozen_alpha = False
 
     def reset_finetuning(self):
@@ -670,14 +667,8 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
             K.set_value(self.alpha_, np.ones_like(self.alpha_.value()))
             K.set_value(self.gamma_, np.ones_like(self.gamma_.value()))
-            K.set_value(self.alpha_in, np.ones_like(self.alpha_pos_in.value()))
-            K.set_value(self.alpha_in, np.ones_like(self.alpha_pos_out.value()))
-            K.set_value(self.gamma_in, np.ones_like(self.gamma_pos_in.value()))
-            K.set_value(self.gamma_in, np.ones_like(self.gamma_pos_out.value()))
-            K.set_value(self.alpha_out, np.ones_like(self.alpha_pos_out.value()))
             K.set_value(self.alpha_out, np.ones_like(self.alpha_neg_out.value()))
             K.set_value(self.gamma_out, np.ones_like(self.gamma_pos_out.value()))
-            K.set_value(self.gamma_out, np.ones_like(self.gamma_pos_in.value()))
 
 
 class DecomonDense(Dense, DecomonLayer):
