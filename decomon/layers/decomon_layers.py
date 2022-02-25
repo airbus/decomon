@@ -29,8 +29,9 @@ except ModuleNotFoundError:
     from tensorflow.python.keras.layers.merge import _Merge as Merge
 
 from decomon.layers import activations
-from decomon.layers.utils import NonPos, ClipAlpha, MultipleConstraint, Project_initializer_pos, Project_initializer_neg
+from decomon.layers.utils import NonPos, ClipAlpha, MultipleConstraint, Project_initializer_pos, Project_initializer_neg, ClipAlphaAndSumtoOne
 from tensorflow.python.keras.utils import conv_utils
+from tensorflow.python.keras.utils.generic_utils import to_list
 from decomon.layers.utils import get_upper, get_lower, sort
 from .maxpooling import DecomonMaxPooling2D
 from .decomon_reshape import DecomonReshape, DecomonPermute
@@ -152,8 +153,13 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         if self.finetune and self.mode == F_HYBRID.name:
             # create extra parameters that can be optimized
 
+            n_in_ = input_shape[-1][1:]
+            self.n_in_ = [e for e in n_in_]
+            nb_comp = int(np.prod(to_list(self.kernel_size))*self.filters/np.prod(to_list(self.strides)))
+            self.n_comp = nb_comp
+
             self.alpha_ = self.add_weight(
-                shape=kernel_shape,
+                shape=[nb_comp]+n_in_,
                 initializer="ones",
                 name="alpha_f",
                 regularizer=None,
@@ -161,155 +167,33 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             )
 
             self.gamma_ = self.add_weight(
-                shape=kernel_shape,
+                shape=nb_comp+n_in_,
                 initializer="ones",
                 name="gamma_f",
                 regularizer=None,
                 constraint=ClipAlpha(),
             )
 
-            n_in_ = input_shape[-1][1:]
-            self.alpha_pos_in = self.add_weight(
-                shape = n_in_,
-                initializer="ones",
-                name="alpha_f_pos_in",
-                regularizer=None,
-                constraint = ClipAlpha(),
-            )
-
-            self.alpha_neg_in = self.add_weight(
-                shape=n_in_,
-                initializer="ones",
-                name="alpha_f_neg_in",
-                regularizer=None,
-                constraint=ClipAlpha(),
-            )
-
-            self.gamma_pos_in = self.add_weight(
-                shape=n_in_,
-                initializer="ones",
-                name="gamma_f_pos_in",
-                regularizer=None,
-                constraint=ClipAlpha(),
-            )
-
-            self.gamma_neg_in = self.add_weight(
-                shape=n_in_,
-                initializer="ones",
-                name="gamma_f_neg_in",
-                regularizer=None,
-                constraint=ClipAlpha(),
-            )
-
             n_out_ = self.compute_output_shape(input_shape)[-1][1:]
-            self.alpha_pos_out = self.add_weight(
-                shape=n_out_,
-                initializer="ones",
-                name= "alpha_f_pos_out",
-                regularizer =None,
-                constraint=ClipAlpha(),
-            )
+            self.n_out_ = [e for e in n_out_]
 
-            self.alpha_neg_out = self.add_weight(
-                shape=n_out_,
+            self.alpha_out = self.add_weight(
+                shape=[nb_comp]+self.n_out_,
                 initializer="ones",
-                name="alpha_f_neg_out",
+                name="alpha_f",
                 regularizer=None,
-                constraint=ClipAlpha(),
+                constraint=ClipAlphaAndSumtoOne(),
             )
 
-            self.gamma_pos_out = self.add_weight(
-                shape=n_out_,
+            self.gamma_out = self.add_weight(
+                shape=[nb_comp] + self.n_out_,
                 initializer="ones",
-                name="gamma_f_pos_out",
+                name="alpha_f",
                 regularizer=None,
-                constraint=ClipAlpha(),
-            )
-
-            self.gamma_neg_out = self.add_weight(
-                shape=n_out_,
-                initializer="ones",
-                name="gamma_f_neg_out",
-                regularizer=None,
-                constraint=ClipAlpha(),
+                constraint=ClipAlphaAndSumtoOne(),  # list of constraints ?
             )
 
 
-
-
-
-            """
-            dim_alpha = tuple(input_shape[0][1:])
-            # create extra parameters that can be optimized
-
-            self.alpha_u_f = self.add_weight(
-                shape=dim_alpha, initializer="ones", name="alpha_u_f", regularizer=None, constraint=ClipAlpha()
-            )
-            self.alpha_l_f = self.add_weight(
-                shape=dim_alpha, initializer="ones", name="alpha_l_f", regularizer=None, constraint=ClipAlpha()
-            )
-            """
-
-        """
-        if self.mode == F_HYBRID.name:
-            # inputs tensors: h, g, x_min, x_max, W_u, b_u, W_l, b_l
-            if channel_axis == -1:
-                self.input_spec = [
-                    #InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # y
-                    InputSpec(min_ndim=2),  # x
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # u_c
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # w_u
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # b_u
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # l_c
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # w_l
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # b_l
-                ]
-            else:
-                self.input_spec = [
-                    #InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # y
-                    InputSpec(min_ndim=2),  # x
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # u_c
-                    InputSpec(min_ndim=4, axes={channel_axis + 1: input_dim}),  # w_u
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # b_u
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # l_c
-                    InputSpec(min_ndim=4, axes={channel_axis + 1: input_dim}),  # w_l
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # b_l
-                ]
-        elif self.mode == F_IBP.name:
-            self.input_spec = [
-                # InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # y
-                # InputSpec(min_ndim=2),  # x
-                InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # u_c
-                InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # l_c
-            ]
-        elif self.mode == F_FORWARD.name:
-            # inputs tensors: h, g, x_min, x_max, W_u, b_u, W_l, b_l
-            if channel_axis == -1:
-                self.input_spec = [
-                    #InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # y
-                    InputSpec(min_ndim=2),  # x
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # w_u
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # b_u
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # w_l
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # b_l
-                ]
-            else:
-                self.input_spec = [
-                    #InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # y
-                    InputSpec(min_ndim=2),  # x
-                    InputSpec(min_ndim=4, axes={channel_axis + 1: input_dim}),  # w_u
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # b_u
-                    InputSpec(min_ndim=4, axes={channel_axis + 1: input_dim}),  # w_l
-                    InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # b_l
-                ]
-
-        if self.dc_decomp:
-            self.input_spec += [
-                InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # h
-                InputSpec(min_ndim=4, axes={channel_axis: input_dim}),  # g
-            ]
-
-        """
         self.built = True
 
     def get_backward_weights(self, inputs, flatten=True):
@@ -423,6 +307,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         if self.finetune and self.mode ==F_HYBRID.name:
 
+            """
             def conv_pos_alpha(x):
                 return conv2d(
                     x,
@@ -460,6 +345,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                     data_format=self.data_format,
                     dilation_rate=self.dilation_rate,
                 )
+            """
 
         if self.dc_decomp:
             h_ = conv_pos(h) + conv_neg(g)
@@ -514,135 +400,104 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                 mask_b = o_value - K.sign(x_max)
                 mask_a = o_value - mask_b
 
-                if self.mode == F_HYBRID.name and self.finetune:
-
-                    b_u_ = self.alpha_pos_out[None]*conv_pos_alpha(self.alpha_pos_in[None]*(b_u-u_c)) +\
-                            (o_value-self.alpha_pos_out[None])*conv_pos(u_c)+\
-                            self.alpha_neg_out[None] * conv_neg_alpha(self.alpha_neg_in[None] * (b_l - l_c)) + \
-                            (o_value - self.alpha_neg_out[None]) * conv_neg(l_c)
-
-                    b_l_ = self.gamma_pos_out[None]*conv_pos_gamma(self.gamma_pos_in[None]*(b_l-l_c)) +\
-                            (o_value-self.gamma_pos_out[None])*conv_pos(l_c)+\
-                            self.gamma_neg_out[None] * conv_neg_gamma(self.gamma_neg_in[None] * (b_u - u_c)) + \
-                            (o_value - self.gamma_neg_out[None]) * conv_neg(u_c)
-
-                    """
-                    b_u_ = self.alpha_pos_out[None]*conv_pos_alpha(self.alpha_pos_in[None]*(b_u-u_c)) +\
-                           self.alpha_neg_out[None]*conv_neg_alpha(self.alpha_neg_in[None]*mask_a*(b_l-l_c) +
-                                          self.alpha_pos_in[None]*mask_b*(b_u-u_c)) +\
-                           (o_value-self)*conv_pos((o_value-self.alpha_pos_in[None])*u_c) +\
-                           conv_neg((o_value-self.alpha_neg_in[None])*mask_a*l_c +
-                                    (o_value - self.alpha_pos_in[None])*mask_b*u_c)
-                    
-                    
-
-                    b_l_ = conv_pos_gamma(self.gamma_pos_in[None]*(b_l-l_c)) +\
-                           conv_neg_gamma(self.gamma_neg_in[None]*mask_a*(b_u-u_c) +
-                                          self.gamma_pos_in[None]*mask_b*(b_l-l_c)) +\
-                           conv_pos((o_value-self.gamma_pos_in[None])*l_c) +\
-                           conv_neg((o_value-self.gamma_neg_in[None])*mask_a*u_c +
-                                    (o_value-self.gamma_pos_in[None])*mask_b*l_c)
-                    """
-
-
-
-                    """
-                    b_u_ = conv_pos(self.alpha_u_f * b_u + (1 - self.alpha_u_f) * u_c) + conv_neg(
-                        mask_a * (self.alpha_l_f * b_l + (1 - self.alpha_l_f) * l_c)
-                        + mask_b * (self.alpha_u_f * b_u + (1 - self.alpha_u_f) * u_c)
-                    )
-
-                    b_l_ = conv_pos(self.alpha_l_f * b_l + (1 - self.alpha_l_f) * l_c) + conv_neg(
-                        mask_a * (self.alpha_u_f * b_u + (1 - self.alpha_u_f) * u_c)
-                        + mask_b * (self.alpha_l_f * b_l + (1 - self.alpha_l_f) * l_c)
-                    )
-                    """
-                else:
-                    b_u_ = conv_pos(b_u) + conv_neg(mask_a * b_l + mask_b * b_u)
-
-                    b_l_ = conv_pos(b_l) + conv_neg(mask_a * b_u + mask_b * b_l)
-
-                mask_a = K.expand_dims(mask_a, 1)
-                mask_b = K.expand_dims(mask_b, 1)
-
                 def step_pos(x, _):
                     return conv_pos(x), []
 
                 def step_neg(x, _):
                     return conv_neg(x), []
 
-
                 if self.mode == F_HYBRID.name and self.finetune:
 
-                    def step_pos_alpha(x, _):
-                        return conv_pos_alpha(x), []
+                    b_u_ = K.rnn(step_function=step_pos,
+                          inputs=self.alpha_[None] * (b_u - u_c)[:,None],
+                          initial_states=[], unroll=False)[1] + u_c_[:,None]+\
+                          K.rnn(step_function=step_neg,
+                          inputs=self.alpha_[None] * (b_l - l_c)[:, None],
+                          initial_states=[], unroll=False)[1]
 
-                    def step_neg_alpha(x, _):
-                        return conv_neg_alpha(x), []
+                    b_l_ = K.rnn(step_function=step_pos,
+                          inputs=self.gamma_[None] * (b_l - l_c)[:,None],
+                          initial_states=[], unroll=False)[1] + l_c_[:,None]+\
+                          K.rnn(step_function=step_neg,
+                          inputs=self.gamma_[None] * (b_u - u_c)[:, None],
+                          initial_states=[], unroll=False)[1]
 
-                    def step_pos_gamma(x, _):
-                        return conv_pos_gamma(x), []
-
-                    def step_neg_gamma(x, _):
-                        return conv_neg_gamma(x), []
-
-                    w_u_ = (
-                            self.alpha_pos_out[None,None]*K.rnn(step_function=step_pos_alpha,
-                                                                inputs=self.alpha_pos_in[None,None]*w_u,
-                                                                initial_states=[], unroll=False)[1]
-                          + self.alpha_neg_out*K.rnn(step_function=step_neg_alpha,
-                                                    inputs=self.alpha_neg_in[None, None]*w_l, initial_states=[],
-                            unroll=False)[1])
-
-                    w_l_ = (
-                            self.gamma_pos_out[None,None]*K.rnn(step_function=step_pos_gamma,
-                                                                inputs=self.gamma_pos_in[None,None]*w_l,
-                                                                initial_states=[], unroll=False)[1]
-                            + self.gamma_neg_out[None,None]*K.rnn(step_function=step_neg_gamma,
-                                                                  inputs=self.gamma_neg_in[None,None]*w_u,
-                                                                  initial_states=[],
-                                    unroll=False)[1])
-
-
-
-                    """
-                    alpha_u_ = self.alpha_u_f[None, None, :]
-                    alpha_l_ = self.alpha_l_f[None, None, :]
-
-                    w_u_ = (
-                        K.rnn(step_function=step_pos, inputs=alpha_u_ * w_u, initial_states=[], unroll=False)[1]
-                        + K.rnn(
-                            step_function=step_neg,
-                            inputs=mask_a * alpha_l_ * w_l + mask_b * alpha_u_ * w_u,
-                            initial_states=[],
-                            unroll=False,
-                        )[1]
-                    )
-                    w_l_ = (
-                        K.rnn(step_function=step_pos, inputs=alpha_l_ * w_l, initial_states=[], unroll=False)[1]
-                        + K.rnn(
-                            step_function=step_neg,
-                            inputs=mask_a * alpha_u_ * w_u + mask_b * alpha_l_ * w_l,
-                            initial_states=[],
-                            unroll=False,
-                        )[1]
-                    )
-                    """
                 else:
+                    """
+                    b_u_ = conv_pos(b_u) + conv_neg(mask_a * b_l + mask_b * b_u)
+
+                    b_l_ = conv_pos(b_l) + conv_neg(mask_a * b_u + mask_b * b_l)
+                    """
+                    b_u_ = conv_pos(b_u) + conv_neg(b_l)
+
+                    b_l_ = conv_pos(b_l) + conv_neg(b_u)
+
+                mask_a = K.expand_dims(mask_a, 1)
+                mask_b = K.expand_dims(mask_b, 1)
+
+
+
+                if self.mode == F_HYBRID.name and self.finetune:
+                    n_x = w_u.shape[1]
+
+                    w_u_alpha = K.reshape(self.alpha_[None,None]*w_u[:,:,None], [-1, n_x*self.n_comp]+ self.n_in_)
+                    w_l_alpha = K.reshape(self.alpha_[None, None] * w_l[:,:,None], [-1, n_x * self.n_comp] + self.n_in_)
+                    w_u_gamma = K.reshape(self.gamma_[None, None] * w_u[:,:,None], [-1, n_x * self.n_comp] + self.n_in_)
+                    w_l_gamma = K.reshape(self.gamma_[None, None] * w_l[:,:,None], [-1, n_x * self.n_comp] + self.n_in_)
+
+                    w_u_ = K.rnn(step_function=step_pos, inputs=w_u_alpha,
+                                                                initial_states=[], unroll=False)[1] +\
+                           K.rnn(step_function=step_neg, inputs=w_l_alpha, initial_states=[],unroll=False)[1]
+                    w_l_ = K.rnn(step_function=step_pos, inputs=w_l_gamma,
+                                 initial_states=[], unroll=False)[1] + \
+                           K.rnn(step_function=step_neg, inputs=w_u_gamma, initial_states=[], unroll=False)[1]
+
+                    n_out = [e for e in w_u_.shape[2:]]
+                    w_u_ = K.reshape(w_u_, [-1, n_x, self.n_comp]+n_out)
+                    w_l_ = K.reshape(w_l_, [-1, n_x, self.n_comp] + n_out)
+
+
+                else:
+
                     w_u_ = (
-                        K.rnn(step_function=step_pos, inputs=w_u, initial_states=[], unroll=False)[1]
-                        + K.rnn(
-                            step_function=step_neg, inputs=mask_a * w_l + mask_b * w_u, initial_states=[], unroll=False
-                        )[1]
+                            K.rnn(step_function=step_pos, inputs=w_u, initial_states=[], unroll=False)[1]
+                            + K.rnn(
+                        step_function=step_neg, inputs=w_l, initial_states=[], unroll=False
+                    )[1]
                     )
                     w_l_ = (
-                        K.rnn(step_function=step_pos, inputs=w_l, initial_states=[], unroll=False)[1]
-                        + K.rnn(
-                            step_function=step_neg, inputs=mask_a * w_u + mask_b * w_l, initial_states=[], unroll=False
-                        )[1]
+                            K.rnn(step_function=step_pos, inputs=w_l, initial_states=[], unroll=False)[1]
+                            + K.rnn(
+                        step_function=step_neg, inputs=w_u, initial_states=[], unroll=False
+                    )[1]
                     )
 
         # add bias
+        if self.mode == F_HYBRID.name:
+            upper_ = get_upper(x_0, w_u_, b_u_, self.convex_domain)
+            lower_ = get_lower(x_0, w_l_, b_l_, self.convex_domain)
+
+            if self.finetune:
+                # retrieve the best relaxation of the n_comp possible
+
+                upper_ = K.min(upper_, 1)
+                lower_ = K.max(lower_, 1)
+
+                # affine combination on the output: take the best
+
+                b_u_ = K.sum(self.alpha_out[None]*b_u_, 1)
+                b_l_ = K.sum(self.gamma_out[None] * b_l_, 1)
+                w_u_ = K.sum(self.alpha_out[None,None]*w_u_, 2)
+                w_l_ = K.sum(self.gamma_out[None,None]*w_l_, 2)
+
+
+
+            u_c_ = K.minimum(upper_, u_c_)
+
+            l_c_ = K.maximum(lower_, l_c_)
+
+
+
         if self.use_bias:
             #y_ = bias_add(y_, self.bias, data_format=self.data_format)
             if self.dc_decomp:

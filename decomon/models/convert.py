@@ -73,8 +73,8 @@ def convert(
     model,
     input_tensors,
     method=CROWN.name,
-    ibp=True,
-    forward=True,
+    ibp=False,
+    forward=False,
     back_bounds=[],
     layer_fn=to_monotonic,
     input_dim=-1,
@@ -96,6 +96,8 @@ def convert(
     method = method.lower()
     if not method in [algo.name for algo in [CROWN, CROWN_FORWARD, CROWN_HYBRID, CROWN_IBP, IBP, FORWARD, HYBRID]]:
         raise KeyError()
+
+
 
     if method != CROWN.name:
 
@@ -146,8 +148,8 @@ def clone(
     layer_fn=to_monotonic,
     dc_decomp=False,
     convex_domain={},
-    ibp=True,
-    forward=True,
+    ibp=False,
+    forward=False,
     method="crown",
     finetune=False,
     shared=True,
@@ -157,6 +159,15 @@ def clone(
 
     if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
+
+    if not ibp and not forward:
+        # adapt the mode to the methods
+        if method in [CROWN_HYBRID.name, HYBRID.name]:
+            ibp=True; forward=True
+        if method in [IBP.name, CROWN_IBP.name, CROWN.name]:
+            ibp=True
+        if method in [FORWARD.name, CROWN_FORWARD.name]:
+            forward=True
 
     if finetune:
         finetune_forward = True

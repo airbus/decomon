@@ -474,6 +474,15 @@ class ClipAlpha(Constraint):
     def __call__(self, w):
         return K.clip(w, 0.0, 1.0)
 
+class ClipAlphaAndSumtoOne(Constraint):
+    """Cosntraints the weights to be between 0 and 1."""
+
+    def __call__(self, w):
+        w = K.clip(w, 0.0, 1.0)
+        # normalize the first colum to 1
+        w_scale = K.maximum(K.sum(w, 0), K.epsilon())
+        return w/w_scale[:,None,None,None]
+
 
 class MultipleConstraint(Constraint):
     """

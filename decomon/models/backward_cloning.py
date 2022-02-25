@@ -325,6 +325,7 @@ def get_output_model(node, layer_map, forward_map, mode, input_dim, **kwargs):
             convex_domain = kwargs["convex_domain"]
         else:
             convex_domain = {}
+
         output_max = DecomonMinimum(mode=mode, convex_domain=convex_domain)(outputs)
         output_min = DecomonMaximum(mode=mode, convex_domain=convex_domain)(outputs)
 
@@ -359,8 +360,12 @@ def get_output_layer(node, layer_map, forward_map, mode, input_dim, **kwargs):
             tmp = update_input(backward_map[key], forward_map[key], mode, layer_.output_shape, reshape=True, **kwargs)
             outputs += tmp
 
-        output_max = DecomonMinimum(mode=mode, convex_domain=convex_domain)(outputs)
-        output_min = DecomonMaximum(mode=mode, convex_domain=convex_domain)(outputs)
+        if len(backward_map.keys())>1:
+            output_max = DecomonMinimum(mode=mode, convex_domain=convex_domain)(outputs)
+            output_min = DecomonMaximum(mode=mode, convex_domain=convex_domain)(outputs)
+        else:
+            output_max = outputs
+            output_min=outputs
 
         if mode == F_IBP.name:
             return [output_max[0], output_min[-1]]
