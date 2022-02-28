@@ -349,7 +349,7 @@ def get_output_layer(node, layer_map, forward_map, mode, input_dim, **kwargs):
     else:
         if len(to_list(layer_.output_shape)) > 1:
             raise NotImplementedError("Decomon cannot handle nodes with a list of output tensors")
-        backward_map = get_backward_layer(node, layer_map, forward_map, mode, [], input_dim, **kwargs)
+        backward_map = get_backward_layer(node, layer_map, forward_map, mode, [], input_dim, **kwargs)# recursiv approach
         outputs = []
         if "convex_domain" in kwargs:
             convex_domain = kwargs["convex_domain"]
@@ -368,10 +368,13 @@ def get_output_layer(node, layer_map, forward_map, mode, input_dim, **kwargs):
             output_min=outputs
 
         if mode == F_IBP.name:
+            forward_map["{}_{}".format(layer_.name, id_node)]= [output_max[0], output_min[-1]]
             return [output_max[0], output_min[-1]]
         if mode == F_FORWARD.name:
+            forward_map["{}_{}".format(layer_.name, id_node)] = output_max[:3] + output_min[-2:]
             return output_max[:3] + output_min[-2:]
         if mode == F_HYBRID.name:
+            forward_map["{}_{}".format(layer_.name, id_node)] = output_max[:4] + output_min[-3:]
             return output_max[:4] + output_min[-3:]
 
 
@@ -615,10 +618,13 @@ def get_backward_model(
             input_dim = input_tensors[i][0].shape[-1]
 
     mode = get_mode(IBP=IBP, forward=forward)
-    if not isinstance(back_bounds, list):
-        import pdb
+    if 'mode_output' not in kwargs:
+        mode_output = mode
+    else:
+        mode_output = kwargs['mode_output']
 
-        pdb.set_trace()
+    if not isinstance(back_bounds, list):
+        import pdb; pdb.set_trace()
 
     if len(back_bounds) and not isinstance(back_bounds[0], list):
         back_bounds = [back_bounds]
@@ -691,7 +697,7 @@ def get_backward_model(
 
                         lambda_f = Lambda(lambda x: func(x))
                         output_i = lambda_f(max_bounds + min_bounds)
-
+                    forward_map["{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i))]=output_i
                     back_bound_i.append(output_i)
 
         output += back_bound_i

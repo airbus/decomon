@@ -45,12 +45,12 @@ from .decomon_merge_layers import (
     to_monotonic_merge,
 )
 from .utils import grad_descent
-from .core import F_FORWARD, F_IBP, F_HYBRID
+from .core import F_FORWARD, F_IBP, F_HYBRID, DEEL_LIP
 import warnings
 import inspect
 
 try:
-    from .deel_lip import DecomonGroupSort
+    from .deel_lip import DecomonGroupSort, DecomonGroupSort2
 except ModuleNotFoundError:
     pass
 
@@ -1599,6 +1599,12 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
         return  input_shape
 
 
+# conditional import for deel-lip
+
+
+
+
+
 
 def to_monotonic(
     layer,
@@ -1628,6 +1634,10 @@ def to_monotonic(
 
     # get class name
     class_name = layer.__class__.__name__
+    # remove deel-lip dependency
+    if class_name[:len(DEEL_LIP.name)]==DEEL_LIP.name:
+        class_name = class_name[len(DEEL_LIP.name):]
+
 
     # check if layer has a built argument that built is set to True
     if hasattr(layer, "built"):
@@ -1682,11 +1692,17 @@ def to_monotonic(
             layer_monotonic = globals()[monotonic_class_name].from_config(config_layer)
             layer_monotonic.shared_weights(layer)
             layer_list.append(layer_monotonic)
-            if not activation is None and not isinstance(layer, Activation):
+            if not activation is None and not isinstance(layer, Activation) and not isinstance(activation, dict):
+                import pdb; pdb.set_trace()
                 layer_next = DecomonActivation(activation, \
                                                mode=mode, finetune=finetune, \
                                                dc_decomp=dc_decomp, convex_domain=convex_domain)
                 layer_list.append(layer_next)
+            else:
+                if isinstance(activation, dict):
+                    layer_next_list = to_monotonic(layer.activation, input_dim,dc_decomp=dc_decomp, convex_domain=convex_domain,
+                                                   finetune=finetune, IBP=IBP, forward=forward, shared=shared, fast=fast)
+                    layer_list+=layer_next_list
             break
         except KeyError:
             """
@@ -1702,31 +1718,35 @@ def to_monotonic(
                 layer = layer_
                 class_name = layer.__class__.__name__
 
-    input_shape = list(layer.input_shape)[1:]
-    if isinstance(input_dim, tuple):
-        x_shape = Input(input_dim)
-        input_dim = input_dim[-1]
-    else:
-        x_shape = Input((input_dim,))
+    try:
+        input_shape = list(layer.input_shape)[1:]
+        if isinstance(input_dim, tuple):
+            x_shape = Input(input_dim)
+            input_dim = input_dim[-1]
+        else:
+            x_shape = Input((input_dim,))
 
-    w_shape = Input(tuple([input_dim] + input_shape))
-    y_shape = Input(tuple(input_shape))
+        if mode in [F_HYBRID.name, F_FORWARD.name]:
+            w_shape = Input(tuple([input_dim] + input_shape))
+        y_shape = Input(tuple(input_shape))
 
-    if mode == F_HYBRID.name:
-        #input_ = [y_shape, x_shape, y_shape, w_shape, y_shape, y_shape, w_shape, y_shape]
-        input_ = [x_shape, y_shape, w_shape, y_shape, y_shape, w_shape, y_shape]
-    elif mode == F_IBP.name:
-        #input_ = [y_shape, x_shape, y_shape, y_shape]
-        input_ = [y_shape, y_shape]
-    elif mode == F_FORWARD.name:
-        #input_ = [y_shape, x_shape, w_shape, y_shape, w_shape, y_shape]
-        input_ = [x_shape, w_shape, y_shape, w_shape, y_shape]
+        if mode == F_HYBRID.name:
+            #input_ = [y_shape, x_shape, y_shape, w_shape, y_shape, y_shape, w_shape, y_shape]
+            input_ = [x_shape, y_shape, w_shape, y_shape, y_shape, w_shape, y_shape]
+        elif mode == F_IBP.name:
+            #input_ = [y_shape, x_shape, y_shape, y_shape]
+            input_ = [y_shape, y_shape]
+        elif mode == F_FORWARD.name:
+            #input_ = [y_shape, x_shape, w_shape, y_shape, w_shape, y_shape]
+            input_ = [x_shape, w_shape, y_shape, w_shape, y_shape]
 
-    if dc_decomp:
-        input_ += [y_shape, y_shape]
+        if dc_decomp:
+            input_ += [y_shape, y_shape]
 
-    layer_list[0](input_)
-    layer_list[0].reset_layer(layer)
+        layer_list[0](input_)
+        layer_list[0].reset_layer(layer)
+    except:
+        pass
 
     #return layer_monotonic
     return layer_list

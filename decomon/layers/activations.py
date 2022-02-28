@@ -30,7 +30,7 @@ TANH = "tanh"
 EXPONENTIAL = "exponential"
 HARD_SIGMOID = "hard_sigmoid"
 LINEAR = "linear"
-
+GROUP_SORT_2 = 'GroupSort2'
 
 def relu(x, dc_decomp=False, convex_domain={}, alpha=0.0, max_value=None, threshold=0.0, mode=F_HYBRID.name, **kwargs):
     """Rectified Linear Unit.
@@ -336,6 +336,25 @@ def softmax(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, *
     # TO DO linear relaxation
     raise NotImplementedError()
 
+def group_sort_2(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, data_format="channels_last", **kwargs):
+
+    input_shape = x[-1].shape
+    if data_format=="channels_last":
+        axis=-1
+        # check dimension
+        if input_shape[-1]%2!=0:
+            raise ValueError()
+    else:
+        axis=1
+        if input_shape[1]%2!=0:
+            raise ValueError()
+
+    import pdb; pdb.set_trace()
+
+
+
+
+
 
 def deserialize(name):
     """Get the activation from name.
@@ -367,6 +386,8 @@ def deserialize(name):
         return exponential
     if name == LINEAR:
         return linear
+    if name ==GROUP_SORT_2:
+        return group_sort_2
     raise ValueError("Could not interpret " "activation function identifier:", name)
 
 

@@ -32,6 +32,9 @@ class Vertex:
     name = "vertex"  # convex set represented by its vertices
     # (no verification is proceeded to assess that the set is convex)
 
+class DEEL_LIP:
+    name='deel-lip>'
+
 
 class StaticVariables:
     """

@@ -729,7 +729,7 @@ def add(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.nam
     return output
 
 
-def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
+def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, finetune=False, **kwargs):
     """
     LiRPA implementation of element-wise max
 
@@ -741,12 +741,14 @@ def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID
     :return: maximum(inputs_0, inputs_1)
     """
     output_0 = substract(inputs_1, inputs_0, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
+    if finetune:
+        finetune=kwargs['finetune_params']
     output_1 = relu_(
         output_0,
         dc_decomp=dc_decomp,
         convex_domain=convex_domain,
         mode=mode,
-    )
+        finetune=finetune)
 
     return add(
         output_1,
@@ -757,7 +759,7 @@ def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID
     )
 
 
-def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
+def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, finetune=False, **kwargs):
     """
     LiRPA implementation of element-wise min
 
@@ -776,6 +778,8 @@ def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID
             dc_decomp=dc_decomp,
             convex_domain=convex_domain,
             mode=mode,
+            finetune=finetune,
+            **kwargs
         ),
         dc_decomp=dc_decomp,
         mode=mode,
@@ -783,7 +787,7 @@ def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID
 
 
 # convex hull of the maximum between two functions
-def max_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, **kwargs):
+def max_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, finetune=False, **kwargs):
     """
     LiRPA implementation of max(x, axis)
 
@@ -853,6 +857,11 @@ def max_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, **kw
         w_u_tmp = w_u_list[0] + 0 * (w_u_list[0])
         w_l_tmp = w_l_list[0] + 0 * (w_l_list[0])
 
+        if finetune:
+            key = [e for e in kwargs.keys()][0]
+            params = kwargs[key][0]
+            params_ = [e[0] for e in tf.split(params[None], max_dim, axis)]
+
     output_tmp = []
     if mode == F_HYBRID.name:
         # output_tmp = [y_tmp,x_0,u_c_tmp,w_u_tmp,b_u_tmp,l_c_tmp,w_l_tmp,b_l_tmp,]
@@ -869,7 +878,10 @@ def max_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, **kw
         for i in range(1, max_dim):
             # output_i = [y_list[i], x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
             output_i = [x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
-            output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
+            if finetune:
+                output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune, finetune_params=params_[i])
+            else:
+                output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
 
     if mode == F_IBP.name:
         # output_tmp = [y_tmp,x_0,u_c_tmp,l_c_tmp,]
@@ -881,7 +893,7 @@ def max_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, **kw
         for i in range(1, max_dim):
             # output_i = [y_list[i], x_0, u_c_list[i], l_c_list[i]]
             output_i = [u_c_list[i], l_c_list[i]]
-            output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
+            output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune)
 
     if mode == F_FORWARD.name:
         # output_tmp = [y_tmp,x_0,w_u_tmp,b_u_tmp,w_l_tmp,b_l_tmp,]
@@ -896,7 +908,10 @@ def max_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, **kw
         for i in range(1, max_dim):
             # output_i = [y_list[i], x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
             output_i = [x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
-            output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
+            if finetune:
+                output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune, finetune_params=params_[i])
+            else:
+                output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
 
     # reduce the dimension
     if mode == F_IBP.name:
@@ -1522,7 +1537,7 @@ def frac_pos_hull(inputs_, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name
 
 
 # convex hull for min
-def min_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1):
+def min_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, finetune=False, **kwargs):
     """
     LiRPA implementation of min(x, axis=axis)
     :param x:
@@ -1534,7 +1549,7 @@ def min_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1):
     """
     # return - max - x
     return minus(
-        max_(minus(x, mode=mode), dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, axis=axis), mode=mode
+        max_(minus(x, mode=mode), dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, axis=axis, finetune=finetune, **kwargs), mode=mode
     )
 
 
@@ -1588,3 +1603,6 @@ def expand_dims(inputs_, dc_decomp=False, mode=F_HYBRID.name, axis=-1):
         output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
     return output
+
+
+

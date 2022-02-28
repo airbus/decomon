@@ -45,11 +45,14 @@ from deel.lip.layers import (
 
 from .decomon_reshape import DecomonReshape
 from .decomon_merge_layers import DecomonConcatenate
-from .utils import sort, max_, min_, expand_dims
+from .utils import sort, max_, min_, expand_dims, ClipAlpha
 
 
-from deel.lip.model import Sequential
-from deel.lip.activations import GroupSort
+
+try:
+    from deel.lip.activations import GroupSort, GroupSort2
+except:
+    raise Warning('Could not import GroupSort from deel.lip.activations. Install deel-lip for being compatible with 1 Lipschitz network (see https://github.com/deel-ai/deel-lip)')
 
 
 class DecomonGroupSort(DecomonLayer):
@@ -114,3 +117,68 @@ class DecomonGroupSort(DecomonLayer):
 
     def compute_output_shape(self, input_shape):
         return input_shape
+
+
+
+class DecomonGroupSort2(DecomonLayer):
+    def __init__(self,  n=2, data_format="channels_last", k_coef_lip=1.0, mode=F_HYBRID.name, **kwargs):
+        super(DecomonGroupSort2, self).__init__(**kwargs)
+        self.mode = mode
+        self.data_format=data_format
+
+        if self.data_format=="channels_last":
+            self.axis=-1
+        else:
+            self.axis=1
+
+        if self.dc_decomp:
+            raise NotImplementedError()
+
+        self.op_concat = DecomonConcatenate(self.axis, mode=self.mode, convex_domain=self.convex_domain)
+        self.op_reshape_in = None
+        self.op_reshape_out = None
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
+    def call(self, inputs):
+
+
+        inputs_ = self.op_reshape_in(inputs)
+        inputs_max = expand_dims(max_(inputs_, mode=self.mode, convex_domain=self.convex_domain, axis=self.axis, finetune=self.finetune, finetune_params=self.params_max), mode=self.mode, axis=self.axis)
+        inputs_min = expand_dims(min_(inputs_, mode=self.mode, convex_domain=self.convex_domain, axis=self.axis, finetune=self.finetune, finetune_params=self.params_min), mode=self.mode, axis=self.axis)
+        output= self.op_concat(inputs_min+inputs_max)
+        output_ = self.op_reshape_out(output)
+        return output_
+
+    def build(self, input_shape):
+        input_shape = input_shape[-1]
+
+        if self.data_format=="channels_last":
+            if input_shape[-1]%2!=0:
+                raise ValueError()
+            target_shape = input_shape[1:-2]+[int(input_shape[-1]/2), 2]
+        else:
+            if input_shape[1]%2!=0:
+                raise ValueError()
+            target_shape = [2, int(input_shape[1]/2)] + input_shape[2:]
+
+        self.params_max=[]
+        self.params_min=[]
+
+        if self.finetune and self.mode in [F_FORWARD.name, F_HYBRID.name]:
+            self.beta_max_ = self.add_weight(
+                shape=target_shape, initializer="ones", name="beta_max", regularizer=None, constraint=ClipAlpha()
+            )
+            self.beta_min_ = self.add_weight(
+                shape=target_shape, initializer="ones", name="beta_max", regularizer=None, constraint=ClipAlpha()
+            )
+            self.params_max=[self.beta_max_]
+            self.params_min=[self.beta_min_]
+
+
+        self.op_reshape_in = DecomonReshape(target_shape, mode=self.mode)
+        self.op_reshape_out = DecomonReshape(input_shape[1:], mode=self.mode)
+
+    def reset_layer(self, layer):
+        print('kikou')
