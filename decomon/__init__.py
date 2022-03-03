@@ -14,6 +14,7 @@ from .wrapper import (
     get_range_noise,
     get_upper_noise,
     refine_box,
+    get_adv_noise
 )
 
 from .wrapper_with_tuning import get_upper_box_tuning, get_lower_box_tuning

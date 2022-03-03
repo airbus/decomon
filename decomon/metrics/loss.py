@@ -2,6 +2,7 @@ from __future__ import absolute_import
 import tensorflow.keras.backend as K
 from decomon.models.utils import get_mode
 from decomon.layers.utils import F_HYBRID, F_FORWARD, F_IBP, get_upper, get_lower
+from decomon.layers.activations import softmax as softmax_
 from decomon.models import DecomonModel
 from tensorflow.keras.layers import InputLayer, Input, Layer, Flatten, Lambda
 import numpy as np
@@ -214,7 +215,7 @@ def get_lower_loss(model):
     return loss_lower
 
 
-def get_adv_loss(model):
+def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
 
     IBP = model.IBP
     forward = model.forward
@@ -270,6 +271,9 @@ def get_adv_loss(model):
             u_c = y_pred[:, :, 0]
             l_c = y_pred[:, :, 1]
 
+            if softmax:
+                u_c, l_c = softmax_([u_c, l_c], mode=mode, convex_domain=convex_domain, clip=False)
+
         if mode == F_FORWARD.name:
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-1, :n_comp], (0, 2, 1))
@@ -280,6 +284,10 @@ def get_adv_loss(model):
             b_u = y_pred[:, -1, n_comp : n_comp + n_out]
             w_l = y_pred[:, :-1, n_comp + n_out :]
             b_l = y_pred[:, -1, n_comp + n_out :]
+
+            if softmax:
+                _, w_u, b_u, w_l, b_l = softmax_([x_0, w_u, b_u, w_l, b_l],
+                                                mode=mode, convex_domain=convex_domain, clip=False)
 
         if mode == F_HYBRID.name:
 
@@ -295,17 +303,33 @@ def get_adv_loss(model):
             u_c = y_pred[:, -1, n_comp : n_comp + n_out]
             l_c = y_pred[:, -1, n_comp + n_out :]
 
+            _, u_c, w_u, b_u, l_c, w_l, b_l = softmax_([x_0, u_c, w_u, b_u, l_c, w_l, b_l],
+                                            mode=mode, convex_domain=convex_domain, clip=False)
+
         if IBP:
             score_ibp = adv_ibp(u_c, l_c, y_true)
+            if clip_value is not None:
+                score_ibp = K.maximum(score_ibp, clip_value)
         if forward:
             score_forward = adv_forward(x_0, w_u, b_u, w_l, b_l, y_true)
+            if clip_value is not None:
+                score_forward = K.maximum(score_forward, clip_value)
 
         if mode == F_IBP.name:
-            return K.mean(score_ibp)
+            if sigmoid:
+                return K.mean(K.sigmoid(score_ibp))
+            else:
+                return K.mean(score_ibp)
         if mode == F_FORWARD.name:
-            return K.mean(score_forward)
+            if sigmoid:
+                return K.mean(K.sigmoid(score_forward))
+            else:
+                return K.mean(score_forward)
         if mode == F_HYBRID.name:
-            return K.mean(K.minimum(score_ibp, score_forward))
+            if sigmoid:
+                return K.mean(K.sigmoid(K.minimum(score_ibp, score_forward)))
+            else:
+                return K.mean(K.minimum(score_ibp, score_forward))
 
         raise NotImplementedError()
 

@@ -728,6 +728,70 @@ def add(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.nam
 
     return output
 
+def sum(x, axis=-1, dc_decomp=False, mode=F_HYBRID.name, **kwargs):
+
+    if dc_decomp:
+        raise NotImplementedError()
+
+    if mode == F_IBP.name:
+        return [K.sum(x[0], axis=axis), K.sum(x[1], axis=axis)]
+    if mode == F_FORWARD.name:
+        x_0, w_u, b_u, w_l, b_l = x
+    if mode == F_HYBRID.name:
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
+        u_c_ = K.sum(u_c, axis=axis)
+        l_c_ = K.sum(l_c, axis=axis)
+
+    axis_w = -1
+    if axis!=-1:
+        axis_w = axis+1
+    w_u_ = K.sum(w_u, axis=axis_w)
+    w_l_ = K.sum(w_l, axis=axis_w)
+    b_u_ = K.sum(b_u, axis=axis)
+    b_l_ = K.sum(b_l, axis=axis)
+
+    if mode == F_FORWARD.name:
+        return [x_0, w_u_, b_u_, w_l_, b_l_]
+    if mode == F_HYBRID.name:
+        return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+
+def frac_pos(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+
+    if dc_decomp:
+        raise NotImplementedError()
+    # frac_pos is convex for positive values
+    if mode ==F_IBP.name:
+        u_c, l_c = x
+        u_c_ = 1. / l_c
+        l_c_ = 1. / u_c
+        return [u_c_, l_c_]
+    if mode == F_FORWARD.name:
+        x_0, w_u,b_u, w_l, b_l = x
+        u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
+        l_c = get_lower(x_0, w_u, b_u, convex_domain=convex_domain)
+    if mode == F_HYBRID.name:
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
+        u_c_ = 1./l_c
+        l_c_ = 1./u_c
+
+        w_u_0 = (u_c_-l_c_)/K.maximum(u_c-l_c, K.epsilon())
+        b_u_0 = l_c_ - w_u_0*l_c
+
+        y = (u_c+l_c)/2.
+        b_l_0 = 2./y
+        w_l_0 = -1/y**2
+
+        w_u_ = w_u_0[:, None] * w_l
+        b_u_ = b_u_0 * b_l + b_u_0
+        w_l_ = w_l_0[:, None] * w_u
+        b_l_ = b_l_0 * b_u + b_l_0
+
+        if mode == F_FORWARD.name:
+            return [x_0, w_u_, b_u_, w_l_, b_l_]
+        if mode == F_HYBRID.name:
+            return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+
+
 
 def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, finetune=False, **kwargs):
     """
@@ -743,12 +807,18 @@ def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID
     output_0 = substract(inputs_1, inputs_0, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
     if finetune:
         finetune=kwargs['finetune_params']
-    output_1 = relu_(
-        output_0,
-        dc_decomp=dc_decomp,
-        convex_domain=convex_domain,
-        mode=mode,
-        finetune=finetune)
+        output_1 = relu_(
+            output_0,
+            dc_decomp=dc_decomp,
+            convex_domain=convex_domain,
+            mode=mode,
+            finetune=finetune)
+    else:
+        output_1 = relu_(
+            output_0,
+            dc_decomp=dc_decomp,
+            convex_domain=convex_domain,
+            mode=mode)
 
     return add(
         output_1,
@@ -1043,7 +1113,7 @@ def minus(inputs, mode=F_HYBRID.name, dc_decomp=False):
     return output
 
 
-def multiply(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
+def multiply_old(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
     """
     LiRPA implementation of (element-wise) multiply(x,y)=-x*y.
 
@@ -1089,6 +1159,8 @@ def multiply(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRI
     # xy >=x_L*y + x*y_L -x_L*y_L
     # xy >= x_U*y + x*y_U - x_U*y_U
     if mode in [F_IBP.name, F_HYBRID.name]:
+
+
         upper_0 = K.relu(u0) * u1 - K.relu(-u0) * l1 + K.relu(l1) * u0 - K.relu(-l1) * l0 - u0 * l1
         upper_1 = K.relu(u1) * u0 - K.relu(-u1) * l0 + K.relu(l0) * u1 - K.relu(-l0) * l1 - u1 * l0
 
@@ -1172,6 +1244,85 @@ def multiply(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRI
 
     return output
 
+
+def multiply(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
+    """
+    LiRPA implementation of (element-wise) multiply(x,y)=-x*y.
+
+    :param inputs_0: list of tensors
+    :param inputs_1: list of tensors
+    :param dc_decomp: boolean that indicates
+    whether we return a difference of convex decomposition of our layer
+    whether we propagate upper and lower bounds on the values of the gradient
+    :param convex_domain: the type of convex domain
+    :param mode: type of Forward propagation (IBP, Forward or Hybrid)
+    :return: maximum(inputs_0, inputs_1)
+    """
+
+    if dc_decomp:
+        raise NotImplementedError()
+
+    nb_tensor = StaticVariables(dc_decomp, mode=mode).nb_tensors
+
+    if mode == F_IBP.name:
+        # y0, x, u0, l0 = inputs_0[:4]
+        # y1, _, u1, l1 = inputs_1[:4]
+        u0, l0 = inputs_0[:nb_tensor]
+        u1, l1 = inputs_1[:nb_tensor]
+    if mode == F_FORWARD.name:
+        # y0, x, w_u0, b_u0, w_l0, b_l0 = inputs_0[:6]
+        # y1, _, w_u1, b_u1, w_l1, b_l1 = inputs_1[:6]
+        x, w_u0, b_u0, w_l0, b_l0 = inputs_0[:nb_tensor]
+        _, w_u1, b_u1, w_l1, b_l1 = inputs_1[:nb_tensor]
+        u0 = get_upper(x, w_u0, b_u0, convex_domain=convex_domain)
+        l0 = get_lower(x, w_l0, b_l0, convex_domain=convex_domain)
+        u1 = get_upper(x, w_u1, b_u1, convex_domain=convex_domain)
+        l1 = get_lower(x, w_l1, b_l1, convex_domain=convex_domain)
+    if mode == F_HYBRID.name:
+        # y0, x, u0, w_u0, b_u0, l0, w_l0, b_l0 = inputs_0[:8]
+        # y1, _, u1, w_u1, b_u1, l1, w_l1, b_l1 = inputs_1[:8]
+        x, u0, w_u0, b_u0, l0, w_l0, b_l0 = inputs_0[:nb_tensor]
+        _, u1, w_u1, b_u1, l1, w_l1, b_l1 = inputs_1[:nb_tensor]
+
+    # using McCormick's inequalities to derive bounds
+    # xy<= x_u*y + x*y_L - xU*y_L
+    # xy<= x*y_u + x_L*y - x_L*y_U
+
+    # xy >=x_L*y + x*y_L -x_L*y_L
+    # xy >= x_U*y + x*y_U - x_U*y_U
+
+    if mode in [F_IBP.name, F_HYBRID.name]:
+        u_c_0_ = K.maximum(u0*u1, u0*l1) + K.maximum(u0*l1, l0*l1) - u0*l1
+        u_c_1_ = K.maximum(u1*u0, u1*l0) + K.maximum(u1*l0, l1*l0) - u1*l0
+        u_c_ = K.minimum(u_c_0_, u_c_1_)
+        l_c_ = K.minimum(l0*l1, l0*u1) + K.minimum(l0*l1, u0*l1) - l0*l1
+
+    if mode in [F_HYBRID.name, F_FORWARD.name]:
+        #xy <= x_u * y + x * y_L - xU * y_L
+        cx_u_pos = K.maximum(u0, 0.)
+        cx_u_neg = K.minimum(u0, 0.)
+
+        cy_l_pos = K.maximum(l1, 0.)
+        cy_l_neg = K.minimum(l1, 0.)
+        w_u_ = cx_u_pos[:,None]*w_u1 + cx_u_neg[:,None]*w_l1 + cy_l_pos[:,None]*w_u0 + cy_l_neg[:,None]*w_l0
+        b_u_ = cx_u_pos*b_u1 + cx_u_neg*b_l1 + cy_l_pos*b_u0 + cy_l_neg*b_l0 - u0*l1
+
+        # xy >= x_U*y + x*y_U - x_U*y_U
+        cy_u_pos = K.maximum(u1, 0.)
+        cy_u_neg = K.minimum(u1, 0.)
+        cx_l_pos = K.maximum(l0, 0.)
+        cx_l_neg = K.minimum(l0, 0.)
+
+
+        w_l_ = cx_l_pos[:,None]*w_l1 + cx_l_neg[:,None]*w_u1 + cy_l_pos[:,None]*w_l0 + cy_l_neg[:,None]*w_u0
+        b_l_ = cx_l_pos*b_l1 + cx_l_neg*b_u1 + cy_l_pos*b_l0 + cy_l_neg*b_u0 - l0*l1
+
+    if mode == F_IBP.name:
+        return [u_c_, l_c_]
+    if mode == F_FORWARD.name:
+        return [x, w_u_, b_u_, w_l_, b_l_]
+    if mode == F_HYBRID.name:
+        return [x, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
 def permute_dimensions(x, axis, mode=F_HYBRID.name, axis_perm=1):
     """
@@ -1592,7 +1743,7 @@ def expand_dims(inputs_, dc_decomp=False, mode=F_HYBRID.name, axis=-1):
 
     if mode == F_IBP.name:
         # output = [y_, x_0, u_c_, l_c_]
-        output = [x_0, u_c_, l_c_]
+        output = [u_c_, l_c_]
 
     if mode == F_FORWARD.name:
         # output = [y, x_0, w_u_, b_u_, w_l_, b_l_]

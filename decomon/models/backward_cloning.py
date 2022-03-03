@@ -698,6 +698,7 @@ def get_backward_model(
                         lambda_f = Lambda(lambda x: func(x))
                         output_i = lambda_f(max_bounds + min_bounds)
                     forward_map["{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i))]=output_i
+                    #print("{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i)))
                     back_bound_i.append(output_i)
 
         output += back_bound_i

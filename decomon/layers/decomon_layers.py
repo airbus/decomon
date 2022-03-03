@@ -860,8 +860,8 @@ class DecomonDense(Dense, DecomonLayer):
         if self.mode in [F_HYBRID.name, F_FORWARD.name]:
             if len(w_u.shape) != len(b_u.shape):
                 x_max = get_upper(x_0, w_u - w_l, b_u - b_l, self.convex_domain)
-                mask_b = o_value - K.sign(x_max)
-                mask_a = o_value - mask_b
+                #mask_b = o_value - K.sign(x_max)
+                #mask_a = o_value - mask_b
 
         if self.mode in [F_HYBRID.name, F_IBP.name]:
 
@@ -885,13 +885,23 @@ class DecomonDense(Dense, DecomonLayer):
 
                 if self.finetune and self.mode == F_HYBRID.name:
 
+                    b_u_ = K.dot(b_u - u_c, kernel_pos_alpha) + \
+                           K.dot((b_l - l_c), kernel_neg_alpha) + \
+                           K.dot(u_c, kernel_pos) + K.dot(l_c, kernel_neg)  # focus....
+
+                    b_l_ = K.dot(b_l - l_c, kernel_pos_gamma) + \
+                           K.dot((b_u - u_c), kernel_neg_gamma) + \
+                           K.dot(l_c, kernel_pos) + K.dot(u_c, kernel_neg)
+                    """
                     b_u_ = K.dot(b_u-u_c, kernel_pos_alpha) +\
                            K.dot(mask_a * (b_l-l_c) + mask_b * (b_u-u_c), kernel_neg_alpha) +\
-                           K.dot(u_c, kernel_pos) + K.dot(mask_a*l_c + mask_b*u_c, kernel_neg)
+                           K.dot(u_c, kernel_pos) + K.dot(mask_a*l_c + mask_b*u_c, kernel_neg) # focus....
 
                     b_l_ = K.dot(b_l-l_c, kernel_pos_gamma) +\
                            K.dot(mask_a * (b_u-u_c) + mask_b * (b_l-l_c), kernel_neg_gamma) +\
                            K.dot(l_c, kernel_pos)+ K.dot(mask_a*u_c + mask_b*l_c, kernel_neg)
+                    """
+
                     """
                     b_u_ = K.dot(self.alpha_u_f * b_u + (1 - self.alpha_u_f) * u_c, kernel_pos) + K.dot(
                         mask_a * (self.alpha_l_f * b_l + (1 - self.alpha_l_f) * l_c)
@@ -907,18 +917,18 @@ class DecomonDense(Dense, DecomonLayer):
                     """
                 else:
                     # if not self.n_subgrad or self.mode == F_FORWARD.name:
-                    b_u_ = K.dot(b_u, kernel_pos) + K.dot(mask_a * b_l + mask_b * b_u, kernel_neg)
-                    b_l_ = K.dot(b_l, kernel_pos) + K.dot(mask_a * b_u + mask_b * b_l, kernel_neg)
+                    b_u_ = K.dot(b_u, kernel_pos) + K.dot(b_l, kernel_neg)
+                    b_l_ = K.dot(b_l, kernel_pos) + K.dot(b_u, kernel_neg)
 
                 # else:
-                mask_a = K.expand_dims(mask_a, 1)
-                mask_b = K.expand_dims(mask_b, 1)
+                #mask_a = K.expand_dims(mask_a, 1)
+                #mask_b = K.expand_dims(mask_b, 1)
 
                 # if not self.n_subgrad or self.mode == F_FORWARD.name:
                 if self.finetune and self.mode == F_HYBRID.name:
 
-                    w_u_ = K.dot(w_u, kernel_pos_alpha) + K.dot(mask_a * w_l + mask_b * w_u, kernel_neg_alpha)
-                    w_l_ = K.dot(w_l, kernel_pos_gamma) + K.dot(mask_a * w_u + mask_b * w_l, kernel_neg_gamma)
+                    w_u_ = K.dot(w_u, kernel_pos_alpha) + K.dot(w_l, kernel_neg_alpha)
+                    w_l_ = K.dot(w_l, kernel_pos_gamma) + K.dot(w_u, kernel_neg_gamma)
 
 
                     """
@@ -930,8 +940,8 @@ class DecomonDense(Dense, DecomonLayer):
                     )
                     """
                 else:
-                    w_u_ = K.dot(w_u, kernel_pos) + K.dot(mask_a * w_l + mask_b * w_u, kernel_neg)
-                    w_l_ = K.dot(w_l, kernel_pos) + K.dot(mask_a * w_u + mask_b * w_l, kernel_neg)
+                    w_u_ = K.dot(w_u, kernel_pos) + K.dot(w_l, kernel_neg)
+                    w_l_ = K.dot(w_l, kernel_pos) + K.dot(w_u, kernel_neg)
 
 
                 # else:
@@ -1693,7 +1703,6 @@ def to_monotonic(
             layer_monotonic.shared_weights(layer)
             layer_list.append(layer_monotonic)
             if not activation is None and not isinstance(layer, Activation) and not isinstance(activation, dict):
-                import pdb; pdb.set_trace()
                 layer_next = DecomonActivation(activation, \
                                                mode=mode, finetune=finetune, \
                                                dc_decomp=dc_decomp, convex_domain=convex_domain)

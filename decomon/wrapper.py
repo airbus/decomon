@@ -1141,3 +1141,311 @@ def refine_box(func, model, x_min, x_max, n_split, source_labels=None, target_la
         return np.max(results, 1)
     else:
         return np.min(results, 1)
+
+
+### adversarial robustness Lp norm
+# get upper bound of a sample with bounded noise
+def get_upper_noise_(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
+    """
+    upper bound the maximum of a model in an Lp Ball
+    :param model: either a Keras model or a Decomon model
+    :param x: numpy array, the example around
+    which the impact of noise is assessed
+    :param eps: the radius of the ball
+    :param p: the type of Lp norm (p=2, 1, np.inf)
+    :param batch_size: for computational efficiency, one can split the calls to minibatches
+    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
+    :return: numpy array, vector with upper bounds
+     of the range of values taken by the model inside the ball
+    """
+    # check that the model is a DecomonModel, else do the conversion
+    convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
+
+    # check that the model is a DecomonModel, else do the conversion
+    # input_dim = 0
+    if not isinstance(model, DecomonModel):
+        model_ = convert(model, convex_domain=convex_domain)
+    else:
+        model_ = model
+        if eps >= 0:
+            model_.set_domain(convex_domain)
+
+    # reshape x_mmin, x_max
+    input_shape = list(model_.input_shape[1:])
+    input_dim = np.prod(input_shape)
+    x_ = x + 0 * x
+    x_ = x_.reshape([-1] + input_shape)
+
+    if batch_size > 0:
+        # split
+        r = 0
+        if len(x_) % batch_size > 0:
+            r += 1
+        X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        results = [get_upper_noise(model_, X_[i], eps=eps, p=p, batch_size=-1, fast=fast) for i in range(len(X_))]
+
+        return np.concatenate(results)
+
+    IBP = model_.IBP
+    forward = model_.forward
+    output = model_.predict(x_)
+    shape = output[-1].shape[1:]
+    shape_ = np.prod(shape)
+
+    x_ = x_.reshape((len(x_), -1))
+    if p not in [1, 2, np.inf]:
+        raise NotImplementedError()
+
+    if p == np.inf:
+        ord = 1
+    if p == 1:
+        ord = np.inf
+    if p == 2:
+        ord = 2
+
+
+
+
+    if forward:
+        if not IBP:
+            _, w_u_f, b_u_f, _, _ = output[:5]
+        else:
+            _, _, w_u_f, b_u_f, _, _, _ = output[:7]
+
+        # reshape if necessary
+        if len(w_u_f.shape) > 3:
+            w_u_f = np.reshape(w_u_f, (-1, input_dim, shape_))
+            b_u_f = np.reshape(b_u_f, (-1, shape_))
+
+        u_f = eps * np.linalg.norm(w_u_f, ord=ord, axis=1) + np.sum(w_u_f * x_[:, :, None], 1) + b_u_f
+
+        if IBP:
+            u_i = output[1]
+
+            if len(u_i.shape) > 2:
+                u_i = np.reshape(u_i, (-1, input_dim))
+
+    else:
+        u_i = output[0]
+        if len(u_i.shape) > 2:
+            u_i = np.reshape(u_i, (-1, input_dim))
+            ######
+
+    if IBP and forward:
+        u_ = np.minimum(u_i, u_f)
+    if IBP and not forward:
+        u_ = u_i
+    if not IBP and forward:
+        u_ = u_f
+
+    if len(shape) > 1:
+        u_ = np.reshape(u_ + [-1] + list(shape))
+
+    return u_
+
+def get_adv_noise(
+    model,
+    x,
+    source_labels,
+    eps=0,
+    p=np.inf,
+    target_labels=None,
+    batch_size=-1,
+    fast=True,
+):
+    """
+    if the output is negative, then it is a formal guarantee that there is no adversarial examples
+    :param model: either a Keras model or a Decomon model
+    :param x_min: numpy array for the extremal lower corner of the boxes
+    :param x_max: numpy array for the extremal upper corner of the boxes
+    :param source_labels: the list of label that should be predicted all the time in the box (either an integer, either an array that can contain multiple source labels for each sample)
+    :param target_labels: the list of label that should never be predicted in the box (either an integer, either an array that can contain multiple target labels for each sample)
+    :param batch_size: for computational efficiency, one can split the calls to minibatches
+    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
+    :return: numpy array, vector with upper bounds for adversarial attacks
+    """
+
+    convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
+
+    # check that the model is a DecomonModel, else do the conversion
+    # input_dim = 0
+    if not isinstance(model, DecomonModel):
+        model_ = convert(model, convex_domain=convex_domain)
+    else:
+        model_ = model
+        if eps >= 0:
+            model_.set_domain(convex_domain)
+
+    eps = model.convex_domain['eps']
+
+    # reshape x_mmin, x_max
+    input_shape = list(model_.input_shape[1:])
+    input_dim = np.prod(input_shape)
+    x_ = x + 0 * x
+    x_ = x_.reshape([-1] + input_shape)
+    n_split = 1
+    n_batch = len(x_)
+
+    input_shape = list(model_.input_shape[1:])
+    input_dim = np.prod(input_shape)
+    x_ = x + 0 * x
+    x_ = x_.reshape([-1] + input_shape)
+
+    if isinstance(source_labels, int) or isinstance(source_labels, np.int64):
+        source_labels = np.zeros((n_batch, 1)) + source_labels
+
+    if isinstance(source_labels, list):
+        source_labels = np.array(source_labels).reshape((n_batch, -1))
+
+    source_labels = source_labels.reshape((n_batch, -1))
+    source_labels = source_labels.astype("int64")
+
+    if target_labels is not None:
+        target_labels = target_labels.reshape((n_batch, -1))
+        target_labels = target_labels.astype("int64")
+
+    if batch_size > 0:
+        # split
+        r = 0
+        if len(x_) % batch_size > 0:
+            r += 1
+        X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        S_ = [source_labels[batch_size * i: batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        if (
+                (target_labels is not None)
+                and (not isinstance(target_labels, int))
+                and (str(target_labels.dtype)[:3] != "int")
+        ):
+            T_ = [target_labels[batch_size * i: batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        else:
+            T_ = [target_labels] * (len(x_) // batch_size + r)
+
+        results = [get_adv_noise(model_, X_[i], source_labels=S_[i], eps=eps, p=p,
+                                 target_labels=T_[i],
+                                 batch_size=-1, fast=fast) for i in range(len(X_))]
+
+        return np.concatenate(results)
+    else:
+
+        IBP = model_.IBP
+        forward = model_.forward
+        output = model_.predict(x_) # to do !!!!
+
+        def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
+
+            if target_tensor is None:
+                target_tensor = 1 - source_tensor
+
+            shape = np.prod(u_c.shape[1:])
+
+            t_tensor_ = np.reshape(target_tensor, (-1, shape))
+            s_tensor_ = np.reshape(source_tensor, (-1, shape))
+
+            # add penalties on biases
+            upper = u_c[:, :, None] - l_c[:, None]
+            const = upper.max() - upper.min()
+            # upper = upper*s_tensor_[:,None, :] + (const+0.1)*(1. - s_tensor_[:,None,:])
+            discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
+
+            upper -= (1 - discard_mask_s) * (const + 0.1)
+
+            return np.max(np.max(upper, -2), -1)
+
+        def get_forward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None):
+
+            if target_tensor is None:
+                target_tensor = 1 - source_tensor
+
+            n_dim = w_u.shape[1]
+            shape = np.prod(b_u.shape[1:])
+            w_u_ = np.reshape(w_u, (-1, n_dim, shape, 1))
+            w_l_ = np.reshape(w_l, (-1, n_dim, 1, shape))
+            b_u_ = np.reshape(b_u, (-1, shape, 1))
+            b_l_ = np.reshape(b_l, (-1, 1, shape))
+
+            t_tensor_ = np.reshape(target_tensor, (-1, shape))
+            s_tensor_ = np.reshape(source_tensor, (-1, shape))
+
+            w_u_f = w_u_ - w_l_
+            b_u_f = b_u_ - b_l_
+
+            # add penalties on biases
+
+            # compute upper with lp norm
+
+            if len(z_tensor.shape)>2:
+                z_tensor = np.reshape(z_tensor, (len(z_tensor), -1))
+
+            upper_0 = np.sum(w_u_f*z_tensor[:,:,None, None], 1) + b_u_f
+            # compute dual norm
+            if p==2:
+                upper_1 = eps*np.sum(w_u_f**2, 1)
+            if p==1:
+                upper_1 = eps*np.max(np.abs(w_u_f), 1)
+            if p==np.inf:
+                upper_1 = eps*np.sum(np.abs(w_u_f), 1)
+
+            upper = upper_0+upper_1
+
+            const = upper.max() - upper.min()
+            # upper = upper*s_tensor_[:,None, :] + (const+0.1)*(1. - s_tensor_[:,None,:])
+            discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
+            upper -= (1 - discard_mask_s) * (const + 0.1)
+
+            # upper = upper * s_tensor_[:, :, None] - (const + 0.1) * (1. - s_tensor_[:, None,:])
+            # upper = upper*t_tensor_[:,:,None ] - (const+0.1)*(1. - t_tensor_[:,None,:])
+
+            return np.max(np.max(upper, -2), -1)
+
+        if IBP and forward:
+            z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = output[:7]
+        if not IBP and forward:
+            z, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
+        if IBP and not forward:
+            u_c, l_c = output[:2]
+
+        if IBP:
+            adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels)
+        if forward:
+            adv_f = get_forward_score(z, w_u_f, b_u_f, w_l_f, b_l_f, source_labels, target_labels)
+
+        if IBP and not forward:
+            adv_score = adv_ibp
+        if IBP and forward:
+            adv_score = np.minimum(adv_ibp, adv_f)
+        if not IBP and forward:
+            adv_score = adv_f
+
+        if n_split > 1:
+            adv_score = np.max(np.reshape(adv_score, (-1, n_split)), -1)
+
+        return adv_score
+
+    def get_upper_ball(x_0, eps, p, w, b):
+        """
+        max of an affine function over an Lp ball
+        :param x_0: the center of the ball
+        :param eps: the radius
+        :param p: the type of Lp norm considered
+        :param w: weights of the affine function
+        :param b: bias of the affine function
+        :return: max_(|x - x_0|_p<= eps) w*x + b
+        """
+        if p == np.inf:
+            # compute x_min and x_max according to eps
+            x_min = x_0 - eps
+            x_max = x_0 + eps
+            return get_upper_box(x_min, x_max, w, b)
+
+        else:
+            # use Holder's inequality p+q=1
+            # ||w||_q*eps + w*x_0 + b
+
+            upper_ = eps * get_lq_norm(w, p, axis=1) + b
+
+            for _ in range(len(w.shape) - len(x_0.shape)):
+                x_0 = K.expand_dims(x_0, -1)
+
+            return K.sum(w * x_0, 1) + upper
+
+
