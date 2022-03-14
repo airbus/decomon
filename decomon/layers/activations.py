@@ -13,7 +13,8 @@ from .utils import (
     frac_pos,
     sum,
     multiply,
-    expand_dims
+    expand_dims,
+    exp
 )
 import warnings
 import six
@@ -278,39 +279,8 @@ def exponential(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwar
     :return: the updated list of tensors
 
     """
-    if dc_decomp:
-        raise NotImplementedError()
 
-    if mode == F_IBP.name:
-        return [K.exp(e) for e in x]
-    if mode == F_FORWARD.name:
-        x_0, w_u, b_u, w_l, b_l = x
-        u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
-        l_c =  get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
-    if mode == F_HYBRID.name:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
-
-    u_c_ = K.exp(u_c)
-    l_c_ = K.exp(l_c)
-
-    y = (u_c+l_c)/2. # do finetuneting
-    slope = K.exp(y)
-
-    w_u_0 = (u_c_ - l_c_)/K.maximum(u_c-l_c, K.epsilon())
-    b_u_0 = l_c_ - w_u_0*l_c
-
-    w_l_0 = K.exp(y)
-    b_l_0 = w_l_0*(1-y)
-
-    w_u_ = w_u_0[:,None]*w_u
-    b_u_ = b_u_0*b_u + b_u_0
-    w_l_ = w_l_0[:, None] * w_l
-    b_l_ = b_l_0 * b_l + b_l_0
-
-    if mode == F_FORWARD.name:
-        return [x_0, w_u_, b_u_, w_l_, b_l_]
-    if mode == F_HYBRID.name:
-        return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+    return exp(x,dc_decomp=dc_decomp,convex_domain=convex_domain, mode=mode, **kwargs)
 
 
 def softplus(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):

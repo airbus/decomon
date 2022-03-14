@@ -6,6 +6,10 @@ from decomon.layers.activations import softmax as softmax_
 from decomon.models import DecomonModel
 from tensorflow.keras.layers import InputLayer, Input, Layer, Flatten, Lambda
 import numpy as np
+from ..layers.core import DecomonLayer
+from decomon.layers.utils import F_HYBRID, F_IBP
+from decomon.utils import set_mode
+from .utils import categorical_cross_entropy
 
 
 def get_model(model):
@@ -78,6 +82,11 @@ def get_model(model):
         forward=forward,
         finetune=model.finetune,
     )
+
+
+
+
+
 
 def get_upper_loss(model):
 
@@ -334,3 +343,57 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
         raise NotImplementedError()
 
     return loss_adv
+
+
+# create a layer
+class DecomonLossFusion(DecomonLayer):
+
+    def __init__(self, mode=F_HYBRID.name, **kwargs):
+        super(DecomonLossFusion, self).__init__(mode=mode, **kwargs)
+        self.final_mode = F_IBP.name
+
+    def call(self, inputs, **kwargs):
+
+        proba = categorical_cross_entropy(inputs, dc_decomp=False, mode=self.mode,
+                                          convex_domain=self.convex_domain)
+        return set_mode(proba, self.final_mode, self.mode, self.convex_domain)[0] # get upper bound
+
+    def compute_output_shape(self, input_shape):
+        return input_shape[-1]
+
+
+
+##### DESIGN LOSS FUNCTIONS
+def build_crossentropy_model(model):
+    IBP = model.IBP
+    forward = model.forward
+
+    mode = get_mode(IBP, forward)
+    convex_domain = model.convex_domain
+
+    inputs = model.input
+    output = model.output
+
+    layer_fusion = DecomonLossFusion(mode=mode)
+    output_fusion = layer_fusion(output, mode=mode)
+
+    return DecomonModel(
+        input=inputs,
+        output=output_fusion,
+        convex_domain=model.convex_domain,
+        IBP=IBP,
+        forward=forward,
+        finetune=model.finetune,
+    )
+
+
+
+
+
+
+
+
+
+
+
+

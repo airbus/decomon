@@ -518,6 +518,7 @@ def get_backward_layer(node, layer_map, forward_map, mode, back_bounds, input_di
             input_dim=input_dim,
         )
 
+
         if not isinstance(layer_, Dense) or not isinstance(layer_, Conv2D) or layer_.get_config()['activation'] != 'linear' or not len(
                 back_bounds):  # Linear layer do not need recursive calls
             for node_i in input_nodes:
@@ -527,6 +528,12 @@ def get_backward_layer(node, layer_map, forward_map, mode, back_bounds, input_di
         else:
             # generate fake inputs
             input_layer_ = kwargs['fake_input']
+            """
+            for node_i in input_nodes:
+                tmp = get_output_layer(node_i, layer_map, forward_map, mode, input_dim, **kwargs)
+
+                input_layer_ += tmp
+            """
 
 
         back_bounds_ = back_layer(input_layer_ + back_bounds)
@@ -671,7 +678,7 @@ def get_backward_model(
                         output_i, inputs_tensors_i, mode, node_i.outbound_layer.output_shape, **kwargs
                     )
 
-
+                    """
                     if "{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i)) in forward_map:
                         output_tmp_i = forward_map["{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i))]
                         max_bounds = DecomonMinimum(mode=mode)(output_tmp_i+output_i)
@@ -697,6 +704,7 @@ def get_backward_model(
 
                         lambda_f = Lambda(lambda x: func(x))
                         output_i = lambda_f(max_bounds + min_bounds)
+                    """
                     forward_map["{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i))]=output_i
                     #print("{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i)))
                     back_bound_i.append(output_i)

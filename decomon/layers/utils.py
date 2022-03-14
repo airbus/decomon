@@ -71,7 +71,7 @@ def _get_shape_tuple(init_tuple, tensor, start_idx, int_shape=None):
 ##############
 
 # case 1: a box
-def get_upper_box(x_min, x_max, w, b):
+def get_upper_box(x_min, x_max, w, b, **kwargs):
     """
     #compute the max of an affine function
     within a box (hypercube) defined by its extremal corners
@@ -101,7 +101,7 @@ def get_upper_box(x_min, x_max, w, b):
     return K.sum(w_pos * x_max_ + w_neg * x_min_, 1) + b
 
 
-def get_lower_box(x_min, x_max, w, b):
+def get_lower_box(x_min, x_max, w, b, **kwargs):
     """
 
     :param x_min: lower bound of the box domain
@@ -150,7 +150,7 @@ def get_lq_norm(x, p, axis=-1):
     return x_q
 
 
-def get_upper_ball(x_0, eps, p, w, b):
+def get_upper_ball(x_0, eps, p, w, b, **kwargs):
     """
     max of an affine function over an Lp ball
     :param x_0: the center of the ball
@@ -172,6 +172,9 @@ def get_upper_ball(x_0, eps, p, w, b):
         # use Holder's inequality p+q=1
         # ||w||_q*eps + w*x_0 + b
 
+        if len(kwargs):
+            return get_upper_ball_finetune(x_0, eps, p, w, b, **kwargs)
+
         upper = eps * get_lq_norm(w, p, axis=1) + b
 
         for _ in range(len(w.shape) - len(x_0.shape)):
@@ -180,7 +183,114 @@ def get_upper_ball(x_0, eps, p, w, b):
         return K.sum(w * x_0, 1) + upper
 
 
-def get_lower_ball(x_0, eps, p, w, b):
+def get_lower_ball_finetune(x_0, eps, p, w, b, **kwargs):
+
+    if "finetune_lower" in kwargs and "upper" in kwargs or "lower" in kwargs:
+
+        alpha = kwargs["finetune_lower"]
+        # assume alpha is the same shape as w, minus the batch dimension
+        n_shape = len(w.shape) - 2
+
+        if "upper" and "lower" in kwargs:
+            upper = kwargs['upper'] # flatten vector
+            lower = kwargs['lower'] # flatten vector
+
+            upper_ = np.reshape(upper, [1, -1]+[1]*n_shape)
+            lower_ = np.reshape(lower, [1, -1] + [1] * n_shape)
+
+            w_alpha = w*alpha[None]
+            w_alpha_bar = w*(1-alpha)
+
+            score_box = K.sum(K.maximum(0., w_alpha_bar)*lower_, 1) + K.sum(K.minimum(0., w_alpha_bar)*upper_, 1)
+            score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
+
+            return score_box+score_ball
+
+        if "upper" in kwargs:
+
+            upper = kwargs['upper'] # flatten vector
+            upper_ = np.reshape(upper, [1, -1]+[1]*n_shape)
+
+            w_alpha = K.minimum(0, w)*alpha[None] + K.maximum(0., w)
+            w_alpha_bar = K.minimum(0, w)*(1-alpha[None])
+
+
+            score_box = K.sum(K.minimum(0., w_alpha_bar)*upper_, 1)
+            score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
+
+            return score_box+score_ball
+
+        if "lower" in kwargs:
+
+            lower = kwargs['lower'] # flatten vector
+            lower_ = np.reshape(lower, [1, -1]+[1]*n_shape)
+
+            w_alpha = K.maximum(0, w)*alpha[None] + K.minimum(0., w)
+            w_alpha_bar = K.maximum(0, w)*(1-alpha[None])
+
+            score_box = K.sum(K.maximum(0., w_alpha_bar)*lower_, 1)
+            score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
+
+            return score_box+score_ball
+
+    return get_lower_ball(x_0, eps, p, w, b)
+
+
+def get_upper_ball_finetune(x_0, eps, p, w, b, **kwargs):
+
+    if "finetune_upper" in kwargs and "upper" in kwargs or "lower" in kwargs:
+
+        alpha = kwargs["finetune_upper"]
+        # assume alpha is the same shape as w, minus the batch dimension
+        n_shape = len(w.shape) - 2
+
+        if "upper" and "lower" in kwargs:
+            upper = kwargs['upper'] # flatten vector
+            lower = kwargs['lower'] # flatten vector
+
+            upper_ = np.reshape(upper, [1, -1]+[1]*n_shape)
+            lower_ = np.reshape(lower, [1, -1] + [1] * n_shape)
+
+            w_alpha = w*alpha[None]
+            w_alpha_bar = w*(1-alpha)
+
+            score_box = K.sum(K.maximum(0., w_alpha_bar)*upper_, 1) + K.sum(K.minimum(0., w_alpha_bar)*lower_, 1)
+            score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
+
+            return score_box+score_ball
+
+        if "upper" in kwargs:
+
+            upper = kwargs['upper'] # flatten vector
+            upper_ = np.reshape(upper, [1, -1]+[1]*n_shape)
+
+            w_alpha = K.minimum(0, w)*alpha[None] + K.maximum(0., w)
+            w_alpha_bar = K.minimum(0, w)*(1-alpha[None])
+
+
+            score_box = K.sum(K.maximum(0., w_alpha_bar)*upper_, 1)
+            score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
+
+            return score_box+score_ball
+
+        if "lower" in kwargs:
+
+            lower = kwargs['lower'] # flatten vector
+            lower_ = np.reshape(lower, [1, -1]+[1]*n_shape)
+
+            w_alpha = K.maximum(0, w)*alpha[None] + K.minimum(0., w)
+            w_alpha_bar = K.maximum(0, w)*(1-alpha[None])
+
+            score_box = K.sum(K.minimum(0., w_alpha_bar)*lower_, 1)
+            score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
+
+            return score_box+score_ball
+
+    return get_upper_ball(x_0, eps, p, w, b)
+
+
+
+def get_lower_ball(x_0, eps, p, w, b, **kwargs):
     """
     min of an affine fucntion over an Lp ball
     :param x_0: the center of the ball
@@ -202,6 +312,8 @@ def get_lower_ball(x_0, eps, p, w, b):
     else:
         # use Holder's inequality p+q=1
         # ||w||_q*eps + w*x_0 + b
+        if len(kwargs):
+            return get_lower_ball_finetune(x_0, eps, p, w, b, **kwargs)
 
         lower = -eps * get_lq_norm(w, p, axis=1) + b
 
@@ -211,7 +323,7 @@ def get_lower_ball(x_0, eps, p, w, b):
         return K.sum(w * x_0, 1) + lower
 
 
-def get_upper(x, w, b, convex_domain={}):
+def get_upper(x, w, b, convex_domain={}, **kwargs):
     """
     Meta function that aggregates all the way
     to compute a constant upper bounds depending on the convex domain
@@ -225,18 +337,21 @@ def get_upper(x, w, b, convex_domain={}):
         # box
         x_min = x[:, 0]
         x_max = x[:, 1]
-        return get_upper_box(x_min, x_max, w, b)
+        return get_upper_box(x_min, x_max, w, b, **kwargs)
 
     if convex_domain["name"] == Box.name:
         x_min = x[:, 0]
         x_max = x[:, 1]
-        return get_upper_box(x_min, x_max, w, b)
+        return get_upper_box(x_min, x_max, w, b, **kwargs)
 
     if convex_domain["name"] == Ball.name:
 
         eps = convex_domain["eps"]
         p = convex_domain["p"]
-        return get_upper_ball(x, eps, p, w, b)
+
+        # check for extra options
+        kwargs.update(convex_domain)
+        return get_upper_ball(x, eps, p, w, b, **kwargs)
 
     if convex_domain["name"] == Vertex.name:
         raise NotImplementedError()
@@ -244,7 +359,7 @@ def get_upper(x, w, b, convex_domain={}):
     raise NotImplementedError()
 
 
-def get_lower(x, w, b, convex_domain={}):
+def get_lower(x, w, b, convex_domain={}, **kwargs):
     """
      Meta function that aggregates all the way
      to compute a constant lower bound depending on the convex domain
@@ -1066,7 +1181,7 @@ def linear_to_softmax(model):
     return model
 
 
-def minus(inputs, mode=F_HYBRID.name, dc_decomp=False):
+def minus(inputs, mode=F_HYBRID.name, dc_decomp=False, **kwargs):
     """
     LiRPA implementation of minus(x)=-x.
     :param inputs:
@@ -1704,7 +1819,7 @@ def min_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, fine
     )
 
 
-def expand_dims(inputs_, dc_decomp=False, mode=F_HYBRID.name, axis=-1):
+def expand_dims(inputs_, dc_decomp=False, mode=F_HYBRID.name, axis=-1, **kwargs):
 
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_IBP.name:
@@ -1756,4 +1871,97 @@ def expand_dims(inputs_, dc_decomp=False, mode=F_HYBRID.name, axis=-1):
     return output
 
 
+def log(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+    """Exponential activation function.
 
+    :param x: list of input tensors
+    :param dc_decomp: boolean that indicates
+    whether we return a difference of convex decomposition of our layer
+    :param convex_domain: the type of convex input domain
+    :param mode: type of Forward propagation (IBP, Forward or Hybrid)
+    :param kwargs: extra parameters
+    :return: the updated list of tensors
+
+    """
+    if dc_decomp:
+        raise NotImplementedError()
+
+    if mode == F_IBP.name:
+        u_c, l_c = x
+        return [K.log(u_c), K.log(l_c)]
+
+    if mode == F_FORWARD.name:
+        x_0, w_u, b_u, w_l, b_l = x
+        u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
+        l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
+        l_c = K.maximum(K.epsilon(), l_c)
+    if mode == F_HYBRID.name:
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
+
+    u_c_ = K.log(u_c)
+    l_c_ = K.log(l_c)
+
+    y = (u_c+l_c)/2. # do finetuneting
+
+    w_l_0 = (u_c_ - l_c_)/K.maximum(u_c-l_c, K.epsilon())
+    b_l_0 = l_c_ - w_l_0*l_c
+
+    w_u_0 = 1/y
+    b_u_0 = K.log(y)-1
+
+    w_u_ = w_u_0[:,None]*w_u
+    b_u_ = w_u_0*b_u + b_u_0
+    w_l_ = w_l_0[:, None] * w_l
+    b_l_ = w_l_0 * b_l + b_l_0
+
+    if mode == F_FORWARD.name:
+        return [x_0, w_u_, b_u_, w_l_, b_l_]
+    if mode == F_HYBRID.name:
+        return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+
+
+def exp(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+    """Exponential activation function.
+
+    :param x: list of input tensors
+    :param dc_decomp: boolean that indicates
+    whether we return a difference of convex decomposition of our layer
+    :param convex_domain: the type of convex input domain
+    :param mode: type of Forward propagation (IBP, Forward or Hybrid)
+    :param kwargs: extra parameters
+    :return: the updated list of tensors
+
+    """
+    if dc_decomp:
+        raise NotImplementedError()
+
+    if mode == F_IBP.name:
+        return [K.exp(e) for e in x]
+    if mode == F_FORWARD.name:
+        x_0, w_u, b_u, w_l, b_l = x
+        u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
+        l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
+    if mode == F_HYBRID.name:
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
+
+    u_c_ = K.exp(u_c)
+    l_c_ = K.exp(l_c)
+
+    y = (u_c+l_c)/2. # do finetuneting
+    slope = K.exp(y)
+
+    w_u_0 = (u_c_ - l_c_)/K.maximum(u_c-l_c, K.epsilon())
+    b_u_0 = l_c_ - w_u_0*l_c
+
+    w_l_0 = K.exp(y)
+    b_l_0 = w_l_0*(1-y)
+
+    w_u_ = w_u_0[:,None]*w_u
+    b_u_ = w_u_0*b_u + b_u_0
+    w_l_ = w_l_0[:, None] * w_l
+    b_l_ = w_l_0 * b_l + b_l_0
+
+    if mode == F_FORWARD.name:
+        return [x_0, w_u_, b_u_, w_l_, b_l_]
+    if mode == F_HYBRID.name:
+        return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]

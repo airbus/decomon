@@ -769,3 +769,32 @@ def get_t_lower(u_c_flat, l_c_flat, s_u, func=K.sigmoid, f_prime=sigmoid_prime):
     b_l = -w_l * u_c_flat + s_u  # func(u_c_flat)
 
     return [w_l, b_l]
+
+
+def set_mode(x, final_mode, mode, convex_domain={}):
+
+    if final_mode==mode:
+        return x
+
+
+    if mode==F_IBP.name:
+        u_c, l_c = x
+    if mode == F_FORWARD.name:
+        x_0, w_u, b_u, w_l, b_l = x
+
+        if final_mode in [F_IBP.name, F_HYBRID.name]:
+            # compute constant bounds
+            u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
+            l_c = get_lower(x_0, w_u, b_u, convex_domain=convex_domain)
+
+    if mode == F_HYBRID.name:
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
+
+    if final_mode==F_IBP.name:
+        return [u_c, l_c]
+    if final_mode == F_FORWARD.name:
+        return [x_0, w_u, b_u, w_l, b_l]
+    if final_mode==F_HYBRID.name:
+        return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
+
+

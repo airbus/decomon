@@ -260,6 +260,7 @@ def convert_forward_functional_model(
     forward_map={},
     name_history=set(),
     finetune_output=False,
+    opt_linear=True, # detect linear successive parts by design
 ):
 
     if not isinstance(model, Model):
@@ -367,7 +368,7 @@ def convert_forward_functional_model(
 
     tensor_map = {}
 
-    for depth in depth_keys:
+    for count_, depth in enumerate(depth_keys):
 
         nodes_depth = model._nodes_by_depth[depth]
         for node in nodes_depth:
@@ -389,6 +390,12 @@ def convert_forward_functional_model(
                     output = get_inputs(node, tensor_map)
 
             if isinstance(layer_, Model):
+                opt_linear_ = False
+                if count_==0 and opt_linear:
+                    opt_linear_=True
+                if opt_linear:
+                    # check the state of the previous layers
+                    raise NotImplementedError()
                 toto, output_, l_map, f_map = convert_forward_functional_model(
                     layer_,
                     input_tensors=output,
@@ -401,6 +408,7 @@ def convert_forward_functional_model(
                     IBP=IBP,
                     forward=forward,
                     name_history=name_history,
+                    opt_init=opt_linear_
                 )
 
                 # output_from_input = pre_process_inputs(output, get_mode(IBP, forward))
@@ -415,7 +423,13 @@ def convert_forward_functional_model(
 
             else:
                 layer_decomon = layer_fn(layer_, depth)
+                if count_==0:
+                    layer_decomon[0].set_linear(opt_linear)
+                if opt_linear and count_:
+                    parents = to_list(node.parent_nodes)
 
+                    bool_linear = min([layer_map["{}_{}".format(parent.outbound_layer.name, get_node_by_id(parent))][-1].get_linear() for parent in parents])
+                    layer_decomon[0].set_linear(bool_linear)
                 # rename if necessary
                 for layer_decomon_i in layer_decomon:
                     if layer_decomon_i.name in name_history:

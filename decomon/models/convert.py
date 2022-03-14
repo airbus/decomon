@@ -9,6 +9,7 @@ import tensorflow.python.keras.backend as K
 from tensorflow.keras.models import Model
 from ..layers.utils import get_upper, get_lower
 import tensorflow as tf
+from decomon.utils import Ball
 
 
 class FORWARD_FEED:
@@ -162,12 +163,16 @@ def clone(
 
     if not ibp and not forward:
         # adapt the mode to the methods
-        if method in [CROWN_HYBRID.name, HYBRID.name]:
+        if len(convex_domain)==0 or convex_domain['name']!=Ball.name:
+            if method in [CROWN_HYBRID.name, HYBRID.name]:
+                ibp=True; forward=True
+            if method in [IBP.name, CROWN_IBP.name, CROWN.name]:
+                ibp=True
+            if method in [FORWARD.name, CROWN_FORWARD.name]:
+                forward=True
+        else:
+            # ball
             ibp=True; forward=True
-        if method in [IBP.name, CROWN_IBP.name, CROWN.name]:
-            ibp=True
-        if method in [FORWARD.name, CROWN_FORWARD.name]:
-            forward=True
 
     if finetune:
         finetune_forward = True

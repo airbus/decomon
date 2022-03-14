@@ -12,9 +12,9 @@ from . import (
 )
 import tensorflow.python.keras.backend as K
 
-from decomon.layers.utils import get_upper, get_lower, relu_, max_, maximum, add, minus, substract
+from decomon.layers.utils import get_upper, get_lower, relu_, max_, maximum, add, minus, substract, log, exp
 
-
+"""
 @pytest.mark.parametrize("odd, floatx", [(0, 32), (0, 64), (0, 16)])
 def test_get_upper_multi_box(odd, floatx):
 
@@ -32,7 +32,6 @@ def test_get_upper_multi_box(odd, floatx):
     # compute maximum
     x_min_ = x_0_[:, 0][:, :, None]
     x_max_ = x_0_[:, 1][:, :, None]
-
     upper_pred = np.sum(np.minimum(W_u_, 0) * x_min_ + np.maximum(W_u_, 0) * x_max_, 1) + b_u_
 
     upper = get_upper(x_0, W_u, b_u)
@@ -1282,3 +1281,289 @@ def test_relu_1D_box_nodc(n):
 
     f_relu_ = K.function(inputs[2:], output)
     assert_allclose(len(f_relu_(inputs_[2:])), 7)
+"""
+
+
+
+
+@pytest.mark.parametrize(
+    "n, mode, floatx",
+    [
+        (1, "ibp", 32),
+        (1, "hybrid", 32),
+        (1, "forward", 32),
+        #(3, "hybrid", 32),
+    ]
+)
+def test_log_1D_box(n, mode, floatx):
+
+    K.set_floatx("float{}".format(floatx))
+    eps = K.epsilon()
+    decimal = 4
+    if floatx == 16:
+        K.set_epsilon(1e-4)
+        decimal = 2
+
+    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+
+
+    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
+    (
+        x_0,
+        y_0,
+        z_0,
+        u_c_0,
+        W_u_0,
+        b_u_0,
+        l_c_0,
+        W_l_0,
+        b_l_0,
+    ) = inputs_  # numpy values
+
+    if mode == "hybrid":
+        output = log(inputs[2:], dc_decomp=False, mode=mode)
+    if mode == "forward":
+        output = log([z, W_u, b_u, W_l, b_l], dc_decomp=False, mode=mode)
+    if mode == "ibp":
+        output = log([u_c, l_c], dc_decomp=False, mode=mode)
+
+    f_log = K.function(inputs[2:], output)
+    f_ref = K.function(inputs, K.log(y))
+
+    y_ = f_ref(inputs_)
+    z_ = z_0
+
+    if mode == "hybrid":
+        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_log(inputs_[2:])
+    if mode == "forward":
+        z_, w_u_, b_u_, w_l_, b_l_ = f_log(inputs_[2:])
+        u_c_, l_c_ = [None] * 2
+    if mode == "ibp":
+        u_c_, l_c_ = f_log(inputs_[2:])
+        w_u_, b_u_, w_l_, b_l_ = [None] * 4
+
+    assert_output_properties_box(
+        x_0,
+        y_,
+        None,
+        None,
+        z_[:, 0],
+        z_[:, 1],
+        u_c_,
+        w_u_,
+        b_u_,
+        l_c_,
+        w_l_,
+        b_l_,
+        "softmax_{}".format(n),
+        decimal=decimal,
+    )
+
+    K.set_floatx("float32")
+    K.set_epsilon(eps)
+
+
+@pytest.mark.parametrize(
+    "n, mode, floatx",
+    [
+        (0, "ibp", 32),
+        (0, "hybrid", 32),
+        (0, "forward", 32),
+
+        (1, "ibp", 32),
+        (1, "hybrid", 32),
+        (1, "forward", 32),
+
+        (2, "ibp", 32),
+        (2, "hybrid", 32),
+        (2, "forward", 32),
+
+        (3, "ibp", 32),
+        (3, "hybrid", 32),
+        (3, "forward", 32),
+
+        (4, "ibp", 32),
+        (4, "hybrid", 32),
+        (4, "forward", 32),
+
+        (5, "ibp", 32),
+        (5, "hybrid", 32),
+        (5, "forward", 32),
+
+        (6, "ibp", 32),
+        (6, "hybrid", 32),
+        (6, "forward", 32),
+
+        (7, "ibp", 32),
+        (7, "hybrid", 32),
+        (7, "forward", 32),
+
+        (8, "ibp", 32),
+        (8, "hybrid", 32),
+        (8, "forward", 32),
+
+        (9, "ibp", 32),
+        (9, "hybrid", 32),
+        (9, "forward", 32),
+        #(3, "hybrid", 32),
+    ]
+)
+def test_exp_1D_box(n, mode, floatx):
+
+    K.set_floatx("float{}".format(floatx))
+    eps = K.epsilon()
+    decimal = 4
+    if floatx == 16:
+        K.set_epsilon(1e-4)
+        decimal = 2
+
+    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+
+
+    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
+    (
+        x_0,
+        y_0,
+        z_0,
+        u_c_0,
+        W_u_0,
+        b_u_0,
+        l_c_0,
+        W_l_0,
+        b_l_0,
+    ) = inputs_  # numpy values
+
+    if mode == "hybrid":
+        output = exp(inputs[2:], dc_decomp=False, mode=mode)
+    if mode == "forward":
+        output = exp([z, W_u, b_u, W_l, b_l], dc_decomp=False, mode=mode)
+    if mode == "ibp":
+        output = exp([u_c, l_c], dc_decomp=False, mode=mode)
+
+    f_exp = K.function(inputs[2:], output)
+    f_ref = K.function(inputs, K.exp(y))
+
+    y_ = f_ref(inputs_)
+    z_ = z_0
+
+    if mode == "hybrid":
+        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_exp(inputs_[2:])
+    if mode == "forward":
+        z_, w_u_, b_u_, w_l_, b_l_ = f_exp(inputs_[2:])
+        u_c_, l_c_ = [None] * 2
+    if mode == "ibp":
+        u_c_, l_c_ = f_exp(inputs_[2:])
+        w_u_, b_u_, w_l_, b_l_ = [None] * 4
+
+
+    assert_output_properties_box(
+        x_0,
+        y_,
+        None,
+        None,
+        z_[:, 0],
+        z_[:, 1],
+        u_c_,
+        w_u_,
+        b_u_,
+        l_c_,
+        w_l_,
+        b_l_,
+        "softmax_{}".format(n),
+        decimal=decimal,
+    )
+
+    K.set_floatx("float32")
+    K.set_epsilon(eps)
+
+
+@pytest.mark.parametrize(
+    "n, mode, floatx",
+    [
+        (0, "ibp", 32),
+        (0, "hybrid", 32),
+        (0, "forward", 32),
+
+        (1, "ibp", 32),
+        (1, "hybrid", 32),
+        (1, "forward", 32),
+
+        (2, "ibp", 32),
+        (2, "hybrid", 32),
+        (2, "forward", 32),
+    ]
+)
+def test_log_exp_1D_box(n, mode, floatx):
+
+    K.set_floatx("float{}".format(floatx))
+    eps = K.epsilon()
+    decimal = 4
+    if floatx == 16:
+        K.set_epsilon(1e-4)
+        decimal = 2
+
+    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+
+
+    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
+    (
+        x_0,
+        y_0,
+        z_0,
+        u_c_0,
+        W_u_0,
+        b_u_0,
+        l_c_0,
+        W_l_0,
+        b_l_0,
+    ) = inputs_  # numpy values
+
+    if mode == "hybrid":
+        output = log(exp(inputs[2:], dc_decomp=False, mode=mode), dc_decomp=False, mode=mode)
+    if mode == "forward":
+        output = log(exp([z, W_u, b_u, W_l, b_l], dc_decomp=False, mode=mode), dc_decomp=False, mode=mode)
+    if mode == "ibp":
+        output = log(exp([u_c, l_c], dc_decomp=False, mode=mode), dc_decomp=False, mode=mode)
+
+    f_log_exp = K.function(inputs[2:], output)
+    f_ref = K.function(inputs, K.log(K.exp(y)))
+
+    y_ = f_ref(inputs_)
+    z_ = z_0
+
+    if mode == "hybrid":
+        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_log_exp(inputs_[2:])
+    if mode == "forward":
+        z_, w_u_, b_u_, w_l_, b_l_ = f_log_exp(inputs_[2:])
+        u_c_, l_c_ = [None] * 2
+    if mode == "ibp":
+        u_c_, l_c_ = f_log_exp(inputs_[2:])
+        w_u_, b_u_, w_l_, b_l_ = [None] * 4
+
+    if n==2 and mode=='forward':
+        import pdb; pdb.set_trace()
+
+    assert_output_properties_box(
+        x_0,
+        y_,
+        None,
+        None,
+        z_[:, 0],
+        z_[:, 1],
+        u_c_,
+        w_u_,
+        b_u_,
+        l_c_,
+        w_l_,
+        b_l_,
+        "softmax_{}".format(n),
+        decimal=decimal,
+    )
+
+    K.set_floatx("float32")
+    K.set_epsilon(eps)
+
+

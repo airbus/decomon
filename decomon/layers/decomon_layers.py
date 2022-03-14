@@ -45,7 +45,7 @@ from .decomon_merge_layers import (
     to_monotonic_merge,
 )
 from .utils import grad_descent
-from .core import F_FORWARD, F_IBP, F_HYBRID, DEEL_LIP
+from .core import F_FORWARD, F_IBP, F_HYBRID, DEEL_LIP, Ball
 import warnings
 import inspect
 
@@ -239,6 +239,10 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         self.kernel = layer.kernel
         self.bias = layer.bias
 
+    def set_linear(self, bool_init):
+        if self.activation is not None and self.activation_name != 'linear':
+            self.linear_layer=bool_init
+
     def call_linear(self, inputs, **kwargs):
         """
         computing the perturbation analysis of the operator without the activation function
@@ -423,11 +427,11 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                           initial_states=[], unroll=False)[1]
 
                 else:
-                    """
-                    b_u_ = conv_pos(b_u) + conv_neg(mask_a * b_l + mask_b * b_u)
 
-                    b_l_ = conv_pos(b_l) + conv_neg(mask_a * b_u + mask_b * b_l)
-                    """
+                    #b_u_ = conv_pos(b_u) + conv_neg(mask_a * b_l + mask_b * b_u)
+
+                    #b_l_ = conv_pos(b_l) + conv_neg(mask_a * b_u + mask_b * b_l)
+
                     b_u_ = conv_pos(b_u) + conv_neg(b_l)
 
                     b_l_ = conv_pos(b_l) + conv_neg(b_u)
@@ -809,6 +813,15 @@ class DecomonDense(Dense, DecomonLayer):
         if self.use_bias:
             self.bias = layer.bias
 
+    def set_linear(self, bool_init):
+        self.linear_layer = bool_init
+
+    def get_linear(self):
+        if self.activation is None and self.activation_name == 'linear':
+            return self.linear_layer
+        else:
+            return False
+
 
     def call_linear(self, inputs):
         """
@@ -860,13 +873,28 @@ class DecomonDense(Dense, DecomonLayer):
         if self.mode in [F_HYBRID.name, F_FORWARD.name]:
             if len(w_u.shape) != len(b_u.shape):
                 x_max = get_upper(x_0, w_u - w_l, b_u - b_l, self.convex_domain)
-                #mask_b = o_value - K.sign(x_max)
-                #mask_a = o_value - mask_b
+                mask_b = o_value - K.sign(x_max)
+                mask_a = o_value - mask_b
+
 
         if self.mode in [F_HYBRID.name, F_IBP.name]:
+            if not self.linear_layer:
+                u_c_ = K.dot(u_c, kernel_pos) + K.dot(l_c, kernel_neg)
+                l_c_ = K.dot(l_c, kernel_pos) + K.dot(u_c, kernel_neg)
+            else:
 
-            u_c_ = K.dot(u_c, kernel_pos) + K.dot(l_c, kernel_neg)
-            l_c_ = K.dot(l_c, kernel_pos) + K.dot(u_c, kernel_neg)
+                # check convex_domain
+                if len(self.convex_domain) and self.convex_domain['name']==Ball.name:
+
+                    if self.mode == F_IBP.name:
+                        x_0 = (u_c+l_c)/2.
+                    b_ = (0*self.kernel[0])[None]
+                    u_c_ = get_upper(x_0, self.kernel[None], b_, convex_domain=self.convex_domain)
+                    l_c_ = get_lower(x_0, self.kernel[None], b_, convex_domain=self.convex_domain)
+
+                else:
+                    u_c_ = K.dot(u_c, kernel_pos) + K.dot(l_c, kernel_neg)
+                    l_c_ = K.dot(l_c, kernel_pos) + K.dot(u_c, kernel_neg)
 
         if self.mode in [F_HYBRID.name, F_FORWARD.name]:
 
@@ -919,10 +947,16 @@ class DecomonDense(Dense, DecomonLayer):
                     # if not self.n_subgrad or self.mode == F_FORWARD.name:
                     b_u_ = K.dot(b_u, kernel_pos) + K.dot(b_l, kernel_neg)
                     b_l_ = K.dot(b_l, kernel_pos) + K.dot(b_u, kernel_neg)
+                    """
+                    b_u_ = K.dot(b_u, kernel_pos) + \
+                           K.dot(mask_a * (b_l) + mask_b * (b_u), kernel_neg)
 
+                    b_l_ = K.dot(b_l, kernel_pos) + \
+                           K.dot(mask_a * (b_u) + mask_b * (b_l), kernel_neg_gamma)
+                    """
                 # else:
-                #mask_a = K.expand_dims(mask_a, 1)
-                #mask_b = K.expand_dims(mask_b, 1)
+                mask_a = K.expand_dims(mask_a, 1)
+                mask_b = K.expand_dims(mask_b, 1)
 
                 # if not self.n_subgrad or self.mode == F_FORWARD.name:
                 if self.finetune and self.mode == F_HYBRID.name:
@@ -942,6 +976,13 @@ class DecomonDense(Dense, DecomonLayer):
                 else:
                     w_u_ = K.dot(w_u, kernel_pos) + K.dot(w_l, kernel_neg)
                     w_l_ = K.dot(w_l, kernel_pos) + K.dot(w_u, kernel_neg)
+                    """
+                    w_u_ = K.dot(w_u, kernel_pos) + K.dot(
+                        mask_a *w_l + mask_b * w_u, kernel_neg)
+                    w_l_ = K.dot(w_l, kernel_pos) + K.dot(
+                        mask_a * w_u + mask_b * w_l, kernel_neg
+                    )
+                    """
 
 
                 # else:
@@ -1608,6 +1649,8 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
     def compute_output_shape(self, input_shape):
         return  input_shape
 
+    def get_linear(self):
+        return self.linear_layer
 
 # conditional import for deel-lip
 

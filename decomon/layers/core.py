@@ -105,6 +105,7 @@ class DecomonLayer(ABC, Layer):
         self.shared = shared
         self.fast = fast
         self.init_layer = False
+        self.linear_layer=False
 
     def build(self, input_shape):
         """
@@ -122,6 +123,12 @@ class DecomonLayer(ABC, Layer):
         :return:
         """
         pass
+
+    def set_linear(self, bool_init):
+        self.linear_layer = bool_init
+
+    def get_linear(self):
+        return False
 
     @abstractmethod
     def compute_output_shape(self, input_shape):
