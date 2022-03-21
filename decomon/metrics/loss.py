@@ -10,6 +10,7 @@ from ..layers.core import DecomonLayer
 from decomon.layers.utils import F_HYBRID, F_IBP
 from decomon.utils import set_mode
 from .utils import categorical_cross_entropy
+import tensorflow as tf
 
 
 def get_model(model):
@@ -345,22 +346,130 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
     return loss_adv
 
 
+
 # create a layer
 class DecomonLossFusion(DecomonLayer):
 
-    def __init__(self, mode=F_HYBRID.name, **kwargs):
+    def __init__(self, mode=F_HYBRID.name, asymptotic=False, **kwargs):
         super(DecomonLossFusion, self).__init__(mode=mode, **kwargs)
         self.final_mode = F_IBP.name
+        self.asymptotic = asymptotic
 
     def call(self, inputs, **kwargs):
 
-        proba = categorical_cross_entropy(inputs, dc_decomp=False, mode=self.mode,
-                                          convex_domain=self.convex_domain)
-        return set_mode(proba, self.final_mode, self.mode, self.convex_domain)[0] # get upper bound
+        if not self.asymptotic:
+
+            u_c, l_c = set_mode(inputs, self.final_mode, self.mode, self.convex_domain)
+
+            return - l_c + K.log(K.sum(K.exp(u_c - K.max(u_c, -1)[:, None]), -1))[:, None] + K.max(u_c, -1)[:, None]
+
+            shape = u_c.shape[-1]
+
+            def cross_entropy(y_tensor):
+                l_c_ = -l_c * y_tensor
+                u_c_ = u_c * (1 - y_tensor)
+
+                return K.categorical_crossentropy(y_tensor, l_c_ + u_c_, from_logits=True)[:, None]
+
+            source_tensor = tf.linalg.diag(K.ones_like(l_c))
+            return K.concatenate([cross_entropy(source_tensor[:, i]) for i in range(shape)], -1)
+
+        else:
+            u_c, l_c = set_mode(inputs, self.final_mode, self.mode, self.convex_domain)  # (None, n_out), (None, n_out)
+            shape = u_c.shape[-1]
+
+            def adv_ibp(u_c, l_c, y_tensor):
+
+                t_tensor = 1 - y_tensor
+                s_tensor = y_tensor
+
+                t_tensor = t_tensor[:, :, None]
+                s_tensor = s_tensor[:, None, :]
+                M = t_tensor * s_tensor
+                upper = K.expand_dims(u_c, -1) - K.expand_dims(l_c, 1)
+                const = (K.max(upper, (-1, -2)) - K.min(upper, (-1, -2)))[:, None, None]
+                upper = upper - (const + K.cast(1, K.floatx())) * (1 - M)
+                return K.max(upper, (-1, -2))
+
+            source_tensor = tf.linalg.diag(K.ones_like(l_c))
+
+            score = K.concatenate([adv_ibp(u_c, l_c, source_tensor[:, i])[:, None] for i in range(shape)], -1)
+            return K.maximum(score, -1)  # + 1e-3*K.maximum(K.max(K.abs(u_c), -1)[:,None], K.abs(l_c))
+
 
     def compute_output_shape(self, input_shape):
         return input_shape[-1]
 
+
+# new layer for new loss functions
+class DecomonRadiusRobust(DecomonLayer):
+
+    def __init__(self, mode=F_HYBRID.name, **kwargs):
+        super(DecomonRadiusRobust, self).__init__(mode=mode, **kwargs)
+
+        if self.mode == F_IBP.name:
+            raise NotImplementedError
+
+        if len(self.convex_domain):
+            raise NotImplementedError()
+
+    def call(self, inputs, **kwargs):
+
+        if self.mode == F_HYBRID.name:
+            x, _, w_u, b_u, _, w_l, b_l = inputs
+        else:
+            x, w_u, b_u, w_l, b_l = inputs
+
+        # compute center
+        x_0 = (x[:,0]+x[:, 1])/2.
+        radius = (x[:,1]-x[:,0])/2.
+        source_tensor = tf.linalg.diag(K.ones_like(b_l))
+
+        shape = b_l.shape[-1]
+
+        def radius_label(y_tensor):
+
+            t_tensor = 1 - y_tensor
+            s_tensor = y_tensor
+
+            W_adv = K.sum(w_l*(s_tensor[:,None]), -1, keepdims=True) - w_u*t_tensor[:,None] - w_l*y_tensor[:,None] # (None, n_in, n_out)
+            b_adv = K.sum(b_l*(s_tensor), -1, keepdims=True) - b_u*t_tensor - b_l*y_tensor  # (None, n_out)
+
+            score = K.sum(W_adv*x_0[:,:,None], 1) + b_adv #(None, n_out)
+            denum = K.maximum(K.sum(K.abs(W_adv*radius[:,:,None]), 1), K.epsilon()) # (None, n_out)
+
+            eps_adv = -score/denum + y_tensor
+
+            adv_volume = 1. - eps_adv
+            return K.max(adv_volume, -1, keepdims=True)
+
+        return K.concatenate([radius_label(source_tensor[:, i]) for i in range(shape)], -1)
+
+    def compute_output_shape(self, input_shape):
+        return input_shape[-1]
+
+
+def build_radius_robust_model(model):
+    IBP = model.IBP
+    forward = model.forward
+
+    mode = get_mode(IBP, forward)
+    convex_domain = model.convex_domain
+
+    inputs = model.input
+    output = model.output
+
+    layer_robust = DecomonRadiusRobust(mode=mode, convex_domain=convex_domain)
+    output_robust = layer_robust(output)
+
+    return DecomonModel(
+        input=inputs,
+        output=output_robust,
+        convex_domain=model.convex_domain,
+        IBP=IBP,
+        forward=forward,
+        finetune=model.finetune,
+    )
 
 
 ##### DESIGN LOSS FUNCTIONS
@@ -375,6 +484,30 @@ def build_crossentropy_model(model):
     output = model.output
 
     layer_fusion = DecomonLossFusion(mode=mode)
+    output_fusion = layer_fusion(output, mode=mode)
+
+    return DecomonModel(
+        input=inputs,
+        output=output_fusion,
+        convex_domain=model.convex_domain,
+        IBP=IBP,
+        forward=forward,
+        finetune=model.finetune,
+    )
+
+
+##### DESIGN LOSS FUNCTIONS
+def build_asymptotic_crossentropy_model(model):
+    IBP = model.IBP
+    forward = model.forward
+
+    mode = get_mode(IBP, forward)
+    convex_domain = model.convex_domain
+
+    inputs = model.input
+    output = model.output
+
+    layer_fusion = DecomonLossFusion(mode=mode, asymptotic=True)
     output_fusion = layer_fusion(output, mode=mode)
 
     return DecomonModel(

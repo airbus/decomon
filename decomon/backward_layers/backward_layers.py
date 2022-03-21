@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import tensorflow.keras.backend as K
 import tensorflow as tf
 import numpy as np
-from tensorflow.keras.layers import Layer, Flatten, Dot, Permute, Activation
+from tensorflow.keras.layers import Layer, Flatten, Permute, Activation
 from decomon.layers.decomon_layers import (
     DecomonDense,
     DecomonConv2D,

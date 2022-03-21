@@ -87,6 +87,8 @@ def convert(
     forward_map={},
     finetune_forward=False,
     finetune_backward=False,
+    final_ibp=False,
+    final_forward=False,
     **kwargs,
 ):
 
@@ -135,6 +137,8 @@ def convert(
             finetune=finetune_backward,
             layer_map=layer_map,
             forward_map=forward_map,
+            final_ibp=final_ibp,
+            final_forward=final_forward,
             **kwargs,
         )
     else:
@@ -156,6 +160,8 @@ def clone(
     shared=True,
     finetune_forward=False,
     finetune_backward=False,
+    final_ibp=False,
+    final_forward=False,
 ):
 
     if not isinstance(model, Model):
@@ -173,6 +179,14 @@ def clone(
         else:
             # ball
             ibp=True; forward=True
+
+    if not final_ibp and not final_forward:
+        if method in [CROWN_IBP.name, CROWN.name]:
+            final_ibp=ibp
+            final_forward=True
+        else:
+            final_ibp=ibp
+            final_forward=forward
 
     if finetune:
         finetune_forward = True
@@ -275,6 +289,8 @@ def clone(
         forward_map={},
         finetune_forward=finetune_forward,
         finetune_backward=finetune_backward,
+        final_ibp=final_ibp,
+        final_forward=final_forward
     )
 
     return DecomonModel(
@@ -283,8 +299,8 @@ def clone(
         convex_domain=convex_domain,
         dc_decomp=False,
         method=method,
-        IBP=ibp,
-        forward=forward,
+        IBP=final_ibp,
+        forward=final_forward,
         finetune=finetune,
         shared=shared,
     )

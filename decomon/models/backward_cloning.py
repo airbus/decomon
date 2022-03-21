@@ -5,7 +5,7 @@ from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
 import numpy as np
 from ..backward_layers.backward_layers import get_backward as get_backward_
 from tensorflow.keras.layers import Lambda, Reshape, Concatenate, Flatten, Minimum, Maximum, Conv2D, Dense
-from ..utils import get_upper_layer, get_lower_layer, backward_minimum, backward_maximum, F_HYBRID, F_FORWARD, F_IBP
+from ..utils import get_upper_layer, get_lower_layer, backward_minimum, backward_maximum, F_HYBRID, F_FORWARD, F_IBP, get_upper_layer_box, get_lower_layer_box
 from tensorflow.keras.models import Model, Sequential
 from .utils import (
     check_input_tensors_sequential,
@@ -21,11 +21,15 @@ from .utils import (
 )
 from decomon.layers.decomon_layers import DecomonMinimum, DecomonMaximum
 import tensorflow.python.keras.backend as K
-from ..utils import get_upper
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear, linear_to_softmax
 
 
 def update_input(backward_bound, input_tensors, mode, output_shape, reshape=False, **kwargs):
+
+    if 'final_mode' in kwargs:
+        final_mode = kwargs["final_mode"]
+    else:
+        final_mode = mode
 
     w_out_u, b_out_u, w_out_l, b_out_l = backward_bound
     if reshape:
@@ -45,98 +49,93 @@ def update_input(backward_bound, input_tensors, mode, output_shape, reshape=Fals
     if mode == F_IBP.name:
         u_c, l_c = input_tensors
 
-        if "flatten" in kwargs:
-            op_flatten = kwargs["flatten"]
-        else:
-            op_flatten = Flatten()
 
-        if "reshape" in kwargs:
-            op_reshape = kwargs["reshape"]
-        else:
-            op_reshape = Reshape((1, -1))
+    if mode == F_IBP.name:
 
-        u_c_flat = op_reshape(op_flatten(u_c))
-        l_c_flat = op_reshape(op_flatten(l_c))
+        # case 1: we do not change the mode
+        if final_mode in [F_IBP.name,  F_HYBRID.name]:
 
-        if "concatenate" in kwargs:
-            op_concat = kwargs["concatenate"]
-        else:
-            op_concat = Concatenate(axis=1)
-
-        """
-        if 'upper_layer' in kwargs:
-            upper_layer = kwargs['upper_layer']
-            lower_layer = kwargs['lower_layer']
-        else:
-            if 'convex_domain' in kwargs:
-                convex_domain=kwargs['convex_domain']
+            if "flatten" in kwargs:
+                op_flatten = kwargs["flatten"]
             else:
-                convex_domain={}
-        """
+                op_flatten = Flatten()
 
-        upper_layer_ibp = get_upper_layer()
-        lower_layer_ibp = get_lower_layer()
-        x = op_concat([l_c_flat, u_c_flat])
-        w_out_u, b_out_u, w_out_l, b_out_l = backward_bound
-        u_c_out = op_reshape_u(upper_layer_ibp([x, w_out_u, b_out_u]))
-        l_c_out = op_reshape_u(lower_layer_ibp([x, w_out_l, b_out_l]))
+            u_c_flat = op_flatten(u_c)
+            l_c_flat = op_flatten(l_c)
 
-    if mode in [F_HYBRID.name, F_FORWARD.name]:
-        # update the linear bounds
+            upper_layer_ibp = get_upper_layer_box()
+            lower_layer_ibp = get_lower_layer_box()
+            u_c_out = op_reshape_u(upper_layer_ibp([l_c_flat, u_c_flat, w_out_u, b_out_u]))
+            l_c_out = op_reshape_u(lower_layer_ibp([l_c_flat, u_c_flat, w_out_l, b_out_l]))
 
-        def func(variables):
+        if final_mode in [F_HYBRID.name, F_FORWARD.name]:
 
-            w_u, b_u, w_l, b_l, w_out_u, b_out_u, w_out_l, b_out_l = variables
-            if len(w_u.shape) == 2:
-                # identity
-                return w_out_u, b_out_u, w_out_l, b_out_l
-            z_value = 0.0
+            # create a fake x
+            if "reshape" in kwargs:
+                op_reshape = kwargs["reshape"]
+            else:
+                op_reshape = Reshape((1, -1))
 
-            w_u_ = K.reshape(w_u, [-1, w_u.shape[1], np.prod(w_u.shape[2:])])  # (None, n_x, n_in)
-            w_l_ = K.reshape(w_l, [-1, w_l.shape[1], np.prod(w_l.shape[2:])])  # (None, n_x, n_in)
-            b_u_ = K.reshape(b_u, [-1, np.prod(b_u.shape[1:])])  # (None, n_in)
-            b_l_ = K.reshape(b_l, [-1, np.prod(b_l.shape[1:])])  # (None, n_in)
+            u_c_flat = op_reshape(u_c)
+            l_c_flat = op_reshape(l_c)
+            x = Concatenate(1)([l_c_flat, u_c_flat])
 
-            w_u_pos = K.maximum(w_out_u, z_value)  # (None, n_in, n_out)
-            w_u_neg = K.minimum(w_out_u, z_value)
+        if final_mode == F_IBP.name:
+            return [u_c_out, l_c_out]
+        if final_mode == F_FORWARD.name:
+            return [x]+backward_bound
+        if final_mode == F_HYBRID.name:
+            return [x, u_c_out, w_out_u, b_out_u, l_c_out, w_out_l, b_out_l]
 
-            w_l_pos = K.maximum(w_out_l, z_value)
-            w_l_neg = K.minimum(w_out_l, z_value)
 
-            #                sum( (None, 1, n_in, n_out)   *  (None, n_x, n_in, 1) -> (None, n_x, n_in, n_out), 2)- >(None, n_x, n_out)
-            w_out_u_0 = K.sum(K.expand_dims(w_u_pos, 1) * K.expand_dims(w_u_, -1), 2) + K.sum(
-                K.expand_dims(w_u_neg, 1) * K.expand_dims(w_l_, -1), 2
-            )
+    # the mode is necessary with linear bounds
 
-            w_out_l_0 = K.sum(K.expand_dims(w_l_pos, 1) * K.expand_dims(w_l_, -1), 2) + K.sum(
-                K.expand_dims(w_l_neg, 1) * K.expand_dims(w_u_, -1), 2
-            )
+    def func(variables):
 
-            b_out_u_0 = (
+        w_u, b_u, w_l, b_l, w_out_u, b_out_u, w_out_l, b_out_l = variables
+        if len(w_u.shape) == 2:
+            # identity
+            return w_out_u, b_out_u, w_out_l, b_out_l
+        z_value = 0.0
+
+        w_u_ = K.reshape(w_u, [-1, w_u.shape[1], np.prod(w_u.shape[2:])])  # (None, n_x, n_in)
+        w_l_ = K.reshape(w_l, [-1, w_l.shape[1], np.prod(w_l.shape[2:])])  # (None, n_x, n_in)
+        b_u_ = K.reshape(b_u, [-1, np.prod(b_u.shape[1:])])  # (None, n_in)
+        b_l_ = K.reshape(b_l, [-1, np.prod(b_l.shape[1:])])  # (None, n_in)
+
+        w_u_pos = K.maximum(w_out_u, z_value)  # (None, n_in, n_out)
+        w_u_neg = K.minimum(w_out_u, z_value)
+
+        w_l_pos = K.maximum(w_out_l, z_value)
+        w_l_neg = K.minimum(w_out_l, z_value)
+
+        #                sum( (None, 1, n_in, n_out)   *  (None, n_x, n_in, 1) -> (None, n_x, n_in, n_out), 2)- >(None, n_x, n_out)
+        w_out_u_0 = K.sum(K.expand_dims(w_u_pos, 1) * K.expand_dims(w_u_, -1), 2) + K.sum(
+            K.expand_dims(w_u_neg, 1) * K.expand_dims(w_l_, -1), 2
+        )
+
+        w_out_l_0 = K.sum(K.expand_dims(w_l_pos, 1) * K.expand_dims(w_l_, -1), 2) + K.sum(
+            K.expand_dims(w_l_neg, 1) * K.expand_dims(w_u_, -1), 2
+        )
+
+        b_out_u_0 = (
                 K.sum(w_u_pos * K.expand_dims(b_u_, -1), 1) + K.sum(w_u_neg * K.expand_dims(b_l_, -1), 1) + b_out_u
-            )
-            b_out_l_0 = (
+        )
+        b_out_l_0 = (
                 K.sum(w_l_pos * K.expand_dims(b_l_, -1), 1) + K.sum(w_l_neg * K.expand_dims(b_u_, -1), 1) + b_out_l
-            )
+        )
 
-            # w_out_u_0 = K.sum(w_out_u[:,None]*K.expand_dims(w_u_, -1), 2)
-            # w_out_l_0 = K.sum(w_out_l[:, None] * K.expand_dims(w_l_, -1), 2)
-            # b_out_u_0 = K.sum(w_out_u*K.expand_dims(b_u_, -1), 1) + b_out_u
-            # b_out_l_0 = K.sum(w_out_l * K.expand_dims(b_l_, -1), 1) + b_out_l
+        return w_out_u_0, b_out_u_0, w_out_l_0, b_out_l_0
 
-            return w_out_u_0, b_out_u_0, w_out_l_0, b_out_l_0
+    lambda_ = Lambda(lambda var: func(var))
 
-        lambda_ = Lambda(lambda var: func(var))
+    w_out_u_, b_out_u_, w_out_l_, b_out_l_ = lambda_([w_u, b_u, w_l, b_l] + backward_bound)
+    w_out_u_ = op_reshape_w(w_out_u_)
+    w_out_l_ = op_reshape_w(w_out_l_)
+    b_out_u_ = op_reshape_u(b_out_u_)
+    b_out_l_ = op_reshape_u(b_out_l_)
 
-        w_out_u_, b_out_u_, w_out_l_, b_out_l_ = lambda_([w_u, b_u, w_l, b_l] + backward_bound)
-        w_out_u_ = op_reshape_w(w_out_u_)
-        w_out_l_ = op_reshape_w(w_out_l_)
-        b_out_u_ = op_reshape_u(b_out_u_)
-        b_out_l_ = op_reshape_u(b_out_l_)
-
-        # need a reshape at the end
-
-    if mode == F_HYBRID.name:
+    if final_mode in [F_HYBRID.name, F_IBP.name]:
         if "upper_layer" in kwargs:
             upper_layer = kwargs["upper_layer"]
             lower_layer = kwargs["lower_layer"]
@@ -151,12 +150,14 @@ def update_input(backward_bound, input_tensors, mode, output_shape, reshape=Fals
         u_c_out = upper_layer([x, w_out_u_, b_out_u_])
         l_c_out = lower_layer([x, w_out_l_, b_out_l_])
 
-    if mode == F_IBP.name:
+
+    if final_mode == F_IBP.name:
         return [u_c_out, l_c_out]
-    if mode == F_FORWARD.name:
+    if final_mode == F_FORWARD.name:
         return [x, w_out_u_, b_out_u_, w_out_l_, b_out_l_]
-    if mode == F_HYBRID.name:
+    if final_mode == F_HYBRID.name:
         return [x, u_c_out, w_out_u_, b_out_u_, l_c_out, w_out_l_, b_out_l_]
+
 
 
 def pre_process_inputs(input_layer_, mode, **kwargs):
@@ -625,6 +626,21 @@ def get_backward_model(
             input_dim = input_tensors[i][0].shape[-1]
 
     mode = get_mode(IBP=IBP, forward=forward)
+    if 'final_ibp' in kwargs or 'final_forward' in kwargs:
+        final_IBP=False
+        final_forward=False
+
+        if 'final_ibp' in kwargs:
+            final_IBP=kwargs['final_ibp']
+        if 'final_forward' in kwargs:
+            final_forward = kwargs['final_forward']
+        if final_IBP or final_forward:
+            final_mode = get_mode(final_IBP, final_forward)
+        else:
+            final_mode=mode
+    else:
+        final_mode=None
+
     if 'mode_output' not in kwargs:
         mode_output = mode
     else:
@@ -674,9 +690,15 @@ def get_backward_model(
                 else:
                     inputs_tensors_i = forward_map["{}_{}".format(layer_name_j, id_j)]
                     kwargs["convex_domain"] = convex_domain
-                    output_i = update_input(
-                        output_i, inputs_tensors_i, mode, node_i.outbound_layer.output_shape, **kwargs
-                    )
+                    if final_mode:
+                        # do not return the same mode as the one used in the internal layers
+                        output_i = update_input(
+                            output_i, inputs_tensors_i, mode, node_i.outbound_layer.output_shape, final_mode=final_mode, **kwargs
+                        )
+                    else:
+                        output_i = update_input(
+                            output_i, inputs_tensors_i, mode, node_i.outbound_layer.output_shape,**kwargs
+                        )
 
                     """
                     if "{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i)) in forward_map:

@@ -334,6 +334,19 @@ def get_upper_layer(convex_domain={}):
 
     return Lambda(func)
 
+def get_lower_layer_box():
+    def func(inputs):
+        return get_lower_box(inputs[0], inputs[1], inputs[2], inputs[3])
+
+    return Lambda(func)
+
+
+def get_upper_layer_box():
+    def func(inputs):
+        return get_upper_box(inputs[0], inputs[1], inputs[2], inputs[3])
+
+    return Lambda(func)
+
 
 def backward_maximum(inputs_, convex_domain):
 
