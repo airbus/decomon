@@ -663,6 +663,13 @@ def get_backward_model(
     nodes_output = model._nodes_by_depth[0]
     output = []
     for node_i, bounds_i in zip(nodes_output, back_bounds):
+        if len(bounds_i)==1:
+            w_u = bounds_i[0]
+            w_l = w_u
+            b_u = 0*w_u[:, 0]
+            b_l = b_u
+            bounds_i = [w_u, b_u, w_l, b_l]
+
         back_bound_i_dict = get_backward_layer(
             node_i,
             layer_map,

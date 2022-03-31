@@ -26,6 +26,7 @@ class DecomonModel(tf.keras.Model):
         forward=True,
         finetune=False,
         shared=True,
+        backward_bounds=False,
         **kwargs,
     ):
         super(DecomonModel, self).__init__(input, output, **kwargs)
@@ -37,6 +38,7 @@ class DecomonModel(tf.keras.Model):
         self.IBP = IBP
         self.forward = forward
         self.finetune = finetune
+        self.backward_bounds=backward_bounds
 
     def set_domain(self, convex_domain):
         convex_domain = set_domain_priv(self.convex_domain, convex_domain)

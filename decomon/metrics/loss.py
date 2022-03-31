@@ -350,12 +350,14 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
 # create a layer
 class DecomonLossFusion(DecomonLayer):
 
-    def __init__(self, mode=F_HYBRID.name, asymptotic=False, **kwargs):
+    def __init__(self, mode=F_HYBRID.name, asymptotic=False, backward=False, **kwargs):
         super(DecomonLossFusion, self).__init__(mode=mode, **kwargs)
         self.final_mode = F_IBP.name
         self.asymptotic = asymptotic
+        self.backward=backward
 
-    def call(self, inputs, **kwargs):
+
+    def call_no_backward(self, inputs, **kwargs):
 
         if not self.asymptotic:
 
@@ -396,6 +398,23 @@ class DecomonLossFusion(DecomonLayer):
             score = K.concatenate([adv_ibp(u_c, l_c, source_tensor[:, i])[:, None] for i in range(shape)], -1)
             return K.maximum(score, -1)  # + 1e-3*K.maximum(K.max(K.abs(u_c), -1)[:,None], K.abs(l_c))
 
+    def call_backward(self, inputs, **kwargs):
+
+        if not self.asymptotic:
+
+            u_c, l_c = set_mode(inputs, self.final_mode, self.mode, self.convex_domain)
+            return K.softmax(u_c)
+
+        else:
+
+            raise NotImplementedError()
+
+    def call(self, inputs, **kwargs):
+        if self.backward:
+            return self.call_backward(inputs, **kwargs)
+        else:
+            return self.call_no_backward(inputs, **kwargs)
+
 
     def compute_output_shape(self, input_shape):
         return input_shape[-1]
@@ -404,7 +423,7 @@ class DecomonLossFusion(DecomonLayer):
 # new layer for new loss functions
 class DecomonRadiusRobust(DecomonLayer):
 
-    def __init__(self, mode=F_HYBRID.name, **kwargs):
+    def __init__(self, mode=F_HYBRID.name, backward=False, **kwargs):
         super(DecomonRadiusRobust, self).__init__(mode=mode, **kwargs)
 
         if self.mode == F_IBP.name:
@@ -413,7 +432,9 @@ class DecomonRadiusRobust(DecomonLayer):
         if len(self.convex_domain):
             raise NotImplementedError()
 
-    def call(self, inputs, **kwargs):
+        self.backward=backward
+
+    def call_no_backward(self, inputs, **kwargs):
 
         if self.mode == F_HYBRID.name:
             x, _, w_u, b_u, _, w_l, b_l = inputs
@@ -422,7 +443,43 @@ class DecomonRadiusRobust(DecomonLayer):
 
         # compute center
         x_0 = (x[:,0]+x[:, 1])/2.
-        radius = (x[:,1]-x[:,0])/2.
+        radius = K.maximum((x[:,1]-x[:,0])/2., K.epsilon())
+        source_tensor = tf.linalg.diag(K.ones_like(b_l))
+
+        shape = b_l.shape[-1]
+
+        def radius_label(y_tensor, backward=False):
+
+            t_tensor = 1 - y_tensor
+            s_tensor = y_tensor
+
+            W_adv = K.sum(-w_l * (s_tensor[:, None]), -1, keepdims=True) + w_u * t_tensor[:, None] + w_l * y_tensor[:,
+                                                                                                           None]  # (None, n_in, n_out)
+            b_adv = K.sum(-b_l * (s_tensor), -1, keepdims=True) + b_u * t_tensor + (
+                        b_l - 1e6) * y_tensor  # (None, n_out)
+
+            score = K.sum(W_adv * x_0[:, :, None], 1) + b_adv  # (None, n_out)
+
+            denum = K.maximum(K.sum(K.abs(W_adv * radius[:, :, None]), 1), K.epsilon())  # (None, n_out)
+
+            eps_adv = K.minimum(-score / denum + y_tensor, 2.)
+
+            adv_volume = 1. - eps_adv
+
+            return K.max(adv_volume, -1, keepdims=True)
+
+        return K.concatenate([radius_label(source_tensor[:, i]) for i in range(shape)], -1)
+
+    def call_backward(self, inputs, **kwargs):
+
+        if self.mode == F_HYBRID.name:
+            x, _, w_u, b_u, _, w_l, b_l = inputs
+        else:
+            x, w_u, b_u, w_l, b_l = inputs
+
+        # compute center
+        x_0 = (x[:,0]+x[:, 1])/2.
+        radius = K.maximum((x[:,1]-x[:,0])/2., K.epsilon())
         source_tensor = tf.linalg.diag(K.ones_like(b_l))
 
         shape = b_l.shape[-1]
@@ -432,18 +489,25 @@ class DecomonRadiusRobust(DecomonLayer):
             t_tensor = 1 - y_tensor
             s_tensor = y_tensor
 
-            W_adv = K.sum(w_l*(s_tensor[:,None]), -1, keepdims=True) - w_u*t_tensor[:,None] - w_l*y_tensor[:,None] # (None, n_in, n_out)
-            b_adv = K.sum(b_l*(s_tensor), -1, keepdims=True) - b_u*t_tensor - b_l*y_tensor  # (None, n_out)
+            W_adv = w_u
+            b_adv = b_u -1e6*y_tensor
 
-            score = K.sum(W_adv*x_0[:,:,None], 1) + b_adv #(None, n_out)
-            denum = K.maximum(K.sum(K.abs(W_adv*radius[:,:,None]), 1), K.epsilon()) # (None, n_out)
+            score = K.sum(W_adv * x_0[:, :, None], 1) + b_adv  # (None, n_out)
+            denum = K.maximum(K.sum(K.abs(W_adv * radius[:, :, None]), 1), K.epsilon())  # (None, n_out)
 
-            eps_adv = -score/denum + y_tensor
+            eps_adv = K.minimum(-score / denum + y_tensor, 2.)
 
             adv_volume = 1. - eps_adv
+
             return K.max(adv_volume, -1, keepdims=True)
 
         return K.concatenate([radius_label(source_tensor[:, i]) for i in range(shape)], -1)
+
+    def call(self, inputs, **kwargs):
+        if self.backward:
+            return self.call_backward(inputs, **kwargs)
+        else:
+            return self.call_no_backward(inputs, **kwargs)
 
     def compute_output_shape(self, input_shape):
         return input_shape[-1]
@@ -459,7 +523,7 @@ def build_radius_robust_model(model):
     inputs = model.input
     output = model.output
 
-    layer_robust = DecomonRadiusRobust(mode=mode, convex_domain=convex_domain)
+    layer_robust = DecomonRadiusRobust(mode=mode, convex_domain=convex_domain, backward=model.backward_bounds)
     output_robust = layer_robust(output)
 
     return DecomonModel(
@@ -483,7 +547,7 @@ def build_crossentropy_model(model):
     inputs = model.input
     output = model.output
 
-    layer_fusion = DecomonLossFusion(mode=mode)
+    layer_fusion = DecomonLossFusion(mode=mode, backward=model.backward_bounds)
     output_fusion = layer_fusion(output, mode=mode)
 
     return DecomonModel(

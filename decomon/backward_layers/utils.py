@@ -2,7 +2,7 @@ from decomon.layers import get_lower, get_upper
 from tensorflow.python.keras import backend as K
 from ..layers import F_HYBRID, F_IBP, F_FORWARD, StaticVariables
 import tensorflow as tf
-from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Flatten, Dropout, Lambda
 from ..layers.utils import (
     get_upper,
     get_lower,
@@ -152,6 +152,12 @@ def backward_relu_(
     lower = K.reshape(lower, [-1, shape])
 
     z_value = K.cast(0.0, K.floatx())
+
+    dropout_u = Dropout(0.)
+    dropout_l = Dropout(0.)
+
+    upper = K.maximum(upper, upper + dropout_u(-2 * upper))
+    lower = K.minimum(lower, lower + dropout_l(-2 * lower))
 
     #############
     w_u_, b_u_, w_l_, b_l_ = get_linear_hull_relu(upper, lower, slope=slope, **kwargs)
@@ -785,3 +791,8 @@ def get_input_dim(input_dim, convex_domain):
         return (2, input_dim)
     else:
         return input_dim
+
+
+
+
+

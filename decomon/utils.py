@@ -387,18 +387,37 @@ def backward_minimum(inputs_, convex_domain):
 
     return output[2:4]
 
+def noisy_lower(lower):
+
+    # if some random binary variable is set to 0 return K.maximum(upper,- upper)
+    var_ = K.minimum(lower, -lower)
+    proba = K.random_binomial(lower.shape, p=0.2, dtype=K.floatx())
+
+    return proba * lower + (1 - proba) * var_
+
+def noisy_upper(upper):
+
+    # if some random binary variable is set to 0 return K.maximum(upper,- upper)
+    var_ = K.maximum(upper, -upper)
+    proba= K.random_binomial(upper.shape, p =0.2, dtype=K.floatx())
+
+    return proba*upper + (1-proba)*var_
+
 
 # define routines to get linear relaxations useful both for forward and backward
 def get_linear_hull_relu(upper, lower, slope, **kwargs):
 
+    #upper = K.in_train_phase(noisy_upper(upper), upper)
+    #lower = K.in_train_phase(noisy_lower(upper), lower)
+
     # in case upper=lower, this cases are
     # considered with index_dead and index_linear
-    alpha = upper / K.maximum(K.cast(K.epsilon(), K.floatx()), upper - lower)
+    alpha = (K.relu(upper) - K.relu(lower)) / K.maximum(K.cast(K.epsilon(), K.floatx()), upper - lower)
     # scaling factor for the upper bound on the relu
     # see README
 
     w_u_ = alpha
-    b_u_ = -alpha * lower
+    b_u_ = K.relu(lower) - alpha * lower
     z_value = K.cast(0.0, K.floatx())
     o_value = K.cast(1.0, K.floatx())
 

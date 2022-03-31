@@ -53,7 +53,10 @@ def get_adv_box(
         x_max = np.reshape(x_max, [-1] + shape)
 
     # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[2:])
+    if model_.backward_bounds:
+        input_shape = list(model_.input_shape[0][2:])
+    else:
+        input_shape = list(model_.input_shape[2:])
     input_dim = np.prod(input_shape)
     x_ = x_min + 0 * x_min
     x_ = x_.reshape([-1] + input_shape)
@@ -107,11 +110,18 @@ def get_adv_box(
 
         IBP = model_.IBP
         forward = model_.forward
-        output = model_.predict(z)
-
         n_label = source_labels.shape[-1]
 
-        def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
+        # two possitible cases: the model improves the bound based on the knowledge of the labels
+        if model_.backward_bounds:
+            C=np.diag([1]*n_label)[None] - source_labels[:,:,None]
+            output = model_.predict([z, C])
+        else:
+            output = model_.predict(z)
+
+
+
+        def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None, backward=False):
 
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
@@ -122,37 +132,19 @@ def get_adv_box(
             s_tensor_ = np.reshape(source_tensor, (-1, shape))
 
             # add penalties on biases
-            upper = u_c[:, :, None] - l_c[:, None]
+            if backward:
+                upper = u_c[:,:,None]-0*l_c[:, None]
+            else:
+                upper = u_c[:, :, None] - l_c[:, None]
             const = upper.max() - upper.min()
             # upper = upper*s_tensor_[:,None, :] + (const+0.1)*(1. - s_tensor_[:,None,:])
             discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
 
             upper -= (1 - discard_mask_s) * (const + 0.1)
 
-            # upper = upper * s_tensor_[:, :, None] - (const + 0.1) * (1. - s_tensor_[:, None,:])
-            # upper = upper*t_tensor_[:,:,None ] - (const+0.1)*(1. - t_tensor_[:,None,:])
-
-            """
-                        if target_tensor is None:
-                target_tensor = 1 - source_tensor
-
-            shape = np.prod(u_c.shape[1:])
-            u_c_ = np.reshape(u_c, (-1, shape))
-            l_c_ = np.reshape(l_c, (-1, shape))
-
-            t_tensor_ = np.reshape(target_tensor, (-1, shape))
-            s_tensor_ = np.reshape(source_tensor, (-1, shape))
-
-            #score_u = np.min(u_c_ * t_tensor_ + (u_c_.max() + 1e6) * (1 - t_tensor_), -1)
-            score_u = np.max(u_c * t_tensor_ + (u_c_.min() - 0.1) * (1 - t_tensor_), -1)
-            score_l = np.max(l_c * s_tensor_ + (l_c_.min() - 0.1) * (1 - s_tensor_), -1)
-
-            return score_u - score_l
-            """
-
             return np.max(np.max(upper, -2), -1)
 
-        def get_forward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None):
+        def get_forward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None, backward=False):
 
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
@@ -167,8 +159,12 @@ def get_adv_box(
             t_tensor_ = np.reshape(target_tensor, (-1, shape))
             s_tensor_ = np.reshape(source_tensor, (-1, shape))
 
-            w_u_f = w_u_ - w_l_
-            b_u_f = b_u_ - b_l_
+            if backward:
+                w_u_f = w_u_ - w_l_
+                b_u_f = b_u_ - b_l_
+            else:
+                w_u_f = w_u_ - 0.*w_l_
+                b_u_f = b_u_ - 0.*b_l_
 
             # add penalties on biases
             upper = (
@@ -195,9 +191,9 @@ def get_adv_box(
             u_c, l_c = output[:2]
 
         if IBP:
-            adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels)
+            adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels, backward=model_.backward_bounds)
         if forward:
-            adv_f = get_forward_score(z, w_u_f, b_u_f, w_l_f, b_l_f, source_labels, target_labels)
+            adv_f = get_forward_score(z, w_u_f, b_u_f, w_l_f, b_l_f, source_labels, target_labels, backward=model_.backward_bounds)
 
         if IBP and not forward:
             adv_score = adv_ibp

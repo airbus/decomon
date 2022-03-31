@@ -156,6 +156,7 @@ def clone(
     ibp=False,
     forward=False,
     method="crown",
+    back_bounds=[],
     finetune=False,
     shared=True,
     finetune_forward=False,
@@ -277,6 +278,7 @@ def clone(
     _, output, _, _ = convert(
         model,
         input_tensors=input_tensors,
+        back_bounds=back_bounds,
         method=method,
         ibp=ibp,
         forward=forward,
@@ -294,7 +296,7 @@ def clone(
     )
 
     return DecomonModel(
-        input=z_tensor,
+        input=[z_tensor]+back_bounds,
         output=output,
         convex_domain=convex_domain,
         dc_decomp=False,
@@ -303,4 +305,5 @@ def clone(
         forward=final_forward,
         finetune=finetune,
         shared=shared,
+        backward_bounds=(len(back_bounds)>0)
     )
