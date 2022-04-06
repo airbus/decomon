@@ -240,7 +240,8 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         self.bias = layer.bias
 
     def set_linear(self, bool_init):
-        if self.activation is not None and self.activation_name != 'linear':
+
+        if self.activation is not None and self.get_config()['activation'] != 'linear':
             self.linear_layer=bool_init
 
     def call_linear(self, inputs, **kwargs):
@@ -705,6 +706,9 @@ class DecomonDense(Dense, DecomonLayer):
         else:
             self.activation_name = activation
 
+        self.input_shape_build=None
+        self.op_dot = K.dot
+
     def build(self, input_shape):
         """
         :param input_shape: list of input shape
@@ -768,7 +772,6 @@ class DecomonDense(Dense, DecomonLayer):
             )
 
 
-
         # False
         # 6 inputs tensors :  h, g, x_min, x_max, W_u, b_u, W_l, b_l
         if self.mode == F_HYBRID.name:
@@ -804,7 +807,11 @@ class DecomonDense(Dense, DecomonLayer):
                 InputSpec(min_ndim=2, axes={-1: input_dim}),
             ]  # g
 
+        if self.has_backward_bounds:
+            self.input_spec+=[InputSpec(ndim=3, axes={-1:self.units, -2:self.units})]
+
         self.built = True
+        self.input_shape_build = input_shape
 
     def shared_weights(self, layer):
         if not self.shared:
@@ -822,6 +829,18 @@ class DecomonDense(Dense, DecomonLayer):
         else:
             return False
 
+    def set_back_bounds(self, has_backward_bounds):
+        # check for activation
+        if self.activation is not None and self.activation_name != 'linear' and has_backward_bounds:
+            raise ValueError()
+        self.has_backward_bounds = has_backward_bounds
+        if self.built and has_backward_bounds:
+            # rebuild with an additional input
+            self.build(self.input_shape_build)
+        if self.has_backward_bounds:
+            op_ = Dot(1)
+            self.op_dot=lambda x,y: op_([x,y])
+
 
     def call_linear(self, inputs):
         """
@@ -834,6 +853,17 @@ class DecomonDense(Dense, DecomonLayer):
 
         if not isinstance(inputs, list):
             raise ValueError("A merge layer should be called " "on a list of inputs.")
+
+        if self.has_backward_bounds:
+            back_bound = inputs[-1]
+            inputs = inputs[:-1]
+
+        if self.has_backward_bounds:
+
+            kernel_ = K.sum(self.kernel[None,:,:,None]*back_bound[:,None], 2)
+            kernel_pos_back = K.maximum(z_value, kernel_)
+            kernel_neg_back = K.minimum(z_value, kernel_)
+
 
         kernel_pos = K.maximum(z_value, self.kernel)
         kernel_neg = K.minimum(z_value, self.kernel)
@@ -879,8 +909,13 @@ class DecomonDense(Dense, DecomonLayer):
 
         if self.mode in [F_HYBRID.name, F_IBP.name]:
             if not self.linear_layer:
-                u_c_ = K.dot(u_c, kernel_pos) + K.dot(l_c, kernel_neg)
-                l_c_ = K.dot(l_c, kernel_pos) + K.dot(u_c, kernel_neg)
+                if not self.has_backward_bounds:
+                    u_c_ = self.op_dot(u_c, kernel_pos) + self.op_dot(l_c, kernel_neg)
+                    l_c_ = self.op_dot(l_c, kernel_pos) + self.op_dot(u_c, kernel_neg)
+                else:
+                    u_c_ = self.op_dot(u_c, kernel_pos_back) + self.op_dot(l_c, kernel_neg_back)
+                    l_c_ = self.op_dot(l_c, kernel_pos_back) + self.op_dot(u_c, kernel_neg_back)
+
             else:
 
                 # check convex_domain
@@ -889,12 +924,19 @@ class DecomonDense(Dense, DecomonLayer):
                     if self.mode == F_IBP.name:
                         x_0 = (u_c+l_c)/2.
                     b_ = (0*self.kernel[0])[None]
+                    if self.has_backward_bounds:
+                        raise NotImplementedError()
                     u_c_ = get_upper(x_0, self.kernel[None], b_, convex_domain=self.convex_domain)
                     l_c_ = get_lower(x_0, self.kernel[None], b_, convex_domain=self.convex_domain)
 
                 else:
-                    u_c_ = K.dot(u_c, kernel_pos) + K.dot(l_c, kernel_neg)
-                    l_c_ = K.dot(l_c, kernel_pos) + K.dot(u_c, kernel_neg)
+                    if not self.has_backward_bounds:
+                        u_c_ = self.op_dot(u_c, kernel_pos) + self.op_dot(l_c, kernel_neg)
+                        l_c_ = self.op_dot(l_c, kernel_pos) + self.op_dot(u_c, kernel_neg)
+                    else:
+                        u_c_ = self.op_dot(u_c, kernel_pos_back) + self.op_dot(l_c, kernel_neg_back)
+                        l_c_ = self.op_dot(l_c, kernel_pos_back) + self.op_dot(u_c, kernel_neg_back)
+
 
         if self.mode in [F_HYBRID.name, F_FORWARD.name]:
 
@@ -961,6 +1003,9 @@ class DecomonDense(Dense, DecomonLayer):
                 # if not self.n_subgrad or self.mode == F_FORWARD.name:
                 if self.finetune and self.mode == F_HYBRID.name:
 
+                    if self.has_backward_bounds:
+                        raise ValueError('last layer should not be finetuned')
+
                     w_u_ = K.dot(w_u, kernel_pos_alpha) + K.dot(w_l, kernel_neg_alpha)
                     w_l_ = K.dot(w_l, kernel_pos_gamma) + K.dot(w_u, kernel_neg_gamma)
 
@@ -974,8 +1019,20 @@ class DecomonDense(Dense, DecomonLayer):
                     )
                     """
                 else:
-                    w_u_ = K.dot(w_u, kernel_pos) + K.dot(w_l, kernel_neg)
-                    w_l_ = K.dot(w_l, kernel_pos) + K.dot(w_u, kernel_neg)
+
+                    if not self.has_backward_bounds:
+                        w_u_ = K.dot(w_u, kernel_pos) + K.dot(w_l, kernel_neg)
+                        w_l_ = K.dot(w_l, kernel_pos) + K.dot(w_u, kernel_neg)
+                    else:
+
+                        raise NotImplementedError() # bug somewhere
+                        w_u_ = K.sum(K.expand_dims(w_u, -1)*K.expand_dims(kernel_pos_back, 1), 2)+ \
+                               K.sum(K.expand_dims(w_l, -1) * K.expand_dims(kernel_neg_back, 1), 2)
+
+                        w_l_ = K.sum(K.expand_dims(w_l, -1) * K.expand_dims(kernel_pos_back, 1), 2) + \
+                               K.sum(K.expand_dims(w_u, -1) * K.expand_dims(kernel_neg_back, 1), 2)
+
+
                     """
                     w_u_ = K.dot(w_u, kernel_pos) + K.dot(
                         mask_a *w_l + mask_b * w_u, kernel_neg)
@@ -1022,16 +1079,28 @@ class DecomonDense(Dense, DecomonLayer):
                 """
 
         if self.use_bias:
-            if self.mode in [F_HYBRID.name, F_IBP.name]:
-                u_c_ = K.bias_add(u_c_, self.bias, data_format="channels_last")
-                l_c_ = K.bias_add(l_c_, self.bias, data_format="channels_last")
-            if self.mode in [F_FORWARD.name, F_HYBRID.name]:
-                b_u_ = K.bias_add(b_u_, self.bias, data_format="channels_last")
-                b_l_ = K.bias_add(b_l_, self.bias, data_format="channels_last")
+
+            if not self.has_backward_bounds:
+                if self.mode in [F_HYBRID.name, F_IBP.name]:
+                    u_c_ = K.bias_add(u_c_, self.bias, data_format="channels_last")
+                    l_c_ = K.bias_add(l_c_, self.bias, data_format="channels_last")
+                if self.mode in [F_FORWARD.name, F_HYBRID.name]:
+                    b_u_ = K.bias_add(b_u_, self.bias, data_format="channels_last")
+                    b_l_ = K.bias_add(b_l_, self.bias, data_format="channels_last")
+            else:
+                b_ = K.sum(back_bound * self.bias[None, None], 1)
+                if self.mode in [F_HYBRID.name, F_IBP.name]:
+                    u_c_ = u_c_ + b_
+                    l_c_ = l_c_ + b_
+                if self.mode in [F_FORWARD.name, F_HYBRID.name]:
+                    b_u_ = b_u_ + b_
+                    b_l_ = b_l_ + b_
 
             #y_ = K.bias_add(y_, self.bias, data_format="channels_last")
 
             if self.dc_decomp:
+                if self.has_backward_bounds:
+                    raise NotImplementedError()
                 h_ = K.bias_add(h_, K.maximum(z_value, self.bias), data_format="channels_last")
                 g_ = K.bias_add(g_, K.minimum(z_value, self.bias), data_format="channels_last")
 

@@ -39,23 +39,20 @@ LINEAR = "linear"
 GROUP_SORT_2 = 'GroupSort2'
 
 def relu(x, dc_decomp=False, convex_domain={}, alpha=0.0, max_value=None, threshold=0.0, mode=F_HYBRID.name, **kwargs):
-    """Rectified Linear Unit.
-    With default values, it returns element-wise `max(x, 0)`.
-    Otherwise, it follows:
-    `f(x) = max_value` for `x >= max_value`,
-    `f(x) = x` for `threshold <= x < max_value`,
-    `f(x) = alpha * (x - threshold)` otherwise.
+    """
 
     :param x: list of input tensors
     :param dc_decomp: boolean that indicates
     whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex input domain
+    :param convex_domain: type of convex input domain (None or dict)
     :param alpha: see Keras official documentation
     :param max_value: see Keras official documentation
     :param threshold: see Keras official documentation
     :param mode: type of Forward propagation (IBP, Forward or Hybrid)
+    :param kwargs: see Keras official documentation
     :return: the updated list of tensors
     """
+
     if threshold != 0:
         raise NotImplementedError()
 
@@ -81,7 +78,7 @@ def linear_hull_s_shape(
     :param f_prime: the derivative of the function (sigmoid_prime...)
     :param dc_decomp: boolean that indicates
     whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex input domain
+    :param convex_domain: type of convex input domain (None or dict)
     :param mode: type of Forward propagation (IBP, Forward or Hybrid)
     :return: the updated list of tensors
     """
@@ -90,13 +87,10 @@ def linear_hull_s_shape(
         raise NotImplementedError()
 
     if mode == F_IBP.name:
-        # y, x_0, u_c, l_c = x[:4]
         u_c, l_c = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
     if mode == F_HYBRID.name:
-        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
     if mode == F_FORWARD.name:
-        # y, x_0, w_u, b_u, w_l, b_l = x[:6]
         x_0, w_u, b_u, w_l, b_l = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
         u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
         l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
@@ -105,7 +99,6 @@ def linear_hull_s_shape(
         u_c_ = func(u_c)
         l_c_ = func(l_c)
 
-        # output = [y, x_0, u_c_, l_c_]
 
     if mode in [F_FORWARD.name, F_HYBRID.name]:
 
@@ -147,15 +140,15 @@ def linear_hull_s_shape(
 
 
 def sigmoid(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
-    """Sigmoid activation function .
+    """LiRPA for Sigmoid activation function .
     `1 / (1 + exp(-x))`.
 
     :param x: list of input tensors
     :param dc_decomp: boolean that indicates
     whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex input domain
+    :param convex_domain: type of convex input domain (None or dict)
     :param mode: type of Forward propagation (IBP, Forward or Hybrid)
-    :param kwargs: extra parameters
+    :param kwargs: see Keras official documentation
     :return: the updated list of tensors
     """
 
@@ -165,15 +158,15 @@ def sigmoid(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
 
 
 def tanh(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
-    """Hyperbolic activation function.
+    """LiRPA for Hyperbolic activation function.
     `tanh(x)=2*sigmoid(2*x)+1`
 
     :param x: list of input tensors
     :param dc_decomp: boolean that indicates
     whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex input domain
+    :param convex_domain: type of convex input domain (None or dict)
     :param mode: type of Forward propagation (IBP, Forward or Hybrid)
-    :param kwargs: extra parameters
+    :param kwargs: see Keras official documentation
     :return: the updated list of tensors
     """
 
@@ -183,16 +176,16 @@ def tanh(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
 
 
 def hard_sigmoid(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
-    """Hard sigmoid activation function.
+    """LiRPA for Hard sigmoid activation function.
        Faster to compute than sigmoid activation.
+
     :param x: list of input tensors
     :param dc_decomp: boolean that indicates
     whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex input domain
+    :param convex_domain: type of convex input domain (None or dict)
     :param mode: type of Forward propagation (IBP, Forward or Hybrid)
-    :param kwargs: extra parameters
+    :param kwargs: see Keras official documentation
     :return: the updated list of tensors
-
     """
 
     if dc_decomp:
@@ -203,22 +196,17 @@ def hard_sigmoid(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwa
 
 
 def elu(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
-    """Exponential linear unit.
-
-    Fast and Accurate Deep Network Learning
-    by Exponential  Linear Units (ELUs)](https://arxiv.org/abs/1511.07289)
-    Relu(x) - Relu(-alpha*[exp(x)-1])
+    """LiRPA for Exponential linear unit.
 
     :param x: list of input tensors
     :param dc_decomp: boolean that indicates
     whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex input domain
+    :param convex_domain: type of convex input domain (None or dict)
     :param mode: type of Forward propagation (IBP, Forward or Hybrid)
-    :param kwargs: extra parameters
+    :param kwargs: see Keras official documentation
     :return: the updated list of tensors
-
-
     """
+
     if dc_decomp:
         raise NotImplementedError()
 
@@ -227,7 +215,7 @@ def elu(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
 
 
 def selu(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
-    """Scaled Exponential Linear Unit (SELU).
+    """LiRPA for Scaled Exponential Linear Unit (SELU).
 
     SELU is equal to: `scale * elu(x, alpha)`, where alpha and scale
     are predefined constants. The values of `alpha` and `scale` are
@@ -239,9 +227,9 @@ def selu(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
     :param x: list of input tensors
     :param dc_decomp: boolean that indicates
     whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex input domain
+    :param convex_domain: type of convex input domain (None or dict)
     :param mode: type of Forward propagation (IBP, Forward or Hybrid)
-    :param kwargs: extra parameters
+    :param kwargs: see Keras official documentation
     :return: the updated list of tensors
 
     """
@@ -253,14 +241,14 @@ def selu(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
 
 
 def linear(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
-    """Linear (i.e. identity) activation function.
+    """LiRPA foe Linear (i.e. identity) activation function.
 
     :param x: list of input tensors
     :param dc_decomp: boolean that indicates
     whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex input domain
+    :param convex_domain: type of convex input domain (None or dict)
     :param mode: type of Forward propagation (IBP, Forward or Hybrid)
-    :param kwargs: extra parameters
+    :param kwargs: see Keras official documentation
     :return: the updated list of tensors
 
     """
@@ -268,14 +256,14 @@ def linear(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
 
 
 def exponential(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
-    """Exponential activation function.
+    """LiRPA for Exponential activation function.
 
     :param x: list of input tensors
     :param dc_decomp: boolean that indicates
     whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex input domain
+    :param convex_domain: type of convex input domain (None or dict)
     :param mode: type of Forward propagation (IBP, Forward or Hybrid)
-    :param kwargs: extra parameters
+    :param kwargs: see Keras official documentation
     :return: the updated list of tensors
 
     """
@@ -284,14 +272,14 @@ def exponential(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwar
 
 
 def softplus(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
-    """Softplus activation function `log(exp(x) + 1)`.
+    """LiRPA for Softplus activation function `log(exp(x) + 1)`.
 
     :param x: list of input tensors
     :param dc_decomp: boolean that indicates
     whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex input domain
+    :param convex_domain: type of convex input domain (None or dict)
     :param mode: type of Forward propagation (IBP, Forward or Hybrid)
-    :param kwargs: extra parameters
+    :param kwargs: see Keras official documentation
     :return: the updated list of tensors
 
     """
@@ -304,14 +292,14 @@ def softplus(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs)
 
 
 def softsign(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
-    """Softsign activation function `x / (abs(x) + 1)`.
+    """LiRPA for Softsign activation function `x / (abs(x) + 1)`.
 
     :param x: list of input tensors
     :param dc_decomp: boolean that indicates
     whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex input domain
+    :param convex_domain: type of convex input domain (None or dict)
     :param mode: type of Forward propagation (IBP, Forward or Hybrid)
-    :param kwargs: extra parameters
+    :param kwargs: see Keras official documentation
     :return: the updated list of tensors
 
     """
@@ -322,14 +310,14 @@ def softsign(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs)
 
 
 def softmax(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, clip=True, **kwargs):
-    """Softmax activation function.
+    """LiRPA for Softmax activation function.
 
     :param x: list of input tensors
     :param dc_decomp: boolean that indicates
     whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex input domain
+    :param convex_domain: type of convex input domain (None or dict)
     :param mode: type of Forward propagation (IBP, Forward or Hybrid)
-    :param kwargs: extra parameters
+    :param kwargs: see Keras official documentation
     :return: the updated list of tensors
 
     """
@@ -363,6 +351,8 @@ def softmax(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, c
     raise NotImplementedError()
 
 def group_sort_2(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, data_format="channels_last", **kwargs):
+
+    raise NotImplementedError()
 
     input_shape = x[-1].shape
     if data_format=="channels_last":

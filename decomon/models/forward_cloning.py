@@ -221,6 +221,7 @@ def convert_forward(
     finetune=False,
     shared=True,
     softmax_to_linear=True,
+    back_bounds=[],
     **kwargs,
 ):
 
@@ -239,6 +240,7 @@ def convert_forward(
         finetune=finetune,
         shared=shared,
         softmax_to_linear=True,
+        back_bounds=back_bounds,
     )
 
     return f_output
@@ -261,6 +263,7 @@ def convert_forward_functional_model(
     name_history=set(),
     finetune_output=False,
     opt_linear=True, # detect linear successive parts by design
+    back_bounds=[],
 ):
 
     if not isinstance(model, Model):
@@ -396,6 +399,10 @@ def convert_forward_functional_model(
                 if opt_linear:
                     # check the state of the previous layers
                     raise NotImplementedError()
+                if depth:
+                    back_bounds_=[]
+                else:
+                    back_bounds_=back_bounds
                 toto, output_, l_map, f_map = convert_forward_functional_model(
                     layer_,
                     input_tensors=output,
@@ -408,7 +415,8 @@ def convert_forward_functional_model(
                     IBP=IBP,
                     forward=forward,
                     name_history=name_history,
-                    opt_init=opt_linear_
+                    opt_init=opt_linear_,
+                    back_bounds=back_bounds_
                 )
 
                 # output_from_input = pre_process_inputs(output, get_mode(IBP, forward))
@@ -430,6 +438,10 @@ def convert_forward_functional_model(
 
                     bool_linear = min([layer_map["{}_{}".format(parent.outbound_layer.name, get_node_by_id(parent))][-1].get_linear() for parent in parents])
                     layer_decomon[0].set_linear(bool_linear)
+
+                if len(back_bounds)!=0 and not depth:
+                    layer_decomon[-1].set_back_bounds(True)
+
                 # rename if necessary
                 for layer_decomon_i in layer_decomon:
                     if layer_decomon_i.name in name_history:
@@ -439,6 +451,8 @@ def convert_forward_functional_model(
                         # set the name in l_map as well
                         set_name(layer_decomon_i, count)
                     name_history.add(layer_decomon_i.name)
+                    if layer_decomon_i.has_backward_bounds:
+                        output+=back_bounds
                     output = layer_decomon_i(output)
                     forward_map["{}_{}".format(layer_decomon_i.name, id_node)] = output
 

@@ -119,6 +119,7 @@ def convert(
             shared=shared,
             softmax_to_linear=softmax_to_linear,
             forward_map=forward_map,
+            back_bounds=back_bounds,
         )
         input_tensors, _, layer_map, forward_map = results
 

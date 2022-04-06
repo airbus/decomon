@@ -52,19 +52,10 @@ class StaticVariables:
         self.mode = mode
 
         if self.mode == F_HYBRID.name:
-            # y, z, u_c, w_u, b_u, l_c, w_l, b_l
-            # nb_tensors = 8
-            # z, u_c, w_u, b_u, l_c, w_l, b_l
             nb_tensors = 7
         elif self.mode == F_IBP.name:
-            # y, z, u_c, l_c
-            # nb_tensors = 4
-            # u_c, l_c
             nb_tensors = 2
         elif self.mode == F_FORWARD.name:
-            # y, z, w_u, b_u, w_l, b_l
-            # nb_tensors = 6
-            # z, w_u, b_u, w_l, b_l
             nb_tensors = 5
         else:
             raise NotImplementedError("unknown forward mode {}".format(mode))
@@ -77,7 +68,7 @@ class StaticVariables:
 
 class DecomonLayer(ABC, Layer):
     """
-    Abstract class that contains the common information of every implemented layers
+    Abstract class that contains the common information of every implemented layers for Forward LiRPA
     """
 
     def __init__(
@@ -85,9 +76,7 @@ class DecomonLayer(ABC, Layer):
     ):
         """
 
-        :param convex_domain: a dictionary that indicates the type of convex
-        domain we are working on (possible options
-        to be determined
+        :param convex_domain: type of convex input domain (None or dict)
         :param dc_decomp: boolean that indicates whether we return a
         difference of convex decomposition of our layer
         :param mode: type of Forward propagation (IBP, Forward or Hybrid)
@@ -106,6 +95,7 @@ class DecomonLayer(ABC, Layer):
         self.fast = fast
         self.init_layer = False
         self.linear_layer=False
+        self.has_backward_bounds = False # optimizing Forward LiRPA for adversarial perturbation
 
     def build(self, input_shape):
         """
@@ -176,6 +166,7 @@ class DecomonLayer(ABC, Layer):
     def split_kwargs(self, **kwargs):
         # necessary for InputLayer
         # 'mode', 'dc_decomp', 'convex_domain', 'finetune', 'shared', 'fast'])
-        import pdb
+        pass
 
-        pdb.set_trace()
+    def set_back_bounds(self, has_backward_bounds):
+        pass

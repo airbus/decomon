@@ -153,12 +153,6 @@ def backward_relu_(
 
     z_value = K.cast(0.0, K.floatx())
 
-    dropout_u = Dropout(0.)
-    dropout_l = Dropout(0.)
-
-    upper = K.maximum(upper, upper + dropout_u(-2 * upper))
-    lower = K.minimum(lower, lower + dropout_l(-2 * lower))
-
     #############
     w_u_, b_u_, w_l_, b_l_ = get_linear_hull_relu(upper, lower, slope=slope, **kwargs)
 
