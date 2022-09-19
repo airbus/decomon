@@ -62,7 +62,7 @@ Please install DecoMon first before running any examples following
 ```
 git clone https://github.com/airbus/decomon
 cd decomon
-poetry build
+poetry install
 ```
 
 This library is still under heavy development.
