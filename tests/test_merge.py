@@ -26,7 +26,7 @@ import tensorflow.python.keras.backend as K
 from numpy.testing import assert_almost_equal
 from tensorflow.keras.models import Model
 
-
+""""
 @pytest.mark.parametrize(
     "n0, mode, floatx",
     [
@@ -131,7 +131,7 @@ def test_DecomonAdd_1D_box(n0, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    decomon_op = DecomonAdd(dc_decomp=False, mode=mode)
+    decomon_op = DecomonAdd(dc_decomp=False, mode=mode, dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
@@ -170,6 +170,7 @@ def test_DecomonAdd_1D_box(n0, mode, floatx):
     )
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)
+
 
 
 @pytest.mark.parametrize(
@@ -422,8 +423,7 @@ def test_DecomonSubstract_1D_box(n0, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    decomon_op = DecomonSubtract(dc_decomp=False, mode=mode)
-
+    decomon_op = DecomonSubtract(dc_decomp=False, mode=mode, dtype=K.floatx())
     inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_0_ = get_standart_values_1d_box(n0, dc_decomp=False)
@@ -566,7 +566,7 @@ def test_DecomonMaximum_1D_box(n0, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    decomon_op = DecomonMaximum(dc_decomp=False, mode=mode)
+    decomon_op = DecomonMaximum(dc_decomp=False, mode=mode, dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
@@ -710,7 +710,7 @@ def test_DecomonMinimum_1D_box(n0, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    decomon_op = DecomonMinimum(dc_decomp=False, mode=mode)
+    decomon_op = DecomonMinimum(dc_decomp=False, mode=mode, dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
@@ -853,7 +853,7 @@ def test_DecomonConcatenate_1D_box(n0, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    decomon_op = DecomonConcatenate(axis=-1, dc_decomp=False, mode=mode)
+    decomon_op = DecomonConcatenate(axis=-1, dc_decomp=False, mode=mode, dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
@@ -891,7 +891,7 @@ def test_DecomonConcatenate_1D_box(n0, mode, floatx):
     )
     K.set_epsilon(eps)
     K.set_floatx("float32")
-
+"""
 
 @pytest.mark.parametrize(
     "n0, mode, floatx",
@@ -925,8 +925,7 @@ def test_DecomonAdd_multiD_box(n0, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    decomon_op = DecomonAdd(dc_decomp=False, mode=mode)
-
+    decomon_op = DecomonAdd(dc_decomp=False, mode=mode, dtype=K.floatx())
     inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
@@ -961,6 +960,7 @@ def test_DecomonAdd_multiD_box(n0, mode, floatx):
     assert_output_properties_box(
         inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add", decimal=decimal
     )
+
     K.set_epsilon(eps)
     K.set_floatx("float32")
 
@@ -997,7 +997,7 @@ def test_DecomonSubstract_multiD_box(n0, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    decomon_op = DecomonSubtract(dc_decomp=False, mode=mode)
+    decomon_op = DecomonSubtract(dc_decomp=False, mode=mode, dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
@@ -1069,7 +1069,7 @@ def test_DecomonAverage_multiD_box(n0, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    decomon_op = DecomonAverage(dc_decomp=False, mode=mode)
+    decomon_op = DecomonAverage(dc_decomp=False, mode=mode, dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
@@ -1141,7 +1141,7 @@ def test_DecomonMaximum_multiD_box(n0, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    decomon_op = DecomonMaximum(dc_decomp=False, mode=mode)
+    decomon_op = DecomonMaximum(dc_decomp=False, mode=mode, dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
@@ -1213,7 +1213,7 @@ def test_DecomonMinimum_multiD_box(n0, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    decomon_op = DecomonMinimum(dc_decomp=False, mode=mode)
+    decomon_op = DecomonMinimum(dc_decomp=False, mode=mode, dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
@@ -1285,7 +1285,7 @@ def test_DecomonConcatenate_multiD_box(n0, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    decomon_op = DecomonConcatenate(dc_decomp=False, mode=mode, axis=-1)
+    decomon_op = DecomonConcatenate(dc_decomp=False, mode=mode, axis=-1, dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
@@ -1586,7 +1586,7 @@ def test_DecomonSubstract_multiD_box_to_monotonic(n0):
 @pytest.mark.parametrize("n0", [0, 1])
 def test_DecomonAverage_multiD_box_to_monotonic(n0):
 
-    ref_op = Average()
+    ref_op = Average(dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
@@ -1618,7 +1618,7 @@ def test_DecomonAverage_multiD_box_to_monotonic(n0):
 @pytest.mark.parametrize("n0", [0, 1])
 def test_DecomonMaximum_multiD_box_to_monotonic(n0):
 
-    ref_op = Maximum()
+    ref_op = Maximum(dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
@@ -1650,7 +1650,7 @@ def test_DecomonMaximum_multiD_box_to_monotonic(n0):
 @pytest.mark.parametrize("n0", [0, 1])
 def test_DecomonMinimum_multiD_box_to_monotonic(n0):
 
-    ref_op = Minimum()
+    ref_op = Minimum(dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
@@ -1682,7 +1682,7 @@ def test_DecomonMinimum_multiD_box_to_monotonic(n0):
 @pytest.mark.parametrize("n0", [0, 1])
 def test_DecomonConcatenate_multiD_box_to_monotonic(n0):
 
-    ref_op = Concatenate(axis=-1)
+    ref_op = Concatenate(axis=-1, dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
@@ -1818,7 +1818,7 @@ def test_DecomonMultiply_1D_box(n0, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    decomon_op = DecomonMultiply(dc_decomp=False, mode=mode)
+    decomon_op = DecomonMultiply(dc_decomp=False, mode=mode, dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
@@ -1861,7 +1861,7 @@ def test_DecomonMultiply_1D_box(n0, mode, floatx):
 @pytest.mark.parametrize("n0", [0, 1, 2, 3, 4, 5, 6, 7])
 def test_DecomonMultiply_1D_box_to_monotonic(n0):
 
-    ref_op = Multiply()
+    ref_op = Multiply(dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
@@ -1920,8 +1920,7 @@ def test_DecomonMultiply_multiD_box(n0, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    decomon_op = DecomonMultiply(dc_decomp=False, mode=mode)
-
+    decomon_op = DecomonMultiply(dc_decomp=False, mode=mode, dtype=K.floatx())
     inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
@@ -1963,7 +1962,7 @@ def test_DecomonMultiply_multiD_box(n0, mode, floatx):
 @pytest.mark.parametrize("n0", [0, 1])
 def test_DecomonMultiply_multiD_box_to_monotonic(n0):
 
-    ref_op = Multiply()
+    ref_op = Multiply(dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
@@ -1989,12 +1988,11 @@ def test_DecomonMultiply_multiD_box_to_monotonic(n0):
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add"
     )
 
-
 """
 @pytest.mark.parametrize("n0", [0, 1, 2, 3, 4, 5, 6, 7])
 def test_DecomonDot_1D_box(n0):
 
-    decomon_op = DecomonDot(axes=(-1, -1), dc_decomp=False)
+    decomon_op = DecomonDot(axes=(-1, -1), dc_decomp=False, dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
@@ -2021,7 +2019,7 @@ def test_DecomonDot_1D_box(n0):
 @pytest.mark.parametrize("n0", [0, 1, 2, 3, 4, 5, 6, 7])
 def test_DecomonDot_1D_box_to_monotonic(n0):
 
-    ref_op = Dot(axes=(-1, -1))
+    ref_op = Dot(axes=(-1, -1), dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
@@ -2051,7 +2049,7 @@ def test_DecomonDot_1D_box_to_monotonic(n0):
 @pytest.mark.parametrize("n0", [0, 1])
 def test_DecomonDot_multiD_box(n0):
 
-    decomon_op = DecomonDot(axes=(-1, -1), dc_decomp=False)
+    decomon_op = DecomonDot(axes=(-1, -1), dc_decomp=False, dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
@@ -2078,7 +2076,7 @@ def test_DecomonDot_multiD_box(n0):
 @pytest.mark.parametrize("n0", [0, 1])
 def test_DecomonDot_multiD_box_to_monotonic(n0):
 
-    ref_op = Dot(axes=(1, 1))
+    ref_op = Dot(axes=(1, 1), dtype=K.floatx())
 
     inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
     inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)

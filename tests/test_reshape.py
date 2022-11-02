@@ -16,7 +16,7 @@ from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
 @pytest.mark.parametrize(
     "odd, m_0, m_1, mode, floatx",
     [
-        (0, 0, 1, "hybrid", 32),
+        (0, 0, 1, "hybrid", 16),
         (0, 0, 1, "forward", 32),
         (0, 0, 1, "ibp", 32),
         (0, 0, 1, "hybrid", 64),
@@ -47,7 +47,7 @@ def test_Decomon_reshape_box(odd, m_0, m_1, mode, floatx):
     target_shape = (np.prod(y.shape[1:]),)
     y_ = np.reshape(inputs_[1], (-1, target_shape[0]))
 
-    monotonic_layer = DecomonReshape((target_shape), dc_decomp=True, mode=mode)
+    monotonic_layer = DecomonReshape((target_shape), dc_decomp=True, mode=mode, dtype=K.floatx())
 
     if mode == "hybrid":
         output = monotonic_layer(inputs[2:])
@@ -66,7 +66,6 @@ def test_Decomon_reshape_box(odd, m_0, m_1, mode, floatx):
     if mode == "ibp":
         u_c_, l_c_, h_, g_ = f_reshape(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
-
     assert_output_properties_box(
         x_,
         y_,
@@ -122,7 +121,7 @@ def test_Decomon_reshape_box_nodc(odd, m_0, m_1, mode, floatx):
     target_shape = (np.prod(y.shape[1:]),)
     y_ = np.reshape(inputs_[1], (-1, target_shape[0]))
 
-    monotonic_layer = DecomonReshape((target_shape), dc_decomp=False, mode=mode)
+    monotonic_layer = DecomonReshape((target_shape), dc_decomp=False, mode=mode, dtype=K.floatx())
 
     if mode == "hybrid":
         output = monotonic_layer(inputs[2:])
@@ -190,7 +189,7 @@ def test_Decomon_reshape_to_monotonic_box(odd, m_0, m_1, shared, floatx):
     z_ = inputs_[2]
     target_shape = (np.prod(y.shape[1:]),)
 
-    reshape_ref = Reshape(target_shape)
+    reshape_ref = Reshape(target_shape, dtype=K.floatx())
     output_ref = reshape_ref(inputs[1])
 
     input_dim = x_.shape[-1]
@@ -265,7 +264,7 @@ def test_Decomon_permute_box(odd, m_0, m_1, mode, floatx):
 
     y_ = np.transpose(inputs_[1], target_shape_)
 
-    monotonic_layer = DecomonPermute(target_shape, dc_decomp=True, mode=mode)
+    monotonic_layer = DecomonPermute(target_shape, dc_decomp=True, mode=mode, dtype=K.floatx())
 
     if mode == "hybrid":
         output = monotonic_layer(inputs[2:])
@@ -340,7 +339,7 @@ def test_Decomon_permute_box_nodc(odd, m_0, m_1, mode, floatx):
 
     y_ = np.transpose(inputs_[1], target_shape_)
 
-    monotonic_layer = DecomonPermute(target_shape, dc_decomp=False, mode=mode)
+    monotonic_layer = DecomonPermute(target_shape, dc_decomp=False, mode=mode, dtype=K.floatx())
 
     if mode == "hybrid":
         output = monotonic_layer(inputs[2:])

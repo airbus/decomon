@@ -114,8 +114,8 @@ def test_relu_backward_1D_box(n, mode, floatx):
         z_0 = z_
         u_c_0, l_c_0 = output
 
-    w_out = Input((1, 1))
-    b_out = Input((1))
+    w_out = Input((1, 1), dtype=K.floatx())
+    b_out = Input((1), dtype=K.floatx())
 
     # backward_relu_(input_mode, w_out, b_out, w_out, b_out, mode=mode)
     w_out_u, b_out_u, w_out_l, b_out_l = backward_relu_(input_mode, w_out, b_out, w_out, b_out, mode=mode)
@@ -139,6 +139,7 @@ def test_relu_backward_1D_box(n, mode, floatx):
 
     K.set_epsilon(eps)
     K.set_floatx("float32")
+
 
 
 @pytest.mark.parametrize(
@@ -190,8 +191,8 @@ def test_add_backward_1D_box(n_0, n_1, mode, floatx):
     inputs_1_ = get_standart_values_1d_box(n_1, dc_decomp=False)
     x_1, y_1, z_1, u_c_1, W_u_1, b_u_1, l_c_1, W_l_1, b_l_1 = inputs_1_
 
-    w_out = Input((1, 1))
-    b_out = Input((1,))
+    w_out = Input((1, 1), dtype=K.floatx())
+    b_out = Input((1,), dtype=K.floatx())
 
     if mode == "hybrid":
         input_tmp_0 = inputs_0[2:]
@@ -326,8 +327,8 @@ def test_substract_backward_1D_box(n_0, n_1, mode, floatx):
         input_tmp_0 = [inputs_0[2], inputs_0[4], inputs_0[5], inputs_0[7], inputs_0[8]]
         input_tmp_1 = [inputs_1[2], inputs_1[4], inputs_1[5], inputs_1[7], inputs_1[8]]
 
-    w_out = Input((1, 1))
-    b_out = Input((1,))
+    w_out = Input((1, 1), dtype=K.floatx())
+    b_out = Input((1,), dtype=K.floatx())
 
     back_bounds_0, back_bounds_1 = backward_substract(input_tmp_0, input_tmp_1, w_out, b_out, w_out, b_out, mode=mode)
 
@@ -457,8 +458,8 @@ def test_maximum_backward_1D_box(n_0, n_1, mode, floatx):
         input_tmp_0 = [inputs_0[2], inputs_0[4], inputs_0[5], inputs_0[7], inputs_0[8]]
         input_tmp_1 = [inputs_1[2], inputs_1[4], inputs_1[5], inputs_1[7], inputs_1[8]]
 
-    w_out = Input((1, 1))
-    b_out = Input((1,))
+    w_out = Input((1, 1), dtype=K.floatx())
+    b_out = Input((1,), dtype=K.floatx())
 
     back_bounds_0, back_bounds_1 = backward_maximum(input_tmp_0, input_tmp_1, w_out, b_out, w_out, b_out, mode=mode)
 
@@ -527,9 +528,10 @@ def test_maximum_backward_1D_box(n_0, n_1, mode, floatx):
 
 
 """
-@pytest.mark.parametrize("odd, mode, floatx", [(1, "hybrid", 32), (1, "forward", 32), (1, "ibp", 32),
-                                               (1, "hybrid", 64), (1, "forward", 64), (1, "ibp", 64),
-                                               (1, "hybrid", 16), (1, "forward", 16), (1, "ibp", 16),
+@pytest.mark.parametrize("odd, mode, floatx", [(1, "hybrid", 32),
+                                               #(1, "forward", 32), (1, "ibp", 32),
+                                               #(1, "hybrid", 64), (1, "forward", 64), (1, "ibp", 64),
+                                               #(1, "hybrid", 16), (1, "forward", 16), (1, "ibp", 16),
                                                ])
 def test_max_backward_multiD_box(odd, mode, floatx):
 

@@ -463,12 +463,14 @@ def test_Decomon_conv_box(data_format, odd, m_0, m_1, activation, padding, use_b
         decimal = 2
 
     layer = DecomonConv2D(
-        10, kernel_size=(3, 3), activation=activation, dc_decomp=False, padding=padding, use_bias=use_bias, mode=mode
+        10, kernel_size=(3, 3), activation=activation, dc_decomp=False, padding=padding, use_bias=use_bias, mode=mode,
+        dtype=K.floatx()
     )
 
     inputs = get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)
     inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
+
 
     if mode == "hybrid":
         input_mode = inputs[2:]
@@ -507,6 +509,7 @@ def test_Decomon_conv_box(data_format, odd, m_0, m_1, activation, padding, use_b
     # import pdb; pdb.set_trace()
 
     # import pdb; pdb.set_trace()
+
 
     w_u_, b_u_, w_l_, b_l_ = output_
 

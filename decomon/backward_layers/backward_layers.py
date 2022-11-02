@@ -16,14 +16,15 @@ from decomon.layers.decomon_layers import (
 from ..backward_layers.activations import get
 from tensorflow.keras.backend import conv2d, conv2d_transpose
 from .utils import V_slope, backward_sort, get_identity_lirpa, get_IBP, get_FORWARD, get_input_dim
-from ..layers.utils import ClipAlpha, F_HYBRID, F_FORWARD
+from ..layers.utils import ClipAlpha, F_HYBRID, F_FORWARD, NonNeg, NonPos, F_IBP, ClipAlphaGrid
 from ..layers.decomon_layers import to_monotonic
 from .backward_maxpooling import BackwardMaxPooling2D
-from .backward_merge import BackwardAverage
+from .backward_merge import BackwardAverage, BackwardAdd
 from tensorflow.python.ops import array_ops
+from ..layers.core import Grid, Option
+from .core import BackwardLayer
 
-
-class BackwardDense(Layer):
+class BackwardDense(BackwardLayer):
     """
     Backward  LiRPA of Dense
     """
@@ -75,7 +76,7 @@ class BackwardDense(Layer):
     def call_previous(self, inputs):
 
         if not len(inputs):
-            inputs = self.layer.input
+            raise ValueError()
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -115,11 +116,20 @@ class BackwardDense(Layer):
                     mode=self.mode,
                 )
         # w_out_u (None, n_out, n_back)  b_out_u (None, n_back)
+
         weights = K.expand_dims(K.expand_dims(weights, 0), -1)  # (1, n_in, n_out, 1)
+        if len(w_out_u.shape) == 2:
+            w_out_u = tf.linalg.diag(w_out_u)  # (None, n_out, n_back=n_out)
+        if len(w_out_l.shape) == 2:
+            w_out_l = tf.linalg.diag(w_out_l)
+
         if self.layer.use_bias:
             bias = K.expand_dims(K.expand_dims(bias, 0), -1)  # (None, n_out, 1)
             b_out_u_ = K.sum(w_out_u * bias, 1) + b_out_u  # (None, n_back)
-            b_out_l_ = K.sum(w_out_l * bias, 1) + b_out_l
+            b_out_l_ = K.sum(w_out_l * bias, 1)
+            b_out_l_+= b_out_l
+
+
         else:
             b_out_u_ = b_out_u
             b_out_l_ = b_out_l
@@ -127,7 +137,6 @@ class BackwardDense(Layer):
         w_out_l = K.expand_dims(w_out_l, 1)
         w_out_u_ = K.sum(w_out_u * weights, 2)  # (None, n_in,  n_back)
         w_out_l_ = K.sum(w_out_l * weights, 2)
-
         return w_out_u_, b_out_u_, w_out_l_, b_out_l_
 
     def call_no_previous(self, inputs):
@@ -141,7 +150,6 @@ class BackwardDense(Layer):
         weights = self.layer.kernel
         if self.layer.use_bias:
             bias = self.layer.bias
-
         if self.activation_name != "linear":
             # here update x
             x = self.layer.call_linear(x_)
@@ -152,7 +160,7 @@ class BackwardDense(Layer):
                         convex_domain=self.convex_domain,
                         slope=self.slope,
                         mode=self.mode,
-                        previous=self.previous,
+                        previous=False,
                         finetune=[self.alpha_b_u, self.alpha_b_l],
                     )
                 else:
@@ -161,7 +169,7 @@ class BackwardDense(Layer):
                         convex_domain=self.convex_domain,
                         slope=self.slope,
                         mode=self.mode,
-                        previous=self.previous,
+                        previous=False,
                         finetune=self.alpha_b_l,
                     )
             else:
@@ -172,31 +180,48 @@ class BackwardDense(Layer):
                     previous=self.previous,
                     mode=self.mode,
                 )
+
             # w_out_u (None, n_out)  b_out_u (None, n_back)
-            w_out_u = tf.linalg.diag(w_out_u)  # (None, n_out, n_back=n_out)
-            w_out_l = tf.linalg.diag(w_out_l)
+            # correction:
+
+
+
+
+            if len(w_out_u.shape)==2:
+                w_out_u = tf.linalg.diag(w_out_u)  # (None, n_out, n_back=n_out)
+            else:
+
+                toto = inputs
+                titi =x
+                finetune = self.finetune
+                act = self.activation_name
+                import pdb; pdb.set_trace()
+
+            if len(w_out_l.shape)==2:
+                w_out_l = tf.linalg.diag(w_out_l)
             weights = K.expand_dims(K.expand_dims(weights, 0), -1)  # (1, n_in, n_out, 1)
             if self.layer.use_bias:
+
                 bias = K.expand_dims(K.expand_dims(bias, 0), -1)  # (None, n_out, 1)
                 b_out_u_ = K.sum(w_out_u * bias, 1) + b_out_u  # (None, n_back)
                 b_out_l_ = K.sum(w_out_l * bias, 1) + b_out_l
             else:
                 b_out_u_ = b_out_u
                 b_out_l_ = b_out_l
-            w_out_u = K.expand_dims(w_out_u, 1)  # (None,  1, n_in, n_back)
-            w_out_l = K.expand_dims(w_out_l, 1)
+            if len(w_out_u.shape)==3:
+                w_out_u = K.expand_dims(w_out_u, 1)  # (None,  1, n_in, n_back)
+            if len(w_out_l.shape)==3:
+                w_out_l = K.expand_dims(w_out_l, 1)
             w_out_u_ = K.sum(w_out_u * weights, 2)  # (None, n_in,  n_back)
             w_out_l_ = K.sum(w_out_l * weights, 2)
         else:
             y_ = x_[-1]
-            z_value = K.cast(0.0, K.floatx())
-
+            z_value = K.cast(0.0, self.dtype)
             w_out_u_, w_out_l_ = [weights[None] + z_value * K.expand_dims(y_, -1)] * 2
             if self.layer.use_bias:
                 b_out_u_, b_out_l_ = [bias[None] + z_value * w_out_u_[:, 0]] * 2  # not sure....
             else:
                 b_out_u_, b_out_l_ = [z_value * w_out_u_[:, 0]] * 2
-
         return w_out_u_, b_out_u_, w_out_l_, b_out_l_
 
     def call(self, inputs):
@@ -262,7 +287,7 @@ class BackwardDense(Layer):
             self.frozen_weights = False
 
 
-class BackwardConv2D(Layer):
+class BackwardConv2D(BackwardLayer):
     """
     Backward  LiRPA of Conv2D
     """
@@ -322,8 +347,25 @@ class BackwardConv2D(Layer):
     def get_bounds_linear(self, w_out_u, b_out_u, w_out_l, b_out_l ):
 
         output_shape_tensor = self.layer.output_shape[-1]
+        shape_ = list(output_shape_tensor)
+        shape_[0]=-1
         n_out = w_out_u.shape[-1]
+
+        """
+        w_out_u = K.reshape(w_out_u, shape_)
+        w_out_u = K.reshape(w_out_l, shape_)
+        b_out_u = K.reshape(b_out_u, shape_)
+        b_out_l = K.reshape(b_out_l, shape_)
+        """
+
         # first permute dimensions
+        if len(w_out_u.shape)==2:
+            w_out_u = tf.linalg.diag(w_out_u)
+
+        if len(w_out_l.shape)==2:
+            w_out_l = tf.linalg.diag(w_out_l)
+
+
         w_out_u = array_ops.transpose(w_out_u, perm=(0, 2, 1))
         w_out_l = array_ops.transpose(w_out_l, perm=(0, 2, 1))
 
@@ -415,7 +457,6 @@ class BackwardConv2D(Layer):
     def call_no_previous(self, inputs):
         x = inputs
 
-
         if self.activation_name != "linear":
             # here update x
             x_output = self.layer.call_linear(x)
@@ -429,36 +470,38 @@ class BackwardConv2D(Layer):
                     slope=self.slope,
                     mode=self.mode,
                     finetune=self.alpha_b_l,
-                    previous=self.previous,
+                    previous=False,
                 )
 
             else:
                 w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                    x_output, convex_domain=self.convex_domain, slope=self.slope, mode=self.mode, previous=self.previous
+                    x_output, convex_domain=self.convex_domain, slope=self.slope, mode=self.mode, previous=False
                 )
-                w_out_u = K.reshape(w_out_u, (-1, shape))
-                b_out_u = K.reshape(b_out_u, (-1, shape))
-                w_out_l = K.reshape(w_out_l, (-1, shape))
-                b_out_l = K.reshape(b_out_l, (-1, shape))
+
+
+
+                #w_out_u = K.reshape(w_out_u, (-1, shape))
+                #b_out_u = K.reshape(b_out_u, (-1, shape))
+                #w_out_l = K.reshape(w_out_l, (-1, shape))
+                #b_out_l = K.reshape(b_out_l, (-1, shape))
 
             return self.get_bounds_linear(w_out_u, b_out_u, w_out_l, b_out_l)
 
         else:
             weight, bias = self.layer.get_backward_weights(x)
 
-            z_value = K.cast(0.0, K.floatx())
+            z_value = K.cast(0.0, self.dtype)
             y_ = x[-1]
             shape = np.prod(y_.shape[1:])
             y_flatten = K.reshape(z_value * y_, (-1, np.prod(shape), 1))  # (None, n_in, 1)
             w_out_u_ = y_flatten + K.expand_dims(weight, 0)
             w_out_l_ = w_out_u_
-            b_out_u_ = K.sum(y_flatten, 1) + K.expand_dims(bias, 0)
+            b_out_u_ = K.sum(y_flatten, 1) + bias
             b_out_l_ = b_out_u_
 
         return w_out_u_, b_out_u_, w_out_l_, b_out_l_
 
     def call(self, inputs):
-
         if self.previous:
             return self.call_previous(inputs)
         else:
@@ -518,11 +561,12 @@ class BackwardConv2D(Layer):
             self.frozen_weights = False
 
 
-class BackwardActivation(Layer):
+class BackwardActivation(BackwardLayer):
     def __init__(
         self, layer, slope=V_slope.name, previous=True, mode=F_HYBRID.name, convex_domain={}, finetune=False, **kwargs
     ):
         super(BackwardActivation, self).__init__(**kwargs)
+
 
         self.layer = layer
         self.activation = get(layer.get_config()["activation"])  # ??? not sur
@@ -539,34 +583,81 @@ class BackwardActivation(Layer):
         self.finetune_param = []
         if self.finetune:
             self.frozen_alpha=False
+        self.grid_finetune=[]
+        self.frozen_grid=False
 
     def build(self, input_shape):
         """
         :param input_shape: list of input shape
         :return:
         """
+        if self.previous:
+            input_dim = np.prod(input_shape[-5][1:])
+        else:
+            input_dim = np.prod(input_shape[-1][1:])
 
         if self.finetune and self.activation_name != "linear":
 
-            if self.previous:
-                input_dim = np.prod(input_shape[-5][1:])
+            if len(self.convex_domain) and self.convex_domain['name'] == Grid.name:
+                if self.activation_name[:4] == "relu":
+                    self.alpha_b_l = self.add_weight(
+                        shape=(3, input_dim,), initializer="ones", name="alpha_l_b_0", regularizer=None,
+                        constraint=ClipAlpha()
+                    )
+                    alpha_b_l = np.zeros((3, input_dim))
+                    alpha_b_l[0]=1
+                    K.set_value(self.alpha_b_l, alpha_b_l)
+                    self.finetune_param.append(self.alpha_b_l)
+
+
             else:
-                input_dim = np.prod(input_shape[-1][1:])
-            self.alpha_b_l = self.add_weight(
-                shape=(input_dim,), initializer="ones", name="alpha_l_b", regularizer=None, constraint=ClipAlpha()
-            )
-
-            if self.activation_name[:4] != "relu":
-                self.alpha_b_u = self.add_weight(
-                    shape=(input_dim,), initializer="ones", name="alpha_u_b", regularizer=None, constraint=ClipAlpha()
+                self.alpha_b_l = self.add_weight(
+                    shape=(2,input_dim,), initializer="ones", name="alpha_l_b", regularizer=None, constraint=ClipAlpha()
                 )
-                self.finetune_param.append(self.alpha_b_u)
+                alpha_b_l = np.zeros((2, input_dim))
+                alpha_b_l[0] = 1
+                K.set_value(self.alpha_b_l, alpha_b_l)
 
-            self.finetune_param.append(self.alpha_b_l)
+                if self.activation_name[:4] != "relu":
+                    self.alpha_b_u = self.add_weight(
+                        shape=(input_dim,), initializer="ones", name="alpha_u_b", regularizer=None, constraint=ClipAlpha()
+                    )
+                    self.finetune_param.append(self.alpha_b_u)
+
+                self.finetune_param.append(self.alpha_b_l)
             if len(self.finetune_param) == 1:
                 self.finetune_param = self.finetune_param[0]
 
+
+        # grid domain
+        if self.activation_name[:4] == "relu":
+
+            #import pdb; pdb.set_trace()
+            if len(self.convex_domain) and self.convex_domain['name']==Grid.name and\
+                    self.convex_domain['option']==Option.lagrangian and self.mode!=F_IBP.name:
+
+                    finetune_grid_pos = self.add_weight(shape=(input_dim,), initializer="zeros", name="lambda_grid_neg", regularizer=None, constraint=NonNeg())
+
+                    finetune_grid_neg = self.add_weight(
+                        shape=(input_dim,), initializer="zeros", name="lambda_grid_pos", regularizer=None,
+                        constraint=NonPos())
+
+                    self.grid_finetune = [finetune_grid_neg, finetune_grid_pos]
+
+        # import pdb; pdb.set_trace()
+        if len(self.convex_domain) and self.convex_domain['name'] == Grid.name and self.convex_domain['option'] == Option.milp and self.mode != F_IBP.name:
+
+            finetune_grid_A = self.add_weight(shape=(input_dim,), initializer="zeros", name="A_{}_{}".format(self.layer.name, self.rec),
+                                                          regularizer=None, trainable=False)#constraint=NonPos()
+            finetune_grid_B = self.add_weight(
+                            shape=(input_dim,), initializer="zeros", name="B_{}_{}".format(self.layer.name, self.rec), regularizer=None, trainable=False) #constraint=NonNeg()
+
+            self.grid_finetune = [finetune_grid_A, finetune_grid_B]
+
+
         self.built = True
+
+
 
     def call_previous(self, inputs):
         x = inputs[:-4]
@@ -583,6 +674,7 @@ class BackwardActivation(Layer):
                     slope=self.slope,
                     mode=self.mode,
                     finetune=self.finetune_param,
+                    finetune_grid=self.grid_finetune
                 )
         else:
             if self.activation_name != "linear":
@@ -593,13 +685,17 @@ class BackwardActivation(Layer):
                     convex_domain=self.convex_domain,
                     slope=self.slope,
                     mode=self.mode,
+                    finetune_grid=self.grid_finetune
                 )
         # reshape
         # shape = np.prod(x[-1].shape[1:])
         # op_reshape = Reshape((shape, -1))
         # w_out_u = op_reshape(w_out_u)
         # w_out_l = op_reshape(w_out_l)
-
+        if len(w_out_u)==2:
+            w_out_u = tf.linalg.diag(w_out_u)
+        if len(w_out_l)==2:
+            w_out_l = tf.linalg.diag(w_out_l)
         return w_out_u, b_out_u, w_out_l, b_out_l
 
     def call_no_previous(self, inputs):
@@ -616,8 +712,9 @@ class BackwardActivation(Layer):
                     convex_domain=self.convex_domain,
                     slope=self.slope,
                     mode=self.mode,
-                    previous=self.previous,  # add hyperparameters
+                    previous=False,  # add hyperparameters
                     finetune=self.finetune_param,
+                    finetune_grid=self.grid_finetune
                 )
             else:
                 w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
@@ -625,25 +722,35 @@ class BackwardActivation(Layer):
                     convex_domain=self.convex_domain,
                     slope=self.slope,
                     mode=self.mode,
-                    previous=self.previous,  # add hyperparameters
+                    previous=False,  # add hyperparameters
+                    finetune_grid=self.grid_finetune
                 )
         else:
             y_ = inputs[-1]
             shape = np.prod(y_.shape[1:])
 
-            z_value = K.cast(0.0, K.floatx())
-            o_value = K.cast(1.0, K.floatx())
+            z_value = K.cast(0.0, self.dtype)
+            o_value = K.cast(1.0, self.dtype)
             y_flat = K.reshape(y_, [-1, shape])
 
             w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
             b_out_u, b_out_l = [z_value * y_flat] * 2
 
-        w_out_u = tf.linalg.diag(w_out_u)
-        w_out_l = tf.linalg.diag(w_out_l)
+            w_out_u = tf.linalg.diag(w_out_u)
+            w_out_l = tf.linalg.diag(w_out_l)
+
+
+        if len(w_out_u.shape)==2:
+            w_out_u = tf.linalg.diag(w_out_u)
+        if len(w_out_l.shape)==2:
+            w_out_l = tf.linalg.diag(w_out_l)
+
 
         return w_out_u, b_out_u, w_out_l, b_out_l
 
     def call(self, inputs):
+
+
         if self.previous:
             y_ = inputs[:-4][-1]
             w_out_u, w_out_l, b_out_u, b_out_l = self.call_previous(inputs)
@@ -657,7 +764,10 @@ class BackwardActivation(Layer):
     def freeze_alpha(self):
         if not self.frozen_alpha:
             if self.finetune and self.mode in [F_FORWARD.name,F_HYBRID.name]:
-                self._trainable_weights = []
+                if len(self.grid_finetune):
+                    self._trainable_weights = self._trainable_weights[:2]
+                else:
+                    self._trainable_weights = []
                 self.frozen_alpha = True
 
 
@@ -671,8 +781,19 @@ class BackwardActivation(Layer):
                         self._trainable_weights += [self.alpha_b_l]
             self.frozen_alpha = False
 
+    def freeze_grid(self):
+        if len(self.grid_finetune) and not self.frozen_grid:
+            self._trainable_weights=self._trainable_weights[2:]
+            self.frozen_grid=True
 
-class BackwardFlatten(Layer):
+    def unfreeze_grid(self):
+        if len(self.grid_finetune) and self.frozen_grid:
+            self._trainable_weights = self.grid_finetune+ self._trainable_weights
+            self.frozen_grid=False
+
+
+
+class BackwardFlatten(BackwardLayer):
     """
     Backward  LiRPA of Flatten
     """
@@ -690,8 +811,8 @@ class BackwardFlatten(Layer):
             y_ = inputs[-1]
             shape = np.prod(y_.shape[1:])
 
-            z_value = K.cast(0.0, K.floatx())
-            o_value = K.cast(1.0, K.floatx())
+            z_value = K.cast(0.0, self.dtype)
+            o_value = K.cast(1.0, self.dtype)
             y_flat = K.reshape(y_, [-1, shape])
 
             w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
@@ -702,7 +823,7 @@ class BackwardFlatten(Layer):
             return w_out_u, b_out_u, w_out_l, b_out_l
 
 
-class BackwardReshape(Layer):
+class BackwardReshape(BackwardLayer):
     """
     Backward  LiRPA of Reshape
     """
@@ -713,15 +834,18 @@ class BackwardReshape(Layer):
         super(BackwardReshape, self).__init__(**kwargs)
         self.previous = previous
 
+    """
     def call(self, inputs, slope=V_slope.name):
+        
+        if self.previous:
         if self.previous:
             w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
         else:
             y_ = inputs[-1]
             shape = np.prod(y_.shape[1:])
 
-            z_value = K.cast(0.0, K.floatx())
-            o_value = K.cast(1.0, K.floatx())
+            z_value = K.cast(0.0, self.dtype)
+            o_value = K.cast(1.0, self.dtype)
             y_flat = K.reshape(y_, [-1, shape])
 
             w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
@@ -730,9 +854,39 @@ class BackwardReshape(Layer):
             w_out_l = tf.linalg.diag(w_out_l)
 
         return w_out_u, b_out_u, w_out_l, b_out_l
+    """
+
+    def call_no_previous(self, inputs):
+
+        y_ = inputs[-1]
+        shape = np.prod(y_.shape[1:])
+
+        z_value = K.cast(0.0, self.dtype)
+        o_value = K.cast(1.0, self.dtype)
+        y_flat = K.reshape(y_, [-1, shape])
+
+        w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
+        b_out_u, b_out_l = [z_value * y_flat] * 2
+        w_out_u = tf.linalg.diag(w_out_u)
+        w_out_l = tf.linalg.diag(w_out_l)
+
+        return w_out_u, b_out_u, w_out_l, b_out_l
+
+    def call_previous(self, inputs):
+
+        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
+        return w_out_u, b_out_u, w_out_l, b_out_l
+
+    def call(self, inputs):
+        if self.previous:
+            return self.call_previous(inputs)
+        else:
+            return self.call_no_previous(inputs)
 
 
-class BackwardPermute(Layer):
+
+
+class BackwardPermute(BackwardLayer):
     """
     Backward LiRPA of Permute
     """
@@ -753,8 +907,8 @@ class BackwardPermute(Layer):
         else:
             y = inputs[-1]
             shape = np.prod(y.shape[1:])
-            z_value = K.cast(0.0, K.floatx())
-            o_value = K.cast(1.0, K.floatx())
+            z_value = K.cast(0.0, self.dtype)
+            o_value = K.cast(1.0, self.dtype)
             y_flat = K.reshape(y, [-1, shape])
 
             w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
@@ -779,13 +933,13 @@ class BackwardPermute(Layer):
         return [w_out_u_0, b_out_u, w_out_l_0, b_out_l]
 
 
-class BackwardDropout(Layer):
+class BackwardDropout(BackwardLayer):
     """
     Backward  LiRPA of Dropout
     """
 
     def __init__(
-        self, layer, slope=V_slope.name, previous=True, mode=F_HYBRID.name, convex_domain={}, finetune=False, **kwargs
+        self, layer, slope=V_slope.name, previous=True, mode=F_HYBRID.name, convex_domain={}, finetune=False, rec=1, **kwargs
     ):
         super(BackwardDropout, self).__init__(**kwargs)
 
@@ -797,8 +951,8 @@ class BackwardDropout(Layer):
             y_ = inputs[-1]
             shape = np.prod(y_.shape[1:])
 
-            z_value = K.cast(0.0, K.floatx())
-            o_value = K.cast(1.0, K.floatx())
+            z_value = K.cast(0.0, self.dtype)
+            o_value = K.cast(1.0, self.dtype)
             y_flat = K.reshape(y_, [-1, shape])
 
             w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
@@ -809,7 +963,7 @@ class BackwardDropout(Layer):
         return w_out_u, b_out_u, w_out_l, b_out_l
 
 
-class BackwardBatchNormalization(Layer):
+class BackwardBatchNormalization(BackwardLayer):
     """
     Backward  LiRPA of Batch Normalization
     """
@@ -864,7 +1018,7 @@ class BackwardBatchNormalization(Layer):
         return w_u_b_, b_u_b_, w_l_b_, b_l_b_
 
 
-class BackwardInputLayer(Layer):
+class BackwardInputLayer(BackwardLayer):
     def __init__(
         self, layer, slope=V_slope.name, previous=True, mode=F_HYBRID.name, convex_domain={}, finetune=False, **kwargs
     ):
@@ -900,7 +1054,6 @@ class BackwardInputLayer(Layer):
 def get_backward(
     layer, slope=V_slope.name, previous=True, mode=F_HYBRID.name, convex_domain={}, finetune=False, **kwargs
 ):
-
     # do it better
     # either a Decomon layer or its pure Keras version
     class_name = layer.__class__.__name__
@@ -911,7 +1064,7 @@ def get_backward(
     class_ = globals()[backward_class_name]
     try:
         return class_(
-            layer, slope=slope, previous=previous, mode=mode, convex_domain=convex_domain, finetune=finetune, **kwargs
+            layer, slope=slope, previous=previous, mode=mode, convex_domain=convex_domain, finetune=finetune, dtype=layer.dtype, **kwargs
         )
     except KeyError:
         import pdb

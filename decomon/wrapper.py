@@ -1,8 +1,9 @@
 from decomon.models.models import DecomonModel
 from decomon.models.convert import clone as convert
 import numpy as np
-from .layers.core import Ball, Box
+from .layers.core import Ball, Box, Grid
 from .models.decomon_sequential import Backward, Forward
+from decomon.numpy.models import NumpyModel
 
 
 ##### ADVERSARIAL ROBUSTTNESS #####
@@ -36,9 +37,9 @@ def get_adv_box(
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
     if not isinstance(model, DecomonModel):
-        model_ = convert(model)
+        model_ = convert(model, ibp=True, forward=True)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
+        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
         model_ = model
 
     n_split = 1
@@ -133,7 +134,9 @@ def get_adv_box(
 
             # add penalties on biases
             if backward:
-                upper = u_c[:,:,None]-0*l_c[:, None]
+
+                # TO DO target tensor
+                return np.max(u_c, -1)
             else:
                 upper = u_c[:, :, None] - l_c[:, None]
             const = upper.max() - upper.min()
@@ -159,12 +162,16 @@ def get_adv_box(
             t_tensor_ = np.reshape(target_tensor, (-1, shape))
             s_tensor_ = np.reshape(source_tensor, (-1, shape))
 
-            if backward:
+            if not backward:
                 w_u_f = w_u_ - w_l_
                 b_u_f = b_u_ - b_l_
             else:
-                w_u_f = w_u_ - 0.*w_l_
-                b_u_f = b_u_ - 0.*b_l_
+
+                upper = (np.maximum(w_u, 0.)*z_tensor[:, 1][:,:,None]).sum(1) + \
+                        (np.minimum(w_u, 0.) * z_tensor[:, 0][:, :, None]).sum(1) + b_u
+
+                return upper.max(-1)
+
 
             # add penalties on biases
             upper = (
@@ -229,9 +236,9 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
     if not isinstance(model, DecomonModel):
-        model_ = convert(model)
+        model_ = convert(model, ibp=True, forward=True)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
+        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
         model_ = model
 
     IBP = model_.IBP
@@ -366,10 +373,10 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
     fast = True
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
-    if not isinstance(model, DecomonModel):
-        model_ = convert(model)
+    if not (isinstance(model, DecomonModel) or isinstance(model, NumpyModel)):
+        model_ = convert(model, ibp=True, forward=True)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
+        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
         model_ = model
 
     n_split = 1
@@ -384,12 +391,17 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         x_max = np.reshape(x_max, [-1] + shape)
 
     # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[2:])
-    input_dim = np.prod(input_shape)
-    x_ = x_min + 0 * x_min
-    x_ = x_.reshape([-1] + input_shape)
-    x_min = x_min.reshape((-1, 1, input_dim))
-    x_max = x_max.reshape((-1, 1, input_dim))
+    if not isinstance(model_, NumpyModel):
+        input_shape = list(model_.input_shape[2:])
+        input_dim = np.prod(input_shape)
+        x_ = x_min + 0 * x_min
+        x_ = x_.reshape([-1] + input_shape)
+        x_min = x_min.reshape((-1, 1, input_dim))
+        x_max = x_max.reshape((-1, 1, input_dim))
+    else:
+        x_min = x_min.reshape((n_batch, 1, -1))
+        x_max = x_max.reshape((n_batch, 1, -1))
+        input_dim = x_min.shape[-1]
 
     z = np.concatenate([x_min, x_max], 1)
 
@@ -473,10 +485,10 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
     fast = True
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
-    if not isinstance(model, DecomonModel):
-        model_ = convert(model)
+    if not (isinstance(model, DecomonModel) or isinstance(model, NumpyModel)):
+        model_ = convert(model, ibp=True, forward=True)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
+        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
         model_ = model
 
     n_split = 1
@@ -491,12 +503,17 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         x_max = np.reshape(x_max, [-1] + shape)
 
     # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[2:])
-    input_dim = np.prod(input_shape)
-    x_ = x_min + 0 * x_min
-    x_ = x_.reshape([-1] + input_shape)
-    x_min = x_min.reshape((-1, 1, input_dim))
-    x_max = x_max.reshape((-1, 1, input_dim))
+    if not isinstance(model_, NumpyModel):
+        input_shape = list(model_.input_shape[2:])
+        input_dim = np.prod(input_shape)
+        x_ = x_min + 0 * x_min
+        x_ = x_.reshape([-1] + input_shape)
+        x_min = x_min.reshape((-1, 1, input_dim))
+        x_max = x_max.reshape((-1, 1, input_dim))
+    else:
+        x_min = x_min.reshape((n_batch, 1, -1))
+        x_max = x_max.reshape((n_batch, 1, -1))
+        input_dim = x_min.shape[-1]
 
     z = np.concatenate([x_min, x_max], 1)
 
@@ -580,10 +597,10 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
     fast = True
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
-    if not isinstance(model, DecomonModel):
-        model_ = convert(model)
+    if not (isinstance(model, DecomonModel) or isinstance(model, NumpyModel)):
+        model_ = convert(model, ibp=True, forward=True)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
+        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
         model_ = model
 
     n_split = 1
@@ -598,12 +615,18 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         x_max = np.reshape(x_max, [-1] + shape)
 
     # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[2:])
-    input_dim = np.prod(input_shape)
-    x_ = x_min + 0 * x_min
-    x_ = x_.reshape([-1] + input_shape)
-    x_min = x_min.reshape((-1, 1, input_dim))
-    x_max = x_max.reshape((-1, 1, input_dim))
+    if not isinstance(model_, NumpyModel):
+        input_shape = list(model_.input_shape[2:])
+        input_dim = np.prod(input_shape)
+        x_ = x_min + 0 * x_min
+        x_ = x_.reshape([-1] + input_shape)
+        x_min = x_min.reshape((-1, 1, input_dim))
+        x_max = x_max.reshape((-1, 1, input_dim))
+    else:
+        x_min = x_min.reshape((n_batch, 1, -1))
+        x_max = x_max.reshape((n_batch, 1, -1))
+        input_dim=x_min.shape[-1]
+
 
     z = np.concatenate([x_min, x_max], 1)
 
@@ -709,7 +732,7 @@ def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, convex_domain=convex_domain)
+        model_ = convert(model, method='crown-hybrid', convex_domain=convex_domain, ibp=True, forward=False)
     else:
         model_ = model
         if eps >= 0:
@@ -804,7 +827,7 @@ def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
     convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
 
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, convex_domain=convex_domain)
+        model_ = convert(model, method='crown-hybrid', convex_domain=convex_domain, ibp=True, forward=False)
     else:
         model_ = model
         if eps >= 0:
@@ -899,7 +922,7 @@ def get_range_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
     convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
 
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, convex_domain=convex_domain)
+        model_ = convert(model, method='crown-hybrid', convex_domain=convex_domain, ibp=True, forward=False)
     else:
         model_ = model
         if eps >= 0:
@@ -1049,7 +1072,7 @@ def refine_box(func, model, x_min, x_max, n_split, source_labels=None, target_la
     if not isinstance(model, DecomonModel):
         model_ = convert(model)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
+        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
         model_ = model
 
     # reshape x_mmin, x_max
@@ -1109,7 +1132,6 @@ def refine_box(func, model, x_min, x_max, n_split, source_labels=None, target_la
                 i = np.argmax(np.max(index_max[n_i, :count], -1))
                 j = np.argmax(index_max[n_i, i])
             else:
-                import pdb; pdb.set_trace()
                 i = np.random.randint(count - 1)
                 j = np.random.randint(input_dim)
 

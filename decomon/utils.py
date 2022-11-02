@@ -10,6 +10,7 @@ from .layers.core import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
 from tensorflow.keras.layers import Flatten
 from tensorflow.math import greater_equal
 import tensorflow as tf
+from .corners.slope import get_linear_lower_slope_relu
 
 
 # create static variables for varying convex domain
@@ -20,6 +21,9 @@ class Ball:
 class Box:
     name = "box"  # Hypercube
 
+class Grid:
+    name = "grid"  # Hypercube
+    stable_coeff = 0.
 
 class Vertex:
     name = "vertex"  # convex set represented by its vertices
@@ -68,7 +72,7 @@ def relu_prime(x):
     :return:
     """
 
-    return K.clip(K.sign(x), K.cast(0, K.floatx()), K.cast(1, K.floatx()))
+    return K.clip(K.sign(x), K.cast(0, dtype=x.dtype), K.cast(1, dtype=x.dtype))
 
 
 def sigmoid_prime(x):
@@ -79,7 +83,7 @@ def sigmoid_prime(x):
     """
 
     s_x = K.sigmoid(x)
-    return s_x * (K.cast(1, K.floatx()) - s_x)
+    return s_x * (K.cast(1, dtype=x.dtype) - s_x)
 
 
 def tanh_prime(x):
@@ -90,7 +94,7 @@ def tanh_prime(x):
     """
 
     s_x = K.tanh(x)
-    return K.cast(1, K.floatx()) - K.pow(s_x, K.cast(2, K.floatx()))
+    return K.cast(1, dtype=x.dtype) - K.pow(s_x, K.cast(2, dtype=x.dtype))
 
 
 def softsign_prime(x):
@@ -100,7 +104,7 @@ def softsign_prime(x):
     :return:
     """
 
-    return K.cast(1.0, K.floatx()) / K.pow(K.cast(1.0, K.floatx()) + K.abs(x), K.cast(2, K.floatx()))
+    return K.cast(1.0, dtype=x.dtype) / K.pow(K.cast(1.0, dtype=x.dtype) + K.abs(x), K.cast(2, dtype=x.dtype))
 
 
 ##############
@@ -125,7 +129,7 @@ def get_upper_box(x_min, x_max, w, b):
         return x_max
 
     # split into positive and negative components
-    z_value = K.cast(0.0, K.floatx())
+    z_value = K.cast(0.0, dtype=x_min.dtype)
     w_pos = K.maximum(w, z_value)
     w_neg = K.minimum(w, z_value)
 
@@ -152,7 +156,7 @@ def get_lower_box(x_min, x_max, w, b):
     if len(w.shape) == len(b.shape):
         return x_min
 
-    z_value = K.cast(0.0, K.floatx())
+    z_value = K.cast(0.0, dtype=x_min.dtype)
 
     w_pos = K.maximum(w, z_value)
     w_neg = K.minimum(w, z_value)
@@ -268,7 +272,7 @@ def get_upper(x, w, b, convex_domain={}):
         x_max = x[:, 1]
         return get_upper_box(x_min, x_max, w, b)
 
-    if convex_domain["name"] == Box.name:
+    if convex_domain["name"] == Box.name or convex_domain["name"] == Grid.name:
         x_min = x[:, 0]
         x_max = x[:, 1]
         return get_upper_box(x_min, x_max, w, b)
@@ -303,7 +307,7 @@ def get_lower(x, w, b, convex_domain={}):
 
         return get_lower_box(x_min, x_max, w, b)
 
-    if convex_domain["name"] == Box.name:
+    if convex_domain["name"] == Box.name or convex_domain["name"] == Grid.name:
         x_min = x[:, 0]
         x_max = x[:, 1]
         return get_lower_box(x_min, x_max, w, b)
@@ -405,21 +409,26 @@ def noisy_upper(upper):
 
 
 # define routines to get linear relaxations useful both for forward and backward
-def get_linear_hull_relu(upper, lower, slope, **kwargs):
+def get_linear_hull_relu(upper, lower, slope, upper_g=0, lower_g=0, **kwargs):
+
+
 
     #upper = K.in_train_phase(noisy_upper(upper), upper)
     #lower = K.in_train_phase(noisy_lower(upper), lower)
 
     # in case upper=lower, this cases are
     # considered with index_dead and index_linear
-    alpha = (K.relu(upper) - K.relu(lower)) / K.maximum(K.cast(K.epsilon(), K.floatx()), upper - lower)
+    alpha = (K.relu(upper) - K.relu(lower)) / K.maximum(K.cast(K.epsilon(), dtype=upper.dtype), upper - lower)
+
     # scaling factor for the upper bound on the relu
     # see README
 
     w_u_ = alpha
     b_u_ = K.relu(lower) - alpha * lower
-    z_value = K.cast(0.0, K.floatx())
-    o_value = K.cast(1.0, K.floatx())
+    z_value = K.cast(0.0, dtype=upper.dtype)
+    o_value = K.cast(1.0, dtype=upper.dtype)
+
+
 
     if slope == V_slope.name:
         # 1 if upper<=-lower else 0
@@ -435,33 +444,43 @@ def get_linear_hull_relu(upper, lower, slope, **kwargs):
         b_l_ = z_value * b_u_
 
     if slope == Z_slope.name:
-        print("Z_slope")
         w_l_ = z_value * w_u_
         b_l_ = z_value * b_u_
 
     if slope == O_slope.name:
-        print("O_slope")
         w_l_ = z_value * w_u_ + o_value
         b_l_ = z_value * b_u_
 
     if slope == S_slope.name:
-        print("S_slope")
         w_l_ = w_u_
         b_l_ = z_value * b_u_
 
+
+    if 'upper_grid' in kwargs:
+
+        raise NotImplementedError()
+        upper_grid = kwargs['upper_grid']
+        lower_grid = kwargs['lower_grid']
+
+        w_l_, b_l_ = get_linear_lower_slope_relu(upper, lower, upper_grid, lower_grid, **kwargs)
+
     if "finetune" in kwargs:
+        raise NotImplementedError()
+        if not('finetune_grid' in kwargs and len(kwargs['finetune_grid'])):
 
-        # weighted linear combination
-        alpha_l = kwargs["finetune"]
+            # weighted linear combination
+            alpha_l = kwargs["finetune"]
+            alpha_l_0 = alpha_l[0][None]
+            alpha_l_1 = alpha_l[1][None]
 
-        alpha_l_ = alpha_l[None]
+            w_l_ = alpha_l_0*w_l_ + (1-alpha_l_0)*alpha_l_1
+            b_l_ = alpha_l_0*b_l_
 
-        w_l_ = alpha_l_ * w_l_
-        b_l_ = alpha_l_ * b_l_ + (o_value - alpha_l_) * K.maximum(lower, z_value)
 
     # check inactive relu state: u<=0
     index_dead = -K.clip(K.sign(upper) - o_value, -o_value, z_value)  # =1 if inactive state
     index_linear = K.clip(K.sign(lower) + o_value, z_value, o_value)  # 1 if linear state
+
 
     w_u_ = (o_value - index_dead) * w_u_
     w_l_ = (o_value - index_dead) * w_l_
@@ -473,13 +492,6 @@ def get_linear_hull_relu(upper, lower, slope, **kwargs):
     b_u_ = (o_value - index_linear) * b_u_
     b_l_ = (o_value - index_linear) * b_l_
 
-    if "finetune" in kwargs:
-        # weighted linear combination
-        alpha_l = kwargs["finetune"]
-        alpha_l_ = alpha_l[None]
-
-        w_l_ = alpha_l_ * w_l_
-        b_l_ = alpha_l_ * b_l_ + (o_value - alpha_l_) * K.maximum(lower, z_value)
 
     return [w_u_, b_u_, w_l_, b_l_]
 
@@ -504,12 +516,12 @@ def get_linear_softplus_hull(upper, lower, slope, **kwargs):
     # considered with index_dead and index_linear
     u_c_ = K.softsign(upper)
     l_c_ = K.softsign(lower)
-    alpha = (u_c_ - l_c_) / K.maximum(K.cast(K.epsilon(), K.floatx()), (upper - lower))
+    alpha = (u_c_ - l_c_) / K.maximum(K.cast(K.epsilon(), dtype=upper.dtype), (upper - lower))
     w_u_ = alpha
     b_u_ = -alpha * lower + l_c_
 
-    z_value = K.cast(0.0, K.floatx())
-    o_value = K.cast(1.0, K.floatx())
+    z_value = K.cast(0.0, dtype=upper.dtype)
+    o_value = K.cast(1.0, dtype=upper.dtype)
 
     if slope == V_slope.name:
         # 1 if upper<=-lower else 0
@@ -617,9 +629,9 @@ def get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, convex_dom
     :return: the updated list of tensors
     """
 
-    z_value = K.cast(0.0, K.floatx())
-    o_value = K.cast(1.0, K.floatx())
-    t_value = K.cast(2.0, K.floatx())
+    z_value = K.cast(0.0, dtype=x[0].dtype)
+    o_value = K.cast(1.0, dtype=x[0].dtype)
+    t_value = K.cast(2.0, dtype=x[0].dtype)
 
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_IBP.name:
@@ -718,8 +730,8 @@ def get_t_upper(u_c_flat, l_c_flat, s_l, func=K.sigmoid, f_prime=sigmoid_prime):
     :return: the upper affine bounds in this subcase
     """
 
-    o_value = K.cast(1.0, K.floatx())
-    z_value = K.cast(0.0, K.floatx())
+    o_value = K.cast(1.0, dtype=u_c_flat.dtype)
+    z_value = K.cast(0.0, dtype=u_c_flat.dtype)
 
     # step1: find t
     u_c_flat_ = K.expand_dims(u_c_flat, -1)  # (None, n , 1)
@@ -734,7 +746,7 @@ def get_t_upper(u_c_flat, l_c_flat, s_l, func=K.sigmoid, f_prime=sigmoid_prime):
     threshold = K.min(score, -1)  # (None, n)
 
     index_t = K.cast(
-        K.switch(K.greater(threshold, z_value * threshold), index_, K.clip(index_ - 1, 0, 100)), K.floatx()
+        K.switch(K.greater(threshold, z_value * threshold), index_, K.clip(index_ - 1, 0, 100)), dtype=u_c_flat.dtype
     )  # (None, n)
     t_value = K.sum(
         K.switch(
@@ -749,7 +761,7 @@ def get_t_upper(u_c_flat, l_c_flat, s_l, func=K.sigmoid, f_prime=sigmoid_prime):
     )  # (None, n)
 
     s_t = func(t_value)  # (None, n)
-    w_u = (s_t - s_l) / K.maximum(K.cast(K.epsilon(), K.floatx()), t_value - l_c_flat)  # (None, n)
+    w_u = (s_t - s_l) / K.maximum(K.cast(K.epsilon(), dtype=u_c_flat.dtype), t_value - l_c_flat)  # (None, n)
     b_u = -w_u * l_c_flat + s_l  # + func(l_c_flat)
 
     return [w_u, b_u]
@@ -766,8 +778,8 @@ def get_t_lower(u_c_flat, l_c_flat, s_u, func=K.sigmoid, f_prime=sigmoid_prime):
     :param f_prime: the derivative of the function
     :return: the lower affine bounds in this subcase
     """
-    z_value = K.cast(0.0, K.floatx())
-    o_value = K.cast(1.0, K.floatx())
+    z_value = K.cast(0.0, dtype=u_c_flat.dtype)
+    o_value = K.cast(1.0, dtype=u_c_flat.dtype)
 
     # step1: find t
     u_c_flat_ = K.expand_dims(u_c_flat, -1)  # (None, n , 1)
@@ -782,7 +794,7 @@ def get_t_lower(u_c_flat, l_c_flat, s_u, func=K.sigmoid, f_prime=sigmoid_prime):
 
     threshold = K.min(score, -1)
     index_t = K.cast(
-        K.switch(K.greater(threshold, z_value * threshold), index_, K.clip(index_ + 1, 0, 100)), K.floatx()
+        K.switch(K.greater(threshold, z_value * threshold), index_, K.clip(index_ + 1, 0, 100)), dtype=u_c_flat.dtype
     )  # (None, n)
     t_value = K.sum(
         K.switch(
@@ -797,7 +809,7 @@ def get_t_lower(u_c_flat, l_c_flat, s_u, func=K.sigmoid, f_prime=sigmoid_prime):
     )
 
     s_t = func(t_value)  # (None, n)
-    w_l = (s_u - s_t) / K.maximum(K.cast(K.epsilon(), K.floatx()), u_c_flat - t_value)  # (None, n)
+    w_l = (s_u - s_t) / K.maximum(K.cast(K.epsilon(), dtype=u_c_flat.dtype), u_c_flat - t_value)  # (None, n)
     b_l = -w_l * u_c_flat + s_u  # func(u_c_flat)
 
     return [w_l, b_l]
@@ -828,5 +840,42 @@ def set_mode(x, final_mode, mode, convex_domain={}):
         return [x_0, w_u, b_u, w_l, b_l]
     if final_mode==F_HYBRID.name:
         return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
+
+
+def get_AB(model_):
+    dico_AB = dict()
+    convex_domain = model_.convex_domain
+    if not (len(convex_domain) and convex_domain['name'] == 'grid' and convex_domain['option'] == 'milp'):
+        return dico_AB
+
+    for layer in model_.layers:
+        name = layer.name
+        sub_names = name.split('backward_activation')
+        if len(sub_names) > 1:
+            key = '{}_{}'.format(layer.layer.name, layer.rec)
+            if key not in dico_AB:
+                dico_AB[key] = layer.grid_finetune
+    return dico_AB
+
+def get_AB_finetune(model_):
+    dico_AB = dict()
+    convex_domain = model_.convex_domain
+    if not (len(convex_domain) and convex_domain['name'] == 'grid' and convex_domain['option'] == 'milp'):
+        return dico_AB
+
+    if not model_.finetune:
+        return dico_AB
+
+    for layer in model_.layers:
+        name = layer.name
+        sub_names = name.split('backward_activation')
+        if len(sub_names) > 1:
+            key = '{}_{}'.format(layer.layer.name, layer.rec)
+            if key not in dico_AB:
+                dico_AB[key] = layer.alpha_b_l
+    return dico_AB
+
+
+
 
 

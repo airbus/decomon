@@ -17,8 +17,9 @@ from decomon.layers.activations import sigmoid, tanh, softsign, softplus
 from deel.lip.activations import GroupSort2
 from tensorflow.keras.layers import Dense
 
+"""
 def test_group_sort_2_activation(n):
 
     # create a layer with GroupSort2 as activation
     layer = Dense(1, activation=GroupSort2())
-
+"""

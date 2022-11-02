@@ -320,7 +320,7 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, slope, previous, mode, f
     inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
-    layer_ = Dense(1, use_bias=use_bias, activation=activation)
+    layer_ = Dense(1, use_bias=use_bias, activation=activation, dtype=K.floatx())
     input_dim = x.shape[-1]
     layer_(inputs[1])
     if mode == "hybrid":
@@ -348,8 +348,8 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, slope, previous, mode, f
         output = layer(input_mode)
         u_c_0, l_c_0 = output
 
-    w_out = Input((1, 1))
-    b_out = Input((1,))
+    w_out = Input((1, 1), dtype=K.floatx())
+    b_out = Input((1,), dtype=K.floatx())
     # get backward layer
     layer_backward = get_backward(
         layer_, input_dim=input_dim, slope=slope, previous=previous, mode=mode, convex_domain={}
@@ -565,7 +565,7 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, previou
     inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     input_dim = x.shape[-1]
-    layer_ = Dense(1, use_bias=True, activation=activation)
+    layer_ = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
     layer_(inputs[1])
     if mode == "hybrid":
         IBP = True
@@ -595,8 +595,8 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, previou
     # output = layer(inputs[2:])
     # z_0, u_c_0, _, _, l_c_0, _, _ = output
 
-    w_out = Input((1, 1))
-    b_out = Input((1,))
+    w_out = Input((1, 1), dtype=K.floatx())
+    b_out = Input((1,), dtype=K.floatx())
     # get backward layer
     layer_backward = get_backward(layer_, input_dim=input_dim, previous=previous, mode=mode, convex_domain={})
     if previous:

@@ -17,10 +17,10 @@ def get_standart_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
     for testing the activations
     """
 
-    w_u_ = np.ones(nb)
-    b_u_ = np.zeros(nb)
-    w_l_ = np.ones(nb)
-    b_l_ = np.zeros(nb)
+    w_u_ = np.ones(nb, dtype=K.floatx())
+    b_u_ = np.zeros(nb, dtype=K.floatx())
+    w_l_ = np.ones(nb, dtype=K.floatx())
+    b_l_ = np.zeros(nb, dtype=K.floatx())
 
     if n == 0:
         # identity
@@ -106,7 +106,7 @@ def get_standart_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
 
     if dc_decomp:
 
-        return [
+        output= [
             x_[:, None],
             y_[:, None],
             x_0_[:, :, None],
@@ -119,18 +119,22 @@ def get_standart_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
             h_[:, None],
             g_[:, None],
         ]
+    else:
+        output = [
+            x_[:, None],
+            y_[:, None],
+            x_0_[:, :, None],
+            u_c_[:, None],
+            w_u_[:, None, None],
+            b_u_[:, None],
+            l_c_[:, None],
+            w_l_[:, None, None],
+            b_l_[:, None],
+        ]
 
-    return [
-        x_[:, None],
-        y_[:, None],
-        x_0_[:, :, None],
-        u_c_[:, None],
-        w_u_[:, None, None],
-        b_u_[:, None],
-        l_c_[:, None],
-        w_l_[:, None, None],
-        b_l_[:, None],
-    ]
+    # cast element
+    return [e.astype(K.floatx()) for e in output]
+
 
 
 def get_tensor_decomposition_1d_box(dc_decomp=True):
@@ -138,27 +142,27 @@ def get_tensor_decomposition_1d_box(dc_decomp=True):
     if dc_decomp:
         return [
             Input((1,), dtype=K.floatx()),
-            Input((1,)),
-            Input((2, 1)),
-            Input((1,)),
-            Input((1, 1)),
-            Input((1,)),
-            Input((1,)),
-            Input((1, 1)),
-            Input((1,)),
-            Input((1,)),
-            Input((1,)),
+            Input((1,), dtype=K.floatx()),
+            Input((2, 1), dtype=K.floatx()),
+            Input((1,), dtype=K.floatx()),
+            Input((1, 1), dtype=K.floatx()),
+            Input((1,), dtype=K.floatx()),
+            Input((1,), dtype=K.floatx()),
+            Input((1, 1), dtype=K.floatx()),
+            Input((1,), dtype=K.floatx()),
+            Input((1,), dtype=K.floatx()),
+            Input((1,), dtype=K.floatx()),
         ]
     return [
-        Input((1,)),
-        Input((1,)),
-        Input((2, 1)),
-        Input((1,)),
-        Input((1, 1)),
-        Input((1,)),
-        Input((1,)),
-        Input((1, 1)),
-        Input((1,)),
+        Input((1,), dtype=K.floatx()),
+        Input((1,), dtype=K.floatx()),
+        Input((2, 1), dtype=K.floatx()),
+        Input((1,), dtype=K.floatx()),
+        Input((1, 1), dtype=K.floatx()),
+        Input((1,), dtype=K.floatx()),
+        Input((1,), dtype=K.floatx()),
+        Input((1, 1), dtype=K.floatx()),
+        Input((1,), dtype=K.floatx()),
     ]
 
 
@@ -172,28 +176,28 @@ def get_tensor_decomposition_multid_box(odd=1, dc_decomp=True):
     if dc_decomp:
         # x, y, z, u, w_u, b_u, l, w_l, b_l, h, g
         return [
-            Input((n,)),
-            Input((n,)),
-            Input((2, n)),
-            Input((n,)),
-            Input((n, n)),
-            Input((n,)),
-            Input((n,)),
-            Input((n, n)),
-            Input((n,)),
-            Input((n,)),
-            Input((n,)),
+            Input((n,), dtype=K.floatx()),
+            Input((n,), dtype=K.floatx()),
+            Input((2, n), dtype=K.floatx()),
+            Input((n,), dtype=K.floatx()),
+            Input((n, n), dtype=K.floatx()),
+            Input((n,), dtype=K.floatx()),
+            Input((n,), dtype=K.floatx()),
+            Input((n, n), dtype=K.floatx()),
+            Input((n,), dtype=K.floatx()),
+            Input((n,), dtype=K.floatx()),
+            Input((n,), dtype=K.floatx()),
         ]
     return [
-        Input((n,)),
-        Input((n,)),
-        Input((2, n)),
-        Input((n,)),
-        Input((n, n)),
-        Input((n,)),
-        Input((n,)),
-        Input((n, n)),
-        Input((n,)),
+        Input((n,), dtype=K.floatx()),
+        Input((n,), dtype=K.floatx()),
+        Input((2, n), dtype=K.floatx()),
+        Input((n,), dtype=K.floatx()),
+        Input((n, n), dtype=K.floatx()),
+        Input((n,), dtype=K.floatx()),
+        Input((n,), dtype=K.floatx()),
+        Input((n, n), dtype=K.floatx()),
+        Input((n,), dtype=K.floatx()),
     ]
 
 
@@ -459,7 +463,6 @@ def build_image_from_2D_box(odd=0, m0=0, m1=1, dc_decomp=True):
     if dc_decomp:
         h_ = h_0 + h_1
         g_ = g_0 + g_1
-
         assert_output_properties_box(
             x_,
             h_ + g_,
@@ -475,6 +478,7 @@ def build_image_from_2D_box(odd=0, m0=0, m1=1, dc_decomp=True):
             b_l_,
             "image from 2D",
         )
+
 
         return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
     return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
@@ -565,35 +569,35 @@ def get_tensor_decomposition_images_box(data_format, odd, dc_decomp=True):
         # x, y, z, u, w_u, b_u, l, w_l, b_l
 
         output = [
-            Input((2,)),
-            Input((n, n, 2)),
-            Input((2, 2)),
-            Input((n, n, 2)),
-            Input((2, n, n, 2)),
-            Input((n, n, 2)),
-            Input((n, n, 2)),
-            Input((2, n, n, 2)),
-            Input((n, n, 2)),
+            Input((2,), dtype=K.floatx()),
+            Input((n, n, 2), dtype=K.floatx()),
+            Input((2, 2), dtype=K.floatx()),
+            Input((n, n, 2), dtype=K.floatx()),
+            Input((2, n, n, 2), dtype=K.floatx()),
+            Input((n, n, 2), dtype=K.floatx()),
+            Input((n, n, 2), dtype=K.floatx()),
+            Input((2, n, n, 2), dtype=K.floatx()),
+            Input((n, n, 2), dtype=K.floatx()),
         ]
 
         if dc_decomp:
-            output += [Input((n, n, 2)), Input((n, n, 2))]
+            output += [Input((n, n, 2), dtype=K.floatx()), Input((n, n, 2), dtype=K.floatx())]
     else:
 
         output = [
-            Input((2,)),
-            Input((2, n, n)),
-            Input((2, 2)),
-            Input((2, n, n)),
-            Input((2, 2, n, n)),
-            Input((2, n, n)),
-            Input((2, n, n)),
-            Input((2, 2, n, n)),
-            Input((2, n, n)),
+            Input((2,), dtype=K.floatx()),
+            Input((2, n, n), dtype=K.floatx()),
+            Input((2, 2), dtype=K.floatx()),
+            Input((2, n, n), dtype=K.floatx()),
+            Input((2, 2, n, n), dtype=K.floatx()),
+            Input((2, n, n), dtype=K.floatx()),
+            Input((2, n, n), dtype=K.floatx()),
+            Input((2, 2, n, n), dtype=K.floatx()),
+            Input((2, n, n), dtype=K.floatx()),
         ]
         if dc_decomp:
 
-            output += [Input((n, n, 2)), Input((n, n, 2))]
+            output += [Input((n, n, 2), dtype=K.floatx()), Input((n, n, 2), dtype=K.floatx())]
 
     return output
 
@@ -651,19 +655,20 @@ def assert_output_properties_box(x_, y_, h_, g_, x_min_, x_max_, u_c_, w_u_, b_u
 
     #
     if w_u_ is not None:
-        assert_almost_equal(
-            np.clip(lower_ - y_, 0.0, np.inf),
-            np.zeros_like(y_),
-            decimal=decimal,
-            err_msg="lower_ >y",
-        )
+        if K.floatx()=="float32":
+            assert_almost_equal(
+                np.clip(lower_ - y_, 0.0, np.inf),
+                np.zeros_like(y_),
+                decimal=decimal,
+                err_msg="lower_ >y",
+            )
 
-        assert_almost_equal(
-            np.clip(y_ - upper_, 0.0, 1e6),
-            np.zeros_like(y_),
-            decimal=decimal,
-            err_msg="upper <y",
-        )
+            assert_almost_equal(
+                np.clip(y_ - upper_, 0.0, 1e6),
+                np.zeros_like(y_),
+                decimal=decimal,
+                err_msg="upper <y",
+            )
 
     if l_c_ is not None:
         assert_almost_equal(

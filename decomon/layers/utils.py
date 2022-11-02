@@ -5,7 +5,7 @@ from tensorflow.keras.constraints import Constraint
 from tensorflow.keras.initializers import Initializer
 import tensorflow.keras as keras
 import numpy as np
-from .core import Ball, Box, Vertex, F_FORWARD, F_IBP, F_HYBRID, StaticVariables
+from .core import Ball, Box, Vertex, Grid, F_FORWARD, F_IBP, F_HYBRID, StaticVariables
 from tensorflow.math import greater_equal
 from tensorflow.keras.layers import Flatten
 
@@ -114,7 +114,6 @@ def get_lower_box(x_min, x_max, w, b, **kwargs):
 
     if len(w.shape) == len(b.shape):
         return x_min
-
     w_pos = K.maximum(w, z_value)
     w_neg = K.minimum(w, z_value)
 
@@ -160,6 +159,8 @@ def get_upper_ball(x_0, eps, p, w, b, **kwargs):
     :param b: bias of the affine function
     :return: max_(|x - x_0|_p<= eps) w*x + b
     """
+
+    #import pdb; pdb.set_trace()
     if len(w.shape) == len(b.shape):
         return x_0 + eps
     if p == np.inf:
@@ -339,18 +340,17 @@ def get_upper(x, w, b, convex_domain={}, **kwargs):
         x_max = x[:, 1]
         return get_upper_box(x_min, x_max, w, b, **kwargs)
 
-    if convex_domain["name"] == Box.name:
+    if convex_domain["name"] in [Box.name, Grid.name]:
         x_min = x[:, 0]
         x_max = x[:, 1]
         return get_upper_box(x_min, x_max, w, b, **kwargs)
 
     if convex_domain["name"] == Ball.name:
-
         eps = convex_domain["eps"]
         p = convex_domain["p"]
 
         # check for extra options
-        kwargs.update(convex_domain)
+        #kwargs.update(convex_domain)
         return get_upper_ball(x, eps, p, w, b, **kwargs)
 
     if convex_domain["name"] == Vertex.name:
@@ -377,7 +377,7 @@ def get_lower(x, w, b, convex_domain={}, **kwargs):
 
         return get_lower_box(x_min, x_max, w, b)
 
-    if convex_domain["name"] == Box.name:
+    if convex_domain["name"] in [Box.name, Grid.name]:
         x_min = x[:, 0]
         x_max = x[:, 1]
         return get_lower_box(x_min, x_max, w, b)
@@ -580,7 +580,15 @@ class NonPos(Constraint):
     """Constrains the weights to be non-negative."""
 
     def __call__(self, w):
-        return w * K.cast(K.less_equal(w, 0.0), K.floatx())
+        #return w * K.cast(K.less_equal(w, 0.0), K.floatx())
+        return K.minimum(w, 0.)
+
+class NonNeg(Constraint):
+    """Constrains the weights to be non-negative."""
+
+    def __call__(self, w):
+        #return w * K.cast(K.less_equal(w, 0.0), K.floatx())
+        return K.maximum(w, 0.)
 
 
 class ClipAlpha(Constraint):
@@ -588,6 +596,17 @@ class ClipAlpha(Constraint):
 
     def __call__(self, w):
         return K.clip(w, 0.0, 1.0)
+
+class ClipAlphaGrid(Constraint):
+    """Cosntraints the weights to be between 0 and 1."""
+
+    def __call__(self, w):
+        w = K.clip(w, 0.0, 1.0)
+
+        #w = K.clip(w, 0., 1.)
+        w /=K.maximum(K.sum(w, 0), 1.)[None]
+        return w
+
 
 class ClipAlphaAndSumtoOne(Constraint):
     """Cosntraints the weights to be between 0 and 1."""
@@ -688,11 +707,20 @@ def relu_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, slope=V_slop
     l_c_ = K.relu(lower)
 
     if mode in [F_FORWARD.name, F_HYBRID.name]:
+
+
+        if len(convex_domain) and convex_domain['name']==Grid.name:
+            upper_g, lower_g = get_bound_grid(x_0, w_u, b_u, w_l, b_l, 1)
+            kwargs.update({'upper_grid':upper_g, 'lower_grid':lower_g})
+
+
         w_u_, b_u_, w_l_, b_l_ = get_linear_hull_relu(upper, lower, slope, **kwargs)
         b_u_ = w_u_ * b_u + b_u_
         b_l_ = w_l_ * b_l + b_l_
         w_u_ = K.expand_dims(w_u_, 1) * w_u
         w_l_ = K.expand_dims(w_l_, 1) * w_l
+
+
 
     output = []
     if mode == F_IBP.name:
@@ -768,9 +796,10 @@ def substract(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBR
     :param convex_domain: the type of convex domain
     :return: inputs_0 - inputs_1
     """
-
     inputs_1_ = minus(inputs_1, mode=mode, dc_decomp=dc_decomp)
-    return add(inputs_0, inputs_1_, dc_decomp=dc_decomp, mode=mode, convex_domain=convex_domain)
+    output= add(inputs_0, inputs_1_, dc_decomp=dc_decomp, mode=mode, convex_domain=convex_domain)
+
+    return output
 
 
 def add(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
@@ -819,7 +848,6 @@ def add(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.nam
         b_l_ = b_l_0 + b_l_1
 
     if mode == F_HYBRID.name:
-
         upper_ = get_upper(x_0, w_u_, b_u_, convex_domain)  # we can see an improvement
         u_c_ = K.minimum(upper_, u_c_)
 
@@ -1965,3 +1993,47 @@ def exp(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
         return [x_0, w_u_, b_u_, w_l_, b_l_]
     if mode == F_HYBRID.name:
         return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+
+
+##### corners ######
+def get_lower_bound_grid(x, W, b, n):
+
+    A, B = convert_lower_search_2_subset_sum(x, W, b, n)
+    return subset_sum_lower(A, B, repeat=n)
+
+def get_upper_bound_grid(x, W, b, n):
+
+    return - get_lower_bound_grid(x, -W, -b, n)
+
+def get_bound_grid(x, W_u, b_u, W_l, b_l, n):
+
+    upper = get_upper_bound_grid(x, W_u, b_u, n)
+    lower = get_lower_bound_grid(x, W_l, b_l, n)
+
+    return upper, lower
+
+
+# convert max Wx +b s.t Wx+b<=0 into a subset-sum problem with positive values
+def convert_lower_search_2_subset_sum(x, W, b, n):
+
+    x_min = x[:,0]
+    x_max = x[:, 1]
+
+    if len(W.shape)>3:
+        W = K.reshape(W, (-1, W.shape[1], np.prod(W.shape[2:])))
+        b = K.reshape(b, (-1, np.prod(b.shape[1:])))
+
+    const = get_lower(x, W, b, convex_domain={}) # convex_domain = {}
+
+    weights = K.abs(W)*K.expand_dims((x_max-x_min)/n, -1)
+    return weights, const
+
+def subset_sum_lower(W, b, repeat=1):
+
+    B = tf.sort(W, 1)
+    C = K.repeat_elements(B,rep=repeat,axis=1)
+    C_ = K.cumsum(C, axis=1)
+    D = K.minimum( K.sign(K.expand_dims(-b, 1)-C_)+1, 1)
+
+    score = K.minimum( K.sum(D*C, 1) + b, 0.)  # to do: add 2
+    return score

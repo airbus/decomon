@@ -71,7 +71,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
 
         # express maxpooling with convolutions
         if not self.fast or self.fast:
-            self.filters = np.zeros((pool_size[0], pool_size[1], 1, np.prod(pool_size)), dtype=K.floatx())
+            self.filters = np.zeros((pool_size[0], pool_size[1], 1, np.prod(pool_size)), dtype=self.dtype)
             for i in range(pool_size[0]):
                 for j in range(pool_size[1]):
                     self.filters[i, j, 0, i * pool_size[0] + j] = 1
@@ -79,7 +79,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
             def conv_(x):
 
                 if self.data_format in [None, "channels_last"]:
-                    return K.expand_dims(
+                    return K.cast(K.expand_dims(
                         conv2d(
                             x,
                             self.filters,
@@ -88,9 +88,9 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
                             data_format=data_format,
                         ),
                         -2,
-                    )
+                    ), self.dtype)
                 else:
-                    return K.expand_dims(
+                    return K.cast(K.expand_dims(
                         conv2d(
                             x,
                             self.filters,
@@ -99,7 +99,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
                             data_format=data_format,
                         ),
                         1,
-                    )
+                    ), self.dtype)
 
             self.internal_op = conv_
 

@@ -15,7 +15,7 @@ from . import (
 )
 import tensorflow.python.keras.backend as K
 
-
+"""
 @pytest.mark.parametrize(
     "n, n_subgrad, slope",
     [
@@ -62,19 +62,21 @@ def test_convert_backward_model_1d_box_nodc(n, n_subgrad, slope):
     # build a simple sequential model from keras
     # start with 1D
     sequential = Sequential()
-    sequential.add(Dense(10, activation="relu", input_dim=1))
+    sequential.add(Dense(10, activation="linear", input_dim=1))
     sequential.add(Dense(1, activation="linear"))
 
-    monotonic_model = clone(sequential, input_dim=1, dc_decomp=False)
+    monotonic_model = convert(sequential, mode='forward', dc_decomp=False)
 
     inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
+
     output_ref = sequential(inputs[1])
     f_ref = K.function(inputs, output_ref)
     backward_model = get_backward(monotonic_model, slope=slope)
 
+    import pdb; pdb.set_trace()
     output = backward_model(inputs[1:])
 
     f_clone = K.function(inputs[1:], output)
@@ -90,8 +92,11 @@ def test_convert_backward_model_1d_box_nodc(n, n_subgrad, slope):
     assert_output_properties_box_linear(
         x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_b[:, 0], b_u_b[:, 0], l_c_, w_l_b[:, 0], b_l_b[:, 0], "nodc"
     )
+"""
 
 
+
+"""
 @pytest.mark.parametrize(
     "n, n_subgrad",
     [
@@ -508,3 +513,4 @@ def test_convert_bacwkard_model_1d_box_nodc_forward(n, n_subgrad):
     assert_almost_equal(w_l_f, w_l_b, decimal=5, err_msg="w_l")
     assert_almost_equal(b_u_f, b_u_b, decimal=5, err_msg="b_u")
     assert_almost_equal(b_l_f, b_l_b, decimal=5, err_msg="b_l")
+"""

@@ -14,6 +14,7 @@ from ..layers.utils import (
     get_upper,
     get_lower,
 )
+import tensorflow as tf
 import tensorflow.keras.backend as K
 from ..utils import get_linear_hull_relu, get_linear_hull_sigmoid, get_linear_hull_tanh
 from ..layers.core import StaticVariables
@@ -76,7 +77,6 @@ def backward_relu(
             )
         else:
             nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
-
             if mode == F_IBP.name:
                 upper, lower = x[:nb_tensors]
             if mode == F_FORWARD.name:
@@ -89,7 +89,10 @@ def backward_relu(
             shape = np.prod(x[-1].shape[1:])
             bounds = [K.reshape(elem, (-1, shape)) for elem in bounds]
 
-            return bounds
+            w_u_, b_u_, w_l_, b_l_ = bounds
+            #w_u_ = tf.linalg.diag(w_u_)
+            #w_l_ = tf.linalg.diag(w_l_)
+            return [w_u_, b_u_, w_l_, b_l_]
 
     raise NotImplementedError()
 
@@ -326,38 +329,71 @@ def backward_softplus(
         return get_linear_hull_softplus(upper, lower, slope=slope, **kwargs)
 
 
-def backward_softsign(
-    inputs, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
-):
+def backward_softsign(x, dc_decom=False, convex_domain={},
+                      slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs):
     """
-    Backward LiRPA of softsign
-    :param x:
-    :param w_out_u:
-    :param b_out_u:
-    :param w_out_l:
-    :param b_out_l:
-    :param convex_domain:
-    :param slope: backward slope
-    :param mode:
-    :return:
-    """
-    if dc_decomp:
-        raise NotImplementedError()
+        Backward LiRPA of softsign
+        :param x:
+        :param w_out_u:
+        :param b_out_u:
+        :param w_out_l:
+        :param b_out_l:
+        :param convex_domain:
+        :param slope: backward slope
+        :param mode:
+        :return:
+        """
 
-    x = inputs[:-4]
-    w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
+    if previous:
+        y = x[:-4]
+        w_out_u, b_out_u, w_out_l, b_out_l = x[-4:]
+
+        return backward_softsign_(
+            y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, mode=mode, **kwargs
+        )
+    else:
+        nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+        if mode == F_IBP.name:
+            upper, lower = x[:nb_tensors]
+        if mode == F_FORWARD.name:
+            z_, w_u_, b_u_, w_l_, b_l_ = x[:nb_tensors]
+            upper = get_upper(z_, w_u_, b_u_)
+            lower = get_lower(z_, w_l_, b_l_)
+        if mode == F_HYBRID.name:
+            _, upper, _, _, lower, _, _ = x[:nb_tensors]
+
+        bounds = get_linear_hull_s_shape(
+            x, func=K.softsign, f_prime=softsign_prime, convex_domain=convex_domain, mode=mode
+        )
+        shape = np.prod(x[-1].shape[1:])
+        bounds = [K.reshape(elem, (-1, shape)) for elem in bounds]
+
+        w_u_, b_u_, w_l_, b_l_ = bounds
+        # w_u_ = tf.linalg.diag(w_u_)
+        # w_l_ = tf.linalg.diag(w_l_)
+        return [w_u_, b_u_, w_l_, b_l_]
+
+
+def backward_softsign_(
+    y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, mode=F_HYBRID.name, **kwargs
+):
+
+
     w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
-        x, func=K.softsign, f_prime=softsign_prime, convex_domain=convex_domain, mode=mode
+        y, func=K.softsign, f_prime=softsign_prime, convex_domain=convex_domain, mode=mode
     )
 
-    w_u_0 = K.expand_dims(K.expand_dims(w_u_0, 1), -1)
-    w_l_0 = K.expand_dims(K.expand_dims(w_l_0, 1), -1)
-    b_u_0 = K.expand_dims(K.expand_dims(b_u_0, 1), -1)
-    b_l_0 = K.expand_dims(K.expand_dims(b_l_0, 1), -1)
-    w_out_u_ = K.maximum(0.0, w_out_u) * w_u_0 + K.minimum(0.0, w_out_u) * w_l_0
-    w_out_l_ = K.maximum(0.0, w_out_l) * w_l_0 + K.minimum(0.0, w_out_l) * w_u_0
-    b_out_u_ = K.sum(K.maximum(0.0, w_out_u) * b_u_0 + K.minimum(0.0, w_out_u) * b_l_0, 2) + b_out_u
-    b_out_l_ = K.sum(K.maximum(0.0, w_out_l) * b_l_0 + K.minimum(0.0, w_out_l) * b_u_0, 2) + b_out_l
+    w_u_0 = K.expand_dims(w_u_0, -1)
+    w_l_0 = K.expand_dims(w_l_0, -1)
+
+    b_u_0 = K.expand_dims(b_u_0, -1)
+    b_l_0 = K.expand_dims(b_l_0, -1)
+
+    z_value = K.cast(0., dtype=y[0].dtype)
+    w_out_u_ = K.maximum(z_value, w_out_u) * w_u_0 + K.minimum(z_value, w_out_u) * w_l_0
+    w_out_l_ = K.maximum(z_value, w_out_l) * w_l_0 + K.minimum(z_value, w_out_l) * w_u_0
+    b_out_u_ = K.sum(K.maximum(z_value, w_out_u) * b_u_0 + K.minimum(z_value, w_out_u) * b_l_0, 2) + b_out_u
+    b_out_l_ = K.sum(K.maximum(z_value, w_out_l) * b_l_0 + K.minimum(z_value, w_out_l) * b_u_0, 2) + b_out_l
 
     return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
 

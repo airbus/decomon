@@ -17,7 +17,7 @@ from tensorflow.keras.models import Model
 
 # Activation
 
-"""
+
 @pytest.mark.parametrize(
     "n, activation, mode, previous, floatx",
     [
@@ -199,7 +199,7 @@ def test_Backward_Activation_1D_box_model(n, activation, mode, previous, floatx)
         K.set_epsilon(1e-2)
         decimal = 2
 
-    layer = DecomonActivation(activation, dc_decomp=False, mode=mode)
+    layer = DecomonActivation(activation, dc_decomp=False, mode=mode, dtype=K.floatx())
 
     inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
@@ -218,8 +218,8 @@ def test_Backward_Activation_1D_box_model(n, activation, mode, previous, floatx)
         output = layer(input_mode)
         u_c_0, l_c_0 = output
 
-    w_out = Input((1, 1))
-    b_out = Input((1,))
+    w_out = Input((1, 1), dtype=K.floatx())
+    b_out = Input((1,), dtype=K.floatx())
     # get backward layer
     layer_backward = get_backward(layer, previous=previous)
     if previous:
@@ -365,7 +365,7 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, previous)
         K.set_epsilon(1e-2)
         decimal = 2
 
-    layer = DecomonActivation(activation, dc_decomp=False, mode=mode)
+    layer = DecomonActivation(activation, dc_decomp=False, mode=mode, dtype=K.floatx())
     inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
     inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
@@ -386,8 +386,8 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, previous)
     # output = layer(inputs[2:])
     # z_0, u_c_0, _, _, l_c_0, _, _ = output
 
-    w_out = Input((1, 1))
-    b_out = Input((1,))
+    w_out = Input((1, 1), dtype=K.floatx())
+    b_out = Input((1,), dtype=K.floatx())
     # get backward layer
     layer_backward = get_backward(layer, previous=previous)
     if previous:
@@ -426,6 +426,25 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, previous)
         "dense_{}".format(odd),
         decimal=decimal,
     )
+    """
+    try:
+        assert_output_properties_box_linear(
+            x,
+            None,
+            z_[:, 0],
+            z_[:, 1],
+            None,
+            np.sum(np.maximum(w_u_, 0) * W_u + np.minimum(w_u_, 0) * W_l, 1)[:, :, None],
+            b_u_ + np.sum(np.maximum(w_u_, 0) * b_u[:, :, None], 1) + np.sum(np.minimum(w_u_, 0) * b_l[:, :, None], 1),
+            None,
+            np.sum(np.maximum(w_l_, 0) * W_l + np.minimum(w_l_, 0) * W_u, 1)[:, :, None],
+            b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
+            "dense_{}".format(odd),
+            decimal=decimal,
+        )
+    except ValueError:
+        import pdb; pdb.set_trace()
+    """
     K.set_floatx("float32")
     K.set_epsilon(eps)
 
@@ -519,7 +538,7 @@ def test_Backward_Flatten_multiD_box(odd, floatx, mode, previous, data_format):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    layer = DecomonFlatten("channels_last", dc_decomp=False, mode=mode)
+    layer = DecomonFlatten("channels_last", dc_decomp=False, mode=mode, dtype=K.floatx())
     inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
     inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
@@ -582,6 +601,7 @@ def test_Backward_Flatten_multiD_box(odd, floatx, mode, previous, data_format):
     )
     K.set_floatx("float32")
     K.set_epsilon(eps)
+
 
 
 @pytest.mark.parametrize(
@@ -672,7 +692,7 @@ def test_Backward_Reshape_multiD_box(odd, floatx, mode, previous, data_format):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    layer = DecomonReshape((-1,), dc_decomp=False, mode=mode)
+    layer = DecomonReshape((-1,), dc_decomp=False, mode=mode, dtype=K.floatx())
     inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
     inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
@@ -693,8 +713,8 @@ def test_Backward_Reshape_multiD_box(odd, floatx, mode, previous, data_format):
     # output = layer(inputs[2:])
     # z_0, u_c_0, _, _, l_c_0, _, _ = output
 
-    w_out = Input((1, 1))
-    b_out = Input((1,))
+    w_out = Input((1, 1), dtype=K.floatx())
+    b_out = Input((1,), dtype=K.floatx())
     # get backward layer
     layer_backward = get_backward(layer, previous=previous)
     if previous:
@@ -735,9 +755,9 @@ def test_Backward_Reshape_multiD_box(odd, floatx, mode, previous, data_format):
     )
     K.set_floatx("float32")
     K.set_epsilon(eps)
+
+
 """
-
-
 @pytest.mark.parametrize(
     "odd, floatx, mode, previous, data_format",
     [
@@ -857,4 +877,4 @@ def test_Backward_Permute_multiD_box(odd, floatx, mode, previous, data_format):
 
     K.set_floatx("float32")
     K.set_epsilon(eps)
-
+"""

@@ -26,9 +26,15 @@ from .utils import (
 )
 from ..layers.core import F_HYBRID, F_FORWARD, F_IBP
 from ..layers.utils import split, multiply, permute_dimensions, broadcast
+from .core import BackwardLayer
+
+class BackwardMerge(BackwardLayer):
+
+    def __init__(self, **kwargs):
+        super(BackwardMerge, self).__init__(**kwargs)
 
 
-class BackwardAdd(Layer):
+class BackwardAdd(BackwardMerge):
     """
     Backward  LiRPA of Add
     """
@@ -52,17 +58,72 @@ class BackwardAdd(Layer):
         if hasattr(self.layer, "mode"):
             self.mode = self.layer.mode
             self.convex_domain = self.layer.convex_domain
+            self.dc_decomp= self.layer.dc_decomp
         else:
             self.mode = mode
             self.convex_domain = convex_domain
+            self.dc_decomp=False
         self.finetune = False
         self.previous = previous
 
-        self.op = DecomonAdd(mode=self.mode, convex_domain=self.layer.convex_domain, dc_decomp=layer.dc_decomp).call
+        self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp).call
 
+    def call_previous(self, inputs):
+
+        x_ = inputs[:-4]
+
+        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
+        n_comp = 2
+        if self.mode == F_FORWARD.name:
+            n_comp = 5
+        if self.mode == F_HYBRID.name:
+            n_comp = 7
+
+        n_elem = len(x_) // n_comp
+
+
+        if n_elem == 1:
+            return [[w_out_u, b_out_u, w_out_l, b_out_l]]
+        else:
+            if n_elem>2:
+                raise NotImplementedError()
+            else:
+
+                inputs_0 = x_[:n_comp]
+                inputs_1 = x_[n_comp:]
+
+                bounds_0, bounds_1 = backward_add(
+                    inputs_0,
+                    inputs_1,
+                    w_out_u,
+                    b_out_u,
+                    w_out_l,
+                    b_out_l,
+                    convex_domain=self.convex_domain,
+                    mode=self.mode,
+                )
+                return [bounds_0, bounds_1]
+
+
+
+    def call_no_previous(self, inputs):
+
+        bounds = list(get_identity_lirpa(inputs))
+        return self.call_previous(inputs+bounds)
+
+    def call(self, inputs):
+        if self.previous:
+            return self.call_previous(inputs)
+        else:
+            return self.call_no_previous(inputs)
+
+
+
+    """    
     def call(self, inputs):
 
         x_ = inputs[:-4]
+
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
         n_comp = 4
@@ -94,11 +155,12 @@ class BackwardAdd(Layer):
                         b_out_u,
                         w_out_l,
                         b_out_l,
-                        convex_domain=self.layer.convex_domain,
+                        convex_domain=self.convex_domain,
                         mode=self.mode,
                     )
                 else:
                     w_out_u_, b_out_u_, w_out_l_, b_out_l_ = bounds[-1]
+                    import pdb; pdb.set_trace()
                     bounds_0, bounds_1 = backward_add(
                         inputs_0,
                         inputs_1,
@@ -106,7 +168,7 @@ class BackwardAdd(Layer):
                         b_out_u_,
                         w_out_l_,
                         b_out_l_,
-                        convex_domain=self.layer.convex_domain,
+                        convex_domain=self.convex_domain,
                         mode=self.mode,
                     )
 
@@ -118,9 +180,10 @@ class BackwardAdd(Layer):
         input_bounds = input_bounds[::-1]
 
         return input_bounds
+        """
 
 
-class BackwardAverage(Layer):
+class BackwardAverage(BackwardMerge):
     """
     Backward  LiRPA of Average
     """
@@ -148,8 +211,8 @@ class BackwardAverage(Layer):
             self.convex_domain = convex_domain
         self.finetune = False
         self.previous = previous
-
         self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=False).call
+
 
     def call_previous(self, inputs):
 
@@ -215,13 +278,14 @@ class BackwardAverage(Layer):
         return self.call_previous(inputs + bounds)
 
     def call(self, inputs):
+        #import pdb; pdb.set_trace()
         if self.previous:
             return self.call_previous(inputs)
         else:
             return self.call_no_previous(inputs)
 
 
-class BackwardSubtract(Layer):
+class BackwardSubtract(BackwardMerge):
     """
     Backward  LiRPA of Subtract
     """
@@ -263,7 +327,7 @@ class BackwardSubtract(Layer):
         )
 
 
-class BackwardMaximum(Layer):
+class BackwardMaximum(BackwardMerge):
     """
     Backward  LiRPA of Maximum
     """
@@ -305,7 +369,7 @@ class BackwardMaximum(Layer):
         )
 
 
-class BackwardMinimum(Layer):
+class BackwardMinimum(BackwardMerge):
     """
     Backward  LiRPA of Minimum
     """
@@ -347,7 +411,7 @@ class BackwardMinimum(Layer):
         )
 
 
-class BackwardConcatenate(Layer):
+class BackwardConcatenate(BackwardMerge):
     """
     Backward  LiRPA of Concatenate
     """
@@ -387,7 +451,7 @@ class BackwardConcatenate(Layer):
         return bounds
 
 
-class BackwardMultiply(Layer):
+class BackwardMultiply(BackwardMerge):
     """
     Backward  LiRPA of Multiply
     """
@@ -429,7 +493,7 @@ class BackwardMultiply(Layer):
         )
 
 
-class BackwardDot(Layer):
+class BackwardDot(BackwardMerge):
     """
     Backward  LiRPA of Dot
     """

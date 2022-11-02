@@ -13,9 +13,9 @@ from . import (
 )
 import tensorflow.python.keras.backend as K
 
-from decomon.layers.activations import sigmoid, tanh, softsign, softplus, softmax
+from decomon.layers.activations import sigmoid, tanh, softsign, softplus, softmax, exponential
 
-"""
+
 @pytest.mark.parametrize(
     "n, mode, floatx",
     [
@@ -141,6 +141,7 @@ def test_sigmoid_1D_box(n, mode, floatx):
         output = sigmoid([z, W_u, b_u, W_l, b_l], dc_decomp=False, mode=mode)
     if mode == "ibp":
         output = sigmoid([u_c, l_c], dc_decomp=False, mode=mode)
+
 
     f_sigmoid = K.function(inputs[2:], output)
     f_ref = K.function(inputs, K.sigmoid(y))
@@ -495,7 +496,7 @@ def test_softsign_1D_box(n, mode, floatx):
     )
     K.set_floatx("float32")
     K.set_epsilon(eps)
-"""
+
 
 
 """
@@ -579,7 +580,8 @@ def test_softplus_1D_box(n, mode, floatx):
     
     K.set_floatx('float32')
     K.set_epsilon(eps)
-"""  # TODO check
+"""
+# TODO check
 
 """
 @pytest.mark.parametrize(
@@ -679,7 +681,6 @@ def test_softplus_1D_box(n, mode, floatx):
 )
 """
 
-
 @pytest.mark.parametrize(
     "n, mode, floatx",
     [
@@ -756,7 +757,7 @@ def test_softmax_1D_box(n, mode, floatx):
     K.set_floatx("float32")
     K.set_epsilon(eps)
 
-
+"""
 @pytest.mark.parametrize(
     "n, mode, floatx",
     [
@@ -832,3 +833,4 @@ def test_exp_1D_box(n, mode, floatx):
 
     K.set_floatx("float32")
     K.set_epsilon(eps)
+"""

@@ -217,8 +217,8 @@ def clone_sequential_model(
         finetune=finetune,
     )
 
-    model = softmax_to_linear(model)  # do better because you modify the model eventually
 
+    model, _ = softmax_to_linear(model)  # do better because you modify the model eventually
     if not isinstance(model, Sequential):
         raise ValueError(
             "Expected `model` argument " "to be a `Sequential` model instance, " "but got:",
@@ -255,7 +255,7 @@ def clone_sequential_model(
             ]
 
         if isinstance(layer, Layer):
-            return [layer_fn(layer)]
+            return layer_fn(layer)
         raise ValueError
 
     monotonic_layers = []
@@ -299,7 +299,7 @@ def clone_sequential_model(
         if IBP:
             if forward:  # hybrid mode
                 input_tensors = [
-                    y_tensor,
+                    #y_tensor,
                     z_tensor,
                     u_c_tensor,
                     w_u_tensor,
@@ -311,7 +311,7 @@ def clone_sequential_model(
             else:
                 # only IBP
                 input_tensors = [
-                    y_tensor,
+                    #y_tensor,
                     z_tensor,
                     u_c_tensor,
                     l_c_tensor,
@@ -319,7 +319,7 @@ def clone_sequential_model(
         else:
             # forward mode
             input_tensors = [
-                y_tensor,
+                #y_tensor,
                 z_tensor,
                 w_u_tensor,
                 b_u_tensor,
@@ -846,7 +846,7 @@ def convert(
             inputs_ += model_monotonic.inputs[-2:]
 
         input_tensors = inputs_
-
+    import pdb; pdb.set_trace()
     input_tensors_ = lambda_layer(inputs_)
 
     # create the model
@@ -997,7 +997,7 @@ def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, opti
     :param model:
     :return:
     """
-    assert isinstance(model, DecomonModel) or isinstance(model, DecomonSequential)
+    #assert isinstance(model, DecomonModel) or isinstance(model, DecomonSequential)
 
     # create inputs for back_bounds
     # the convert mode for an easy use has been activated
@@ -1005,9 +1005,9 @@ def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, opti
 
     # input_backward = model.input
     input_backward = []
-    for elem in model.input:
+    for elem in to_list(model.input):
         input_backward.append(Input(elem.shape[1:]))
-    output_forward = model(input_backward)
+    output_forward = to_list(model(input_backward))
 
     if back_bounds is None:
 
@@ -1018,13 +1018,12 @@ def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, opti
 
         def get_init_backward(y_pred):
             # create identity matrix to init the backward pass
-            w_out_ = K.reshape(K.expand_dims(tf.linalg.diag(1.0 + 0 * (Flatten()(y_pred))), 1), (-1, 1, n_dim, n_dim))
-            b_out_ = K.reshape(K.expand_dims(0 * y_pred, 1), (-1, 1, n_dim))
+            w_out_ = K.reshape(K.expand_dims(tf.linalg.diag(1.0 + 0 * (Flatten()(y_pred))), 1), (-1, n_dim, n_dim))
+            b_out_ = K.reshape(K.expand_dims(0 * y_pred, 1), (-1, n_dim))
 
             return [w_out_, b_out_, w_out_, b_out_]
 
         lambda_backward = Lambda(lambda x: get_init_backward(x))
-
         back_bounds = lambda_backward(y_pred)
 
     back_bounds = list(get_backward_model(model, back_bounds, input_backward, slope=slope, options=options))
@@ -1083,7 +1082,7 @@ def get_backward_model_(model, back_bounds, input_model, slope=V_slope.name):
     :return:
     """
     # retrieve all layers inside
-    if model.dc_decomp:
+    if hasattr(model, 'dc_decomp') and model.dc_decomp:
         raise NotImplementedError()
 
     # store the input-output relationships between layers
@@ -1128,7 +1127,7 @@ def get_backward_model_(model, back_bounds, input_model, slope=V_slope.name):
 
 def get_backward_model(model, back_bounds, input_model, slope=V_slope.name, options={}):
     # retrieve all layers inside
-    if model.dc_decomp:
+    if hasattr(model, 'dc_decomp') and model.dc_decomp:
         raise NotImplementedError()
 
     name = [layer.name for layer in model.layers]
@@ -1148,14 +1147,14 @@ def get_backward_model(model, back_bounds, input_model, slope=V_slope.name, opti
 
     for depth in np.arange(depth_input + 1)[::-1]:
         # get layers by depth
-        layers_depth = [node_.layer for node_ in model._nodes_by_depth[depth]]
+        layers_depth = [node_.outbound_layer for node_ in model._nodes_by_depth[depth]]
         for j, layer_ in enumerate(layers_depth):
             if len(dico[layer_.name]) == 0:
                 # input node
                 dico_output[layer_.name] = layer_(inputs[j])
                 dico_input[layer_.name] = inputs[j]
             else:
-                # retreive the output of the layers used before
+                # retrieve the output of the layers used before
                 list_inputs = []
                 in_layers = dico[layer_.name]
                 for in_layer in in_layers:
@@ -1169,8 +1168,13 @@ def get_backward_model(model, back_bounds, input_model, slope=V_slope.name, opti
                     dico_output[layer_.name] = layer_(list_inputs[0])
                     dico_input[layer_.name] = list_inputs[0]
                 else:
-                    dico_output[layer_.name] = layer_(list_inputs)
-                    dico_input[layer_.name] = list_inputs
+                    if isinstance(layer_, Model):
+                        sort_names = [e.name for e in layer_.inputs]
+                        unsorted_names = [e._keras_history.layer.name for e in list_inputs]
+                        import pdb; pdb.set_trace()
+                    else:
+                        dico_output[layer_.name] = layer_(list_inputs)
+                        dico_input[layer_.name] = list_inputs
 
     layers_output = [node_.layer for node_ in model._nodes_by_depth[0]]
     if back_bounds is not None:

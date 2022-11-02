@@ -570,9 +570,9 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    monotonic_dense = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=True, mode=mode, shared=shared)
+    monotonic_dense = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=True, mode=mode, shared=shared, dtype=K.floatx())
 
-    ref_dense = Dense(1, use_bias=True, activation=activation)
+    ref_dense = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
 
     inputs = get_tensor_decomposition_1d_box()
     inputs_ = get_standart_values_1d_box(n)
@@ -749,8 +749,8 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
 )
 def test_DecomonDense_multiD_box(odd, activation, mode):
 
-    monotonic_dense = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=True, mode=mode)
-    ref_dense = Dense(1, use_bias=True, activation=activation)
+    monotonic_dense = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=True, mode=mode, dtype=K.floatx())
+    ref_dense = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
 
     inputs = get_tensor_decomposition_multid_box(odd)
     inputs_ = get_standard_values_multid_box(odd)
@@ -1072,7 +1072,7 @@ def test_DecomonDense_multiD_box(odd, activation, mode):
 )
 def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared):
 
-    dense_ref = Dense(1, use_bias=True, activation=activation)
+    dense_ref = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
 
     inputs = get_tensor_decomposition_1d_box()
     inputs_ = get_standart_values_1d_box(n)
@@ -1197,7 +1197,7 @@ def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared):
 )
 def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode):
 
-    dense_ref = Dense(1, use_bias=True, activation=activation)
+    dense_ref = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
 
     inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=True)
     inputs_ = get_standard_values_multid_box(odd, dc_decomp=True)

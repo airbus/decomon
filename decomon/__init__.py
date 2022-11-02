@@ -1,8 +1,18 @@
+"""
+Decomon
+-------
+The goal of Decomon is to provide a simple interface to the latest explanation
+techniques for certified perturbation analysis
+"""
 from __future__ import absolute_import
+
+
+
 
 from . import layers
 from . import models
-
+from .utils import get_AB as get_grid_params
+from .utils import get_AB_finetune as get_grid_slope
 
 from .wrapper import (
     get_adv_box,
@@ -19,3 +29,5 @@ from .wrapper import (
 
 from .wrapper_with_tuning import get_upper_box_tuning, get_lower_box_tuning
 from .metrics.loss import get_model, get_upper_loss, get_lower_loss, get_adv_loss
+
+__version__ = '0.0.1'

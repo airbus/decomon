@@ -38,81 +38,84 @@ from . import (
 )
 
 
-def dense_NN_1D(input_dim, archi, sequential, activation, use_bias):
+def dense_NN_1D(input_dim, archi, sequential, activation, use_bias, dtype="float32"):
 
-    layers = [Dense(archi[0], use_bias=use_bias, activation=activation, input_dim=input_dim)]
-    layers += [Dense(n_i, use_bias=use_bias, activation=activation) for n_i in archi[1:]]
+    layers = [Dense(archi[0], use_bias=use_bias, activation=activation, input_dim=input_dim, dtype=dtype)]
+    layers += [Dense(n_i, use_bias=use_bias, activation=activation, dtype=dtype) for n_i in archi[1:]]
+
 
     if sequential:
         return Sequential(layers)
     else:
-        x = Input(input_dim)
+        x = Input(input_dim, dtype=dtype)
         output = layers[0](x)
         for layer_ in layers[1:]:
             output = layer_(output)
         return Model(x, output)
 
 
-def toy_struct_v0_1D(input_dim, archi, activation, use_bias, merge_op="average"):
+def toy_struct_v0_1D(input_dim, archi, activation, use_bias, merge_op="average", dtype="float32"):
 
-    nnet_0 = dense_NN_1D(input_dim, archi, False, activation, use_bias)
+    nnet_0 = dense_NN_1D(input_dim, archi, False, activation, use_bias, dtype=dtype)
     # nnet_1 = dense_NN_1D(input_dim, archi, False, activation, use_bias)
     # nnet_0 = Dense(archi[-1], use_bias=use_bias, activation=activation, input_dim=input_dim)
     # nnet_1 = dense_NN_1D(input_dim, archi[-1:], True, activation, use_bias)
-    nnet_1 = Dense(archi[-1], use_bias=use_bias, activation="linear", input_dim=input_dim, name="toto")
-    nnet_2 = Dense(archi[-1], use_bias=use_bias, activation="linear", input_dim=input_dim, name="titi")
+    nnet_1 = Dense(archi[-1], use_bias=use_bias, activation="linear", input_dim=input_dim, name="toto", dtype=dtype)
+    nnet_2 = Dense(archi[-1], use_bias=use_bias, activation="linear", input_dim=input_dim, name="titi", dtype=dtype)
 
     # nnet_0 = Activation('linear')
 
-    x = Input(input_dim)
+    x = Input(input_dim, dtype=dtype)
     h_0 = nnet_0(x)
     h_1 = nnet_1(x)
+
+    merge_op = 'add'
     if merge_op == "average":
-        y = Average()([h_0, h_1])
+        y = Average(dtype=dtype)([h_0, h_1])
     if merge_op == "add":
-        y = Add()([h_0, h_1])
+        y = Add(dtype=dtype)([h_0, h_1])
 
     return Model(x, y)
 
 
-def toy_struct_v1_1D(input_dim, archi, sequential, activation, use_bias, merge_op="average"):
+def toy_struct_v1_1D(input_dim, archi, sequential, activation, use_bias, merge_op="average", dtype="float32"):
 
-    nnet_0 = dense_NN_1D(input_dim, archi, sequential, activation, use_bias)
+    nnet_0 = dense_NN_1D(input_dim, archi, sequential, activation, use_bias, dtype=dtype)
 
-    x = Input(input_dim)
+    x = Input(input_dim, dtype=dtype)
     h_0 = nnet_0(x)
     h_1 = nnet_0(x)
     if merge_op == "average":
-        y = Average()([h_0, h_1])
+        y = Average(dtype=dtype)([h_0, h_1])
     if merge_op == "add":
-        y = Add()([h_0, h_1])
+        y = Add(dtype=dtype)([h_0, h_1])
 
     return Model(x, y)
 
 
-def toy_struct_v2_1D(input_dim, archi, sequential, activation, use_bias, merge_op="average"):
+def toy_struct_v2_1D(input_dim, archi, sequential, activation, use_bias, merge_op="average", dtype="float32"):
 
-    nnet_0 = dense_NN_1D(input_dim, archi, sequential, activation, use_bias)
-    nnet_1 = dense_NN_1D(input_dim, archi, sequential, activation, use_bias)
-    nnet_2 = Dense(archi[-1], use_bias=use_bias, activation="linear", input_dim=input_dim)
+    nnet_0 = dense_NN_1D(input_dim, archi, sequential, activation, use_bias, dtype=dtype)
+    nnet_1 = dense_NN_1D(input_dim, archi, sequential, activation, use_bias, dtype=dtype)
+    nnet_2 = Dense(archi[-1], use_bias=use_bias, activation="linear", input_dim=input_dim, dtype=dtype)
 
-    x = Input(input_dim)
+    x = Input(input_dim, dtype=dtype)
     nnet_0(x)
     nnet_1(x)
     nnet_1.set_weights([-p for p in nnet_0.get_weights()])  # be sure that the produced output will differ
     h_0 = nnet_2(nnet_0(x))
     h_1 = nnet_2(nnet_1(x))
     if merge_op == "average":
-        y = Average()([h_0, h_1])
+        y = Average(dtype=dtype)([h_0, h_1])
     if merge_op == "add":
-        y = Add()([h_0, h_1])
+        y = Add(dtype=dtype)([h_0, h_1])
 
     return Model(x, y)
 
 
-def toy_struct_cnn():
+def toy_struct_cnn(dtype="float32"):
 
-    layers = [Conv2D(10, kernel_size=(3, 3), activation="relu", data_format="channels_last"), Flatten(), Dense(1)]
+    layers = [Conv2D(10, kernel_size=(3, 3), activation="relu", data_format="channels_last", dtype=dtype), Flatten(dtype=dtype), Dense(1, dtype=dtype)]
     return Sequential(layers)
 
 
@@ -158,6 +161,17 @@ def test_toy_network_multiD(odd=0, archi=[4, 1], activation="relu", use_bias=Tru
     np.allclose(y_0, y_1)
 
 
+def toy_network_tutorial(dtype="float32"):
+    layers = []
+    layers.append(Dense(100, input_dim=1, dtype=dtype))  # specify the dimension of the input space
+    layers.append(Activation('relu', dtype=dtype))
+    layers.append(Dense(100, dtype=dtype))
+    layers.append(Dense(1, activation='linear', dtype=dtype))
+    model = Sequential(layers)
+    return model
+
+
+
 """
 @pytest.mark.parametrize("n, archi, activation, sequential, use_bias, mode, use_input, floatx", [
     (0, [4, 3, 1], None, True, True, "hybrid", True,32), (1, [4, 3, 1], None, True, True, "hybrid", True,32), (3, [4, 3, 1], None, True, True, "hybrid", True,32), (5, [4, 3, 1], None, True, True, "hybrid", True,32),
@@ -195,7 +209,7 @@ def test_convert_forward_1D(n, archi, activation, sequential, use_bias, mode, us
     z_ = inputs_[2]
 
 
-    ref_nn = dense_NN_1D(1, archi, sequential, activation, use_bias)
+    ref_nn = dense_NN_1D(1, archi, sequential, activation, use_bias, dtype=K.floatx())
     ref_nn(inputs[1])
 
     IBP=True; forward=True
@@ -242,7 +256,7 @@ def test_convert_forward_1D(n, archi, activation, sequential, use_bias, mode, us
     )
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)
-"""
+
 
 
 @pytest.mark.parametrize(
@@ -303,8 +317,8 @@ def test_convert_forward_stack_1D(n, archi, activation, sequential, mode, floatx
     x_ = inputs_[0]
     z_ = inputs_[2]
 
-    ref_nn_0 = dense_NN_1D(1, archi[:-1], sequential, activation, use_bias)
-    ref_nn_1 = dense_NN_1D(archi[-2], archi[-1:], sequential, activation, use_bias)
+    ref_nn_0 = dense_NN_1D(1, archi[:-1], sequential, activation, use_bias, dtype=K.floatx())
+    ref_nn_1 = dense_NN_1D(archi[-2], archi[-1:], sequential, activation, use_bias, dtype=K.floatx())
     if sequential:
         ref_nn = Sequential([ref_nn_0, ref_nn_1])
     else:
@@ -355,6 +369,7 @@ def test_convert_forward_stack_1D(n, archi, activation, sequential, mode, floatx
     )
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)
+
 
 
 @pytest.mark.parametrize(
@@ -428,7 +443,6 @@ def test_convert_forward_stack_multiD(odd, archi, activation, sequential, mode, 
 
     _, output, _, _ = convert_forward(ref_nn, IBP=IBP, forward=forward, shared=shared, input_tensors=input_tensors)
 
-    f_dense = Model(inputs[2:], output)
     f_dense = K.function(inputs[2:], output)
     f_ref = K.function(inputs, ref_nn(inputs[1]))
 
@@ -569,7 +583,6 @@ def test_convert_forward_struct0_1D(n, archi, activation, use_input, mode, float
     )
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)
-
 
 @pytest.mark.parametrize(
     "odd, archi, activation, use_input, mode, floatx, shared",
@@ -988,7 +1001,6 @@ def test_convert_forward_struct2_1D(n, archi, activation, use_input, mode, float
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)
 
-
 @pytest.mark.parametrize(
     "odd, archi, activation, use_input, mode, floatx, shared",
     [
@@ -1125,7 +1137,7 @@ def test_convert_conv(data_format, odd, m_0, m_1, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    ref_nn = toy_struct_cnn()
+    ref_nn = toy_struct_cnn(dtype=K.floatx())
 
     inputs = get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)
     inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
@@ -1188,10 +1200,6 @@ def test_convert_conv(data_format, odd, m_0, m_1, mode, floatx):
     K.set_epsilon(eps)
 
 
-"""
-
-"""
-# testing with multiples inputs
 @pytest.mark.parametrize(
     "odd, archi, activation, use_input, mode, floatx, shared",
     [
@@ -1311,6 +1319,7 @@ def test_convert_forward_multiple_outputs(odd, archi, activation, use_input, mod
     K.set_epsilon(eps)
 
 
+
 # testing with multiples inputs
 @pytest.mark.parametrize(
     "odd, archi, activation, use_input, mode, floatx, shared",
@@ -1368,7 +1377,7 @@ def test_convert_forward_multiple_inputs(odd, archi, activation, use_input, mode
     inputs_0_ = f_0(inputs_prev_[2:])
     inputs_1_ = f_1(inputs_prev_[2:])
 
-    ref_nn = Model([inputs_0[1], inputs_1[1]], Average()([inputs_0[1], inputs_1[1]]))
+    ref_nn = Model([inputs_0[1], inputs_1[1]], Average(dtype=K.floatx())([inputs_0[1], inputs_1[1]]))
 
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0 = inputs_0
     x_1, y_1, z_1, u_c_1, W_u_1, b_u_1, l_c_1, W_l_1, b_l_1 = inputs_1
@@ -1398,3 +1407,90 @@ def test_convert_forward_multiple_inputs(odd, archi, activation, use_input, mode
 
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)
+"""
+
+# network from tutorial 1
+
+@pytest.mark.parametrize("n, archi, activation, sequential, use_bias, mode, use_input, floatx", [
+    (0, [4, 3, 1], None, True, True, "hybrid", True,32), (1, [4, 3, 1], None, True, True, "hybrid", True,32), (3, [4, 3, 1], None, True, True, "hybrid", True,32), (5, [4, 3, 1], None, True, True, "hybrid", True,32),
+    (0, [4, 3, 1], None, False, True, "hybrid", True,32), (1, [4, 3, 1], None, False, True, "hybrid", True,32), (3, [4, 3, 1], None, False, True, "hybrid", True,32), (5, [4, 3, 1], None, False, True, "hybrid", True,32),
+    (0, [4, 3, 1], None, True, True, "forward", True,32), (1, [4, 3, 1], None, True, True, "forward", True,32), (3, [4, 3, 1], None, True, True, "forward", True,32), (5, [4, 3, 1], None, True, True, "forward", True,32),
+    (0, [4, 3, 1], None, False, True, "forward", True,32), (1, [4, 3, 1], None, False, True, "forward", True,32), (3, [4, 3, 1], None, False, True, "forward", True,32), (5, [4, 3, 1], None, False, True, "forward", True,32),
+    (0, [4, 3, 1], None, True, True, "ibp", True,32), (1, [4, 3, 1], None, True, True, "ibp", True,32), (3, [4, 3, 1], None, True, True, "ibp", True,32), (5, [4, 3, 1], None, True, True, "ibp", True,32),
+    (0, [4, 3, 1], None, False, True, "ibp", True,32), (1, [4, 3, 1], None, False, True, "ibp", True,32), (3, [4, 3, 1], None, False, True, "ibp", True,32), (5, [4, 3, 1], None, False, True, "ibp", True,32),
+    (0, [4, 3, 1], None, True, True, "hybrid", True,64), (1, [4, 3, 1], None, True, True, "hybrid", True,64), (3, [4, 3, 1], None, True, True, "hybrid", True,64), (5, [4, 3, 1], None, True, True, "hybrid", True,64),
+    (0, [4, 3, 1], None, False, True, "hybrid", True,64), (1, [4, 3, 1], None, False, True, "hybrid", True,64), (3, [4, 3, 1], None, False, True, "hybrid", True,64), (5, [4, 3, 1], None, False, True, "hybrid", True,64),
+    (0, [4, 3, 1], None, True, True, "forward", True,64), (1, [4, 3, 1], None, True, True, "forward", True,64), (3, [4, 3, 1], None, True, True, "forward", True,64), (5, [4, 3, 1], None, True, True, "forward", True,64),
+    (0, [4, 3, 1], None, False, True, "forward", True,64), (1, [4, 3, 1], None, False, True, "forward", True,64), (3, [4, 3, 1], None, False, True, "forward", True,64), (5, [4, 3, 1], None, False, True, "forward", True,64),
+    (0, [4, 3, 1], None, True, True, "ibp", True,64), (1, [4, 3, 1], None, True, True, "ibp", True,64), (3, [4, 3, 1], None, True, True, "ibp", True,64), (5, [4, 3, 1], None, True, True, "ibp", True,64),
+    (0, [4, 3, 1], None, False, True, "ibp", True,64), (1, [4, 3, 1], None, False, True, "ibp", True,64), (3, [4, 3, 1], None, False, True, "ibp", True,64), (5, [4, 3, 1], None, False, True, "ibp", True,64),
+    (0, [4, 3, 1], None, True, True, "hybrid", True,16), (1, [4, 3, 1], None, True, True, "hybrid", True,16), (3, [4, 3, 1], None, True, True, "hybrid", True,16), (5, [4, 3, 1], None, True, True, "hybrid", True,16),
+    (0, [4, 3, 1], None, False, True, "hybrid", True,16), (1, [4, 3, 1], None, False, True, "hybrid", True,16), (3, [4, 3, 1], None, False, True, "hybrid", True,16), (5, [4, 3, 1], None, False, True, "hybrid", True,16),
+    (0, [4, 3, 1], None, True, True, "forward", True,16), (1, [4, 3, 1], None, True, True, "forward", True,16), (3, [4, 3, 1], None, True, True, "forward", True,16), (5, [4, 3, 1], None, True, True, "forward", True,16),
+    (0, [4, 3, 1], None, False, True, "forward", True,16), (1, [4, 3, 1], None, False, True, "forward", True,16), (3, [4, 3, 1], None, False, True, "forward", True,16), (5, [4, 3, 1], None, False, True, "forward", True,16),
+    (0, [4, 3, 1], None, True, True, "ibp", True,16), (1, [4, 3, 1], None, True, True, "ibp", True,16), (3, [4, 3, 1], None, True, True, "ibp", True,16), (5, [4, 3, 1], None, True, True, "ibp", True,16),
+    (0, [4, 3, 1], None, False, True, "ibp", True,16), (1, [4, 3, 1], None, False, True, "ibp", True,16), (3, [4, 3, 1], None, False, True, "ibp", True,16), (5, [4, 3, 1], None, False, True, "ibp", True,16),
+])
+def test_convert_forward_1D(n, archi, activation, sequential, use_bias, mode, use_input, floatx):
+
+    K.set_floatx('float{}'.format(floatx))
+    eps = K.epsilon()
+    decimal = 5
+    if floatx == 16:
+        K.set_epsilon(1e-2)
+        decimal = 2
+
+    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
+    x_ = inputs_[0]
+    z_ = inputs_[2]
+
+    ref_nn = toy_network_tutorial(dtype=K.floatx())
+    ref_nn(inputs[1])
+
+    IBP=True; forward=True
+    if mode=="forward":
+        IBP=False
+    if mode=="ibp":
+        forward=False
+
+    input_tensors= inputs[2:]
+    if mode=='ibp':
+        input_tensors=[u_c, l_c]
+    if mode=='forward':
+        input_tensors = [z, W_u, b_u, W_l, b_l]
+
+    _,  output, _, _ = convert_forward(ref_nn, IBP=IBP, forward=forward, shared=True, input_tensors=input_tensors)
+
+    f_dense = K.function(inputs[2:], output)
+    f_ref = K.function(inputs, ref_nn(inputs[1]))
+
+    y_ref = f_ref(inputs_)
+    u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = [None]*6
+    if mode == 'hybrid':
+        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
+    if mode == 'ibp':
+        u_c_, l_c_ = f_dense(inputs_[2:])
+    if mode =='forward':
+        z_, w_u_, b_u_, w_l_, b_l_ = f_dense(inputs_[2:])
+
+    assert_output_properties_box(
+        x_,
+        y_ref,
+        None,
+        None,
+        z_[:, 0],
+        z_[:, 1],
+        u_c_,
+        w_u_,
+        b_u_,
+        l_c_,
+        w_l_,
+        b_l_,
+        "dense_{}".format(n),
+        decimal=decimal
+    )
+    K.set_floatx("float{}".format(32))
+    K.set_epsilon(eps)
+

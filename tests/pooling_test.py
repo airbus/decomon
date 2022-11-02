@@ -42,10 +42,10 @@ def test_MaxPooling2D_box(data_format, odd, m_0, m_1, fast, mode, floatx):
     inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1)
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
-    output_ref = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid")(inputs[1])
+    output_ref = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid", dtype=K.floatx())(inputs[1])
     f_ref = K.function(inputs, output_ref)
 
-    layer = DecomonMaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid", dc_decomp=True, fast=fast, mode=mode)
+    layer = DecomonMaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid", dc_decomp=True, fast=fast, mode=mode, dtype=K.floatx())
 
     if mode == "hybrid":
         output = layer(inputs[2:])
@@ -85,7 +85,7 @@ def test_MaxPooling2D_box(data_format, odd, m_0, m_1, fast, mode, floatx):
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)
 
-
+"""
 @pytest.mark.parametrize(
     "data_format, odd, m_0, m_1, fast, mode, floatx",
     [
@@ -113,11 +113,11 @@ def test_MaxPooling2D_box_nodc(data_format, odd, m_0, m_1, fast, mode, floatx):
     inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
-    output_ref = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid")(inputs[1])
+    output_ref = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid", dtype=K.floatx())(inputs[1])
     f_ref = K.function(inputs, output_ref)
 
     layer = DecomonMaxPooling2D(
-        pool_size=(2, 2), strides=(2, 2), padding="valid", dc_decomp=False, fast=fast, mode=mode
+        pool_size=(2, 2), strides=(2, 2), padding="valid", dc_decomp=False, fast=fast, mode=mode, dtype=K.floatx()
     )
 
     if mode == "hybrid":
@@ -175,7 +175,7 @@ def test_MaxPooling2D_to_monotonic(data_format, odd, m_0, m_1, floatx):
     inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
 
-    layer_ref = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid")
+    layer_ref = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid", dtype=K.floatx())
     output_ref = layer_ref(inputs[1])
     f_ref = K.function(inputs, output_ref)
 
@@ -217,7 +217,7 @@ def test_MaxPooling2D_to_monotonic_nodc(data_format, odd, m_0, m_1, fast):
     inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
-    layer_ref = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid")
+    layer_ref = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid", dtype=K.floatx())
     output_ref = layer_ref(inputs[1])
     f_ref = K.function(inputs, output_ref)
 
@@ -231,3 +231,4 @@ def test_MaxPooling2D_to_monotonic_nodc(data_format, odd, m_0, m_1, fast):
 
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_pooling(inputs_)
     assert_output_properties_box_linear(x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc")
+"""

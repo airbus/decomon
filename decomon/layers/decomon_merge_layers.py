@@ -529,6 +529,7 @@ class DecomonDot(Dot, DecomonLayer):
             n_0 = len(inputs_0[-1].shape) - 2
             n_1 = len(inputs_1[-1].shape) - 2
 
+        import pdb; pdb.set_trace()
         input_0_0 = permute_dimensions(inputs_0, self.axes[0], mode=self.mode)
         input_1_0 = permute_dimensions(inputs_1, self.axes[1], mode=self.mode)
 

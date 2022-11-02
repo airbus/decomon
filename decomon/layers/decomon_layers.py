@@ -198,17 +198,14 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
     def get_backward_weights(self, inputs, flatten=True):
 
-
         #if self.w_ is None:
-        z_value = K.cast(0.0, K.floatx())
-        o_value = K.cast(1., K.floatx())
+        z_value = K.cast(0.0, self.dtype)
+        o_value = K.cast(1., self.dtype)
+
         b_u = inputs[-1]
         n_in = np.prod(b_u.shape[1:])
-
-        id_ = self.diag_op(z_value * Flatten()(b_u[0][None]) + o_value)
-
+        id_ = K.cast(self.diag_op(z_value * Flatten(dtype=self.dtype)(b_u[0][None]) + o_value), self.dtype)
         id_ = K.reshape(id_, [-1] + list(b_u.shape[1:]))
-
         w_ = conv2d(
                 id_,
                 self.kernel,
@@ -217,7 +214,6 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                 data_format=self.data_format,
                 dilation_rate=self.dilation_rate,
         )
-
         if flatten:
             if self.data_format == "channels_last":
                 c_in, height, width, c_out = w_.shape
@@ -229,8 +225,11 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
 
         w_ = K.reshape(w_, (n_in, -1))
-        n_repeat = int(w_.shape[-1]/self.bias.shape[-1])
-        b_ = K.reshape(K.repeat(self.bias[None], n_repeat), (-1,))
+        if self.use_bias:
+            n_repeat = int(w_.shape[-1]/self.bias.shape[-1])
+            b_ = K.reshape(K.repeat(self.bias[None], n_repeat), (-1,))
+        else:
+            b_ = K.cast(0., self.dtype)*w_[1][None]
         return w_, b_
 
     def shared_weights(self, layer):
@@ -251,8 +250,8 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         :param kwargs:
         :return: List of updated tensors
         """
-        z_value = K.cast(0.0, K.floatx())
-        o_value = K.cast(1., K.floatx())
+        z_value = K.cast(0.0, self.dtype)
+        o_value = K.cast(1., self.dtype)
 
         if not isinstance(inputs, list):
             raise ValueError("A merge layer should be called " "on a list of inputs.")
@@ -290,7 +289,6 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         #    data_format=self.data_format,
         #    dilation_rate=self.dilation_rate,
         #)
-
         def conv_pos(x):
             return conv2d(
                 x,
@@ -848,8 +846,8 @@ class DecomonDense(Dense, DecomonLayer):
         :param inputs:
         :return:
         """
-        z_value = K.cast(0.0, K.floatx())
-        o_value = K.cast(1., K.floatx())
+        z_value = K.cast(0.0, self.dtype)
+        o_value = K.cast(1., self.dtype)
 
         if not isinstance(inputs, list):
             raise ValueError("A merge layer should be called " "on a list of inputs.")
@@ -1314,7 +1312,8 @@ class DecomonActivation(Activation, DecomonLayer):
             else:
                 return self.activation(input, mode=self.mode, dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, finetune=[self.beta_u_f, self.beta_l_f])
         else:
-            return self.activation(input, mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp)
+            output= self.activation(input, mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp)
+            return output
 
     def reset_finetuning(self):
         if self.finetune and self.mode != F_IBP.name:
@@ -1525,8 +1524,8 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
         if training is None:
             training = K.learning_phase()
 
-        z_value = K.cast(0.0, K.floatx())
-        o_value = K.cast(1., K.floatx())
+        z_value = K.cast(0.0, self.dtype)
+        o_value = K.cast(1., self.dtype)
 
         if training:
             raise NotImplementedError("not working during training")
@@ -1811,18 +1810,20 @@ def to_monotonic(
                 if not(activation is None) and not isinstance(layer, Activation):
                     config_layer['activation']='linear'
 
+
             layer_monotonic = globals()[monotonic_class_name].from_config(config_layer)
             layer_monotonic.shared_weights(layer)
             layer_list.append(layer_monotonic)
             if not activation is None and not isinstance(layer, Activation) and not isinstance(activation, dict):
                 layer_next = DecomonActivation(activation, \
                                                mode=mode, finetune=finetune, \
-                                               dc_decomp=dc_decomp, convex_domain=convex_domain)
+                                               dc_decomp=dc_decomp, convex_domain=convex_domain,
+                                               dtype=layer.dtype)
                 layer_list.append(layer_next)
             else:
                 if isinstance(activation, dict):
                     layer_next_list = to_monotonic(layer.activation, input_dim,dc_decomp=dc_decomp, convex_domain=convex_domain,
-                                                   finetune=finetune, IBP=IBP, forward=forward, shared=shared, fast=fast)
+                                                   finetune=finetune, IBP=IBP, forward=forward, shared=shared, fast=fast, dtype=layer.dtype)
                     layer_list+=layer_next_list
             break
         except KeyError:
@@ -1842,14 +1843,14 @@ def to_monotonic(
     try:
         input_shape = list(layer.input_shape)[1:]
         if isinstance(input_dim, tuple):
-            x_shape = Input(input_dim)
+            x_shape = Input(input_dim, dtype=layer.dtype)
             input_dim = input_dim[-1]
         else:
-            x_shape = Input((input_dim,))
+            x_shape = Input((input_dim,), dtype=layer.dtype)
 
         if mode in [F_HYBRID.name, F_FORWARD.name]:
             w_shape = Input(tuple([input_dim] + input_shape))
-        y_shape = Input(tuple(input_shape))
+        y_shape = Input(tuple(input_shape), dtype=layer.dtype)
 
         if mode == F_HYBRID.name:
             #input_ = [y_shape, x_shape, y_shape, w_shape, y_shape, y_shape, w_shape, y_shape]
