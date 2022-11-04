@@ -5,7 +5,7 @@
 
 <div align="center">
     <a href="#">
-        <img src="https://img.shields.io/badge/Python-3.6, 3.7, 3.8-efefef">
+        <img src="https://img.shields.io/badge/Python-%E2%89%A53.7-efefef">
     </a>
     <a href="https://github.com/airbus/decomon/actions/workflows/python-lints.yml">
         <img alt="PyLint" src="https://github.com/airbus/decomon/actions/workflows/python-lints.yml/badge.svg">
