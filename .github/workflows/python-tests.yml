@@ -2,35 +2,39 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - "**"
   pull_request:
-    branches: ["main"]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   tests:
-    name: "Python ${{ matrix.python-version }}"
-    runs-on: "ubuntu-latest"
-    env:
-      USING_COVERAGE: '3.6,3.8'
-
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "pypy3"]
-
+        python-version: ["3.7", "3.9"]
     steps:
-      - uses: "actions/checkout@v2"
-      - uses: "actions/setup-python@v2"
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
-          python-version: "${{ matrix.python-version }}"
-      - name: "Install dependencies"
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install dependencies
         run: |
-          set -xe
-          python -VV
-          python -m site
-          python -m pip install --upgrade pip setuptools wheel
-          python -m pip install poetry
-          python -m pip install --upgrade tox tox-gh-actions
-
-      - name: "Run tox targets for ${{ matrix.python-version }}"
-        run: "python -m tox"
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade tox setuptools
+      - name: Restore cached .tox
+        id: cache-tox
+        uses: actions/cache@v3
+        with:
+          path: .tox
+          key:
+            tox-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
+      - name: Run tox target env for ${{ matrix.python-version }}
+        run: python -m tox -e py
