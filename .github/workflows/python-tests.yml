@@ -12,6 +12,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  linters:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: create requirements.txt so that pip cache with setup-python works
+        run: echo "pre-commit" > requirements_precommit.txt
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+          cache: pip
+          cache-dependency-path: requirements_precommit.txt
+      - name: install pre-commit
+        run: python -m pip install pre-commit
+      - name: get cached pre-commit hooks
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: pre-commit checks
+        run: pre-commit run --all-files --show-diff-on-failure --color=always
+
   tests:
     name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
