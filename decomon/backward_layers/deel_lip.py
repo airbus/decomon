@@ -15,7 +15,6 @@ from tensorflow.keras.backend import conv2d, conv2d_transpose
 from .utils import V_slope, backward_sort, get_identity_lirpa, get_IBP, get_FORWARD, get_input_dim
 from ..layers.utils import ClipAlpha, F_HYBRID, F_FORWARD
 from ..layers.decomon_layers import to_monotonic
-from back
 
 
 class BackwardDense(Layer):
