@@ -1,19 +1,22 @@
 # Test unit for decomon with Dense layers
 from __future__ import absolute_import
-import pytest
+
 import numpy as np
-from decomon.layers.decomon_layers import DecomonDense, to_monotonic
+import pytest
+import tensorflow.python.keras.backend as K
+from numpy.testing import assert_almost_equal
 from tensorflow.keras.layers import Dense
+
+from decomon.layers.decomon_layers import DecomonDense, to_monotonic
+
 from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
     assert_output_properties_box,
     assert_output_properties_box_linear,
     get_standard_values_multid_box,
+    get_standart_values_1d_box,
+    get_tensor_decomposition_1d_box,
     get_tensor_decomposition_multid_box,
 )
-import tensorflow.python.keras.backend as K
-from numpy.testing import assert_almost_equal
 
 
 @pytest.mark.parametrize(
@@ -570,7 +573,9 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    monotonic_dense = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=True, mode=mode, shared=shared, dtype=K.floatx())
+    monotonic_dense = DecomonDense(
+        1, use_bias=True, activation=activation, dc_decomp=True, mode=mode, shared=shared, dtype=K.floatx()
+    )
 
     ref_dense = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
 

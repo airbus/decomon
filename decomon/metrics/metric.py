@@ -1,10 +1,11 @@
 from __future__ import absolute_import
-from tensorflow.keras.layers import Layer
-from ..layers.utils import get_upper
-import tensorflow.keras.backend as K
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input
+
 import numpy as np
+import tensorflow.keras.backend as K
+from tensorflow.keras.layers import Input, Layer
+from tensorflow.keras.models import Model
+
+from ..layers.utils import get_upper
 
 
 class Adversarial_score(Layer):
@@ -335,7 +336,3 @@ def build_formal_upper_model(decomon_model):
     upper_score = layer(output + [y_out])
     upper_model = Model(input + [y_out], upper_score)
     return upper_model
-
-
-
-

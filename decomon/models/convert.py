@@ -1,16 +1,19 @@
 from __future__ import absolute_import
-from decomon.models.forward_cloning import convert_forward
-from decomon.models.backward_cloning import get_backward_model as convert_backward
-from ..layers.decomon_layers import to_monotonic
-from .models import DecomonModel
+
 import numpy as np
-from tensorflow.keras.layers import InputLayer, Input, Layer, Flatten, Lambda
-import tensorflow.python.keras.backend as K
-from tensorflow.keras.models import Model
-from ..layers.utils import get_upper, get_lower
 import tensorflow as tf
+import tensorflow.python.keras.backend as K
+from tensorflow.keras.layers import Flatten, Input, InputLayer, Lambda, Layer
+from tensorflow.keras.models import Model
+
+from decomon.models.backward_cloning import get_backward_model as convert_backward
+from decomon.models.forward_cloning import convert_forward
 from decomon.utils import Ball
+
+from ..layers.decomon_layers import to_monotonic
+from ..layers.utils import get_lower, get_upper
 from ..numpy.models.convert import clone as clone_to_numpy
+from .models import DecomonModel
 from .utils import convert_2_mode, get_mode
 
 
@@ -105,11 +108,9 @@ def convert(
     if not method in [algo.name for algo in [CROWN, CROWN_FORWARD, CROWN_HYBRID, CROWN_IBP, IBP, FORWARD, HYBRID]]:
         raise KeyError()
 
-
-
     if method != CROWN.name:
 
-        #ibp_, forward_ = get_ibp_forward_from_method(method)
+        # ibp_, forward_ = get_ibp_forward_from_method(method)
         ibp_, forward_ = ibp, forward
 
         results = convert_forward(
@@ -153,7 +154,6 @@ def convert(
         mode_to = get_mode(final_ibp, final_forward)
         output = convert_2_mode(mode_from=mode_from, mode_to=mode_to, convex_domain=convex_domain)(results[1])
 
-
     # build decomon model
     return input_tensors, output, layer_map, forward_map
 
@@ -172,9 +172,9 @@ def clone(
     finetune_forward=False,
     finetune_backward=False,
     extra_inputs=[],
-    to_keras = True,
+    to_keras=True,
     dico_grid={},
-    **kwargs
+    **kwargs,
 ):
 
     if not isinstance(model, Model):
@@ -184,18 +184,32 @@ def clone(
 
     ibp_, forward_ = get_ibp_forward_from_method(method)
 
-
     method = method.lower()
-    assert method in [IBP.name, FORWARD.name, HYBRID.name, CROWN.name, CROWN_IBP.name,
-                              CROWN_FORWARD.name, CROWN_HYBRID.name]
+    assert method in [
+        IBP.name,
+        FORWARD.name,
+        HYBRID.name,
+        CROWN.name,
+        CROWN_IBP.name,
+        CROWN_FORWARD.name,
+        CROWN_HYBRID.name,
+    ]
 
     if not to_keras:
         # only available option: to_numpy (in the future do get and deserialize function
-        return clone_to_numpy(model, ibp=ibp_, forward=forward_, method=method,
-                              final_ibp=final_ibp, final_forward=final_forward,
-                              convex_domain=convex_domain, shared=shared, back_bounds=back_bounds, dico_grid=dico_grid, **kwargs)
-
-
+        return clone_to_numpy(
+            model,
+            ibp=ibp_,
+            forward=forward_,
+            method=method,
+            final_ibp=final_ibp,
+            final_forward=final_forward,
+            convex_domain=convex_domain,
+            shared=shared,
+            back_bounds=back_bounds,
+            dico_grid=dico_grid,
+            **kwargs,
+        )
 
     """
     if not ibp and not forward:
@@ -246,7 +260,6 @@ def clone(
         forward = True
     """
 
-
     input_shape = None
     input_shape_vec = None
 
@@ -269,7 +282,7 @@ def clone(
     else:
         input_dim_ = input_dim
 
-    if len(convex_domain) == 0 or convex_domain['name']!=Ball.name:
+    if len(convex_domain) == 0 or convex_domain["name"] != Ball.name:
         input_shape_x = (2, input_dim_)
     else:
         if isinstance(input_dim, tuple):
@@ -279,8 +292,7 @@ def clone(
 
     z_tensor = Input(shape=input_shape_x, dtype=model.layers[0].dtype)
 
-    if len(convex_domain) == 0 or convex_domain['name']!=Ball.name:
-
+    if len(convex_domain) == 0 or convex_domain["name"] != Ball.name:
 
         u_c_tensor = Lambda(lambda z: z[:, 1])(z_tensor)
         l_c_tensor = Lambda(lambda z: z[:, 0])(z_tensor)
@@ -288,16 +300,19 @@ def clone(
         z_value = K.cast(0.0, z_tensor.dtype)
         o_value = K.cast(1.0, z_tensor.dtype)
         W = Lambda(lambda z: tf.linalg.diag(z_value * z[:, 0] + o_value), dtype=z_tensor.dtype)(z_tensor)
-        b = Lambda(lambda z: z_value *z[:, 1], dtype=z_tensor.dtype)(z_tensor)
+        b = Lambda(lambda z: z_value * z[:, 1], dtype=z_tensor.dtype)(z_tensor)
 
     else:
-
 
         if convex_domain["p"] == np.inf:
             radius = convex_domain["eps"]
 
-            u_c_tensor = Lambda(lambda var: var + K.cast(radius, dtype=model.layers[0].dtype), dtype = model.layers[0].dtype)(z_tensor)
-            l_c_tensor = Lambda(lambda var: var - K.cast(radius, dtype = model.layers[0].dtype), dtype = model.layers[0].dtype)(z_tensor)
+            u_c_tensor = Lambda(
+                lambda var: var + K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
+            )(z_tensor)
+            l_c_tensor = Lambda(
+                lambda var: var - K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
+            )(z_tensor)
 
             z_value = K.cast(0.0, model.layers[0].dtype)
             o_value = K.cast(1.0, model.layers[0].dtype)
@@ -318,19 +333,14 @@ def clone(
 
             W, b, u_c_tensor, l_c_tensor = get_bounds(z_tensor)
 
-
-
     if ibp_ and forward_:
-        #input_tensors = [z_tensor] + [u_c_tensor] * 3 + [l_c_tensor] * 3
+        # input_tensors = [z_tensor] + [u_c_tensor] * 3 + [l_c_tensor] * 3
         input_tensors = [z_tensor] + [u_c_tensor, W, b] + [l_c_tensor, W, b]
     if ibp_ and not forward_:
         input_tensors = [u_c_tensor, l_c_tensor]
     if not ibp_ and forward_:
-        #input_tensors = [z_tensor] + [u_c_tensor] * 2 + [l_c_tensor] * 2
+        # input_tensors = [z_tensor] + [u_c_tensor] * 2 + [l_c_tensor] * 2
         input_tensors = [z_tensor] + [W, b] + [W, b]
-
-
-
 
     _, output, _, _ = convert(
         model,
@@ -349,16 +359,16 @@ def clone(
         finetune_forward=finetune_forward,
         finetune_backward=finetune_backward,
         final_ibp=final_ibp,
-        final_forward=final_forward
+        final_forward=final_forward,
     )
 
-    back_bounds_=[]
+    back_bounds_ = []
     for elem in back_bounds:
         if isinstance(elem._keras_history.layer, InputLayer):
             back_bounds_.append(elem)
 
     return DecomonModel(
-        input=[z_tensor]+back_bounds_+extra_inputs,
+        input=[z_tensor] + back_bounds_ + extra_inputs,
         output=output,
         convex_domain=convex_domain,
         dc_decomp=False,
@@ -367,5 +377,5 @@ def clone(
         forward=final_forward,
         finetune=finetune,
         shared=shared,
-        backward_bounds=(len(back_bounds)>0)
+        backward_bounds=(len(back_bounds) > 0),
     )

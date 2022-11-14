@@ -1,18 +1,20 @@
 # Test unit for decomon with Dense layers
 from __future__ import absolute_import
-import pytest
+
 import numpy as np
+import pytest
+import tensorflow.python.keras.backend as K
+from tensorflow.keras.layers import MaxPooling2D
+
+from decomon.layers.decomon_layers import to_monotonic
+from decomon.layers.maxpooling import DecomonMaxPooling2D
+
 from . import (
     assert_output_properties_box,
     assert_output_properties_box_linear,
-    get_tensor_decomposition_images_box,
     get_standard_values_images_box,
+    get_tensor_decomposition_images_box,
 )
-import tensorflow.python.keras.backend as K
-from tensorflow.keras.layers import MaxPooling2D
-from decomon.layers.decomon_layers import to_monotonic
-
-from decomon.layers.maxpooling import DecomonMaxPooling2D
 
 
 @pytest.mark.parametrize(
@@ -45,7 +47,9 @@ def test_MaxPooling2D_box(data_format, odd, m_0, m_1, fast, mode, floatx):
     output_ref = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid", dtype=K.floatx())(inputs[1])
     f_ref = K.function(inputs, output_ref)
 
-    layer = DecomonMaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid", dc_decomp=True, fast=fast, mode=mode, dtype=K.floatx())
+    layer = DecomonMaxPooling2D(
+        pool_size=(2, 2), strides=(2, 2), padding="valid", dc_decomp=True, fast=fast, mode=mode, dtype=K.floatx()
+    )
 
     if mode == "hybrid":
         output = layer(inputs[2:])
@@ -84,6 +88,7 @@ def test_MaxPooling2D_box(data_format, odd, m_0, m_1, fast, mode, floatx):
     )
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)
+
 
 """
 @pytest.mark.parametrize(

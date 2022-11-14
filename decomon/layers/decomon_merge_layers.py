@@ -1,11 +1,31 @@
 from __future__ import absolute_import
-import tensorflow as tf
+
 import numpy as np
-from .core import DecomonLayer
+import tensorflow as tf
 import tensorflow.keras.backend as K
-from .core import F_FORWARD, F_IBP, F_HYBRID
-from .utils import add, maximum, minus, substract, multiply, permute_dimensions, broadcast
-from tensorflow.keras.layers import Concatenate, Average, Maximum, Multiply, Minimum, Add, Subtract, Dot, Input, Lambda
+from tensorflow.keras.layers import (
+    Add,
+    Average,
+    Concatenate,
+    Dot,
+    Input,
+    Lambda,
+    Maximum,
+    Minimum,
+    Multiply,
+    Subtract,
+)
+
+from .core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
+from .utils import (
+    add,
+    broadcast,
+    maximum,
+    minus,
+    multiply,
+    permute_dimensions,
+    substract,
+)
 
 ##### Merge Layer ####
 
@@ -529,7 +549,9 @@ class DecomonDot(Dot, DecomonLayer):
             n_0 = len(inputs_0[-1].shape) - 2
             n_1 = len(inputs_1[-1].shape) - 2
 
-        import pdb; pdb.set_trace()
+        import pdb
+
+        pdb.set_trace()
         input_0_0 = permute_dimensions(inputs_0, self.axes[0], mode=self.mode)
         input_1_0 = permute_dimensions(inputs_1, self.axes[1], mode=self.mode)
 

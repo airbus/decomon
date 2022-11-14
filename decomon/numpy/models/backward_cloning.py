@@ -1,40 +1,60 @@
 from __future__ import absolute_import
 
-from ..backward.layers import get_backward
 import numpy as np
-from decomon.models.models import DecomonModel
-from ..backward.utils import merge_with_previous
 import tensorflow.keras.backend as K
 
+from decomon.models.models import DecomonModel
 
-def crown_(node, backward_bounds=[], forward_init=[], log_bounds=dict(), log_layers={},
-           convex_domain={}, dico_grid={}, slope_grid={}, update_slope=False, reuse_slope=True, joint=False, rec=1):
+from ..backward.layers import get_backward
+from ..backward.utils import merge_with_previous
+
+
+def crown_(
+    node,
+    backward_bounds=[],
+    forward_init=[],
+    log_bounds=dict(),
+    log_layers={},
+    convex_domain={},
+    dico_grid={},
+    slope_grid={},
+    update_slope=False,
+    reuse_slope=True,
+    joint=False,
+    rec=1,
+):
 
     previous = bool(len(backward_bounds))
 
-
-    params_key = '{}_{}'.format(node.outbound_layer.name, rec)
+    params_key = "{}_{}".format(node.outbound_layer.name, rec)
     if params_key in dico_grid.keys():
         params = dico_grid[params_key]
         if params_key in slope_grid.keys():
             params.append(slope_grid[params_key])
     else:
-        params=[None, None]
+        params = [None, None]
 
     if joint:
-        layer_key = '{}'.format(node.outbound_layer.name)
+        layer_key = "{}".format(node.outbound_layer.name)
     else:
-        layer_key = '{}_{}'.format(node.outbound_layer.name, rec)
+        layer_key = "{}_{}".format(node.outbound_layer.name, rec)
 
     if layer_key in log_layers.keys():
         crown_layer = log_layers[layer_key]
         crown_layer.keras_layer = node.outbound_layer
-        crown_layer.rec=rec
+        crown_layer.rec = rec
     else:
-        crown_layer = get_backward(node.outbound_layer, previous=False, convex_domain=convex_domain, rec=rec, params=params,update_slope=update_slope, reuse_slope=reuse_slope)
+        crown_layer = get_backward(
+            node.outbound_layer,
+            previous=False,
+            convex_domain=convex_domain,
+            rec=rec,
+            params=params,
+            update_slope=update_slope,
+            reuse_slope=reuse_slope,
+        )
         if crown_layer.store_layer(joint, convex_domain, reuse_slope):
-            log_layers[layer_key]=crown_layer
-
+            log_layers[layer_key] = crown_layer
 
     if len(node.parent_nodes):
 
@@ -48,27 +68,44 @@ def crown_(node, backward_bounds=[], forward_init=[], log_bounds=dict(), log_lay
         else:
 
             # retrieve an input
-            crown_forward, log_bounds, log_layers = crown_(node_, backward_bounds=[], forward_init=forward_init,
-                                               log_bounds=log_bounds, log_layers=log_layers,
-                                               convex_domain=convex_domain, dico_grid=dico_grid,
-                                               slope_grid=slope_grid, reuse_slope=reuse_slope,
-                                               update_slope=update_slope, joint=joint)
+            crown_forward, log_bounds, log_layers = crown_(
+                node_,
+                backward_bounds=[],
+                forward_init=forward_init,
+                log_bounds=log_bounds,
+                log_layers=log_layers,
+                convex_domain=convex_domain,
+                dico_grid=dico_grid,
+                slope_grid=slope_grid,
+                reuse_slope=reuse_slope,
+                update_slope=update_slope,
+                joint=joint,
+            )
             # deduce the backward bounds at the next stage
-            #print(node.outbound_layer.name, rec, [e.shape for e in crown_forward])
+            # print(node.outbound_layer.name, rec, [e.shape for e in crown_forward])
             output = crown_layer.call(crown_forward)
             if crown_layer.store_output(joint, convex_domain, reuse_slope):
-                #print('stroing', node.outbound_layer.name)
-                log_bounds[id(node)]=output
+                # print('stroing', node.outbound_layer.name)
+                log_bounds[id(node)] = output
 
         if previous:
             backward_bounds = merge_with_previous(output + backward_bounds)
         else:
             backward_bounds = output
 
-        result = crown_(node_, backward_bounds=backward_bounds, forward_init=forward_init, log_bounds=log_bounds,
-                        convex_domain=convex_domain, rec=rec + 1, dico_grid=dico_grid,
-                        slope_grid=slope_grid, reuse_slope=reuse_slope, update_slope=update_slope, joint=joint)[
-                     0]
+        result = crown_(
+            node_,
+            backward_bounds=backward_bounds,
+            forward_init=forward_init,
+            log_bounds=log_bounds,
+            convex_domain=convex_domain,
+            rec=rec + 1,
+            dico_grid=dico_grid,
+            slope_grid=slope_grid,
+            reuse_slope=reuse_slope,
+            update_slope=update_slope,
+            joint=joint,
+        )[0]
 
         if params[0] is not None:
             params_ = crown_layer.params
@@ -91,29 +128,40 @@ def crown_(node, backward_bounds=[], forward_init=[], log_bounds=dict(), log_lay
         else:
             backward_bounds = crown_bounds
 
-
         return forward_init[:1] + backward_bounds, log_bounds, log_layers
 
 
-
-
-
-def crown_old(node, backward_bounds=[], forward_init=[], log_bounds=dict(),
-           convex_domain={}, dico_grid={}, slope_grid={}, update_slope=False, reuse_slope=True, rec=1):
+def crown_old(
+    node,
+    backward_bounds=[],
+    forward_init=[],
+    log_bounds=dict(),
+    convex_domain={},
+    dico_grid={},
+    slope_grid={},
+    update_slope=False,
+    reuse_slope=True,
+    rec=1,
+):
     previous = bool(len(backward_bounds))
 
-    params_key = '{}_{}'.format(node.outbound_layer.name, rec)
+    params_key = "{}_{}".format(node.outbound_layer.name, rec)
     if params_key in dico_grid.keys():
         params = dico_grid[params_key]
         if params_key in slope_grid.keys():
             params.append(slope_grid[params_key])
     else:
-        params=[None, None]
+        params = [None, None]
 
-    crown_layer = get_backward(node.outbound_layer, previous=previous, convex_domain=convex_domain, rec=rec, params=params,
-                               update_slope=update_slope, reuse_slope=reuse_slope
-                            )
-
+    crown_layer = get_backward(
+        node.outbound_layer,
+        previous=previous,
+        convex_domain=convex_domain,
+        rec=rec,
+        params=params,
+        update_slope=update_slope,
+        reuse_slope=reuse_slope,
+    )
 
     # if input bounds: easy
     if len(node.parent_nodes):
@@ -126,18 +174,37 @@ def crown_old(node, backward_bounds=[], forward_init=[], log_bounds=dict(),
             crown_forward = log_bounds[id(node_)]
             crown_forward = forward_init[:1] + crown_forward
         else:
-            crown_forward, log_bounds = crown_(node_, backward_bounds=[], forward_init=forward_init,
-                                               log_bounds=log_bounds, convex_domain=convex_domain, dico_grid=dico_grid,
-                                               slope_grid=slope_grid, reuse_slope=reuse_slope, update_slope=update_slope)
+            crown_forward, log_bounds = crown_(
+                node_,
+                backward_bounds=[],
+                forward_init=forward_init,
+                log_bounds=log_bounds,
+                convex_domain=convex_domain,
+                dico_grid=dico_grid,
+                slope_grid=slope_grid,
+                reuse_slope=reuse_slope,
+                update_slope=update_slope,
+            )
             log_bounds[id(node_)] = crown_forward[-4:]
 
         # deduce the backward bounds at the next stage
         backward_bounds = crown_layer.call(crown_forward + backward_bounds)
 
-        result = crown_(node_, backward_bounds=backward_bounds, forward_init=forward_init, log_bounds=log_bounds,
-                        convex_domain=convex_domain, rec=rec+1, dico_grid=dico_grid,
-                        slope_grid=slope_grid, reuse_slope=reuse_slope, update_slope=update_slope)[
-                     0], log_bounds
+        result = (
+            crown_(
+                node_,
+                backward_bounds=backward_bounds,
+                forward_init=forward_init,
+                log_bounds=log_bounds,
+                convex_domain=convex_domain,
+                rec=rec + 1,
+                dico_grid=dico_grid,
+                slope_grid=slope_grid,
+                reuse_slope=reuse_slope,
+                update_slope=update_slope,
+            )[0],
+            log_bounds,
+        )
         return result
     else:
 
@@ -153,70 +220,116 @@ def crown_old(node, backward_bounds=[], forward_init=[], log_bounds=dict(),
         return forward_init[:1] + crown_bounds, log_bounds
 
 
-def crown(model, backward_bounds=[], forward_init=[], convex_domain={}, dico_grid={}, slope_grid={},
-          reuse_slope=False, update_slope=False, joint=False):
+def crown(
+    model,
+    backward_bounds=[],
+    forward_init=[],
+    convex_domain={},
+    dico_grid={},
+    slope_grid={},
+    reuse_slope=False,
+    update_slope=False,
+    joint=False,
+):
     # get nodes by depth
     outputs_nodes = model._nodes_by_depth[0][0]
 
-    if len(forward_init)==1:
+    if len(forward_init) == 1:
         # create the init linear relaxations on  the fly
         X = forward_init[0]
-        w_f = np.repeat(np.diag([1]*X.shape[-1])[None], len(X), axis=0)
+        w_f = np.repeat(np.diag([1] * X.shape[-1])[None], len(X), axis=0)
         b_f = np.zeros((len(X), X.shape[-1]))
-        forward_init+=[w_f, b_f]*2
-    toto = crown_(outputs_nodes, backward_bounds=backward_bounds, forward_init=forward_init, log_bounds=dict(),
-                  convex_domain=convex_domain, dico_grid=dico_grid,
-                  slope_grid=slope_grid, reuse_slope=reuse_slope, update_slope=update_slope, joint=joint)
+        forward_init += [w_f, b_f] * 2
+    toto = crown_(
+        outputs_nodes,
+        backward_bounds=backward_bounds,
+        forward_init=forward_init,
+        log_bounds=dict(),
+        convex_domain=convex_domain,
+        dico_grid=dico_grid,
+        slope_grid=slope_grid,
+        reuse_slope=reuse_slope,
+        update_slope=update_slope,
+        joint=joint,
+    )
     return toto[0]
 
-class NumpyModel(object):
 
-    def __init__(self, model, ibp=False, forward=True, convex_domain={}, has_back_bounds=False, dico_grid={},
-                 slope_grid={},
-                 update_slope=False,
-                 reuse_slope=False,
-                 joint=False,
-                 **kwargs):
-        self.IBP=ibp
-        self.forward=forward
-        self.convex_domain=convex_domain
-        self.has_backward_bounds= has_back_bounds
-        self.model=model
-        self.dico_grid=dico_grid
-        self.slope_grid=slope_grid
-        self.reuse_slope=reuse_slope
+class NumpyModel(object):
+    def __init__(
+        self,
+        model,
+        ibp=False,
+        forward=True,
+        convex_domain={},
+        has_back_bounds=False,
+        dico_grid={},
+        slope_grid={},
+        update_slope=False,
+        reuse_slope=False,
+        joint=False,
+        **kwargs,
+    ):
+        self.IBP = ibp
+        self.forward = forward
+        self.convex_domain = convex_domain
+        self.has_backward_bounds = has_back_bounds
+        self.model = model
+        self.dico_grid = dico_grid
+        self.slope_grid = slope_grid
+        self.reuse_slope = reuse_slope
         self.update_slope = update_slope
-        self.joint=joint
+        self.joint = joint
 
     def predict(self, inputs):
         pass
 
-class NumpyCROWNModel(NumpyModel):
 
-    def __init__(self, model, ibp=False, forward=True, convex_domain={}, has_back_bounds=False, dico_grid={},
-                 slope_grid={}, update_slope=False, reuse_slope=False,joint=False,
-                 **kwargs):
-        super(NumpyCROWNModel, self).__init__(model, ibp=ibp, forward=forward, convex_domain=convex_domain, has_back_bounds=has_back_bounds,
-                                              dico_grid=dico_grid,
-                                              slope_grid=slope_grid,
-                                              update_slope=update_slope,
-                                              reuse_slope=reuse_slope,
-                                              joint=joint,
-                                              **kwargs)
+class NumpyCROWNModel(NumpyModel):
+    def __init__(
+        self,
+        model,
+        ibp=False,
+        forward=True,
+        convex_domain={},
+        has_back_bounds=False,
+        dico_grid={},
+        slope_grid={},
+        update_slope=False,
+        reuse_slope=False,
+        joint=False,
+        **kwargs,
+    ):
+        super(NumpyCROWNModel, self).__init__(
+            model,
+            ibp=ibp,
+            forward=forward,
+            convex_domain=convex_domain,
+            has_back_bounds=has_back_bounds,
+            dico_grid=dico_grid,
+            slope_grid=slope_grid,
+            update_slope=update_slope,
+            reuse_slope=reuse_slope,
+            joint=joint,
+            **kwargs,
+        )
 
     def predict(self, inputs):
         if not isinstance(inputs, list):
-            inputs=[inputs]
+            inputs = [inputs]
         if self.has_backward_bounds:
             backward_bounds = inputs[-4]
             inputs = inputs[:-4]
         else:
-            backward_bounds=[]
-        return crown(self.model, backward_bounds=backward_bounds,
-                     forward_init=inputs, convex_domain=self.convex_domain, dico_grid=self.dico_grid,
-                     slope_grid=self.slope_grid,
-                     update_slope=self.update_slope,
-                     reuse_slope=self.reuse_slope,
-                     joint=self.joint
-                     )
-
+            backward_bounds = []
+        return crown(
+            self.model,
+            backward_bounds=backward_bounds,
+            forward_init=inputs,
+            convex_domain=self.convex_domain,
+            dico_grid=self.dico_grid,
+            slope_grid=self.slope_grid,
+            update_slope=self.update_slope,
+            reuse_slope=self.reuse_slope,
+            joint=self.joint,
+        )

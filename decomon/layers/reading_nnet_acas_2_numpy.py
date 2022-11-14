@@ -1,31 +1,32 @@
-import numpy as np
-import NNet # https://github.com/sisl/NNet
-from NNet.utils.readNNet import readNNet
 from contextlib import closing
+
+import NNet  # https://github.com/sisl/NNet
+import numpy as np
+from NNet.utils.readNNet import readNNet
 
 
 def convert_nnet_2_numpy(repo, filename, clipping=True, normalize_in=True, normalize_out=False, verbose=0):
-    with closing(open('{}/{}'.format(repo, filename), 'rb')) as f:
+    with closing(open("{}/{}".format(repo, filename), "rb")) as f:
         lines = f.readlines()
 
     index = 0
-    while lines[index].decode('utf-8')[:2] == '//':
+    while lines[index].decode("utf-8")[:2] == "//":
         index += 1
 
     # get network architecture
-    archi = [int(e) for e in lines[index + 1].decode('utf-8').strip().split(',')[:-1]]
+    archi = [int(e) for e in lines[index + 1].decode("utf-8").strip().split(",")[:-1]]
     input_dim = archi[0]
     n_layers = archi[1:]
     if verbose:
-        print('archi', archi)
+        print("archi", archi)
 
     # get MIN and MAX of the domain
-    MIN = lines[index + 3].decode('utf-8').strip().split(',')[:-1]
-    MAX = lines[index + 4].decode('utf-8').strip().split(',')[:-1]
+    MIN = lines[index + 3].decode("utf-8").strip().split(",")[:-1]
+    MAX = lines[index + 4].decode("utf-8").strip().split(",")[:-1]
 
     # get normalization
-    MEAN = lines[index + 5].decode('utf-8').strip().split(',')[:-1]
-    STD = lines[index + 6].decode('utf-8').strip().split(',')[:-1]
+    MEAN = lines[index + 5].decode("utf-8").strip().split(",")[:-1]
+    STD = lines[index + 6].decode("utf-8").strip().split(",")[:-1]
     MIN = np.array([float(e) for e in MIN])
     MAX = np.array([float(e) for e in MAX])
     MEAN = np.array([float(e) for e in MEAN])
@@ -40,13 +41,13 @@ def convert_nnet_2_numpy(repo, filename, clipping=True, normalize_in=True, norma
     MEAN_in = MEAN[:-1]
 
     # retrieve the parameters of the networks (weights and biases)
-    weights, biases = readNNet('{}/{}'.format(repo, filename))
+    weights, biases = readNNet("{}/{}".format(repo, filename))
     params = []
     for w, b in zip(weights, biases):
         params += [w.T, b]
 
     if normalize_in:
-        W = np.diag(1. / STD_in)
+        W = np.diag(1.0 / STD_in)
         bias = -MEAN_in / STD_in
 
         w_0, b_0 = params[:2]
@@ -78,7 +79,7 @@ def convert_nnet_2_numpy(repo, filename, clipping=True, normalize_in=True, norma
 
         for i in range(len(w_) - 1):
             x = np.dot(x, w_[i]) + b_[i][None]
-            x = np.maximum(x, 0.)
+            x = np.maximum(x, 0.0)
         x = np.dot(x, w_[-1]) + b_[-1][None]
         if n_dim == 1:
             return x[0]
@@ -86,4 +87,3 @@ def convert_nnet_2_numpy(repo, filename, clipping=True, normalize_in=True, norma
             return x
 
     return func
-

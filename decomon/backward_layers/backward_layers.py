@@ -1,28 +1,47 @@
 from __future__ import absolute_import
-import tensorflow.keras.backend as K
-import tensorflow as tf
+
 import numpy as np
-from tensorflow.keras.layers import Layer, Flatten, Permute, Activation
-from decomon.layers.decomon_layers import (
-    DecomonDense,
-    DecomonConv2D,
-    DecomonDropout,
-    DecomonReshape,
-    DecomonFlatten,
-    DecomonBatchNormalization,
-    DecomonActivation,
-    DecomonPermute,
-)
-from ..backward_layers.activations import get
+import tensorflow as tf
+import tensorflow.keras.backend as K
 from tensorflow.keras.backend import conv2d, conv2d_transpose
-from .utils import V_slope, backward_sort, get_identity_lirpa, get_IBP, get_FORWARD, get_input_dim
-from ..layers.utils import ClipAlpha, F_HYBRID, F_FORWARD, NonNeg, NonPos, F_IBP, ClipAlphaGrid
-from ..layers.decomon_layers import to_monotonic
-from .backward_maxpooling import BackwardMaxPooling2D
-from .backward_merge import BackwardAverage, BackwardAdd
+from tensorflow.keras.layers import Activation, Flatten, Layer, Permute
 from tensorflow.python.ops import array_ops
+
+from decomon.layers.decomon_layers import (
+    DecomonActivation,
+    DecomonBatchNormalization,
+    DecomonConv2D,
+    DecomonDense,
+    DecomonDropout,
+    DecomonFlatten,
+    DecomonPermute,
+    DecomonReshape,
+)
+
+from ..backward_layers.activations import get
 from ..layers.core import Grid, Option
+from ..layers.decomon_layers import to_monotonic
+from ..layers.utils import (
+    F_FORWARD,
+    F_HYBRID,
+    F_IBP,
+    ClipAlpha,
+    ClipAlphaGrid,
+    NonNeg,
+    NonPos,
+)
+from .backward_maxpooling import BackwardMaxPooling2D
+from .backward_merge import BackwardAdd, BackwardAverage
 from .core import BackwardLayer
+from .utils import (
+    V_slope,
+    backward_sort,
+    get_FORWARD,
+    get_IBP,
+    get_identity_lirpa,
+    get_input_dim,
+)
+
 
 class BackwardDense(BackwardLayer):
     """
@@ -127,8 +146,7 @@ class BackwardDense(BackwardLayer):
             bias = K.expand_dims(K.expand_dims(bias, 0), -1)  # (None, n_out, 1)
             b_out_u_ = K.sum(w_out_u * bias, 1) + b_out_u  # (None, n_back)
             b_out_l_ = K.sum(w_out_l * bias, 1)
-            b_out_l_+= b_out_l
-
+            b_out_l_ += b_out_l
 
         else:
             b_out_u_ = b_out_u
@@ -184,20 +202,19 @@ class BackwardDense(BackwardLayer):
             # w_out_u (None, n_out)  b_out_u (None, n_back)
             # correction:
 
-
-
-
-            if len(w_out_u.shape)==2:
+            if len(w_out_u.shape) == 2:
                 w_out_u = tf.linalg.diag(w_out_u)  # (None, n_out, n_back=n_out)
             else:
 
                 toto = inputs
-                titi =x
+                titi = x
                 finetune = self.finetune
                 act = self.activation_name
-                import pdb; pdb.set_trace()
+                import pdb
 
-            if len(w_out_l.shape)==2:
+                pdb.set_trace()
+
+            if len(w_out_l.shape) == 2:
                 w_out_l = tf.linalg.diag(w_out_l)
             weights = K.expand_dims(K.expand_dims(weights, 0), -1)  # (1, n_in, n_out, 1)
             if self.layer.use_bias:
@@ -208,9 +225,9 @@ class BackwardDense(BackwardLayer):
             else:
                 b_out_u_ = b_out_u
                 b_out_l_ = b_out_l
-            if len(w_out_u.shape)==3:
+            if len(w_out_u.shape) == 3:
                 w_out_u = K.expand_dims(w_out_u, 1)  # (None,  1, n_in, n_back)
-            if len(w_out_l.shape)==3:
+            if len(w_out_l.shape) == 3:
                 w_out_l = K.expand_dims(w_out_l, 1)
             w_out_u_ = K.sum(w_out_u * weights, 2)  # (None, n_in,  n_back)
             w_out_l_ = K.sum(w_out_l * weights, 2)
@@ -344,11 +361,11 @@ class BackwardConv2D(BackwardLayer):
 
         self.frozen_weights = False
 
-    def get_bounds_linear(self, w_out_u, b_out_u, w_out_l, b_out_l ):
+    def get_bounds_linear(self, w_out_u, b_out_u, w_out_l, b_out_l):
 
         output_shape_tensor = self.layer.output_shape[-1]
         shape_ = list(output_shape_tensor)
-        shape_[0]=-1
+        shape_[0] = -1
         n_out = w_out_u.shape[-1]
 
         """
@@ -359,12 +376,11 @@ class BackwardConv2D(BackwardLayer):
         """
 
         # first permute dimensions
-        if len(w_out_u.shape)==2:
+        if len(w_out_u.shape) == 2:
             w_out_u = tf.linalg.diag(w_out_u)
 
-        if len(w_out_l.shape)==2:
+        if len(w_out_l.shape) == 2:
             w_out_l = tf.linalg.diag(w_out_l)
-
 
         w_out_u = array_ops.transpose(w_out_u, perm=(0, 2, 1))
         w_out_l = array_ops.transpose(w_out_l, perm=(0, 2, 1))
@@ -427,11 +443,9 @@ class BackwardConv2D(BackwardLayer):
 
         return w_out_u_, b_out_u_, w_out_l_, b_out_l_
 
-
     def call_previous(self, inputs):
         x = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-
 
         if self.activation_name != "linear":
             x_output = self.layer.call_linear(x)
@@ -452,7 +466,7 @@ class BackwardConv2D(BackwardLayer):
                     slope=self.slope,
                     mode=self.mode,
                 )
-        return self.get_bounds_linear(w_out_u, b_out_u, w_out_l, b_out_l )
+        return self.get_bounds_linear(w_out_u, b_out_u, w_out_l, b_out_l)
 
     def call_no_previous(self, inputs):
         x = inputs
@@ -478,12 +492,10 @@ class BackwardConv2D(BackwardLayer):
                     x_output, convex_domain=self.convex_domain, slope=self.slope, mode=self.mode, previous=False
                 )
 
-
-
-                #w_out_u = K.reshape(w_out_u, (-1, shape))
-                #b_out_u = K.reshape(b_out_u, (-1, shape))
-                #w_out_l = K.reshape(w_out_l, (-1, shape))
-                #b_out_l = K.reshape(b_out_l, (-1, shape))
+                # w_out_u = K.reshape(w_out_u, (-1, shape))
+                # b_out_u = K.reshape(b_out_u, (-1, shape))
+                # w_out_l = K.reshape(w_out_l, (-1, shape))
+                # b_out_l = K.reshape(b_out_l, (-1, shape))
 
             return self.get_bounds_linear(w_out_u, b_out_u, w_out_l, b_out_l)
 
@@ -567,7 +579,6 @@ class BackwardActivation(BackwardLayer):
     ):
         super(BackwardActivation, self).__init__(**kwargs)
 
-
         self.layer = layer
         self.activation = get(layer.get_config()["activation"])  # ??? not sur
         self.activation_name = layer.get_config()["activation"]
@@ -582,9 +593,9 @@ class BackwardActivation(BackwardLayer):
         self.finetune = finetune
         self.finetune_param = []
         if self.finetune:
-            self.frozen_alpha=False
-        self.grid_finetune=[]
-        self.frozen_grid=False
+            self.frozen_alpha = False
+        self.grid_finetune = []
+        self.frozen_grid = False
 
     def build(self, input_shape):
         """
@@ -598,21 +609,33 @@ class BackwardActivation(BackwardLayer):
 
         if self.finetune and self.activation_name != "linear":
 
-            if len(self.convex_domain) and self.convex_domain['name'] == Grid.name:
+            if len(self.convex_domain) and self.convex_domain["name"] == Grid.name:
                 if self.activation_name[:4] == "relu":
                     self.alpha_b_l = self.add_weight(
-                        shape=(3, input_dim,), initializer="ones", name="alpha_l_b_0", regularizer=None,
-                        constraint=ClipAlpha()
+                        shape=(
+                            3,
+                            input_dim,
+                        ),
+                        initializer="ones",
+                        name="alpha_l_b_0",
+                        regularizer=None,
+                        constraint=ClipAlpha(),
                     )
                     alpha_b_l = np.zeros((3, input_dim))
-                    alpha_b_l[0]=1
+                    alpha_b_l[0] = 1
                     K.set_value(self.alpha_b_l, alpha_b_l)
                     self.finetune_param.append(self.alpha_b_l)
 
-
             else:
                 self.alpha_b_l = self.add_weight(
-                    shape=(2,input_dim,), initializer="ones", name="alpha_l_b", regularizer=None, constraint=ClipAlpha()
+                    shape=(
+                        2,
+                        input_dim,
+                    ),
+                    initializer="ones",
+                    name="alpha_l_b",
+                    regularizer=None,
+                    constraint=ClipAlpha(),
                 )
                 alpha_b_l = np.zeros((2, input_dim))
                 alpha_b_l[0] = 1
@@ -620,7 +643,11 @@ class BackwardActivation(BackwardLayer):
 
                 if self.activation_name[:4] != "relu":
                     self.alpha_b_u = self.add_weight(
-                        shape=(input_dim,), initializer="ones", name="alpha_u_b", regularizer=None, constraint=ClipAlpha()
+                        shape=(input_dim,),
+                        initializer="ones",
+                        name="alpha_u_b",
+                        regularizer=None,
+                        constraint=ClipAlpha(),
                     )
                     self.finetune_param.append(self.alpha_b_u)
 
@@ -628,36 +655,61 @@ class BackwardActivation(BackwardLayer):
             if len(self.finetune_param) == 1:
                 self.finetune_param = self.finetune_param[0]
 
-
         # grid domain
         if self.activation_name[:4] == "relu":
 
-            #import pdb; pdb.set_trace()
-            if len(self.convex_domain) and self.convex_domain['name']==Grid.name and\
-                    self.convex_domain['option']==Option.lagrangian and self.mode!=F_IBP.name:
+            # import pdb; pdb.set_trace()
+            if (
+                len(self.convex_domain)
+                and self.convex_domain["name"] == Grid.name
+                and self.convex_domain["option"] == Option.lagrangian
+                and self.mode != F_IBP.name
+            ):
 
-                    finetune_grid_pos = self.add_weight(shape=(input_dim,), initializer="zeros", name="lambda_grid_neg", regularizer=None, constraint=NonNeg())
+                finetune_grid_pos = self.add_weight(
+                    shape=(input_dim,),
+                    initializer="zeros",
+                    name="lambda_grid_neg",
+                    regularizer=None,
+                    constraint=NonNeg(),
+                )
 
-                    finetune_grid_neg = self.add_weight(
-                        shape=(input_dim,), initializer="zeros", name="lambda_grid_pos", regularizer=None,
-                        constraint=NonPos())
+                finetune_grid_neg = self.add_weight(
+                    shape=(input_dim,),
+                    initializer="zeros",
+                    name="lambda_grid_pos",
+                    regularizer=None,
+                    constraint=NonPos(),
+                )
 
-                    self.grid_finetune = [finetune_grid_neg, finetune_grid_pos]
+                self.grid_finetune = [finetune_grid_neg, finetune_grid_pos]
 
         # import pdb; pdb.set_trace()
-        if len(self.convex_domain) and self.convex_domain['name'] == Grid.name and self.convex_domain['option'] == Option.milp and self.mode != F_IBP.name:
+        if (
+            len(self.convex_domain)
+            and self.convex_domain["name"] == Grid.name
+            and self.convex_domain["option"] == Option.milp
+            and self.mode != F_IBP.name
+        ):
 
-            finetune_grid_A = self.add_weight(shape=(input_dim,), initializer="zeros", name="A_{}_{}".format(self.layer.name, self.rec),
-                                                          regularizer=None, trainable=False)#constraint=NonPos()
+            finetune_grid_A = self.add_weight(
+                shape=(input_dim,),
+                initializer="zeros",
+                name="A_{}_{}".format(self.layer.name, self.rec),
+                regularizer=None,
+                trainable=False,
+            )  # constraint=NonPos()
             finetune_grid_B = self.add_weight(
-                            shape=(input_dim,), initializer="zeros", name="B_{}_{}".format(self.layer.name, self.rec), regularizer=None, trainable=False) #constraint=NonNeg()
+                shape=(input_dim,),
+                initializer="zeros",
+                name="B_{}_{}".format(self.layer.name, self.rec),
+                regularizer=None,
+                trainable=False,
+            )  # constraint=NonNeg()
 
             self.grid_finetune = [finetune_grid_A, finetune_grid_B]
 
-
         self.built = True
-
-
 
     def call_previous(self, inputs):
         x = inputs[:-4]
@@ -674,7 +726,7 @@ class BackwardActivation(BackwardLayer):
                     slope=self.slope,
                     mode=self.mode,
                     finetune=self.finetune_param,
-                    finetune_grid=self.grid_finetune
+                    finetune_grid=self.grid_finetune,
                 )
         else:
             if self.activation_name != "linear":
@@ -685,16 +737,16 @@ class BackwardActivation(BackwardLayer):
                     convex_domain=self.convex_domain,
                     slope=self.slope,
                     mode=self.mode,
-                    finetune_grid=self.grid_finetune
+                    finetune_grid=self.grid_finetune,
                 )
         # reshape
         # shape = np.prod(x[-1].shape[1:])
         # op_reshape = Reshape((shape, -1))
         # w_out_u = op_reshape(w_out_u)
         # w_out_l = op_reshape(w_out_l)
-        if len(w_out_u)==2:
+        if len(w_out_u) == 2:
             w_out_u = tf.linalg.diag(w_out_u)
-        if len(w_out_l)==2:
+        if len(w_out_l) == 2:
             w_out_l = tf.linalg.diag(w_out_l)
         return w_out_u, b_out_u, w_out_l, b_out_l
 
@@ -714,7 +766,7 @@ class BackwardActivation(BackwardLayer):
                     mode=self.mode,
                     previous=False,  # add hyperparameters
                     finetune=self.finetune_param,
-                    finetune_grid=self.grid_finetune
+                    finetune_grid=self.grid_finetune,
                 )
             else:
                 w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
@@ -723,7 +775,7 @@ class BackwardActivation(BackwardLayer):
                     slope=self.slope,
                     mode=self.mode,
                     previous=False,  # add hyperparameters
-                    finetune_grid=self.grid_finetune
+                    finetune_grid=self.grid_finetune,
                 )
         else:
             y_ = inputs[-1]
@@ -739,17 +791,14 @@ class BackwardActivation(BackwardLayer):
             w_out_u = tf.linalg.diag(w_out_u)
             w_out_l = tf.linalg.diag(w_out_l)
 
-
-        if len(w_out_u.shape)==2:
+        if len(w_out_u.shape) == 2:
             w_out_u = tf.linalg.diag(w_out_u)
-        if len(w_out_l.shape)==2:
+        if len(w_out_l.shape) == 2:
             w_out_l = tf.linalg.diag(w_out_l)
-
 
         return w_out_u, b_out_u, w_out_l, b_out_l
 
     def call(self, inputs):
-
 
         if self.previous:
             y_ = inputs[:-4][-1]
@@ -763,19 +812,18 @@ class BackwardActivation(BackwardLayer):
 
     def freeze_alpha(self):
         if not self.frozen_alpha:
-            if self.finetune and self.mode in [F_FORWARD.name,F_HYBRID.name]:
+            if self.finetune and self.mode in [F_FORWARD.name, F_HYBRID.name]:
                 if len(self.grid_finetune):
                     self._trainable_weights = self._trainable_weights[:2]
                 else:
                     self._trainable_weights = []
                 self.frozen_alpha = True
 
-
     def unfreeze_alpha(self):
         if self.frozen_alpha:
             if self.finetune and self.mode in [F_FORWARD.name, F_HYBRID.name]:
-                if self.activation_name!='linear':
-                    if self.activation_name[:4]!='relu':
+                if self.activation_name != "linear":
+                    if self.activation_name[:4] != "relu":
                         self._trainable_weights += [self.alpha_b_u, self.alpha_b_l]
                     else:
                         self._trainable_weights += [self.alpha_b_l]
@@ -783,14 +831,13 @@ class BackwardActivation(BackwardLayer):
 
     def freeze_grid(self):
         if len(self.grid_finetune) and not self.frozen_grid:
-            self._trainable_weights=self._trainable_weights[2:]
-            self.frozen_grid=True
+            self._trainable_weights = self._trainable_weights[2:]
+            self.frozen_grid = True
 
     def unfreeze_grid(self):
         if len(self.grid_finetune) and self.frozen_grid:
-            self._trainable_weights = self.grid_finetune+ self._trainable_weights
-            self.frozen_grid=False
-
+            self._trainable_weights = self.grid_finetune + self._trainable_weights
+            self.frozen_grid = False
 
 
 class BackwardFlatten(BackwardLayer):
@@ -836,7 +883,7 @@ class BackwardReshape(BackwardLayer):
 
     """
     def call(self, inputs, slope=V_slope.name):
-        
+
         if self.previous:
         if self.previous:
             w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -882,8 +929,6 @@ class BackwardReshape(BackwardLayer):
             return self.call_previous(inputs)
         else:
             return self.call_no_previous(inputs)
-
-
 
 
 class BackwardPermute(BackwardLayer):
@@ -939,7 +984,15 @@ class BackwardDropout(BackwardLayer):
     """
 
     def __init__(
-        self, layer, slope=V_slope.name, previous=True, mode=F_HYBRID.name, convex_domain={}, finetune=False, rec=1, **kwargs
+        self,
+        layer,
+        slope=V_slope.name,
+        previous=True,
+        mode=F_HYBRID.name,
+        convex_domain={},
+        finetune=False,
+        rec=1,
+        **kwargs,
     ):
         super(BackwardDropout, self).__init__(**kwargs)
 
@@ -1064,7 +1117,14 @@ def get_backward(
     class_ = globals()[backward_class_name]
     try:
         return class_(
-            layer, slope=slope, previous=previous, mode=mode, convex_domain=convex_domain, finetune=finetune, dtype=layer.dtype, **kwargs
+            layer,
+            slope=slope,
+            previous=previous,
+            mode=mode,
+            convex_domain=convex_domain,
+            finetune=finetune,
+            dtype=layer.dtype,
+            **kwargs,
         )
     except KeyError:
         import pdb

@@ -1,8 +1,12 @@
 from __future__ import absolute_import
+
 import inspect
 import warnings
+
 import tensorflow as tf
+
 from ..layers.core import Box, StaticVariables
+
 
 # create static variables for varying convex domain
 class Backward:
@@ -38,7 +42,7 @@ class DecomonModel(tf.keras.Model):
         self.IBP = IBP
         self.forward = forward
         self.finetune = finetune
-        self.backward_bounds=backward_bounds
+        self.backward_bounds = backward_bounds
 
     def set_domain(self, convex_domain):
         convex_domain = set_domain_priv(self.convex_domain, convex_domain)

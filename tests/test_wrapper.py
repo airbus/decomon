@@ -1,16 +1,14 @@
 from __future__ import absolute_import
+
 import pytest
+from tensorflow.keras.layers import Activation, Dense
+from tensorflow.keras.models import Sequential
+
+from decomon import get_lower_box, get_range_box, get_upper_box
+from decomon.backward_layers.utils import get_FORWARD, get_IBP
 from decomon.models import clone as convert
 
-from tensorflow.keras.layers import Dense, Activation
-from tensorflow.keras.models import Sequential
-from . import (
-    get_standart_values_1d_box,
-    get_standard_values_multid_box_convert,
-)
-from decomon.backward_layers.utils import get_IBP, get_FORWARD
-from decomon import get_upper_box, get_lower_box, get_range_box
-
+from . import get_standard_values_multid_box_convert, get_standart_values_1d_box
 
 
 @pytest.mark.parametrize(
@@ -104,12 +102,11 @@ def test_get_upper_1d_box(n, method, mode, fast):
     # start with 1D
     sequential = Sequential()
     sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1]))
-    sequential.add(Activation('relu'))
+    sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
     ibp = get_IBP(mode)
     forward = get_FORWARD(mode)
-    backward_model = convert(sequential, method = method, ibp=ibp, forward=forward,
-                             mode=mode)
+    backward_model = convert(sequential, method=method, ibp=ibp, forward=forward, mode=mode)
 
     upper = get_upper_box(backward_model, z[:, 0], z[:, 1], fast=fast)
     y_ref = sequential.predict(y)
@@ -117,7 +114,7 @@ def test_get_upper_1d_box(n, method, mode, fast):
     try:
         assert (upper - y_ref).min() + 1e-6 >= 0.0
     except AssertionError:
-        sequential.save_weights('get_upper_1d_box_fail_{}_{}_{}.hd5'.format(n, method, mode))
+        sequential.save_weights("get_upper_1d_box_fail_{}_{}_{}.hd5".format(n, method, mode))
         raise AssertionError
 
 
@@ -212,20 +209,19 @@ def test_get_lower_1d_box(n, method, mode, fast):
     # start with 1D
     sequential = Sequential()
     sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1]))
-    sequential.add(Activation('relu'))
+    sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
     ibp = get_IBP(mode)
     forward = get_FORWARD(mode)
-    backward_model = convert(sequential, method = method, ibp=ibp, forward=forward,
-                             mode=mode)
+    backward_model = convert(sequential, method=method, ibp=ibp, forward=forward, mode=mode)
 
     lower = get_lower_box(backward_model, z[:, 0], z[:, 1], fast=fast)
     y_ref = sequential.predict(y)
 
     try:
-        assert (y_ref-lower).min() + 1e-6 >= 0.0
+        assert (y_ref - lower).min() + 1e-6 >= 0.0
     except AssertionError:
-        sequential.save_weights('get_lower_1d_box_fail_{}_{}_{}.hd5'.format(n, method, mode))
+        sequential.save_weights("get_lower_1d_box_fail_{}_{}_{}.hd5".format(n, method, mode))
         raise AssertionError
 
 
@@ -320,12 +316,11 @@ def test_get_range_1d_box(n, method, mode, fast):
     # start with 1D
     sequential = Sequential()
     sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1]))
-    sequential.add(Activation('relu'))
+    sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
     ibp = get_IBP(mode)
     forward = get_FORWARD(mode)
-    backward_model = convert(sequential, method = method, ibp=ibp, forward=forward,
-                             mode=mode)
+    backward_model = convert(sequential, method=method, ibp=ibp, forward=forward, mode=mode)
 
     upper, lower = get_range_box(backward_model, z[:, 0], z[:, 1], fast=fast)
     y_ref = sequential.predict(y)
@@ -334,23 +329,23 @@ def test_get_range_1d_box(n, method, mode, fast):
         assert (upper - y_ref).min() + 1e-6 >= 0.0
         assert (y_ref - lower).min() + 1e-6 >= 0.0
     except AssertionError:
-        sequential.save_weights('get_range_1d_box_fail_{}_{}_{}.hd5'.format(n, method, mode))
+        sequential.save_weights("get_range_1d_box_fail_{}_{}_{}.hd5".format(n, method, mode))
         raise AssertionError
 
 
 @pytest.mark.parametrize(
     "odd, n_subgrad, method, mode, fast",
     [
-        (0, 0, "ibp","ibp", False),
-        (1, 0, "ibp","ibp", False),
-        (0, 0, "forward","forward", False),
-        (1, 0, "forward","forward", False),
-        (0, 0, "hybrid","hybrid", False),
-        (0, 0, "hybrid","forward", False),
-        (0, 0, "hybrid","ibp", False),
-        (1, 0, "hybrid","hybrid", False),
-        (1, 0, "hybrid","ibp", False),
-        (1, 0, "hybrid","forward", False),
+        (0, 0, "ibp", "ibp", False),
+        (1, 0, "ibp", "ibp", False),
+        (0, 0, "forward", "forward", False),
+        (1, 0, "forward", "forward", False),
+        (0, 0, "hybrid", "hybrid", False),
+        (0, 0, "hybrid", "forward", False),
+        (0, 0, "hybrid", "ibp", False),
+        (1, 0, "hybrid", "hybrid", False),
+        (1, 0, "hybrid", "ibp", False),
+        (1, 0, "hybrid", "forward", False),
         (0, 0, "crown-ibp", "ibp", False),
         (1, 0, "crown-ibp", "ibp", False),
         (0, 0, "crown-forward", "forward", False),
@@ -374,30 +369,31 @@ def test_get_upper_multid_box(odd, n_subgrad, method, mode, fast):
     # build a simple sequential model from keras
     # start with 1D
     sequential = Sequential()
-    sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1])) #
-    sequential.add(Activation('relu'))
+    sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1]))  #
+    sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
     ibp = get_IBP(mode)
     forward = get_FORWARD(mode)
-    backward_model = convert(sequential, method='crown', ibp=ibp, forward=forward)
+    backward_model = convert(sequential, method="crown", ibp=ibp, forward=forward)
     upper = get_upper_box(backward_model, z[:, 0], z[:, 1], fast=fast)
     y_ref = sequential.predict(y)
 
     assert (upper - y_ref).min() + 1e-6 >= 0.0
 
+
 @pytest.mark.parametrize(
     "odd, n_subgrad, method, mode, fast",
     [
-        (0, 0, "ibp","ibp", False),
-        (1, 0, "ibp","ibp", False),
-        (0, 0, "forward","forward", False),
-        (1, 0, "forward","forward", False),
-        (0, 0, "hybrid","hybrid", False),
-        (0, 0, "hybrid","forward", False),
-        (0, 0, "hybrid","ibp", False),
-        (1, 0, "hybrid","hybrid", False),
-        (1, 0, "hybrid","ibp", False),
-        (1, 0, "hybrid","forward", False),
+        (0, 0, "ibp", "ibp", False),
+        (1, 0, "ibp", "ibp", False),
+        (0, 0, "forward", "forward", False),
+        (1, 0, "forward", "forward", False),
+        (0, 0, "hybrid", "hybrid", False),
+        (0, 0, "hybrid", "forward", False),
+        (0, 0, "hybrid", "ibp", False),
+        (1, 0, "hybrid", "hybrid", False),
+        (1, 0, "hybrid", "ibp", False),
+        (1, 0, "hybrid", "forward", False),
         (0, 0, "crown-ibp", "ibp", False),
         (1, 0, "crown-ibp", "ibp", False),
         (0, 0, "crown-forward", "forward", False),
@@ -421,30 +417,31 @@ def test_get_lower_multid_box(odd, n_subgrad, method, mode, fast):
     # build a simple sequential model from keras
     # start with 1D
     sequential = Sequential()
-    sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1])) #
-    sequential.add(Activation('relu'))
+    sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1]))  #
+    sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
     ibp = get_IBP(mode)
     forward = get_FORWARD(mode)
-    backward_model = convert(sequential, method='crown', ibp=ibp, forward=forward)
+    backward_model = convert(sequential, method="crown", ibp=ibp, forward=forward)
     lower = get_lower_box(backward_model, z[:, 0], z[:, 1], fast=fast)
     y_ref = sequential.predict(y)
 
-    assert (y_ref-lower).min() + 1e-6 >= 0.0
+    assert (y_ref - lower).min() + 1e-6 >= 0.0
+
 
 @pytest.mark.parametrize(
     "odd, n_subgrad, method, mode, fast",
     [
-        (0, 0, "ibp","ibp", False),
-        (1, 0, "ibp","ibp", False),
-        (0, 0, "forward","forward", False),
-        (1, 0, "forward","forward", False),
-        (0, 0, "hybrid","hybrid", False),
-        (0, 0, "hybrid","forward", False),
-        (0, 0, "hybrid","ibp", False),
-        (1, 0, "hybrid","hybrid", False),
-        (1, 0, "hybrid","ibp", False),
-        (1, 0, "hybrid","forward", False),
+        (0, 0, "ibp", "ibp", False),
+        (1, 0, "ibp", "ibp", False),
+        (0, 0, "forward", "forward", False),
+        (1, 0, "forward", "forward", False),
+        (0, 0, "hybrid", "hybrid", False),
+        (0, 0, "hybrid", "forward", False),
+        (0, 0, "hybrid", "ibp", False),
+        (1, 0, "hybrid", "hybrid", False),
+        (1, 0, "hybrid", "ibp", False),
+        (1, 0, "hybrid", "forward", False),
         (0, 0, "crown-ibp", "ibp", False),
         (1, 0, "crown-ibp", "ibp", False),
         (0, 0, "crown-forward", "forward", False),
@@ -468,12 +465,12 @@ def test_get_range_multid_box(odd, n_subgrad, method, mode, fast):
     # build a simple sequential model from keras
     # start with 1D
     sequential = Sequential()
-    sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1])) #
-    sequential.add(Activation('relu'))
+    sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1]))  #
+    sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
     ibp = get_IBP(mode)
     forward = get_FORWARD(mode)
-    backward_model = convert(sequential, method='crown', ibp=ibp, forward=forward)
+    backward_model = convert(sequential, method="crown", ibp=ibp, forward=forward)
     upper, lower = get_range_box(backward_model, z[:, 0], z[:, 1], fast=fast)
     y_ref = sequential.predict(y)
 

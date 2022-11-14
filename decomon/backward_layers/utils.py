@@ -1,27 +1,28 @@
-from decomon.layers import get_lower, get_upper
-from tensorflow.python.keras import backend as K
-import tensorflow as tf
-from ..layers import F_HYBRID, F_IBP, F_FORWARD, StaticVariables
-import tensorflow as tf
-from tensorflow.keras.layers import Flatten, Dropout, Lambda
-from ..layers.utils import (
-    get_upper,
-    get_lower,
-    add,
-    maximum,
-    get_upper_box,
-    get_lower_box,
-    relu_,
-    minus,
-    substract,
-    split,
-    multiply,
-    sort,
-)
-from decomon.utils import get_linear_hull_relu, get_linear_softplus_hull
 import numpy as np
-from ..layers.core import Grid, Option
+import tensorflow as tf
+from tensorflow.keras.layers import Dropout, Flatten, Lambda
+from tensorflow.python.keras import backend as K
+
+from decomon.layers import get_lower, get_upper
+from decomon.utils import get_linear_hull_relu, get_linear_softplus_hull
+
 from ..corners.utils import get_bound_grid, get_bound_grid_lagrangian
+from ..layers import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
+from ..layers.core import Grid, Option
+from ..layers.utils import (
+    add,
+    get_lower,
+    get_lower_box,
+    get_upper,
+    get_upper_box,
+    maximum,
+    minus,
+    multiply,
+    relu_,
+    sort,
+    split,
+    substract,
+)
 
 
 # create static variables for varying convex domain
@@ -125,19 +126,17 @@ def merge_with_previous(inputs):
     # result (None, n_h_in, n_out)
     z_value = K.cast(0.0, dtype=w_out_u.dtype)
 
+    if len(w_out_u.shape) == 2:
+        w_out_u = tf.linalg.diag(w_out_u)
 
-    if len(w_out_u.shape)==2:
-        w_out_u=tf.linalg.diag(w_out_u)
+    if len(w_out_l.shape) == 2:
+        w_out_l = tf.linalg.diag(w_out_l)
 
-    if len(w_out_l.shape)==2:
-        w_out_l=tf.linalg.diag(w_out_l)
+    if len(w_b_u.shape) == 2:
+        w_b_u = tf.linalg.diag(w_b_u)
 
-    if len(w_b_u.shape)==2:
-        w_b_u=tf.linalg.diag(w_b_u)
-
-    if len(w_b_l.shape)==2:
-        w_b_l=tf.linalg.diag(w_b_l)
-
+    if len(w_b_l.shape) == 2:
+        w_b_l = tf.linalg.diag(w_b_l)
 
     w_b_u_ = K.expand_dims(w_b_u, 1)
     w_b_l_ = K.expand_dims(w_b_l, 1)
@@ -148,12 +147,13 @@ def merge_with_previous(inputs):
 
     z_value = K.cast(0.0, dtype=w_out_u.dtype)
 
-    w_u = K.sum(K.maximum(w_b_u_, z_value)*w_out_u_ + K.minimum(w_b_u_, z_value)*w_out_l_, 2)
+    w_u = K.sum(K.maximum(w_b_u_, z_value) * w_out_u_ + K.minimum(w_b_u_, z_value) * w_out_l_, 2)
     w_l = K.sum(K.maximum(w_b_l_, z_value) * w_out_l_ + K.minimum(w_b_l_, z_value) * w_out_u_, 2)
-    b_u = K.sum(K.maximum(w_b_u, z_value)*b_out_u_ + K.minimum(w_b_u, z_value)*b_out_l_, 1) + b_b_u
+    b_u = K.sum(K.maximum(w_b_u, z_value) * b_out_u_ + K.minimum(w_b_u, z_value) * b_out_l_, 1) + b_b_u
     b_l = K.sum(K.maximum(w_b_l, z_value) * b_out_l_ + K.minimum(w_b_l, z_value) * b_out_u_, 1) + b_b_l
 
     return [w_u, b_u, w_l, b_l]
+
 
 def backward_relu_(
     x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, fast=True, **kwargs
@@ -193,19 +193,19 @@ def backward_relu_(
         upper = u_c
         lower = l_c
 
-    if len(convex_domain) and convex_domain['name']==Grid.name and mode!=F_IBP.name:
+    if len(convex_domain) and convex_domain["name"] == Grid.name and mode != F_IBP.name:
 
         raise NotImplementedError()
-        if convex_domain['option']==Option.lagrangian:
+        if convex_domain["option"] == Option.lagrangian:
             # do something
-            upper_g, lower_g = get_bound_grid_lagrangian(x_0, w_u, b_u, w_l, b_l, kwargs['finetune_grid'])
-        elif convex_domain['option']==Option.milp:
-            upper_g, lower_g = kwargs['finetune_grid']
+            upper_g, lower_g = get_bound_grid_lagrangian(x_0, w_u, b_u, w_l, b_l, kwargs["finetune_grid"])
+        elif convex_domain["option"] == Option.milp:
+            upper_g, lower_g = kwargs["finetune_grid"]
         else:
             upper_g, lower_g = get_bound_grid(x_0, w_u, b_u, w_l, b_l, 2)
 
-        extra_kwargs = {'upper_grid':upper_g, 'lower_grid':lower_g}
-        kwargs.update(extra_kwargs) # same result
+        extra_kwargs = {"upper_grid": upper_g, "lower_grid": lower_g}
+        kwargs.update(extra_kwargs)  # same result
 
     shape = np.prod(upper.shape[1:])
     upper = K.reshape(upper, [-1, shape])
@@ -214,27 +214,22 @@ def backward_relu_(
     z_value = K.cast(0.0, upper.dtype)
 
     #############
-    w_u_, b_u_, w_l_, b_l_ = get_linear_hull_relu(upper, lower, slope=slope,**kwargs)
+    w_u_, b_u_, w_l_, b_l_ = get_linear_hull_relu(upper, lower, slope=slope, **kwargs)
 
-    #w_u_ = tf.linalg.diag(w_u_)
-    #w_l_ = tf.linalg.diag(w_l_)
+    # w_u_ = tf.linalg.diag(w_u_)
+    # w_l_ = tf.linalg.diag(w_l_)
 
-    #w_out_u_, b_out_u_, w_out_l_, b_out_l_ = merge_with_previous([w_u_, b_u_, w_l_, b_l_, w_out_u, b_out_u, w_out_l, b_out_l])
-
-
+    # w_out_u_, b_out_u_, w_out_l_, b_out_l_ = merge_with_previous([w_u_, b_u_, w_l_, b_l_, w_out_u, b_out_u, w_out_l, b_out_l])
 
     w_u_ = K.expand_dims(w_u_, -1)
     w_l_ = K.expand_dims(w_l_, -1)
     b_u_ = K.expand_dims(b_u_, -1)
     b_l_ = K.expand_dims(b_l_, -1)
-    
 
-    
     w_out_u_ = K.maximum(w_out_u, z_value) * w_u_ + K.minimum(w_out_u, z_value) * w_l_
     w_out_l_ = K.maximum(w_out_l, z_value) * w_l_ + K.minimum(w_out_l, z_value) * w_u_
     b_out_u_ = K.sum(K.maximum(w_out_u, z_value) * b_u_ + K.minimum(w_out_u, z_value) * b_l_, 1) + b_out_u
     b_out_l_ = K.sum(K.maximum(w_out_l, z_value) * b_l_ + K.minimum(w_out_l, z_value) * b_u_, 1) + b_out_l
-
 
     return w_out_u_, b_out_u_, w_out_l_, b_out_l_
 
@@ -676,7 +671,6 @@ def backward_multiply(
     # b_out_u = b_out_u[:, 0]
     # b_out_l = b_out_l[:, 0]
 
-
     if mode == F_IBP.name:
         u_0, l_0 = inputs_0
         u_1, l_1 = inputs_1
@@ -858,8 +852,3 @@ def get_input_dim(input_dim, convex_domain):
         return (2, input_dim)
     else:
         return input_dim
-
-
-
-
-

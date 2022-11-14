@@ -1,27 +1,29 @@
 # Test unit for decomon with Dense layers
 from __future__ import absolute_import
-import pytest
+
 import numpy as np
+import pytest
+import tensorflow.python.keras.backend as K
 from numpy.testing import assert_allclose, assert_almost_equal
 from tensorflow.keras.layers import Input
-from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_multid_box,
-    get_standard_values_multid_box,
-    assert_output_properties_box_linear,
-)
-import tensorflow.python.keras.backend as K
 
-from decomon.layers.utils import relu_, max_, maximum, add, minus, substract, softplus_
 from decomon.backward_layers.utils import (
-    backward_relu_,
-    backward_max_,
     backward_add,
-    backward_minus,
+    backward_max_,
     backward_maximum,
-    backward_substract,
+    backward_minus,
+    backward_relu_,
     backward_softplus_,
+    backward_substract,
+)
+from decomon.layers.utils import add, max_, maximum, minus, relu_, softplus_, substract
+
+from . import (
+    assert_output_properties_box_linear,
+    get_standard_values_multid_box,
+    get_standart_values_1d_box,
+    get_tensor_decomposition_1d_box,
+    get_tensor_decomposition_multid_box,
 )
 
 
@@ -139,7 +141,6 @@ def test_relu_backward_1D_box(n, mode, floatx):
 
     K.set_epsilon(eps)
     K.set_floatx("float32")
-
 
 
 @pytest.mark.parametrize(

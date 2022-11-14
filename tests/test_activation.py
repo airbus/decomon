@@ -1,19 +1,28 @@
 # Test unit for decomon with Dense layers
 from __future__ import absolute_import
-import pytest
+
 import numpy as np
+import pytest
+import tensorflow.python.keras.backend as K
 from numpy.testing import assert_allclose, assert_almost_equal
+
+from decomon.layers.activations import (
+    exponential,
+    sigmoid,
+    softmax,
+    softplus,
+    softsign,
+    tanh,
+)
+
 from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
     assert_output_properties_box,
     assert_output_properties_box_nodc,
-    get_tensor_decomposition_multid_box,
     get_standard_values_multid_box,
+    get_standart_values_1d_box,
+    get_tensor_decomposition_1d_box,
+    get_tensor_decomposition_multid_box,
 )
-import tensorflow.python.keras.backend as K
-
-from decomon.layers.activations import sigmoid, tanh, softsign, softplus, softmax, exponential
 
 
 @pytest.mark.parametrize(
@@ -141,7 +150,6 @@ def test_sigmoid_1D_box(n, mode, floatx):
         output = sigmoid([z, W_u, b_u, W_l, b_l], dc_decomp=False, mode=mode)
     if mode == "ibp":
         output = sigmoid([u_c, l_c], dc_decomp=False, mode=mode)
-
 
     f_sigmoid = K.function(inputs[2:], output)
     f_ref = K.function(inputs, K.sigmoid(y))
@@ -498,7 +506,6 @@ def test_softsign_1D_box(n, mode, floatx):
     K.set_epsilon(eps)
 
 
-
 """
 @pytest.mark.parametrize("n, mode, floatx", [(0, "hybrid", 32), (1, "hybrid", 32), (2, 'hybrid', 32), \
                                         (3, 'hybrid', 32), (4, 'hybrid', 32), (5, 'hybrid', 32), (6, 'hybrid', 32), (7, 'hybrid', 32),\
@@ -577,7 +584,7 @@ def test_softplus_1D_box(n, mode, floatx):
     assert_output_properties_box(
         x_0, y_, None, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "sigmoid_{}".format(n), decimal=decimal
     )
-    
+
     K.set_floatx('float32')
     K.set_epsilon(eps)
 """
@@ -681,13 +688,14 @@ def test_softplus_1D_box(n, mode, floatx):
 )
 """
 
+
 @pytest.mark.parametrize(
     "n, mode, floatx",
     [
         (0, "hybrid", 32),
         (3, "hybrid", 32),
-        #(3, "hybrid", 32),
-    ]
+        # (3, "hybrid", 32),
+    ],
 )
 def test_softmax_1D_box(n, mode, floatx):
 
@@ -700,7 +708,6 @@ def test_softmax_1D_box(n, mode, floatx):
 
     inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
-
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
     (
@@ -756,6 +763,7 @@ def test_softmax_1D_box(n, mode, floatx):
 
     K.set_floatx("float32")
     K.set_epsilon(eps)
+
 
 """
 @pytest.mark.parametrize(

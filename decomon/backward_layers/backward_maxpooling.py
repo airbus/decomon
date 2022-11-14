@@ -1,13 +1,16 @@
 from __future__ import absolute_import
-import tensorflow.keras.backend as K
-import tensorflow as tf
+
 import numpy as np
-from tensorflow.keras.layers import Layer, MaxPooling2D, Flatten
-from decomon.layers.maxpooling import DecomonMaxPooling2D, DecomonMaxPool2d
-from .utils import V_slope, backward_max_
+import tensorflow as tf
+import tensorflow.keras.backend as K
 from tensorflow.keras.backend import conv2d
-from ..layers.core import F_FORWARD, F_IBP, F_HYBRID
+from tensorflow.keras.layers import Flatten, Layer, MaxPooling2D
+
+from decomon.layers.maxpooling import DecomonMaxPool2d, DecomonMaxPooling2D
 from decomon.layers.utils import get_lower, get_upper
+
+from ..layers.core import F_FORWARD, F_HYBRID, F_IBP
+from .utils import V_slope, backward_max_
 
 
 class BackwardMaxPooling2D(Layer):

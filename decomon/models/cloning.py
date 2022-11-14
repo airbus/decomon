@@ -4,29 +4,32 @@ It inherits from keras Sequential class.
 
 """
 from __future__ import absolute_import
+
 import inspect
 import warnings
-import tensorflow as tf
-from tensorflow.keras.models import Sequential, Model
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Lambda, Flatten
-from ..layers.decomon_layers import to_monotonic
-from ..layers.core import Box, StaticVariables
-from tensorflow.keras.layers import InputLayer, Input, Layer
-from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
 from copy import deepcopy
+
 import numpy as np
-from decomon.layers.utils import softmax_to_linear, get_upper, get_lower
+import tensorflow as tf
+import tensorflow.keras.backend as K
+from tensorflow.keras.layers import Flatten, Input, InputLayer, Lambda, Layer
+from tensorflow.keras.models import Model, Sequential
+from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
+
+from decomon.layers.utils import get_lower, get_upper, softmax_to_linear
+
 from ..backward_layers.backward_layers import get_backward as get_backward_
 from ..backward_layers.backward_layers import join
-from ..backward_layers.utils import backward_linear_prod
-from ..backward_layers.utils import V_slope, S_slope
-
-from .models import DecomonModel, DecomonSequential, Forward, Backward
-from ..backward_layers.backward_layers import get_backward as get_backward_
-
+from ..backward_layers.utils import S_slope, V_slope, backward_linear_prod
+from ..layers.core import Box, StaticVariables
+from ..layers.decomon_layers import to_monotonic
 from ..utils import M_BACKWARD, M_FORWARD, M_REC_BACKWARD
-from .utils import check_input_tensors_functionnal, check_input_tensors_sequential, include_dim_layer_fn
+from .models import Backward, DecomonModel, DecomonSequential, Forward
+from .utils import (
+    check_input_tensors_functionnal,
+    check_input_tensors_sequential,
+    include_dim_layer_fn,
+)
 
 # from .backward_cloning import clone_backward_model
 

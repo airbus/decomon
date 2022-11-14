@@ -1,30 +1,43 @@
 # Test unit for decomon with Dense layers
 from __future__ import absolute_import
-import pytest
+
 import numpy as np
+import pytest
+import tensorflow.python.keras.backend as K
+from numpy.testing import assert_almost_equal
+from tensorflow.keras.layers import (
+    Add,
+    Average,
+    Concatenate,
+    Dot,
+    Input,
+    Maximum,
+    Minimum,
+    Multiply,
+    Subtract,
+)
+from tensorflow.keras.models import Model
+
 from decomon.layers.decomon_layers import to_monotonic
 from decomon.layers.decomon_merge_layers import (
-    DecomonConcatenate,
+    DecomonAdd,
     DecomonAverage,
+    DecomonConcatenate,
+    DecomonDot,
     DecomonMaximum,
     DecomonMinimum,
-    DecomonAdd,
-    DecomonSubtract,
     DecomonMultiply,
-    DecomonDot,
+    DecomonSubtract,
 )
-from tensorflow.keras.layers import Concatenate, Average, Maximum, Minimum, Add, Subtract, Input, Multiply, Dot
+
 from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
     assert_output_properties_box,
     assert_output_properties_box_linear,
     get_standard_values_multid_box,
+    get_standart_values_1d_box,
+    get_tensor_decomposition_1d_box,
     get_tensor_decomposition_multid_box,
 )
-import tensorflow.python.keras.backend as K
-from numpy.testing import assert_almost_equal
-from tensorflow.keras.models import Model
 
 """"
 @pytest.mark.parametrize(
@@ -892,6 +905,7 @@ def test_DecomonConcatenate_1D_box(n0, mode, floatx):
     K.set_epsilon(eps)
     K.set_floatx("float32")
 """
+
 
 @pytest.mark.parametrize(
     "n0, mode, floatx",
@@ -1987,6 +2001,7 @@ def test_DecomonMultiply_multiD_box_to_monotonic(n0):
     assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add"
     )
+
 
 """
 @pytest.mark.parametrize("n0", [0, 1, 2, 3, 4, 5, 6, 7])

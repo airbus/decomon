@@ -1,29 +1,32 @@
 from __future__ import absolute_import
-from .utils import (
-    relu_,
-    softplus_,
-    get_upper,
-    get_lower,
-    get_linear_hull_s_shape,
-    sigmoid_prime,
-    softsign_prime,
-    tanh_prime,
-    relu_prime,
-    minus,
-    frac_pos,
-    sum,
-    multiply,
-    expand_dims,
-    exp
-)
-import warnings
-import six
-from decomon.layers.core import DecomonLayer
-from .core import F_HYBRID, F_FORWARD, F_IBP, StaticVariables
-import tensorflow.keras.backend as K
-import numpy as np
-import tensorflow as tf
 
+import warnings
+
+import numpy as np
+import six
+import tensorflow as tf
+import tensorflow.keras.backend as K
+
+from decomon.layers.core import DecomonLayer
+
+from .core import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
+from .utils import (
+    exp,
+    expand_dims,
+    frac_pos,
+    get_linear_hull_s_shape,
+    get_lower,
+    get_upper,
+    minus,
+    multiply,
+    relu_,
+    relu_prime,
+    sigmoid_prime,
+    softplus_,
+    softsign_prime,
+    sum,
+    tanh_prime,
+)
 
 ELU = "elu"
 SELU = "selu"
@@ -36,7 +39,8 @@ TANH = "tanh"
 EXPONENTIAL = "exponential"
 HARD_SIGMOID = "hard_sigmoid"
 LINEAR = "linear"
-GROUP_SORT_2 = 'GroupSort2'
+GROUP_SORT_2 = "GroupSort2"
+
 
 def relu(x, dc_decomp=False, convex_domain={}, alpha=0.0, max_value=None, threshold=0.0, mode=F_HYBRID.name, **kwargs):
     """
@@ -98,7 +102,6 @@ def linear_hull_s_shape(
     if mode in [F_IBP.name, F_HYBRID.name]:
         u_c_ = func(u_c)
         l_c_ = func(l_c)
-
 
     if mode in [F_FORWARD.name, F_HYBRID.name]:
 
@@ -268,7 +271,7 @@ def exponential(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwar
 
     """
 
-    return exp(x,dc_decomp=dc_decomp,convex_domain=convex_domain, mode=mode, **kwargs)
+    return exp(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, **kwargs)
 
 
 def softplus(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
@@ -327,49 +330,49 @@ def softmax(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, c
     x_ = minus(x, mode=mode)
     x_0 = exponential(x_, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
     x_sum = sum(x_0, axis=axis, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
-    x_frac = expand_dims(frac_pos(x_sum, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode), mode=mode, axis=axis)
+    x_frac = expand_dims(
+        frac_pos(x_sum, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode), mode=mode, axis=axis
+    )
 
     x_final = multiply(x_0, x_frac, mode=mode, convex_domain=convex_domain)
 
-    if mode==F_IBP.name:
+    if mode == F_IBP.name:
         u_c, l_c = x_final
         if clip:
-            return [K.minimum(u_c, 1.), K.maximum(l_c, 0.)]
+            return [K.minimum(u_c, 1.0), K.maximum(l_c, 0.0)]
         else:
             return x_final
-    if mode==F_HYBRID.name:
+    if mode == F_HYBRID.name:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x_final
         if clip:
-            u_c = K.minimum(u_c, 1.)
-            l_c = K.maximum(l_c, 0.)
+            u_c = K.minimum(u_c, 1.0)
+            l_c = K.maximum(l_c, 0.0)
         return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
 
     return x_final
 
-
     # TO DO linear relaxation
     raise NotImplementedError()
+
 
 def group_sort_2(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, data_format="channels_last", **kwargs):
 
     raise NotImplementedError()
 
     input_shape = x[-1].shape
-    if data_format=="channels_last":
-        axis=-1
+    if data_format == "channels_last":
+        axis = -1
         # check dimension
-        if input_shape[-1]%2!=0:
+        if input_shape[-1] % 2 != 0:
             raise ValueError()
     else:
-        axis=1
-        if input_shape[1]%2!=0:
+        axis = 1
+        if input_shape[1] % 2 != 0:
             raise ValueError()
 
-    import pdb; pdb.set_trace()
+    import pdb
 
-
-
-
+    pdb.set_trace()
 
 
 def deserialize(name):
@@ -402,7 +405,7 @@ def deserialize(name):
         return exponential
     if name == LINEAR:
         return linear
-    if name ==GROUP_SORT_2:
+    if name == GROUP_SORT_2:
         return group_sort_2
     raise ValueError("Could not interpret " "activation function identifier:", name)
 

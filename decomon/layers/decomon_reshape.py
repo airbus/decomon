@@ -1,11 +1,11 @@
 from __future__ import absolute_import
-from .core import DecomonLayer
+
 import tensorflow.keras.backend as K
 
 # from tensorflow.python.keras.engine.base_layer import InputSpec
-from tensorflow.keras.layers import Reshape, Permute, InputSpec
+from tensorflow.keras.layers import InputSpec, Permute, Reshape
 
-from .core import F_FORWARD, F_IBP, F_HYBRID
+from .core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
 
 
 class DecomonReshape(Reshape, DecomonLayer):

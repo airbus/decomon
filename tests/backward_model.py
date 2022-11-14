@@ -1,19 +1,27 @@
 from __future__ import absolute_import
-import pytest
-from decomon.models.decomon_sequential import clone, clone_sequential_model, convert, get_backward
+
 import numpy as np
+import pytest
+import tensorflow.python.keras.backend as K
 from numpy.testing import assert_almost_equal
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.models import Sequential
+
+from decomon.models.decomon_sequential import (
+    clone,
+    clone_sequential_model,
+    convert,
+    get_backward,
+)
+
 from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
     assert_output_properties_box_linear,
     get_standard_values_multid_box,
-    get_tensor_decomposition_multid_box,
     get_standard_values_multid_box_convert,
+    get_standart_values_1d_box,
+    get_tensor_decomposition_1d_box,
+    get_tensor_decomposition_multid_box,
 )
-import tensorflow.python.keras.backend as K
 
 """
 @pytest.mark.parametrize(
@@ -93,7 +101,6 @@ def test_convert_backward_model_1d_box_nodc(n, n_subgrad, slope):
         x, y_, z_[:, 0], z_[:, 1], u_c_, w_u_b[:, 0], b_u_b[:, 0], l_c_, w_l_b[:, 0], b_l_b[:, 0], "nodc"
     )
 """
-
 
 
 """

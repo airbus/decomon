@@ -4,23 +4,25 @@ It inherits from keras Sequential class.
 
 """
 from __future__ import absolute_import
+
 import inspect
 import warnings
-import tensorflow as tf
-from tensorflow.keras.models import Sequential, Model
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Lambda, Flatten
-from ..layers.decomon_layers import to_monotonic
-from ..layers.core import Box, StaticVariables
-from tensorflow.keras.layers import InputLayer, Input, Layer
-from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
 from copy import deepcopy
+
 import numpy as np
-from decomon.layers.utils import softmax_to_linear, get_upper, get_lower
+import tensorflow as tf
+import tensorflow.keras.backend as K
+from tensorflow.keras.layers import Flatten, Input, InputLayer, Lambda, Layer
+from tensorflow.keras.models import Model, Sequential
+from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
+
+from decomon.layers.utils import get_lower, get_upper, softmax_to_linear
+
 from ..backward_layers.backward_layers import get_backward as get_backward_
 from ..backward_layers.backward_layers import join
-from ..backward_layers.utils import backward_linear_prod
-from ..backward_layers.utils import V_slope, S_slope
+from ..backward_layers.utils import S_slope, V_slope, backward_linear_prod
+from ..layers.core import Box, StaticVariables
+from ..layers.decomon_layers import to_monotonic
 
 
 # create static variables for varying convex domain
@@ -217,7 +219,6 @@ def clone_sequential_model(
         finetune=finetune,
     )
 
-
     model, _ = softmax_to_linear(model)  # do better because you modify the model eventually
     if not isinstance(model, Sequential):
         raise ValueError(
@@ -299,7 +300,7 @@ def clone_sequential_model(
         if IBP:
             if forward:  # hybrid mode
                 input_tensors = [
-                    #y_tensor,
+                    # y_tensor,
                     z_tensor,
                     u_c_tensor,
                     w_u_tensor,
@@ -311,7 +312,7 @@ def clone_sequential_model(
             else:
                 # only IBP
                 input_tensors = [
-                    #y_tensor,
+                    # y_tensor,
                     z_tensor,
                     u_c_tensor,
                     l_c_tensor,
@@ -319,7 +320,7 @@ def clone_sequential_model(
         else:
             # forward mode
             input_tensors = [
-                #y_tensor,
+                # y_tensor,
                 z_tensor,
                 w_u_tensor,
                 b_u_tensor,
@@ -846,7 +847,9 @@ def convert(
             inputs_ += model_monotonic.inputs[-2:]
 
         input_tensors = inputs_
-    import pdb; pdb.set_trace()
+    import pdb
+
+    pdb.set_trace()
     input_tensors_ = lambda_layer(inputs_)
 
     # create the model
@@ -997,7 +1000,7 @@ def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, opti
     :param model:
     :return:
     """
-    #assert isinstance(model, DecomonModel) or isinstance(model, DecomonSequential)
+    # assert isinstance(model, DecomonModel) or isinstance(model, DecomonSequential)
 
     # create inputs for back_bounds
     # the convert mode for an easy use has been activated
@@ -1082,7 +1085,7 @@ def get_backward_model_(model, back_bounds, input_model, slope=V_slope.name):
     :return:
     """
     # retrieve all layers inside
-    if hasattr(model, 'dc_decomp') and model.dc_decomp:
+    if hasattr(model, "dc_decomp") and model.dc_decomp:
         raise NotImplementedError()
 
     # store the input-output relationships between layers
@@ -1127,7 +1130,7 @@ def get_backward_model_(model, back_bounds, input_model, slope=V_slope.name):
 
 def get_backward_model(model, back_bounds, input_model, slope=V_slope.name, options={}):
     # retrieve all layers inside
-    if hasattr(model, 'dc_decomp') and model.dc_decomp:
+    if hasattr(model, "dc_decomp") and model.dc_decomp:
         raise NotImplementedError()
 
     name = [layer.name for layer in model.layers]
@@ -1171,7 +1174,9 @@ def get_backward_model(model, back_bounds, input_model, slope=V_slope.name, opti
                     if isinstance(layer_, Model):
                         sort_names = [e.name for e in layer_.inputs]
                         unsorted_names = [e._keras_history.layer.name for e in list_inputs]
-                        import pdb; pdb.set_trace()
+                        import pdb
+
+                        pdb.set_trace()
                     else:
                         dico_output[layer_.name] = layer_(list_inputs)
                         dico_input[layer_.name] = list_inputs

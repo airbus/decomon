@@ -1,19 +1,22 @@
 # Test unit for decomon with Dense layers
 from __future__ import absolute_import
-import pytest
-import numpy as np
-from numpy.testing import assert_allclose, assert_almost_equal
-from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
-    assert_output_properties_box,
-    get_tensor_decomposition_multid_box,
-    get_standard_values_multid_box,
-)
-import tensorflow.python.keras.backend as K
 
-from decomon.metrics.utils import categorical_cross_entropy
+import numpy as np
+import pytest
+import tensorflow.python.keras.backend as K
+from numpy.testing import assert_allclose, assert_almost_equal
+
 from decomon.layers.utils import minus
+from decomon.metrics.utils import categorical_cross_entropy
+
+from . import (
+    assert_output_properties_box,
+    get_standard_values_multid_box,
+    get_standart_values_1d_box,
+    get_tensor_decomposition_1d_box,
+    get_tensor_decomposition_multid_box,
+)
+
 
 @pytest.mark.parametrize(
     "odd, mode, floatx",
@@ -50,7 +53,7 @@ def test_categorical_cross_entropy(odd, mode, floatx):
     if mode == "ibp":
         output = categorical_cross_entropy([u_c_0, l_c_0], dc_decomp=False, mode=mode)
 
-    f_ref = K.function(inputs_0, -y_0 + K.log(K.sum(K.exp(y_0), -1))[:,None])
+    f_ref = K.function(inputs_0, -y_0 + K.log(K.sum(K.exp(y_0), -1))[:, None])
     f_entropy = K.function(inputs_0, output)
 
     y_ = f_ref(inputs_)
@@ -62,7 +65,7 @@ def test_categorical_cross_entropy(odd, mode, floatx):
             None,
             None,
             z_[:, 0],
-            z_[:,1],
+            z_[:, 1],
             u_c_,
             w_u_,
             b_u_,
@@ -111,7 +114,3 @@ def test_categorical_cross_entropy(odd, mode, floatx):
 
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)
-
-
-
-

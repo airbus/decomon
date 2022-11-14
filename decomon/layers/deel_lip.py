@@ -1,58 +1,60 @@
 from __future__ import absolute_import
-import tensorflow as tf
-from .core import DecomonLayer
-import tensorflow.keras.backend as K
-from tensorflow.keras.backend import bias_add, conv2d
+
 import numpy as np
+import tensorflow as tf
+import tensorflow.keras.backend as K
+from deel.lip.layers import FrobeniusDense, ScaledL2NormPooling2D
+from tensorflow.keras.backend import bias_add, conv2d
 from tensorflow.keras.constraints import NonNeg
 
 # from tensorflow.python.keras.engine.base_layer import InputSpec
 from tensorflow.keras.layers import (
+    Activation,
+    BatchNormalization,
     Conv2D,
     Dense,
-    Activation,
-    Flatten,
-    Reshape,
     Dot,
-    Input,
-    BatchNormalization,
     Dropout,
-    Lambda,
+    Flatten,
+    Input,
     InputSpec,
+    Lambda,
+    Reshape,
 )
 from tensorflow.python.keras.layers.merge import _Merge as Merge
-from decomon.layers import activations
-from decomon.layers.utils import NonPos, MultipleConstraint, Project_initializer_pos, Project_initializer_neg
 from tensorflow.python.keras.utils import conv_utils
-from decomon.layers.utils import get_upper, get_lower, sort
-from .maxpooling import DecomonMaxPooling2D
+
+from decomon.layers import activations
+from decomon.layers.utils import (
+    MultipleConstraint,
+    NonPos,
+    Project_initializer_neg,
+    Project_initializer_pos,
+    get_lower,
+    get_upper,
+    sort,
+)
+
+from .core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
 from .decomon_merge_layers import (
-    DecomonConcatenate,
-    DecomonAverage,
     DecomonAdd,
-    DecomonMinimum,
+    DecomonAverage,
+    DecomonConcatenate,
     DecomonMaximum,
+    DecomonMinimum,
     DecomonSubtract,
     to_monotonic_merge,
 )
-from .utils import grad_descent
-from .core import F_FORWARD, F_IBP, F_HYBRID
-
-from deel.lip.layers import (
-    ScaledL2NormPooling2D,
-    FrobeniusDense,
-)
-
 from .decomon_reshape import DecomonReshape
-from .decomon_merge_layers import DecomonConcatenate
-from .utils import sort, max_, min_, expand_dims, ClipAlpha
-
-
+from .maxpooling import DecomonMaxPooling2D
+from .utils import ClipAlpha, expand_dims, grad_descent, max_, min_, sort
 
 try:
     from deel.lip.activations import GroupSort, GroupSort2
 except:
-    raise Warning('Could not import GroupSort from deel.lip.activations. Install deel-lip for being compatible with 1 Lipschitz network (see https://github.com/deel-ai/deel-lip)')
+    raise Warning(
+        "Could not import GroupSort from deel.lip.activations. Install deel-lip for being compatible with 1 Lipschitz network (see https://github.com/deel-ai/deel-lip)"
+    )
 
 
 class DecomonGroupSort(DecomonLayer):
@@ -119,17 +121,16 @@ class DecomonGroupSort(DecomonLayer):
         return input_shape
 
 
-
 class DecomonGroupSort2(DecomonLayer):
-    def __init__(self,  n=2, data_format="channels_last", k_coef_lip=1.0, mode=F_HYBRID.name, **kwargs):
+    def __init__(self, n=2, data_format="channels_last", k_coef_lip=1.0, mode=F_HYBRID.name, **kwargs):
         super(DecomonGroupSort2, self).__init__(**kwargs)
         self.mode = mode
-        self.data_format=data_format
+        self.data_format = data_format
 
-        if self.data_format=="channels_last":
-            self.axis=-1
+        if self.data_format == "channels_last":
+            self.axis = -1
         else:
-            self.axis=1
+            self.axis = 1
 
         if self.dc_decomp:
             raise NotImplementedError()
@@ -143,28 +144,49 @@ class DecomonGroupSort2(DecomonLayer):
 
     def call(self, inputs):
 
-
         inputs_ = self.op_reshape_in(inputs)
-        inputs_max = expand_dims(max_(inputs_, mode=self.mode, convex_domain=self.convex_domain, axis=self.axis, finetune=self.finetune, finetune_params=self.params_max), mode=self.mode, axis=self.axis)
-        inputs_min = expand_dims(min_(inputs_, mode=self.mode, convex_domain=self.convex_domain, axis=self.axis, finetune=self.finetune, finetune_params=self.params_min), mode=self.mode, axis=self.axis)
-        output= self.op_concat(inputs_min+inputs_max)
+        inputs_max = expand_dims(
+            max_(
+                inputs_,
+                mode=self.mode,
+                convex_domain=self.convex_domain,
+                axis=self.axis,
+                finetune=self.finetune,
+                finetune_params=self.params_max,
+            ),
+            mode=self.mode,
+            axis=self.axis,
+        )
+        inputs_min = expand_dims(
+            min_(
+                inputs_,
+                mode=self.mode,
+                convex_domain=self.convex_domain,
+                axis=self.axis,
+                finetune=self.finetune,
+                finetune_params=self.params_min,
+            ),
+            mode=self.mode,
+            axis=self.axis,
+        )
+        output = self.op_concat(inputs_min + inputs_max)
         output_ = self.op_reshape_out(output)
         return output_
 
     def build(self, input_shape):
         input_shape = input_shape[-1]
 
-        if self.data_format=="channels_last":
-            if input_shape[-1]%2!=0:
+        if self.data_format == "channels_last":
+            if input_shape[-1] % 2 != 0:
                 raise ValueError()
-            target_shape = input_shape[1:-2]+[int(input_shape[-1]/2), 2]
+            target_shape = input_shape[1:-2] + [int(input_shape[-1] / 2), 2]
         else:
-            if input_shape[1]%2!=0:
+            if input_shape[1] % 2 != 0:
                 raise ValueError()
-            target_shape = [2, int(input_shape[1]/2)] + input_shape[2:]
+            target_shape = [2, int(input_shape[1] / 2)] + input_shape[2:]
 
-        self.params_max=[]
-        self.params_min=[]
+        self.params_max = []
+        self.params_min = []
 
         if self.finetune and self.mode in [F_FORWARD.name, F_HYBRID.name]:
             self.beta_max_ = self.add_weight(
@@ -173,12 +195,11 @@ class DecomonGroupSort2(DecomonLayer):
             self.beta_min_ = self.add_weight(
                 shape=target_shape, initializer="ones", name="beta_max", regularizer=None, constraint=ClipAlpha()
             )
-            self.params_max=[self.beta_max_]
-            self.params_min=[self.beta_min_]
-
+            self.params_max = [self.beta_max_]
+            self.params_min = [self.beta_min_]
 
         self.op_reshape_in = DecomonReshape(target_shape, mode=self.mode)
         self.op_reshape_out = DecomonReshape(input_shape[1:], mode=self.mode)
 
     def reset_layer(self, layer):
-        print('kikou')
+        print("kikou")

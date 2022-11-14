@@ -1,19 +1,27 @@
 # Test unit for decomon with Dense layers
 from __future__ import absolute_import
-import pytest
+
 import numpy as np
+import pytest
 import tensorflow.python.keras.backend as K
+from tensorflow.keras.layers import Activation, Flatten, Input, Reshape
+from tensorflow.keras.models import Model
+
 from decomon.backward_layers.backward_layers import get_backward
-from decomon.layers.decomon_layers import DecomonActivation, DecomonPermute, DecomonReshape, DecomonFlatten
-from tensorflow.keras.layers import Input, Activation, Flatten, Reshape
+from decomon.layers.decomon_layers import (
+    DecomonActivation,
+    DecomonFlatten,
+    DecomonPermute,
+    DecomonReshape,
+)
+
 from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
     assert_output_properties_box_linear,
     get_standard_values_multid_box,
+    get_standart_values_1d_box,
+    get_tensor_decomposition_1d_box,
     get_tensor_decomposition_multid_box,
 )
-from tensorflow.keras.models import Model
 
 # Activation
 
@@ -603,7 +611,6 @@ def test_Backward_Flatten_multiD_box(odd, floatx, mode, previous, data_format):
     K.set_epsilon(eps)
 
 
-
 @pytest.mark.parametrize(
     "odd, floatx, mode, previous, data_format",
     [
@@ -856,7 +863,7 @@ def test_Backward_Permute_multiD_box(odd, floatx, mode, previous, data_format):
         # import pdb; pdb.set_trace()
         output_ = f_dense(inputs_)
     w_u_, b_u_, w_l_, b_l_ = output_
-    
+
     assert_output_properties_box_linear(
         x,
         None,
@@ -873,7 +880,7 @@ def test_Backward_Permute_multiD_box(odd, floatx, mode, previous, data_format):
         "dense_{}".format(odd),
         decimal=decimal
     )
-    
+
 
     K.set_floatx("float32")
     K.set_epsilon(eps)

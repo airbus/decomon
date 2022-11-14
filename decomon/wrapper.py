@@ -1,9 +1,11 @@
-from decomon.models.models import DecomonModel
-from decomon.models.convert import clone as convert
 import numpy as np
+
+from decomon.models.convert import clone as convert
+from decomon.models.models import DecomonModel
+from decomon.numpy.models import NumpyModel
+
 from .layers.core import Ball, Box, Grid
 from .models.decomon_sequential import Backward, Forward
-from decomon.numpy.models import NumpyModel
 
 
 ##### ADVERSARIAL ROBUSTTNESS #####
@@ -115,12 +117,10 @@ def get_adv_box(
 
         # two possitible cases: the model improves the bound based on the knowledge of the labels
         if model_.backward_bounds:
-            C=np.diag([1]*n_label)[None] - source_labels[:,:,None]
+            C = np.diag([1] * n_label)[None] - source_labels[:, :, None]
             output = model_.predict([z, C])
         else:
             output = model_.predict(z)
-
-
 
         def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None, backward=False):
 
@@ -167,11 +167,13 @@ def get_adv_box(
                 b_u_f = b_u_ - b_l_
             else:
 
-                upper = (np.maximum(w_u, 0.)*z_tensor[:, 1][:,:,None]).sum(1) + \
-                        (np.minimum(w_u, 0.) * z_tensor[:, 0][:, :, None]).sum(1) + b_u
+                upper = (
+                    (np.maximum(w_u, 0.0) * z_tensor[:, 1][:, :, None]).sum(1)
+                    + (np.minimum(w_u, 0.0) * z_tensor[:, 0][:, :, None]).sum(1)
+                    + b_u
+                )
 
                 return upper.max(-1)
-
 
             # add penalties on biases
             upper = (
@@ -200,7 +202,9 @@ def get_adv_box(
         if IBP:
             adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels, backward=model_.backward_bounds)
         if forward:
-            adv_f = get_forward_score(z, w_u_f, b_u_f, w_l_f, b_l_f, source_labels, target_labels, backward=model_.backward_bounds)
+            adv_f = get_forward_score(
+                z, w_u_f, b_u_f, w_l_f, b_l_f, source_labels, target_labels, backward=model_.backward_bounds
+            )
 
         if IBP and not forward:
             adv_score = adv_ibp
@@ -625,8 +629,7 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
     else:
         x_min = x_min.reshape((n_batch, 1, -1))
         x_max = x_max.reshape((n_batch, 1, -1))
-        input_dim=x_min.shape[-1]
-
+        input_dim = x_min.shape[-1]
 
     z = np.concatenate([x_min, x_max], 1)
 
@@ -732,7 +735,7 @@ def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, method='crown-hybrid', convex_domain=convex_domain, ibp=True, forward=False)
+        model_ = convert(model, method="crown-hybrid", convex_domain=convex_domain, ibp=True, forward=False)
     else:
         model_ = model
         if eps >= 0:
@@ -827,7 +830,7 @@ def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
     convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
 
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, method='crown-hybrid', convex_domain=convex_domain, ibp=True, forward=False)
+        model_ = convert(model, method="crown-hybrid", convex_domain=convex_domain, ibp=True, forward=False)
     else:
         model_ = model
         if eps >= 0:
@@ -922,7 +925,7 @@ def get_range_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
     convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
 
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, method='crown-hybrid', convex_domain=convex_domain, ibp=True, forward=False)
+        model_ = convert(model, method="crown-hybrid", convex_domain=convex_domain, ibp=True, forward=False)
     else:
         model_ = model
         if eps >= 0:
@@ -1221,9 +1224,6 @@ def get_upper_noise_(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
     if p == 2:
         ord = 2
 
-
-
-
     if forward:
         if not IBP:
             _, w_u_f, b_u_f, _, _ = output[:5]
@@ -1261,6 +1261,7 @@ def get_upper_noise_(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
 
     return u_
 
+
 def get_adv_noise(
     model,
     x,
@@ -1294,7 +1295,7 @@ def get_adv_noise(
         if eps >= 0:
             model_.set_domain(convex_domain)
 
-    eps = model.convex_domain['eps']
+    eps = model.convex_domain["eps"]
 
     # reshape x_mmin, x_max
     input_shape = list(model_.input_shape[1:])
@@ -1328,26 +1329,29 @@ def get_adv_noise(
         if len(x_) % batch_size > 0:
             r += 1
         X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        S_ = [source_labels[batch_size * i: batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        S_ = [source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         if (
-                (target_labels is not None)
-                and (not isinstance(target_labels, int))
-                and (str(target_labels.dtype)[:3] != "int")
+            (target_labels is not None)
+            and (not isinstance(target_labels, int))
+            and (str(target_labels.dtype)[:3] != "int")
         ):
-            T_ = [target_labels[batch_size * i: batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+            T_ = [target_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         else:
             T_ = [target_labels] * (len(x_) // batch_size + r)
 
-        results = [get_adv_noise(model_, X_[i], source_labels=S_[i], eps=eps, p=p,
-                                 target_labels=T_[i],
-                                 batch_size=-1, fast=fast) for i in range(len(X_))]
+        results = [
+            get_adv_noise(
+                model_, X_[i], source_labels=S_[i], eps=eps, p=p, target_labels=T_[i], batch_size=-1, fast=fast
+            )
+            for i in range(len(X_))
+        ]
 
         return np.concatenate(results)
     else:
 
         IBP = model_.IBP
         forward = model_.forward
-        output = model_.predict(x_) # to do !!!!
+        output = model_.predict(x_)  # to do !!!!
 
         def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
 
@@ -1391,19 +1395,19 @@ def get_adv_noise(
 
             # compute upper with lp norm
 
-            if len(z_tensor.shape)>2:
+            if len(z_tensor.shape) > 2:
                 z_tensor = np.reshape(z_tensor, (len(z_tensor), -1))
 
-            upper_0 = np.sum(w_u_f*z_tensor[:,:,None, None], 1) + b_u_f
+            upper_0 = np.sum(w_u_f * z_tensor[:, :, None, None], 1) + b_u_f
             # compute dual norm
-            if p==2:
-                upper_1 = eps*np.sum(w_u_f**2, 1)
-            if p==1:
-                upper_1 = eps*np.max(np.abs(w_u_f), 1)
-            if p==np.inf:
-                upper_1 = eps*np.sum(np.abs(w_u_f), 1)
+            if p == 2:
+                upper_1 = eps * np.sum(w_u_f**2, 1)
+            if p == 1:
+                upper_1 = eps * np.max(np.abs(w_u_f), 1)
+            if p == np.inf:
+                upper_1 = eps * np.sum(np.abs(w_u_f), 1)
 
-            upper = upper_0+upper_1
+            upper = upper_0 + upper_1
 
             const = upper.max() - upper.min()
             # upper = upper*s_tensor_[:,None, :] + (const+0.1)*(1. - s_tensor_[:,None,:])
@@ -1465,5 +1469,3 @@ def get_adv_noise(
                 x_0 = K.expand_dims(x_0, -1)
 
             return K.sum(w * x_0, 1) + upper
-
-

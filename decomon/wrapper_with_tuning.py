@@ -1,11 +1,12 @@
-from decomon.models.models import DecomonModel
-from decomon.models.convert import clone as convert
 import numpy as np
-from .layers.core import Ball, Box
-from .wrapper import get_upper_box, get_lower_box, refine_boxes
-from .metrics.loss import get_upper_loss
 from tensorflow.keras.optimizers import Adam
 
+from decomon.models.convert import clone as convert
+from decomon.models.models import DecomonModel
+
+from .layers.core import Ball, Box
+from .metrics.loss import get_upper_loss
+from .wrapper import get_lower_box, get_upper_box, refine_boxes
 
 
 #### FORMAL BOUNDS ######
@@ -26,12 +27,12 @@ def get_upper_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
     fast = True
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
-    model_=model
+    model_ = model
 
     baseline_upper = get_upper_box(model, x_min, x_max, batch_size=batch_size, n_sub_boxes=n_sub_boxes)
 
     # TO DO
-    #if not model.finetune or not model.forward:
+    # if not model.finetune or not model.forward:
     #    return baseline_upper
 
     n_split = 1
@@ -63,7 +64,10 @@ def get_upper_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
         X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
 
-        results = [get_upper_box_tuning(model_, decomon_model_concat, X_min_[i], X_max_[i], -1, lr=lr, epochs=epochs) for i in range(len(X_min_))]
+        results = [
+            get_upper_box_tuning(model_, decomon_model_concat, X_min_[i], X_max_[i], -1, lr=lr, epochs=epochs)
+            for i in range(len(X_min_))
+        ]
 
         u_ = np.concatenate(results)
 
@@ -105,12 +109,12 @@ def get_lower_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
     fast = True
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
-    model_=model
+    model_ = model
 
     baseline_upper = get_lower_box(model, x_min, x_max, batch_size=batch_size, n_sub_boxes=n_sub_boxes)
 
     # TO DO
-    #if not model.finetune or not model.forward:
+    # if not model.finetune or not model.forward:
     #    return baseline_upper
 
     n_split = 1
@@ -134,7 +138,7 @@ def get_lower_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
 
     z = np.concatenate([x_min, x_max], 1)
 
-    if batch_size >0 and batch_size!=len(x_min):
+    if batch_size > 0 and batch_size != len(x_min):
         # split
         r = 0
         if len(x_) % batch_size > 0:
@@ -142,7 +146,10 @@ def get_lower_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
         X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
 
-        results = [get_lower_box_tuning(model_, decomon_model_concat, X_min_[i], X_max_[i], -1, lr=lr, epochs=epochs) for i in range(len(X_min_))]
+        results = [
+            get_lower_box_tuning(model_, decomon_model_concat, X_min_[i], X_max_[i], -1, lr=lr, epochs=epochs)
+            for i in range(len(X_min_))
+        ]
 
         u_ = np.concatenate(results)
         model.reset_finetuning()
@@ -165,4 +172,3 @@ def get_lower_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
         model.reset_finetuning()
 
         return np.minimum(baseline_upper, upper_)
-

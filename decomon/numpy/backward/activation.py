@@ -1,10 +1,13 @@
 from __future__ import absolute_import
-import six
-import warnings
-from decomon.utils import V_slope, F_FORWARD
-import numpy as np
-from .utils import get_linear_hull_relu, merge_with_previous
 
+import warnings
+
+import numpy as np
+import six
+
+from decomon.utils import F_FORWARD, V_slope
+
+from .utils import get_linear_hull_relu, merge_with_previous
 
 ELU = "elu"
 SELU = "selu"
@@ -58,7 +61,7 @@ def backward_relu(
 
         if previous:
             # TO DO
-            return merge_with_previous(output+x[-4:])
+            return merge_with_previous(output + x[-4:])
         else:
             return output
 
@@ -66,7 +69,14 @@ def backward_relu(
 
 
 def backward_sigmoid(
-    inputs, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True,params=[],**kwargs
+    inputs,
+    dc_decomp=False,
+    convex_domain={},
+    slope=V_slope.name,
+    mode=F_FORWARD.name,
+    previous=True,
+    params=[],
+    **kwargs,
 ):
     """
     Backward  LiRPA of sigmoid
@@ -81,7 +91,14 @@ def backward_sigmoid(
 
 
 def backward_tanh(
-    inputs, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True,params=[],**kwargs
+    inputs,
+    dc_decomp=False,
+    convex_domain={},
+    slope=V_slope.name,
+    mode=F_FORWARD.name,
+    previous=True,
+    params=[],
+    **kwargs,
 ):
     """
     Backward  LiRPA of tanh
@@ -96,7 +113,7 @@ def backward_tanh(
 
 
 def backward_hard_sigmoid(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True,params=[],**kwargs
+    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True, params=[], **kwargs
 ):
     """
     Backward  LiRPA of hard sigmoid
@@ -115,7 +132,9 @@ def backward_hard_sigmoid(
     raise NotImplementedError()
 
 
-def backward_elu(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True, params=[],**kwargs):
+def backward_elu(
+    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True, params=[], **kwargs
+):
     """
     Backward  LiRPA of Exponential Linear Unit
     :param x:
@@ -154,7 +173,7 @@ def backward_selu(
 
 
 def backward_linear(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=False, params=[],**kwargs
+    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=False, params=[], **kwargs
 ):
     """
     Backward LiRPA of linear
@@ -170,7 +189,7 @@ def backward_linear(
         return [z, w_b_u, b_b_u, w_b_l, b_b_l]
     else:
         z, w_f_u, b_f_u = x[:3]
-        w_= np.repeat(np.ones_like(b_f_u[:,None]), z.shape[-1], 1)
+        w_ = np.repeat(np.ones_like(b_f_u[:, None]), z.shape[-1], 1)
         b_ = np.zeros_like(b_f_u)
 
         return [z, w_, b_, w_, b_]
@@ -178,7 +197,7 @@ def backward_linear(
 
 
 def backward_exponential(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True, params=[],**kwargs
+    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True, params=[], **kwargs
 ):
     """
     Backward LiRPAof exponential
@@ -197,7 +216,7 @@ def backward_exponential(
 
 
 def backward_softplus(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True, params=[],**kwargs
+    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True, params=[], **kwargs
 ):
     """
     Backward LiRPA of softplus
@@ -216,9 +235,15 @@ def backward_softplus(
     raise NotImplementedError()
 
 
-
 def backward_softsign(
-    inputs, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True, params=[],**kwargs
+    inputs,
+    dc_decomp=False,
+    convex_domain={},
+    slope=V_slope.name,
+    mode=F_FORWARD.name,
+    previous=True,
+    params=[],
+    **kwargs,
 ):
     """
     Backward LiRPA of softsign
@@ -239,9 +264,16 @@ def backward_softsign(
     raise NotImplementedError()
 
 
-
 def backward_softmax(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True, axis=-1, params=[],**kwargs
+    x,
+    dc_decomp=False,
+    convex_domain={},
+    slope=V_slope.name,
+    mode=F_FORWARD.name,
+    previous=True,
+    axis=-1,
+    params=[],
+    **kwargs,
 ):
     """
     Backward LiRPA of softmax
@@ -319,16 +351,3 @@ def get(identifier):
         return identifier
     else:
         raise ValueError("Could not interpret " "activation function identifier:", identifier)
-
-
-
-
-
-
-
-
-
-
-
-
-

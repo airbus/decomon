@@ -1,8 +1,9 @@
 from __future__ import absolute_import
+
 import numpy as np
-from tensorflow.keras import Input
-from numpy.testing import assert_almost_equal
 import tensorflow.python.keras.backend as K
+from numpy.testing import assert_almost_equal
+from tensorflow.keras import Input
 
 
 def get_standart_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
@@ -106,7 +107,7 @@ def get_standart_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
 
     if dc_decomp:
 
-        output= [
+        output = [
             x_[:, None],
             y_[:, None],
             x_0_[:, :, None],
@@ -134,7 +135,6 @@ def get_standart_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
 
     # cast element
     return [e.astype(K.floatx()) for e in output]
-
 
 
 def get_tensor_decomposition_1d_box(dc_decomp=True):
@@ -479,7 +479,6 @@ def build_image_from_2D_box(odd=0, m0=0, m1=1, dc_decomp=True):
             "image from 2D",
         )
 
-
         return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
     return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
@@ -655,7 +654,7 @@ def assert_output_properties_box(x_, y_, h_, g_, x_min_, x_max_, u_c_, w_u_, b_u
 
     #
     if w_u_ is not None:
-        if K.floatx()=="float32":
+        if K.floatx() == "float32":
             assert_almost_equal(
                 np.clip(lower_ - y_, 0.0, np.inf),
                 np.zeros_like(y_),

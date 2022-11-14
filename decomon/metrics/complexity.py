@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+
 from tensorflow.keras.layers import InputLayer, Lambda
 from tensorflow.python.keras.utils.generic_utils import to_list
 

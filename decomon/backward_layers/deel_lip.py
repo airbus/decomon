@@ -3,18 +3,28 @@ from __future__ import absolute_import
 try:
     from deel.lip.activations import GroupSort, GroupSort2
 except:
-    raise Warning('Could not import GroupSort from deel.lip.activations. Install deel-lip for being compatible with 1 Lipschitz network (see https://github.com/deel-ai/deel-lip)')
+    raise Warning(
+        "Could not import GroupSort from deel.lip.activations. Install deel-lip for being compatible with 1 Lipschitz network (see https://github.com/deel-ai/deel-lip)"
+    )
 
 
-import tensorflow.keras.backend as K
-import tensorflow as tf
 import numpy as np
-from tensorflow.keras.layers import Layer, Flatten, Dot, Permute, Activation
-from ..backward_layers.activations import get
+import tensorflow as tf
+import tensorflow.keras.backend as K
 from tensorflow.keras.backend import conv2d, conv2d_transpose
-from .utils import V_slope, backward_sort, get_identity_lirpa, get_IBP, get_FORWARD, get_input_dim
-from ..layers.utils import ClipAlpha, F_HYBRID, F_FORWARD
+from tensorflow.keras.layers import Activation, Dot, Flatten, Layer, Permute
+
+from ..backward_layers.activations import get
 from ..layers.decomon_layers import to_monotonic
+from ..layers.utils import F_FORWARD, F_HYBRID, ClipAlpha
+from .utils import (
+    V_slope,
+    backward_sort,
+    get_FORWARD,
+    get_IBP,
+    get_identity_lirpa,
+    get_input_dim,
+)
 
 
 class BackwardDense(Layer):
@@ -66,25 +76,27 @@ class BackwardDense(Layer):
 
         self.frozen_weights = False
 
+
 class BackwardGroupSort2(Layer):
     """
     Backward LiRPA of GroupSort2
     """
 
-    def __init__(self,
-                 layer,
-                 slope=V_slope.name,
-                 previous=True,
-                 mode=F_HYBRID.name,
-                 convex_domain={},
-                 finetune=False,
-                 input_dim=-1,
-                 **kwargs,
-                 ):
+    def __init__(
+        self,
+        layer,
+        slope=V_slope.name,
+        previous=True,
+        mode=F_HYBRID.name,
+        convex_domain={},
+        finetune=False,
+        input_dim=-1,
+        **kwargs,
+    ):
         super(BackwardGroupSort2, self).__init__(kwargs)
         self.layer = layer
-        self.slope=slope
-        self.finetune=finetune
+        self.slope = slope
+        self.finetune = finetune
 
         if hasattr(self.layer, "mode"):
             self.mode = self.layer.mode
@@ -107,18 +119,13 @@ class BackwardGroupSort2(Layer):
 
         self.frozen_weights = False
 
-
     def call_previous(self, inputs):
 
-        x= inputs[:-4]
+        x = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
-        if self.layer.data_format=="channels_last":
-            shape = int(w_out_u.shape[1]/2)
+        if self.layer.data_format == "channels_last":
+            shape = int(w_out_u.shape[1] / 2)
             n_out = w_out_u.shape[-1]
             w_out_u_ = K.reshape(w_out_u, [-1, shape, self.layer.n, n_out])
             w
-
-
-
-

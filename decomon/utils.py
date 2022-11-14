@@ -1,16 +1,16 @@
 from __future__ import absolute_import
-from tensorflow.python.keras import backend as K
-import numpy as np
 
-# from tensorflow.python.keras.engine.base_layer import InputSpec
-from tensorflow.keras.layers import Lambda
-from .layers.core import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
+import numpy as np
+import tensorflow as tf
 
 # from .layers.utils import get_linear_hull_s_shape, sigmoid_prime, tanh_prime
-from tensorflow.keras.layers import Flatten
+# from tensorflow.python.keras.engine.base_layer import InputSpec
+from tensorflow.keras.layers import Flatten, Lambda
 from tensorflow.math import greater_equal
-import tensorflow as tf
+from tensorflow.python.keras import backend as K
+
 from .corners.slope import get_linear_lower_slope_relu
+from .layers.core import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
 
 
 # create static variables for varying convex domain
@@ -21,9 +21,11 @@ class Ball:
 class Box:
     name = "box"  # Hypercube
 
+
 class Grid:
     name = "grid"  # Hypercube
-    stable_coeff = 0.
+    stable_coeff = 0.0
+
 
 class Vertex:
     name = "vertex"  # convex set represented by its vertices
@@ -338,6 +340,7 @@ def get_upper_layer(convex_domain={}):
 
     return Lambda(func)
 
+
 def get_lower_layer_box():
     def func(inputs):
         return get_lower_box(inputs[0], inputs[1], inputs[2], inputs[3])
@@ -391,6 +394,7 @@ def backward_minimum(inputs_, convex_domain):
 
     return output[2:4]
 
+
 def noisy_lower(lower):
 
     # if some random binary variable is set to 0 return K.maximum(upper,- upper)
@@ -399,22 +403,21 @@ def noisy_lower(lower):
 
     return proba * lower + (1 - proba) * var_
 
+
 def noisy_upper(upper):
 
     # if some random binary variable is set to 0 return K.maximum(upper,- upper)
     var_ = K.maximum(upper, -upper)
-    proba= K.random_binomial(upper.shape, p =0.2, dtype=K.floatx())
+    proba = K.random_binomial(upper.shape, p=0.2, dtype=K.floatx())
 
-    return proba*upper + (1-proba)*var_
+    return proba * upper + (1 - proba) * var_
 
 
 # define routines to get linear relaxations useful both for forward and backward
 def get_linear_hull_relu(upper, lower, slope, upper_g=0, lower_g=0, **kwargs):
 
-
-
-    #upper = K.in_train_phase(noisy_upper(upper), upper)
-    #lower = K.in_train_phase(noisy_lower(upper), lower)
+    # upper = K.in_train_phase(noisy_upper(upper), upper)
+    # lower = K.in_train_phase(noisy_lower(upper), lower)
 
     # in case upper=lower, this cases are
     # considered with index_dead and index_linear
@@ -427,8 +430,6 @@ def get_linear_hull_relu(upper, lower, slope, upper_g=0, lower_g=0, **kwargs):
     b_u_ = K.relu(lower) - alpha * lower
     z_value = K.cast(0.0, dtype=upper.dtype)
     o_value = K.cast(1.0, dtype=upper.dtype)
-
-
 
     if slope == V_slope.name:
         # 1 if upper<=-lower else 0
@@ -455,32 +456,29 @@ def get_linear_hull_relu(upper, lower, slope, upper_g=0, lower_g=0, **kwargs):
         w_l_ = w_u_
         b_l_ = z_value * b_u_
 
-
-    if 'upper_grid' in kwargs:
+    if "upper_grid" in kwargs:
 
         raise NotImplementedError()
-        upper_grid = kwargs['upper_grid']
-        lower_grid = kwargs['lower_grid']
+        upper_grid = kwargs["upper_grid"]
+        lower_grid = kwargs["lower_grid"]
 
         w_l_, b_l_ = get_linear_lower_slope_relu(upper, lower, upper_grid, lower_grid, **kwargs)
 
     if "finetune" in kwargs:
         raise NotImplementedError()
-        if not('finetune_grid' in kwargs and len(kwargs['finetune_grid'])):
+        if not ("finetune_grid" in kwargs and len(kwargs["finetune_grid"])):
 
             # weighted linear combination
             alpha_l = kwargs["finetune"]
             alpha_l_0 = alpha_l[0][None]
             alpha_l_1 = alpha_l[1][None]
 
-            w_l_ = alpha_l_0*w_l_ + (1-alpha_l_0)*alpha_l_1
-            b_l_ = alpha_l_0*b_l_
-
+            w_l_ = alpha_l_0 * w_l_ + (1 - alpha_l_0) * alpha_l_1
+            b_l_ = alpha_l_0 * b_l_
 
     # check inactive relu state: u<=0
     index_dead = -K.clip(K.sign(upper) - o_value, -o_value, z_value)  # =1 if inactive state
     index_linear = K.clip(K.sign(lower) + o_value, z_value, o_value)  # 1 if linear state
-
 
     w_u_ = (o_value - index_dead) * w_u_
     w_l_ = (o_value - index_dead) * w_l_
@@ -491,7 +489,6 @@ def get_linear_hull_relu(upper, lower, slope, upper_g=0, lower_g=0, **kwargs):
     w_l_ = (o_value - index_linear) * w_l_ + index_linear
     b_u_ = (o_value - index_linear) * b_u_
     b_l_ = (o_value - index_linear) * b_l_
-
 
     return [w_u_, b_u_, w_l_, b_l_]
 
@@ -817,11 +814,10 @@ def get_t_lower(u_c_flat, l_c_flat, s_u, func=K.sigmoid, f_prime=sigmoid_prime):
 
 def set_mode(x, final_mode, mode, convex_domain={}):
 
-    if final_mode==mode:
+    if final_mode == mode:
         return x
 
-
-    if mode==F_IBP.name:
+    if mode == F_IBP.name:
         u_c, l_c = x
     if mode == F_FORWARD.name:
         x_0, w_u, b_u, w_l, b_l = x
@@ -834,33 +830,34 @@ def set_mode(x, final_mode, mode, convex_domain={}):
     if mode == F_HYBRID.name:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
 
-    if final_mode==F_IBP.name:
+    if final_mode == F_IBP.name:
         return [u_c, l_c]
     if final_mode == F_FORWARD.name:
         return [x_0, w_u, b_u, w_l, b_l]
-    if final_mode==F_HYBRID.name:
+    if final_mode == F_HYBRID.name:
         return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
 
 
 def get_AB(model_):
     dico_AB = dict()
     convex_domain = model_.convex_domain
-    if not (len(convex_domain) and convex_domain['name'] == 'grid' and convex_domain['option'] == 'milp'):
+    if not (len(convex_domain) and convex_domain["name"] == "grid" and convex_domain["option"] == "milp"):
         return dico_AB
 
     for layer in model_.layers:
         name = layer.name
-        sub_names = name.split('backward_activation')
+        sub_names = name.split("backward_activation")
         if len(sub_names) > 1:
-            key = '{}_{}'.format(layer.layer.name, layer.rec)
+            key = "{}_{}".format(layer.layer.name, layer.rec)
             if key not in dico_AB:
                 dico_AB[key] = layer.grid_finetune
     return dico_AB
 
+
 def get_AB_finetune(model_):
     dico_AB = dict()
     convex_domain = model_.convex_domain
-    if not (len(convex_domain) and convex_domain['name'] == 'grid' and convex_domain['option'] == 'milp'):
+    if not (len(convex_domain) and convex_domain["name"] == "grid" and convex_domain["option"] == "milp"):
         return dico_AB
 
     if not model_.finetune:
@@ -868,14 +865,9 @@ def get_AB_finetune(model_):
 
     for layer in model_.layers:
         name = layer.name
-        sub_names = name.split('backward_activation')
+        sub_names = name.split("backward_activation")
         if len(sub_names) > 1:
-            key = '{}_{}'.format(layer.layer.name, layer.rec)
+            key = "{}_{}".format(layer.layer.name, layer.rec)
             if key not in dico_AB:
                 dico_AB[key] = layer.alpha_b_l
     return dico_AB
-
-
-
-
-

@@ -1,16 +1,18 @@
 from __future__ import absolute_import
-import tensorflow.keras.backend as K
-from decomon.models.utils import get_mode
-from decomon.layers.utils import F_HYBRID, F_FORWARD, F_IBP, get_upper, get_lower
-from decomon.layers.activations import softmax as softmax_
-from decomon.models import DecomonModel
-from tensorflow.keras.layers import InputLayer, Input, Layer, Flatten, Lambda
+
 import numpy as np
-from ..layers.core import DecomonLayer
-from decomon.layers.utils import F_HYBRID, F_IBP
-from decomon.utils import set_mode
-from .utils import categorical_cross_entropy
 import tensorflow as tf
+import tensorflow.keras.backend as K
+from tensorflow.keras.layers import Flatten, Input, InputLayer, Lambda, Layer
+
+from decomon.layers.activations import softmax as softmax_
+from decomon.layers.utils import F_FORWARD, F_HYBRID, F_IBP, get_lower, get_upper
+from decomon.models import DecomonModel
+from decomon.models.utils import get_mode
+from decomon.utils import set_mode
+
+from ..layers.core import DecomonLayer
+from .utils import categorical_cross_entropy
 
 
 def get_model(model):
@@ -83,10 +85,6 @@ def get_model(model):
         forward=forward,
         finetune=model.finetune,
     )
-
-
-
-
 
 
 def get_upper_loss(model):
@@ -296,8 +294,9 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
             b_l = y_pred[:, -1, n_comp + n_out :]
 
             if softmax:
-                _, w_u, b_u, w_l, b_l = softmax_([x_0, w_u, b_u, w_l, b_l],
-                                                mode=mode, convex_domain=convex_domain, clip=False)
+                _, w_u, b_u, w_l, b_l = softmax_(
+                    [x_0, w_u, b_u, w_l, b_l], mode=mode, convex_domain=convex_domain, clip=False
+                )
 
         if mode == F_HYBRID.name:
 
@@ -313,8 +312,9 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
             u_c = y_pred[:, -1, n_comp : n_comp + n_out]
             l_c = y_pred[:, -1, n_comp + n_out :]
 
-            _, u_c, w_u, b_u, l_c, w_l, b_l = softmax_([x_0, u_c, w_u, b_u, l_c, w_l, b_l],
-                                            mode=mode, convex_domain=convex_domain, clip=False)
+            _, u_c, w_u, b_u, l_c, w_l, b_l = softmax_(
+                [x_0, u_c, w_u, b_u, l_c, w_l, b_l], mode=mode, convex_domain=convex_domain, clip=False
+            )
 
         if IBP:
             score_ibp = adv_ibp(u_c, l_c, y_true)
@@ -346,16 +346,13 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
     return loss_adv
 
 
-
 # create a layer
 class DecomonLossFusion(DecomonLayer):
-
     def __init__(self, mode=F_HYBRID.name, asymptotic=False, backward=False, **kwargs):
         super(DecomonLossFusion, self).__init__(mode=mode, **kwargs)
         self.final_mode = F_IBP.name
         self.asymptotic = asymptotic
-        self.backward=backward
-
+        self.backward = backward
 
     def call_no_backward(self, inputs, **kwargs):
 
@@ -363,7 +360,7 @@ class DecomonLossFusion(DecomonLayer):
 
             u_c, l_c = set_mode(inputs, self.final_mode, self.mode, self.convex_domain)
 
-            return - l_c + K.log(K.sum(K.exp(u_c - K.max(u_c, -1)[:, None]), -1))[:, None] + K.max(u_c, -1)[:, None]
+            return -l_c + K.log(K.sum(K.exp(u_c - K.max(u_c, -1)[:, None]), -1))[:, None] + K.max(u_c, -1)[:, None]
 
             shape = u_c.shape[-1]
 
@@ -415,14 +412,12 @@ class DecomonLossFusion(DecomonLayer):
         else:
             return self.call_no_backward(inputs, **kwargs)
 
-
     def compute_output_shape(self, input_shape):
         return input_shape[-1]
 
 
 # new layer for new loss functions
 class DecomonRadiusRobust(DecomonLayer):
-
     def __init__(self, mode=F_HYBRID.name, backward=False, **kwargs):
         super(DecomonRadiusRobust, self).__init__(mode=mode, **kwargs)
 
@@ -432,7 +427,7 @@ class DecomonRadiusRobust(DecomonLayer):
         if len(self.convex_domain):
             raise NotImplementedError()
 
-        self.backward=backward
+        self.backward = backward
 
     def call_no_backward(self, inputs, **kwargs):
 
@@ -442,8 +437,8 @@ class DecomonRadiusRobust(DecomonLayer):
             x, w_u, b_u, w_l, b_l = inputs
 
         # compute center
-        x_0 = (x[:,0]+x[:, 1])/2.
-        radius = K.maximum((x[:,1]-x[:,0])/2., K.epsilon())
+        x_0 = (x[:, 0] + x[:, 1]) / 2.0
+        radius = K.maximum((x[:, 1] - x[:, 0]) / 2.0, K.epsilon())
         source_tensor = tf.linalg.diag(K.ones_like(b_l))
 
         shape = b_l.shape[-1]
@@ -453,18 +448,20 @@ class DecomonRadiusRobust(DecomonLayer):
             t_tensor = 1 - y_tensor
             s_tensor = y_tensor
 
-            W_adv = K.sum(-w_l * (s_tensor[:, None]), -1, keepdims=True) + w_u * t_tensor[:, None] + w_l * y_tensor[:,
-                                                                                                           None]  # (None, n_in, n_out)
-            b_adv = K.sum(-b_l * (s_tensor), -1, keepdims=True) + b_u * t_tensor + (
-                        b_l - 1e6) * y_tensor  # (None, n_out)
+            W_adv = (
+                K.sum(-w_l * (s_tensor[:, None]), -1, keepdims=True) + w_u * t_tensor[:, None] + w_l * y_tensor[:, None]
+            )  # (None, n_in, n_out)
+            b_adv = (
+                K.sum(-b_l * (s_tensor), -1, keepdims=True) + b_u * t_tensor + (b_l - 1e6) * y_tensor
+            )  # (None, n_out)
 
             score = K.sum(W_adv * x_0[:, :, None], 1) + b_adv  # (None, n_out)
 
             denum = K.maximum(K.sum(K.abs(W_adv * radius[:, :, None]), 1), K.epsilon())  # (None, n_out)
 
-            eps_adv = K.minimum(-score / denum + y_tensor, 2.)
+            eps_adv = K.minimum(-score / denum + y_tensor, 2.0)
 
-            adv_volume = 1. - eps_adv
+            adv_volume = 1.0 - eps_adv
 
             return K.max(adv_volume, -1, keepdims=True)
 
@@ -478,8 +475,8 @@ class DecomonRadiusRobust(DecomonLayer):
             x, w_u, b_u, w_l, b_l = inputs
 
         # compute center
-        x_0 = (x[:,0]+x[:, 1])/2.
-        radius = K.maximum((x[:,1]-x[:,0])/2., K.epsilon())
+        x_0 = (x[:, 0] + x[:, 1]) / 2.0
+        radius = K.maximum((x[:, 1] - x[:, 0]) / 2.0, K.epsilon())
         source_tensor = tf.linalg.diag(K.ones_like(b_l))
 
         shape = b_l.shape[-1]
@@ -490,14 +487,14 @@ class DecomonRadiusRobust(DecomonLayer):
             s_tensor = y_tensor
 
             W_adv = w_u
-            b_adv = b_u -1e6*y_tensor
+            b_adv = b_u - 1e6 * y_tensor
 
             score = K.sum(W_adv * x_0[:, :, None], 1) + b_adv  # (None, n_out)
             denum = K.maximum(K.sum(K.abs(W_adv * radius[:, :, None]), 1), K.epsilon())  # (None, n_out)
 
-            eps_adv = K.minimum(-score / denum + y_tensor, 2.)
+            eps_adv = K.minimum(-score / denum + y_tensor, 2.0)
 
-            adv_volume = 1. - eps_adv
+            adv_volume = 1.0 - eps_adv
 
             return K.max(adv_volume, -1, keepdims=True)
 
@@ -582,15 +579,3 @@ def build_asymptotic_crossentropy_model(model):
         forward=forward,
         finetune=model.finetune,
     )
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,16 +1,17 @@
 from __future__ import absolute_import
+
+import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras import backend as K
+import tensorflow.keras as keras
 from tensorflow.keras.constraints import Constraint
 from tensorflow.keras.initializers import Initializer
-import tensorflow.keras as keras
-import numpy as np
-from .core import Ball, Box, Vertex, Grid, F_FORWARD, F_IBP, F_HYBRID, StaticVariables
-from tensorflow.math import greater_equal
 from tensorflow.keras.layers import Flatten
+from tensorflow.math import greater_equal
+from tensorflow.python.keras import backend as K
 
 # from ..utils import get_linear_hull_relu, get_linear_softplus_hull
 from ..utils import *
+from .core import F_FORWARD, F_HYBRID, F_IBP, Ball, Box, Grid, StaticVariables, Vertex
 
 
 # create static variables for varying convex domain
@@ -160,7 +161,7 @@ def get_upper_ball(x_0, eps, p, w, b, **kwargs):
     :return: max_(|x - x_0|_p<= eps) w*x + b
     """
 
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     if len(w.shape) == len(b.shape):
         return x_0 + eps
     if p == np.inf:
@@ -193,46 +194,45 @@ def get_lower_ball_finetune(x_0, eps, p, w, b, **kwargs):
         n_shape = len(w.shape) - 2
 
         if "upper" and "lower" in kwargs:
-            upper = kwargs['upper'] # flatten vector
-            lower = kwargs['lower'] # flatten vector
+            upper = kwargs["upper"]  # flatten vector
+            lower = kwargs["lower"]  # flatten vector
 
-            upper_ = np.reshape(upper, [1, -1]+[1]*n_shape)
+            upper_ = np.reshape(upper, [1, -1] + [1] * n_shape)
             lower_ = np.reshape(lower, [1, -1] + [1] * n_shape)
 
-            w_alpha = w*alpha[None]
-            w_alpha_bar = w*(1-alpha)
+            w_alpha = w * alpha[None]
+            w_alpha_bar = w * (1 - alpha)
 
-            score_box = K.sum(K.maximum(0., w_alpha_bar)*lower_, 1) + K.sum(K.minimum(0., w_alpha_bar)*upper_, 1)
+            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * lower_, 1) + K.sum(K.minimum(0.0, w_alpha_bar) * upper_, 1)
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
-            return score_box+score_ball
+            return score_box + score_ball
 
         if "upper" in kwargs:
 
-            upper = kwargs['upper'] # flatten vector
-            upper_ = np.reshape(upper, [1, -1]+[1]*n_shape)
+            upper = kwargs["upper"]  # flatten vector
+            upper_ = np.reshape(upper, [1, -1] + [1] * n_shape)
 
-            w_alpha = K.minimum(0, w)*alpha[None] + K.maximum(0., w)
-            w_alpha_bar = K.minimum(0, w)*(1-alpha[None])
+            w_alpha = K.minimum(0, w) * alpha[None] + K.maximum(0.0, w)
+            w_alpha_bar = K.minimum(0, w) * (1 - alpha[None])
 
-
-            score_box = K.sum(K.minimum(0., w_alpha_bar)*upper_, 1)
+            score_box = K.sum(K.minimum(0.0, w_alpha_bar) * upper_, 1)
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
-            return score_box+score_ball
+            return score_box + score_ball
 
         if "lower" in kwargs:
 
-            lower = kwargs['lower'] # flatten vector
-            lower_ = np.reshape(lower, [1, -1]+[1]*n_shape)
+            lower = kwargs["lower"]  # flatten vector
+            lower_ = np.reshape(lower, [1, -1] + [1] * n_shape)
 
-            w_alpha = K.maximum(0, w)*alpha[None] + K.minimum(0., w)
-            w_alpha_bar = K.maximum(0, w)*(1-alpha[None])
+            w_alpha = K.maximum(0, w) * alpha[None] + K.minimum(0.0, w)
+            w_alpha_bar = K.maximum(0, w) * (1 - alpha[None])
 
-            score_box = K.sum(K.maximum(0., w_alpha_bar)*lower_, 1)
+            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * lower_, 1)
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
-            return score_box+score_ball
+            return score_box + score_ball
 
     return get_lower_ball(x_0, eps, p, w, b)
 
@@ -246,49 +246,47 @@ def get_upper_ball_finetune(x_0, eps, p, w, b, **kwargs):
         n_shape = len(w.shape) - 2
 
         if "upper" and "lower" in kwargs:
-            upper = kwargs['upper'] # flatten vector
-            lower = kwargs['lower'] # flatten vector
+            upper = kwargs["upper"]  # flatten vector
+            lower = kwargs["lower"]  # flatten vector
 
-            upper_ = np.reshape(upper, [1, -1]+[1]*n_shape)
+            upper_ = np.reshape(upper, [1, -1] + [1] * n_shape)
             lower_ = np.reshape(lower, [1, -1] + [1] * n_shape)
 
-            w_alpha = w*alpha[None]
-            w_alpha_bar = w*(1-alpha)
+            w_alpha = w * alpha[None]
+            w_alpha_bar = w * (1 - alpha)
 
-            score_box = K.sum(K.maximum(0., w_alpha_bar)*upper_, 1) + K.sum(K.minimum(0., w_alpha_bar)*lower_, 1)
+            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * upper_, 1) + K.sum(K.minimum(0.0, w_alpha_bar) * lower_, 1)
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
-            return score_box+score_ball
+            return score_box + score_ball
 
         if "upper" in kwargs:
 
-            upper = kwargs['upper'] # flatten vector
-            upper_ = np.reshape(upper, [1, -1]+[1]*n_shape)
+            upper = kwargs["upper"]  # flatten vector
+            upper_ = np.reshape(upper, [1, -1] + [1] * n_shape)
 
-            w_alpha = K.minimum(0, w)*alpha[None] + K.maximum(0., w)
-            w_alpha_bar = K.minimum(0, w)*(1-alpha[None])
+            w_alpha = K.minimum(0, w) * alpha[None] + K.maximum(0.0, w)
+            w_alpha_bar = K.minimum(0, w) * (1 - alpha[None])
 
-
-            score_box = K.sum(K.maximum(0., w_alpha_bar)*upper_, 1)
+            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * upper_, 1)
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
-            return score_box+score_ball
+            return score_box + score_ball
 
         if "lower" in kwargs:
 
-            lower = kwargs['lower'] # flatten vector
-            lower_ = np.reshape(lower, [1, -1]+[1]*n_shape)
+            lower = kwargs["lower"]  # flatten vector
+            lower_ = np.reshape(lower, [1, -1] + [1] * n_shape)
 
-            w_alpha = K.maximum(0, w)*alpha[None] + K.minimum(0., w)
-            w_alpha_bar = K.maximum(0, w)*(1-alpha[None])
+            w_alpha = K.maximum(0, w) * alpha[None] + K.minimum(0.0, w)
+            w_alpha_bar = K.maximum(0, w) * (1 - alpha[None])
 
-            score_box = K.sum(K.minimum(0., w_alpha_bar)*lower_, 1)
+            score_box = K.sum(K.minimum(0.0, w_alpha_bar) * lower_, 1)
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
-            return score_box+score_ball
+            return score_box + score_ball
 
     return get_upper_ball(x_0, eps, p, w, b)
-
 
 
 def get_lower_ball(x_0, eps, p, w, b, **kwargs):
@@ -350,7 +348,7 @@ def get_upper(x, w, b, convex_domain={}, **kwargs):
         p = convex_domain["p"]
 
         # check for extra options
-        #kwargs.update(convex_domain)
+        # kwargs.update(convex_domain)
         return get_upper_ball(x, eps, p, w, b, **kwargs)
 
     if convex_domain["name"] == Vertex.name:
@@ -580,15 +578,16 @@ class NonPos(Constraint):
     """Constrains the weights to be non-negative."""
 
     def __call__(self, w):
-        #return w * K.cast(K.less_equal(w, 0.0), K.floatx())
-        return K.minimum(w, 0.)
+        # return w * K.cast(K.less_equal(w, 0.0), K.floatx())
+        return K.minimum(w, 0.0)
+
 
 class NonNeg(Constraint):
     """Constrains the weights to be non-negative."""
 
     def __call__(self, w):
-        #return w * K.cast(K.less_equal(w, 0.0), K.floatx())
-        return K.maximum(w, 0.)
+        # return w * K.cast(K.less_equal(w, 0.0), K.floatx())
+        return K.maximum(w, 0.0)
 
 
 class ClipAlpha(Constraint):
@@ -597,14 +596,15 @@ class ClipAlpha(Constraint):
     def __call__(self, w):
         return K.clip(w, 0.0, 1.0)
 
+
 class ClipAlphaGrid(Constraint):
     """Cosntraints the weights to be between 0 and 1."""
 
     def __call__(self, w):
         w = K.clip(w, 0.0, 1.0)
 
-        #w = K.clip(w, 0., 1.)
-        w /=K.maximum(K.sum(w, 0), 1.)[None]
+        # w = K.clip(w, 0., 1.)
+        w /= K.maximum(K.sum(w, 0), 1.0)[None]
         return w
 
 
@@ -615,7 +615,7 @@ class ClipAlphaAndSumtoOne(Constraint):
         w = K.clip(w, 0.0, 1.0)
         # normalize the first colum to 1
         w_scale = K.maximum(K.sum(w, 0), K.epsilon())
-        return w/w_scale[:,None,None,None]
+        return w / w_scale[:, None, None, None]
 
 
 class MultipleConstraint(Constraint):
@@ -708,19 +708,15 @@ def relu_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, slope=V_slop
 
     if mode in [F_FORWARD.name, F_HYBRID.name]:
 
-
-        if len(convex_domain) and convex_domain['name']==Grid.name:
+        if len(convex_domain) and convex_domain["name"] == Grid.name:
             upper_g, lower_g = get_bound_grid(x_0, w_u, b_u, w_l, b_l, 1)
-            kwargs.update({'upper_grid':upper_g, 'lower_grid':lower_g})
-
+            kwargs.update({"upper_grid": upper_g, "lower_grid": lower_g})
 
         w_u_, b_u_, w_l_, b_l_ = get_linear_hull_relu(upper, lower, slope, **kwargs)
         b_u_ = w_u_ * b_u + b_u_
         b_l_ = w_l_ * b_l + b_l_
         w_u_ = K.expand_dims(w_u_, 1) * w_u
         w_l_ = K.expand_dims(w_l_, 1) * w_l
-
-
 
     output = []
     if mode == F_IBP.name:
@@ -797,7 +793,7 @@ def substract(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBR
     :return: inputs_0 - inputs_1
     """
     inputs_1_ = minus(inputs_1, mode=mode, dc_decomp=dc_decomp)
-    output= add(inputs_0, inputs_1_, dc_decomp=dc_decomp, mode=mode, convex_domain=convex_domain)
+    output = add(inputs_0, inputs_1_, dc_decomp=dc_decomp, mode=mode, convex_domain=convex_domain)
 
     return output
 
@@ -871,6 +867,7 @@ def add(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.nam
 
     return output
 
+
 def sum(x, axis=-1, dc_decomp=False, mode=F_HYBRID.name, **kwargs):
 
     if dc_decomp:
@@ -886,8 +883,8 @@ def sum(x, axis=-1, dc_decomp=False, mode=F_HYBRID.name, **kwargs):
         l_c_ = K.sum(l_c, axis=axis)
 
     axis_w = -1
-    if axis!=-1:
-        axis_w = axis+1
+    if axis != -1:
+        axis_w = axis + 1
     w_u_ = K.sum(w_u, axis=axis_w)
     w_l_ = K.sum(w_l, axis=axis_w)
     b_u_ = K.sum(b_u, axis=axis)
@@ -898,31 +895,32 @@ def sum(x, axis=-1, dc_decomp=False, mode=F_HYBRID.name, **kwargs):
     if mode == F_HYBRID.name:
         return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
+
 def frac_pos(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
 
     if dc_decomp:
         raise NotImplementedError()
     # frac_pos is convex for positive values
-    if mode ==F_IBP.name:
+    if mode == F_IBP.name:
         u_c, l_c = x
-        u_c_ = 1. / l_c
-        l_c_ = 1. / u_c
+        u_c_ = 1.0 / l_c
+        l_c_ = 1.0 / u_c
         return [u_c_, l_c_]
     if mode == F_FORWARD.name:
-        x_0, w_u,b_u, w_l, b_l = x
+        x_0, w_u, b_u, w_l, b_l = x
         u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
         l_c = get_lower(x_0, w_u, b_u, convex_domain=convex_domain)
     if mode == F_HYBRID.name:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
-        u_c_ = 1./l_c
-        l_c_ = 1./u_c
+        u_c_ = 1.0 / l_c
+        l_c_ = 1.0 / u_c
 
-        w_u_0 = (u_c_-l_c_)/K.maximum(u_c-l_c, K.epsilon())
-        b_u_0 = l_c_ - w_u_0*l_c
+        w_u_0 = (u_c_ - l_c_) / K.maximum(u_c - l_c, K.epsilon())
+        b_u_0 = l_c_ - w_u_0 * l_c
 
-        y = (u_c+l_c)/2.
-        b_l_0 = 2./y
-        w_l_0 = -1/y**2
+        y = (u_c + l_c) / 2.0
+        b_l_0 = 2.0 / y
+        w_l_0 = -1 / y**2
 
         w_u_ = w_u_0[:, None] * w_l
         b_u_ = b_u_0 * b_l + b_u_0
@@ -933,7 +931,6 @@ def frac_pos(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs)
             return [x_0, w_u_, b_u_, w_l_, b_l_]
         if mode == F_HYBRID.name:
             return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
-
 
 
 def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, finetune=False, **kwargs):
@@ -949,19 +946,10 @@ def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID
     """
     output_0 = substract(inputs_1, inputs_0, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
     if finetune:
-        finetune=kwargs['finetune_params']
-        output_1 = relu_(
-            output_0,
-            dc_decomp=dc_decomp,
-            convex_domain=convex_domain,
-            mode=mode,
-            finetune=finetune)
+        finetune = kwargs["finetune_params"]
+        output_1 = relu_(output_0, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, finetune=finetune)
     else:
-        output_1 = relu_(
-            output_0,
-            dc_decomp=dc_decomp,
-            convex_domain=convex_domain,
-            mode=mode)
+        output_1 = relu_(output_0, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
     return add(
         output_1,
@@ -992,7 +980,7 @@ def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID
             convex_domain=convex_domain,
             mode=mode,
             finetune=finetune,
-            **kwargs
+            **kwargs,
         ),
         dc_decomp=dc_decomp,
         mode=mode,
@@ -1092,7 +1080,9 @@ def max_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, fine
             # output_i = [y_list[i], x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
             output_i = [x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
             if finetune:
-                output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune, finetune_params=params_[i])
+                output_tmp = maximum(
+                    output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune, finetune_params=params_[i]
+                )
             else:
                 output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
 
@@ -1122,7 +1112,9 @@ def max_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, fine
             # output_i = [y_list[i], x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
             output_i = [x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
             if finetune:
-                output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune, finetune_params=params_[i])
+                output_tmp = maximum(
+                    output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune, finetune_params=params_[i]
+                )
             else:
                 output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
 
@@ -1303,7 +1295,6 @@ def multiply_old(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_H
     # xy >= x_U*y + x*y_U - x_U*y_U
     if mode in [F_IBP.name, F_HYBRID.name]:
 
-
         upper_0 = K.relu(u0) * u1 - K.relu(-u0) * l1 + K.relu(l1) * u0 - K.relu(-l1) * l0 - u0 * l1
         upper_1 = K.relu(u1) * u0 - K.relu(-u1) * l0 + K.relu(l0) * u1 - K.relu(-l0) * l1 - u1 * l0
 
@@ -1435,30 +1426,29 @@ def multiply(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRI
     # xy >= x_U*y + x*y_U - x_U*y_U
 
     if mode in [F_IBP.name, F_HYBRID.name]:
-        u_c_0_ = K.maximum(u0*u1, u0*l1) + K.maximum(u0*l1, l0*l1) - u0*l1
-        u_c_1_ = K.maximum(u1*u0, u1*l0) + K.maximum(u1*l0, l1*l0) - u1*l0
+        u_c_0_ = K.maximum(u0 * u1, u0 * l1) + K.maximum(u0 * l1, l0 * l1) - u0 * l1
+        u_c_1_ = K.maximum(u1 * u0, u1 * l0) + K.maximum(u1 * l0, l1 * l0) - u1 * l0
         u_c_ = K.minimum(u_c_0_, u_c_1_)
-        l_c_ = K.minimum(l0*l1, l0*u1) + K.minimum(l0*l1, u0*l1) - l0*l1
+        l_c_ = K.minimum(l0 * l1, l0 * u1) + K.minimum(l0 * l1, u0 * l1) - l0 * l1
 
     if mode in [F_HYBRID.name, F_FORWARD.name]:
-        #xy <= x_u * y + x * y_L - xU * y_L
-        cx_u_pos = K.maximum(u0, 0.)
-        cx_u_neg = K.minimum(u0, 0.)
+        # xy <= x_u * y + x * y_L - xU * y_L
+        cx_u_pos = K.maximum(u0, 0.0)
+        cx_u_neg = K.minimum(u0, 0.0)
 
-        cy_l_pos = K.maximum(l1, 0.)
-        cy_l_neg = K.minimum(l1, 0.)
-        w_u_ = cx_u_pos[:,None]*w_u1 + cx_u_neg[:,None]*w_l1 + cy_l_pos[:,None]*w_u0 + cy_l_neg[:,None]*w_l0
-        b_u_ = cx_u_pos*b_u1 + cx_u_neg*b_l1 + cy_l_pos*b_u0 + cy_l_neg*b_l0 - u0*l1
+        cy_l_pos = K.maximum(l1, 0.0)
+        cy_l_neg = K.minimum(l1, 0.0)
+        w_u_ = cx_u_pos[:, None] * w_u1 + cx_u_neg[:, None] * w_l1 + cy_l_pos[:, None] * w_u0 + cy_l_neg[:, None] * w_l0
+        b_u_ = cx_u_pos * b_u1 + cx_u_neg * b_l1 + cy_l_pos * b_u0 + cy_l_neg * b_l0 - u0 * l1
 
         # xy >= x_U*y + x*y_U - x_U*y_U
-        cy_u_pos = K.maximum(u1, 0.)
-        cy_u_neg = K.minimum(u1, 0.)
-        cx_l_pos = K.maximum(l0, 0.)
-        cx_l_neg = K.minimum(l0, 0.)
+        cy_u_pos = K.maximum(u1, 0.0)
+        cy_u_neg = K.minimum(u1, 0.0)
+        cx_l_pos = K.maximum(l0, 0.0)
+        cx_l_neg = K.minimum(l0, 0.0)
 
-
-        w_l_ = cx_l_pos[:,None]*w_l1 + cx_l_neg[:,None]*w_u1 + cy_l_pos[:,None]*w_l0 + cy_l_neg[:,None]*w_u0
-        b_l_ = cx_l_pos*b_l1 + cx_l_neg*b_u1 + cy_l_pos*b_l0 + cy_l_neg*b_u0 - l0*l1
+        w_l_ = cx_l_pos[:, None] * w_l1 + cx_l_neg[:, None] * w_u1 + cy_l_pos[:, None] * w_l0 + cy_l_neg[:, None] * w_u0
+        b_l_ = cx_l_pos * b_l1 + cx_l_neg * b_u1 + cy_l_pos * b_l0 + cy_l_neg * b_u0 - l0 * l1
 
     if mode == F_IBP.name:
         return [u_c_, l_c_]
@@ -1466,6 +1456,7 @@ def multiply(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRI
         return [x, w_u_, b_u_, w_l_, b_l_]
     if mode == F_HYBRID.name:
         return [x, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+
 
 def permute_dimensions(x, axis, mode=F_HYBRID.name, axis_perm=1):
     """
@@ -1843,7 +1834,16 @@ def min_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, fine
     """
     # return - max - x
     return minus(
-        max_(minus(x, mode=mode), dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, axis=axis, finetune=finetune, **kwargs), mode=mode
+        max_(
+            minus(x, mode=mode),
+            dc_decomp=dc_decomp,
+            convex_domain=convex_domain,
+            mode=mode,
+            axis=axis,
+            finetune=finetune,
+            **kwargs,
+        ),
+        mode=mode,
     )
 
 
@@ -1929,16 +1929,16 @@ def log(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
     u_c_ = K.log(u_c)
     l_c_ = K.log(l_c)
 
-    y = (u_c+l_c)/2. # do finetuneting
+    y = (u_c + l_c) / 2.0  # do finetuneting
 
-    w_l_0 = (u_c_ - l_c_)/K.maximum(u_c-l_c, K.epsilon())
-    b_l_0 = l_c_ - w_l_0*l_c
+    w_l_0 = (u_c_ - l_c_) / K.maximum(u_c - l_c, K.epsilon())
+    b_l_0 = l_c_ - w_l_0 * l_c
 
-    w_u_0 = 1/y
-    b_u_0 = K.log(y)-1
+    w_u_0 = 1 / y
+    b_u_0 = K.log(y) - 1
 
-    w_u_ = w_u_0[:,None]*w_u
-    b_u_ = w_u_0*b_u + b_u_0
+    w_u_ = w_u_0[:, None] * w_u
+    b_u_ = w_u_0 * b_u + b_u_0
     w_l_ = w_l_0[:, None] * w_l
     b_l_ = w_l_0 * b_l + b_l_0
 
@@ -1975,17 +1975,17 @@ def exp(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
     u_c_ = K.exp(u_c)
     l_c_ = K.exp(l_c)
 
-    y = (u_c+l_c)/2. # do finetuneting
+    y = (u_c + l_c) / 2.0  # do finetuneting
     slope = K.exp(y)
 
-    w_u_0 = (u_c_ - l_c_)/K.maximum(u_c-l_c, K.epsilon())
-    b_u_0 = l_c_ - w_u_0*l_c
+    w_u_0 = (u_c_ - l_c_) / K.maximum(u_c - l_c, K.epsilon())
+    b_u_0 = l_c_ - w_u_0 * l_c
 
     w_l_0 = K.exp(y)
-    b_l_0 = w_l_0*(1-y)
+    b_l_0 = w_l_0 * (1 - y)
 
-    w_u_ = w_u_0[:,None]*w_u
-    b_u_ = w_u_0*b_u + b_u_0
+    w_u_ = w_u_0[:, None] * w_u
+    b_u_ = w_u_0 * b_u + b_u_0
     w_l_ = w_l_0[:, None] * w_l
     b_l_ = w_l_0 * b_l + b_l_0
 
@@ -2001,9 +2001,11 @@ def get_lower_bound_grid(x, W, b, n):
     A, B = convert_lower_search_2_subset_sum(x, W, b, n)
     return subset_sum_lower(A, B, repeat=n)
 
+
 def get_upper_bound_grid(x, W, b, n):
 
-    return - get_lower_bound_grid(x, -W, -b, n)
+    return -get_lower_bound_grid(x, -W, -b, n)
+
 
 def get_bound_grid(x, W_u, b_u, W_l, b_l, n):
 
@@ -2016,24 +2018,25 @@ def get_bound_grid(x, W_u, b_u, W_l, b_l, n):
 # convert max Wx +b s.t Wx+b<=0 into a subset-sum problem with positive values
 def convert_lower_search_2_subset_sum(x, W, b, n):
 
-    x_min = x[:,0]
+    x_min = x[:, 0]
     x_max = x[:, 1]
 
-    if len(W.shape)>3:
+    if len(W.shape) > 3:
         W = K.reshape(W, (-1, W.shape[1], np.prod(W.shape[2:])))
         b = K.reshape(b, (-1, np.prod(b.shape[1:])))
 
-    const = get_lower(x, W, b, convex_domain={}) # convex_domain = {}
+    const = get_lower(x, W, b, convex_domain={})  # convex_domain = {}
 
-    weights = K.abs(W)*K.expand_dims((x_max-x_min)/n, -1)
+    weights = K.abs(W) * K.expand_dims((x_max - x_min) / n, -1)
     return weights, const
+
 
 def subset_sum_lower(W, b, repeat=1):
 
     B = tf.sort(W, 1)
-    C = K.repeat_elements(B,rep=repeat,axis=1)
+    C = K.repeat_elements(B, rep=repeat, axis=1)
     C_ = K.cumsum(C, axis=1)
-    D = K.minimum( K.sign(K.expand_dims(-b, 1)-C_)+1, 1)
+    D = K.minimum(K.sign(K.expand_dims(-b, 1) - C_) + 1, 1)
 
-    score = K.minimum( K.sum(D*C, 1) + b, 0.)  # to do: add 2
+    score = K.minimum(K.sum(D * C, 1) + b, 0.0)  # to do: add 2
     return score
