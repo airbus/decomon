@@ -1,7 +1,16 @@
 # do it with several solvers
 import numpy as np
 import six
-from ortools.linear_solver import pywraplp
+
+try:
+    import ortools
+except ImportError:
+    ortools_available = False
+else:
+    from ortools.linear_solver import pywraplp
+
+    ortools_available = True
+
 
 ORTOOLS = "ortools"
 GUROBI = "gurobi"
