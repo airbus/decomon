@@ -21,16 +21,6 @@ from decomon.layers.decomon_layers import (
 from ..backward_layers.activations import get
 from ..layers.decomon_layers import to_monotonic
 from ..layers.utils import F_FORWARD, F_HYBRID, ClipAlpha
-from .backward_maxpooling import BackwardMaxPooling2D
-from .backward_merge import BackwardAverage
-from .utils import (
-    V_slope,
-    backward_sort,
-    get_FORWARD,
-    get_IBP,
-    get_identity_lirpa,
-    get_input_dim,
-)
 
 
 class GradientDense(Layer):
