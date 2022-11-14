@@ -1,27 +1,29 @@
 from __future__ import absolute_import
-import tensorflow as tf
-from .core import DecomonLayer
-import tensorflow.keras.backend as K
-from tensorflow.keras.backend import bias_add, conv2d
+
 import numpy as np
-from tensorflow.keras.constraints import NonNeg
+import tensorflow as tf
+import tensorflow.keras.backend as K
 from tensorflow.keras import initializers
+from tensorflow.keras.backend import bias_add, conv2d
+from tensorflow.keras.constraints import NonNeg
 
 # from tensorflow.python.keras.engine.base_layer import InputSpec
 from tensorflow.keras.layers import (
+    Activation,
+    BatchNormalization,
     Conv2D,
     Dense,
-    Activation,
-    Flatten,
-    Reshape,
     Dot,
-    Input,
-    BatchNormalization,
     Dropout,
-    Lambda,
+    Flatten,
+    Input,
+    InputLayer,
     InputSpec,
-    InputLayer
+    Lambda,
+    Reshape,
 )
+
+from .core import DecomonLayer
 
 try:
     from keras.layers.merge import _Merge as Merge
@@ -126,7 +128,6 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         if self.finetune and self.mode == F_HYBRID.name:
             # create extra parameters that can be optimized
-
 
             self.alpha_ = self.add_weight(
                 shape=kernel_shape,
@@ -288,7 +289,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         # if self.w_ is None:
         z_value = K.cast(0.0, K.floatx())
-        o_value = K.cast(1., K.floatx())
+        o_value = K.cast(1.0, K.floatx())
         b_u = inputs[-1]
         n_in = np.prod(b_u.shape[1:])
 
@@ -333,7 +334,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         :return: List of updated tensors
         """
         z_value = K.cast(0.0, K.floatx())
-        o_value = K.cast(1., K.floatx())
+        o_value = K.cast(1.0, K.floatx())
 
         if not isinstance(inputs, list):
             raise ValueError("A merge layer should be called " "on a list of inputs.")
@@ -393,6 +394,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             )
 
         if self.finetune and self.mode == F_HYBRID.name:
+
             def conv_pos_alpha(x):
                 return conv2d(
                     x,
@@ -486,15 +488,19 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
                 if self.mode == F_HYBRID.name and self.finetune:
 
-                    b_u_ = self.alpha_pos_out[None] * conv_pos_alpha(self.alpha_pos_in[None] * (b_u - u_c)) + \
-                           (o_value - self.alpha_pos_out[None]) * conv_pos(u_c) + \
-                           self.alpha_neg_out[None] * conv_neg_alpha(self.alpha_neg_in[None] * (b_l - l_c)) + \
-                           (o_value - self.alpha_neg_out[None]) * conv_neg(l_c)
+                    b_u_ = (
+                        self.alpha_pos_out[None] * conv_pos_alpha(self.alpha_pos_in[None] * (b_u - u_c))
+                        + (o_value - self.alpha_pos_out[None]) * conv_pos(u_c)
+                        + self.alpha_neg_out[None] * conv_neg_alpha(self.alpha_neg_in[None] * (b_l - l_c))
+                        + (o_value - self.alpha_neg_out[None]) * conv_neg(l_c)
+                    )
 
-                    b_l_ = self.gamma_pos_out[None] * conv_pos_gamma(self.gamma_pos_in[None] * (b_l - l_c)) + \
-                           (o_value - self.gamma_pos_out[None]) * conv_pos(l_c) + \
-                           self.gamma_neg_out[None] * conv_neg_gamma(self.gamma_neg_in[None] * (b_u - u_c)) + \
-                           (o_value - self.gamma_neg_out[None]) * conv_neg(u_c)
+                    b_l_ = (
+                        self.gamma_pos_out[None] * conv_pos_gamma(self.gamma_pos_in[None] * (b_l - l_c))
+                        + (o_value - self.gamma_pos_out[None]) * conv_pos(l_c)
+                        + self.gamma_neg_out[None] * conv_neg_gamma(self.gamma_neg_in[None] * (b_u - u_c))
+                        + (o_value - self.gamma_neg_out[None]) * conv_neg(u_c)
+                    )
 
                     """
                     b_u_ = self.alpha_pos_out[None]*conv_pos_alpha(self.alpha_pos_in[None]*(b_u-u_c)) +\
@@ -559,21 +565,38 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                         return conv_neg_gamma(x), []
 
                     w_u_ = (
-                            self.alpha_pos_out[None, None] * K.rnn(step_function=step_pos_alpha,
-                                                                   inputs=self.alpha_pos_in[None, None] * w_u,
-                                                                   initial_states=[], unroll=False)[1]
-                            + self.alpha_neg_out * K.rnn(step_function=step_neg_alpha,
-                                                         inputs=self.alpha_neg_in[None, None] * w_l, initial_states=[],
-                                                         unroll=False)[1])
+                        self.alpha_pos_out[None, None]
+                        * K.rnn(
+                            step_function=step_pos_alpha,
+                            inputs=self.alpha_pos_in[None, None] * w_u,
+                            initial_states=[],
+                            unroll=False,
+                        )[1]
+                        + self.alpha_neg_out
+                        * K.rnn(
+                            step_function=step_neg_alpha,
+                            inputs=self.alpha_neg_in[None, None] * w_l,
+                            initial_states=[],
+                            unroll=False,
+                        )[1]
+                    )
 
                     w_l_ = (
-                            self.gamma_pos_out[None, None] * K.rnn(step_function=step_pos_gamma,
-                                                                   inputs=self.gamma_pos_in[None, None] * w_l,
-                                                                   initial_states=[], unroll=False)[1]
-                            + self.gamma_neg_out[None, None] * K.rnn(step_function=step_neg_gamma,
-                                                                     inputs=self.gamma_neg_in[None, None] * w_u,
-                                                                     initial_states=[],
-                                                                     unroll=False)[1])
+                        self.gamma_pos_out[None, None]
+                        * K.rnn(
+                            step_function=step_pos_gamma,
+                            inputs=self.gamma_pos_in[None, None] * w_l,
+                            initial_states=[],
+                            unroll=False,
+                        )[1]
+                        + self.gamma_neg_out[None, None]
+                        * K.rnn(
+                            step_function=step_neg_gamma,
+                            inputs=self.gamma_neg_in[None, None] * w_u,
+                            initial_states=[],
+                            unroll=False,
+                        )[1]
+                    )
 
                     """
                     alpha_u_ = self.alpha_u_f[None, None, :]
@@ -615,16 +638,12 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                     )
                     """
                     w_u_ = (
-                            K.rnn(step_function=step_pos, inputs=w_u, initial_states=[], unroll=False)[1]
-                            + K.rnn(
-                        step_function=step_neg, inputs=w_l, initial_states=[], unroll=False
-                    )[1]
+                        K.rnn(step_function=step_pos, inputs=w_u, initial_states=[], unroll=False)[1]
+                        + K.rnn(step_function=step_neg, inputs=w_l, initial_states=[], unroll=False)[1]
                     )
                     w_l_ = (
-                            K.rnn(step_function=step_pos, inputs=w_l, initial_states=[], unroll=False)[1]
-                            + K.rnn(
-                        step_function=step_neg, inputs=w_u, initial_states=[], unroll=False
-                    )[1]
+                        K.rnn(step_function=step_pos, inputs=w_l, initial_states=[], unroll=False)[1]
+                        + K.rnn(step_function=step_neg, inputs=w_u, initial_states=[], unroll=False)[1]
                     )
 
         # add bias
@@ -788,10 +807,18 @@ class DecomonConv2D(Conv2D, DecomonLayer):
     def unfreeze_alpha(self):
         if self.frozen_alpha:
             if self.finetune and self.mode == F_HYBRID.name:
-                self._trainable_weights += [self.alpha_, self.gamma_, self.alpha_pos_in, self.alpha_pos_out,
-                                            self.gamma_pos_in, self.gamma_pos_out,
-                                            self.alpha_pos_out, self.alpha_neg_out,
-                                            self.gamma_pos_out, self.gamma_neg_out]
+                self._trainable_weights += [
+                    self.alpha_,
+                    self.gamma_,
+                    self.alpha_pos_in,
+                    self.alpha_pos_out,
+                    self.gamma_pos_in,
+                    self.gamma_pos_out,
+                    self.alpha_pos_out,
+                    self.alpha_neg_out,
+                    self.gamma_pos_out,
+                    self.gamma_neg_out,
+                ]
             self.frozen_alpha = False
 
     def reset_finetuning(self):

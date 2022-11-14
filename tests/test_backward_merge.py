@@ -1,38 +1,41 @@
 # Test unit for decomon with Dense layers
 from __future__ import absolute_import
-import pytest
+
 import numpy as np
-from decomon.layers.decomon_layers import to_monotonic
-from decomon.layers.decomon_merge_layers import (
-    DecomonConcatenate,
-    DecomonAverage,
-    DecomonMaximum,
-    DecomonMinimum,
-    DecomonAdd,
-    DecomonSubtract,
-    DecomonMultiply,
-    DecomonDot,
-)
+import pytest
+import tensorflow.python.keras.backend as K
+from tensorflow.keras.layers import Input
+
 from decomon.backward_layers.backward_merge import (
     BackwardAdd,
     BackwardAverage,
-    BackwardSubtract,
+    BackwardDot,
     BackwardMaximum,
     BackwardMinimum,
     BackwardMultiply,
-    BackwardDot,
+    BackwardSubtract,
 )
-from tensorflow.keras.layers import Input
+from decomon.layers.decomon_layers import to_monotonic
+from decomon.layers.decomon_merge_layers import (
+    DecomonAdd,
+    DecomonAverage,
+    DecomonConcatenate,
+    DecomonDot,
+    DecomonMaximum,
+    DecomonMinimum,
+    DecomonMultiply,
+    DecomonSubtract,
+)
+from decomon.layers.utils import relu_
+
 from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
     assert_output_properties_box,
     assert_output_properties_box_linear,
     get_standard_values_multid_box,
+    get_standart_values_1d_box,
+    get_tensor_decomposition_1d_box,
     get_tensor_decomposition_multid_box,
 )
-import tensorflow.python.keras.backend as K
-from decomon.layers.utils import relu_
 
 """
 @pytest.mark.parametrize("n_0, n_1", [(0, 3), (1, 4), (2, 5)])

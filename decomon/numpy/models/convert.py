@@ -12,15 +12,21 @@ def clone(
     dico_grid={},
     final_ibp=True,
     final_forward=True,
-    **kwargs):
+    **kwargs,
+):
 
     # use shared in the layers
-    if method!='crown':
+    if method != "crown":
         raise NotImplementedError()
     if not shared:
         raise NotImplementedError()
 
-    return NumpyCROWNModel(model, ibp=False, forward=True, convex_domain=convex_domain,
-                           has_back_bounds=bool(len(back_bounds)), dico_grid=dico_grid, **kwargs)
-
-
+    return NumpyCROWNModel(
+        model,
+        ibp=False,
+        forward=True,
+        convex_domain=convex_domain,
+        has_back_bounds=bool(len(back_bounds)),
+        dico_grid=dico_grid,
+        **kwargs,
+    )

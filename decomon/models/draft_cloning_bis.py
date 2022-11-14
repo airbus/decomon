@@ -1,25 +1,35 @@
 from __future__ import absolute_import
-from tensorflow.keras.layers import InputLayer, Input, Layer
-from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
+
 import numpy as np
-from ..backward_layers.backward_layers import get_backward as get_backward_
-from tensorflow.keras.layers import Lambda
-from ..utils import get_upper_layer, get_lower_layer, backward_minimum, backward_maximum, F_HYBRID, F_FORWARD, F_IBP
+import tensorflow.python.keras.backend as K
+from tensorflow.keras.layers import Input, InputLayer, Lambda, Layer
 from tensorflow.keras.models import Model, Sequential
+from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
+
+from decomon.layers.decomon_layers import DecomonMaximum, DecomonMinimum
+
+from ..backward_layers.backward_layers import get_backward as get_backward_
+from ..utils import (
+    F_FORWARD,
+    F_HYBRID,
+    F_IBP,
+    backward_maximum,
+    backward_minimum,
+    get_lower_layer,
+    get_upper_layer,
+)
 from .utils import (
     check_input_tensors_sequential,
-    get_mode,
-    get_IBP,
-    get_FORWARD,
-    get_node_by_id,
     convert_to_backward_bounds,
+    fuse_forward_backward,
+    get_back_bounds_model,
+    get_FORWARD,
+    get_IBP,
     get_input_dim,
     get_key,
-    get_back_bounds_model,
-    fuse_forward_backward,
+    get_mode,
+    get_node_by_id,
 )
-from decomon.layers.decomon_layers import DecomonMinimum, DecomonMaximum
-import tensorflow.python.keras.backend as K
 
 
 def update_input(back_bounds, x_tensor, mode, upper_layer=None, lower_layer=None):

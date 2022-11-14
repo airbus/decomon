@@ -1,20 +1,22 @@
 from __future__ import absolute_import
-import pytest
+
 import numpy as np
+import pytest
+import tensorflow.python.keras.backend as K
 from numpy.testing import assert_allclose, assert_almost_equal
 from tensorflow.keras.layers import Input
-from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_multid_box,
-    get_standard_values_multid_box,
-    assert_output_properties_box_linear,
-)
-import tensorflow.python.keras.backend as K
 
-from decomon.layers.utils import relu_, max_, maximum, add, minus, substract
-from decomon.layers.activations import softsign
 from decomon.backward_layers.activations import backward_relu, backward_softsign
+from decomon.layers.activations import softsign
+from decomon.layers.utils import add, max_, maximum, minus, relu_, substract
+
+from . import (
+    assert_output_properties_box_linear,
+    get_standard_values_multid_box,
+    get_standart_values_1d_box,
+    get_tensor_decomposition_1d_box,
+    get_tensor_decomposition_multid_box,
+)
 
 
 @pytest.mark.parametrize(
@@ -163,8 +165,6 @@ def test_activation_relu_backward_1D_box(n, mode, previous, floatx):
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1), dtype=K.floatx())
 
-
-
     # backward_relu_(input_mode, w_out, b_out, w_out, b_out, mode=mode)
     if previous:
         w_out_u, b_out_u, w_out_l, b_out_l = backward_relu(
@@ -176,7 +176,6 @@ def test_activation_relu_backward_1D_box(n, mode, previous, floatx):
         w_out_u, b_out_u, w_out_l, b_out_l = backward_relu(input_mode, mode=mode, previous=previous)
         f_relu = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
         output_ = f_relu(inputs_)
-
 
     w_u_, b_u_, w_l_, b_l_ = output_
     w_u_b = np.sum(np.maximum(w_u_, 0) * W_u_ + np.minimum(w_u_, 0) * W_l_, 1)[:, :, None]
@@ -190,7 +189,6 @@ def test_activation_relu_backward_1D_box(n, mode, previous, floatx):
 
     K.set_epsilon(eps)
     K.set_floatx("float32")
-
 
 
 @pytest.mark.parametrize(
@@ -339,7 +337,6 @@ def test_activation_softsign_backward_1D_box(n, mode, previous, floatx):
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1), dtype=K.floatx())
 
-
     # backward_relu_(input_mode, w_out, b_out, w_out, b_out, mode=mode)
     if previous:
         w_out_u, b_out_u, w_out_l, b_out_l = backward_softsign(
@@ -351,7 +348,6 @@ def test_activation_softsign_backward_1D_box(n, mode, previous, floatx):
         w_out_u, b_out_u, w_out_l, b_out_l = backward_softsign(input_mode, mode=mode, previous=previous)
         f_softsign = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
         output_ = f_softsign(inputs_)
-
 
     w_u_, b_u_, w_l_, b_l_ = output_
     w_u_b = np.sum(np.maximum(w_u_, 0) * W_u_ + np.minimum(w_u_, 0) * W_l_, 1)[:, :, None]
@@ -365,4 +361,3 @@ def test_activation_softsign_backward_1D_box(n, mode, previous, floatx):
 
     K.set_epsilon(eps)
     K.set_floatx("float32")
-

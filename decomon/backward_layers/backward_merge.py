@@ -1,35 +1,38 @@
 from __future__ import absolute_import
-import tensorflow.keras.backend as K
-import tensorflow as tf
+
 import numpy as np
-from tensorflow.keras.layers import Layer, Flatten, Dot, Permute
+import tensorflow as tf
+import tensorflow.keras.backend as K
+from tensorflow.keras.layers import Dot, Flatten, Layer, Permute
 from tensorflow.python.keras.utils.generic_utils import to_list
+
 from decomon.layers.decomon_merge_layers import (
-    DecomonSubtract,
-    DecomonMaximum,
-    DecomonMinimum,
     DecomonAdd,
     DecomonAverage,
     DecomonConcatenate,
-    DecomonMultiply,
     DecomonDot,
+    DecomonMaximum,
+    DecomonMinimum,
+    DecomonMultiply,
+    DecomonSubtract,
 )
+
 from ..backward_layers.activations import get
+from ..layers.core import F_FORWARD, F_HYBRID, F_IBP
+from ..layers.utils import broadcast, multiply, permute_dimensions, split
+from .core import BackwardLayer
 from .utils import (
     V_slope,
     backward_add,
-    backward_substract,
     backward_maximum,
     backward_minimum,
     backward_multiply,
+    backward_substract,
     get_identity_lirpa,
 )
-from ..layers.core import F_HYBRID, F_FORWARD, F_IBP
-from ..layers.utils import split, multiply, permute_dimensions, broadcast
-from .core import BackwardLayer
+
 
 class BackwardMerge(BackwardLayer):
-
     def __init__(self, **kwargs):
         super(BackwardMerge, self).__init__(**kwargs)
 
@@ -58,11 +61,11 @@ class BackwardAdd(BackwardMerge):
         if hasattr(self.layer, "mode"):
             self.mode = self.layer.mode
             self.convex_domain = self.layer.convex_domain
-            self.dc_decomp= self.layer.dc_decomp
+            self.dc_decomp = self.layer.dc_decomp
         else:
             self.mode = mode
             self.convex_domain = convex_domain
-            self.dc_decomp=False
+            self.dc_decomp = False
         self.finetune = False
         self.previous = previous
 
@@ -81,11 +84,10 @@ class BackwardAdd(BackwardMerge):
 
         n_elem = len(x_) // n_comp
 
-
         if n_elem == 1:
             return [[w_out_u, b_out_u, w_out_l, b_out_l]]
         else:
-            if n_elem>2:
+            if n_elem > 2:
                 raise NotImplementedError()
             else:
 
@@ -104,12 +106,10 @@ class BackwardAdd(BackwardMerge):
                 )
                 return [bounds_0, bounds_1]
 
-
-
     def call_no_previous(self, inputs):
 
         bounds = list(get_identity_lirpa(inputs))
-        return self.call_previous(inputs+bounds)
+        return self.call_previous(inputs + bounds)
 
     def call(self, inputs):
         if self.previous:
@@ -117,9 +117,7 @@ class BackwardAdd(BackwardMerge):
         else:
             return self.call_no_previous(inputs)
 
-
-
-    """    
+    """
     def call(self, inputs):
 
         x_ = inputs[:-4]
@@ -213,7 +211,6 @@ class BackwardAverage(BackwardMerge):
         self.previous = previous
         self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=False).call
 
-
     def call_previous(self, inputs):
 
         x_ = inputs[:-4]
@@ -278,7 +275,7 @@ class BackwardAverage(BackwardMerge):
         return self.call_previous(inputs + bounds)
 
     def call(self, inputs):
-        #import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         if self.previous:
             return self.call_previous(inputs)
         else:

@@ -1,14 +1,16 @@
 from __future__ import absolute_import
-from .core import DecomonLayer
+
+import numpy as np
+import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.backend import conv2d
-import numpy as np
 
 # from tensorflow.python.keras.engine.base_layer import InputSpec
-from tensorflow.keras.layers import MaxPooling2D, InputSpec
-from decomon.layers.utils import max_, get_lower, get_upper
-import tensorflow as tf
-from .core import F_FORWARD, F_IBP, F_HYBRID
+from tensorflow.keras.layers import InputSpec, MaxPooling2D
+
+from decomon.layers.utils import get_lower, get_upper, max_
+
+from .core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
 
 
 # step 1: compute the maximum
@@ -79,27 +81,33 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
             def conv_(x):
 
                 if self.data_format in [None, "channels_last"]:
-                    return K.cast(K.expand_dims(
-                        conv2d(
-                            x,
-                            self.filters,
-                            strides=strides,
-                            padding=padding,
-                            data_format=data_format,
+                    return K.cast(
+                        K.expand_dims(
+                            conv2d(
+                                x,
+                                self.filters,
+                                strides=strides,
+                                padding=padding,
+                                data_format=data_format,
+                            ),
+                            -2,
                         ),
-                        -2,
-                    ), self.dtype)
+                        self.dtype,
+                    )
                 else:
-                    return K.cast(K.expand_dims(
-                        conv2d(
-                            x,
-                            self.filters,
-                            strides=strides,
-                            padding=padding,
-                            data_format=data_format,
+                    return K.cast(
+                        K.expand_dims(
+                            conv2d(
+                                x,
+                                self.filters,
+                                strides=strides,
+                                padding=padding,
+                                data_format=data_format,
+                            ),
+                            1,
                         ),
-                        1,
-                    ), self.dtype)
+                        self.dtype,
+                    )
 
             self.internal_op = conv_
 

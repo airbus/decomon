@@ -1,7 +1,9 @@
 from __future__ import absolute_import
-from decomon.models import DecomonModel, convert, clone
+
 import numpy as np
+
 from decomon.layers.core import Ball, Box
+from decomon.models import DecomonModel, clone, convert
 from decomon.models.decomon_sequential import Backward, Forward
 
 # check inputs

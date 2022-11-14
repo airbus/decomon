@@ -1,39 +1,35 @@
 # creating toy network and assess that the decomposition is correct
 from __future__ import absolute_import
-import pytest
+
 import numpy as np
+import pytest
 import tensorflow.python.keras.backend as K
-from decomon.backward_layers.backward_layers import get_backward
-from decomon.layers.decomon_layers import DecomonDense, to_monotonic, DecomonAdd
 from tensorflow.keras.layers import (
-    Input,
-    Dense,
-    Add,
-    Maximum,
-    Average,
     Activation,
-    Conv2D,
-    Flatten,
-    InputLayer,
+    Add,
+    Average,
     Concatenate,
-)
-from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
-    assert_output_properties_box_linear,
-    get_standard_values_multid_box,
-    get_tensor_decomposition_multid_box,
-    get_tensor_decomposition_images_box,
-    get_standard_values_images_box,
+    Conv2D,
+    Dense,
+    Flatten,
+    Input,
+    InputLayer,
+    Maximum,
 )
 from tensorflow.keras.models import Model, Sequential
+
+from decomon.backward_layers.backward_layers import get_backward
+from decomon.layers.decomon_layers import DecomonAdd, DecomonDense, to_monotonic
 from decomon.models.forward_cloning import convert_forward
+
 from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
     assert_output_properties_box,
     assert_output_properties_box_linear,
+    get_standard_values_images_box,
     get_standard_values_multid_box,
+    get_standart_values_1d_box,
+    get_tensor_decomposition_1d_box,
+    get_tensor_decomposition_images_box,
     get_tensor_decomposition_multid_box,
 )
 
@@ -42,7 +38,6 @@ def dense_NN_1D(input_dim, archi, sequential, activation, use_bias, dtype="float
 
     layers = [Dense(archi[0], use_bias=use_bias, activation=activation, input_dim=input_dim, dtype=dtype)]
     layers += [Dense(n_i, use_bias=use_bias, activation=activation, dtype=dtype) for n_i in archi[1:]]
-
 
     if sequential:
         return Sequential(layers)
@@ -69,7 +64,7 @@ def toy_struct_v0_1D(input_dim, archi, activation, use_bias, merge_op="average",
     h_0 = nnet_0(x)
     h_1 = nnet_1(x)
 
-    merge_op = 'add'
+    merge_op = "add"
     if merge_op == "average":
         y = Average(dtype=dtype)([h_0, h_1])
     if merge_op == "add":
@@ -115,7 +110,11 @@ def toy_struct_v2_1D(input_dim, archi, sequential, activation, use_bias, merge_o
 
 def toy_struct_cnn(dtype="float32"):
 
-    layers = [Conv2D(10, kernel_size=(3, 3), activation="relu", data_format="channels_last", dtype=dtype), Flatten(dtype=dtype), Dense(1, dtype=dtype)]
+    layers = [
+        Conv2D(10, kernel_size=(3, 3), activation="relu", data_format="channels_last", dtype=dtype),
+        Flatten(dtype=dtype),
+        Dense(1, dtype=dtype),
+    ]
     return Sequential(layers)
 
 
@@ -164,12 +163,11 @@ def test_toy_network_multiD(odd=0, archi=[4, 1], activation="relu", use_bias=Tru
 def toy_network_tutorial(dtype="float32"):
     layers = []
     layers.append(Dense(100, input_dim=1, dtype=dtype))  # specify the dimension of the input space
-    layers.append(Activation('relu', dtype=dtype))
+    layers.append(Activation("relu", dtype=dtype))
     layers.append(Dense(100, dtype=dtype))
-    layers.append(Dense(1, activation='linear', dtype=dtype))
+    layers.append(Dense(1, activation="linear", dtype=dtype))
     model = Sequential(layers)
     return model
-
 
 
 """
@@ -1411,29 +1409,87 @@ def test_convert_forward_multiple_inputs(odd, archi, activation, use_input, mode
 
 # network from tutorial 1
 
-@pytest.mark.parametrize("n, archi, activation, sequential, use_bias, mode, use_input, floatx", [
-    (0, [4, 3, 1], None, True, True, "hybrid", True,32), (1, [4, 3, 1], None, True, True, "hybrid", True,32), (3, [4, 3, 1], None, True, True, "hybrid", True,32), (5, [4, 3, 1], None, True, True, "hybrid", True,32),
-    (0, [4, 3, 1], None, False, True, "hybrid", True,32), (1, [4, 3, 1], None, False, True, "hybrid", True,32), (3, [4, 3, 1], None, False, True, "hybrid", True,32), (5, [4, 3, 1], None, False, True, "hybrid", True,32),
-    (0, [4, 3, 1], None, True, True, "forward", True,32), (1, [4, 3, 1], None, True, True, "forward", True,32), (3, [4, 3, 1], None, True, True, "forward", True,32), (5, [4, 3, 1], None, True, True, "forward", True,32),
-    (0, [4, 3, 1], None, False, True, "forward", True,32), (1, [4, 3, 1], None, False, True, "forward", True,32), (3, [4, 3, 1], None, False, True, "forward", True,32), (5, [4, 3, 1], None, False, True, "forward", True,32),
-    (0, [4, 3, 1], None, True, True, "ibp", True,32), (1, [4, 3, 1], None, True, True, "ibp", True,32), (3, [4, 3, 1], None, True, True, "ibp", True,32), (5, [4, 3, 1], None, True, True, "ibp", True,32),
-    (0, [4, 3, 1], None, False, True, "ibp", True,32), (1, [4, 3, 1], None, False, True, "ibp", True,32), (3, [4, 3, 1], None, False, True, "ibp", True,32), (5, [4, 3, 1], None, False, True, "ibp", True,32),
-    (0, [4, 3, 1], None, True, True, "hybrid", True,64), (1, [4, 3, 1], None, True, True, "hybrid", True,64), (3, [4, 3, 1], None, True, True, "hybrid", True,64), (5, [4, 3, 1], None, True, True, "hybrid", True,64),
-    (0, [4, 3, 1], None, False, True, "hybrid", True,64), (1, [4, 3, 1], None, False, True, "hybrid", True,64), (3, [4, 3, 1], None, False, True, "hybrid", True,64), (5, [4, 3, 1], None, False, True, "hybrid", True,64),
-    (0, [4, 3, 1], None, True, True, "forward", True,64), (1, [4, 3, 1], None, True, True, "forward", True,64), (3, [4, 3, 1], None, True, True, "forward", True,64), (5, [4, 3, 1], None, True, True, "forward", True,64),
-    (0, [4, 3, 1], None, False, True, "forward", True,64), (1, [4, 3, 1], None, False, True, "forward", True,64), (3, [4, 3, 1], None, False, True, "forward", True,64), (5, [4, 3, 1], None, False, True, "forward", True,64),
-    (0, [4, 3, 1], None, True, True, "ibp", True,64), (1, [4, 3, 1], None, True, True, "ibp", True,64), (3, [4, 3, 1], None, True, True, "ibp", True,64), (5, [4, 3, 1], None, True, True, "ibp", True,64),
-    (0, [4, 3, 1], None, False, True, "ibp", True,64), (1, [4, 3, 1], None, False, True, "ibp", True,64), (3, [4, 3, 1], None, False, True, "ibp", True,64), (5, [4, 3, 1], None, False, True, "ibp", True,64),
-    (0, [4, 3, 1], None, True, True, "hybrid", True,16), (1, [4, 3, 1], None, True, True, "hybrid", True,16), (3, [4, 3, 1], None, True, True, "hybrid", True,16), (5, [4, 3, 1], None, True, True, "hybrid", True,16),
-    (0, [4, 3, 1], None, False, True, "hybrid", True,16), (1, [4, 3, 1], None, False, True, "hybrid", True,16), (3, [4, 3, 1], None, False, True, "hybrid", True,16), (5, [4, 3, 1], None, False, True, "hybrid", True,16),
-    (0, [4, 3, 1], None, True, True, "forward", True,16), (1, [4, 3, 1], None, True, True, "forward", True,16), (3, [4, 3, 1], None, True, True, "forward", True,16), (5, [4, 3, 1], None, True, True, "forward", True,16),
-    (0, [4, 3, 1], None, False, True, "forward", True,16), (1, [4, 3, 1], None, False, True, "forward", True,16), (3, [4, 3, 1], None, False, True, "forward", True,16), (5, [4, 3, 1], None, False, True, "forward", True,16),
-    (0, [4, 3, 1], None, True, True, "ibp", True,16), (1, [4, 3, 1], None, True, True, "ibp", True,16), (3, [4, 3, 1], None, True, True, "ibp", True,16), (5, [4, 3, 1], None, True, True, "ibp", True,16),
-    (0, [4, 3, 1], None, False, True, "ibp", True,16), (1, [4, 3, 1], None, False, True, "ibp", True,16), (3, [4, 3, 1], None, False, True, "ibp", True,16), (5, [4, 3, 1], None, False, True, "ibp", True,16),
-])
+
+@pytest.mark.parametrize(
+    "n, archi, activation, sequential, use_bias, mode, use_input, floatx",
+    [
+        (0, [4, 3, 1], None, True, True, "hybrid", True, 32),
+        (1, [4, 3, 1], None, True, True, "hybrid", True, 32),
+        (3, [4, 3, 1], None, True, True, "hybrid", True, 32),
+        (5, [4, 3, 1], None, True, True, "hybrid", True, 32),
+        (0, [4, 3, 1], None, False, True, "hybrid", True, 32),
+        (1, [4, 3, 1], None, False, True, "hybrid", True, 32),
+        (3, [4, 3, 1], None, False, True, "hybrid", True, 32),
+        (5, [4, 3, 1], None, False, True, "hybrid", True, 32),
+        (0, [4, 3, 1], None, True, True, "forward", True, 32),
+        (1, [4, 3, 1], None, True, True, "forward", True, 32),
+        (3, [4, 3, 1], None, True, True, "forward", True, 32),
+        (5, [4, 3, 1], None, True, True, "forward", True, 32),
+        (0, [4, 3, 1], None, False, True, "forward", True, 32),
+        (1, [4, 3, 1], None, False, True, "forward", True, 32),
+        (3, [4, 3, 1], None, False, True, "forward", True, 32),
+        (5, [4, 3, 1], None, False, True, "forward", True, 32),
+        (0, [4, 3, 1], None, True, True, "ibp", True, 32),
+        (1, [4, 3, 1], None, True, True, "ibp", True, 32),
+        (3, [4, 3, 1], None, True, True, "ibp", True, 32),
+        (5, [4, 3, 1], None, True, True, "ibp", True, 32),
+        (0, [4, 3, 1], None, False, True, "ibp", True, 32),
+        (1, [4, 3, 1], None, False, True, "ibp", True, 32),
+        (3, [4, 3, 1], None, False, True, "ibp", True, 32),
+        (5, [4, 3, 1], None, False, True, "ibp", True, 32),
+        (0, [4, 3, 1], None, True, True, "hybrid", True, 64),
+        (1, [4, 3, 1], None, True, True, "hybrid", True, 64),
+        (3, [4, 3, 1], None, True, True, "hybrid", True, 64),
+        (5, [4, 3, 1], None, True, True, "hybrid", True, 64),
+        (0, [4, 3, 1], None, False, True, "hybrid", True, 64),
+        (1, [4, 3, 1], None, False, True, "hybrid", True, 64),
+        (3, [4, 3, 1], None, False, True, "hybrid", True, 64),
+        (5, [4, 3, 1], None, False, True, "hybrid", True, 64),
+        (0, [4, 3, 1], None, True, True, "forward", True, 64),
+        (1, [4, 3, 1], None, True, True, "forward", True, 64),
+        (3, [4, 3, 1], None, True, True, "forward", True, 64),
+        (5, [4, 3, 1], None, True, True, "forward", True, 64),
+        (0, [4, 3, 1], None, False, True, "forward", True, 64),
+        (1, [4, 3, 1], None, False, True, "forward", True, 64),
+        (3, [4, 3, 1], None, False, True, "forward", True, 64),
+        (5, [4, 3, 1], None, False, True, "forward", True, 64),
+        (0, [4, 3, 1], None, True, True, "ibp", True, 64),
+        (1, [4, 3, 1], None, True, True, "ibp", True, 64),
+        (3, [4, 3, 1], None, True, True, "ibp", True, 64),
+        (5, [4, 3, 1], None, True, True, "ibp", True, 64),
+        (0, [4, 3, 1], None, False, True, "ibp", True, 64),
+        (1, [4, 3, 1], None, False, True, "ibp", True, 64),
+        (3, [4, 3, 1], None, False, True, "ibp", True, 64),
+        (5, [4, 3, 1], None, False, True, "ibp", True, 64),
+        (0, [4, 3, 1], None, True, True, "hybrid", True, 16),
+        (1, [4, 3, 1], None, True, True, "hybrid", True, 16),
+        (3, [4, 3, 1], None, True, True, "hybrid", True, 16),
+        (5, [4, 3, 1], None, True, True, "hybrid", True, 16),
+        (0, [4, 3, 1], None, False, True, "hybrid", True, 16),
+        (1, [4, 3, 1], None, False, True, "hybrid", True, 16),
+        (3, [4, 3, 1], None, False, True, "hybrid", True, 16),
+        (5, [4, 3, 1], None, False, True, "hybrid", True, 16),
+        (0, [4, 3, 1], None, True, True, "forward", True, 16),
+        (1, [4, 3, 1], None, True, True, "forward", True, 16),
+        (3, [4, 3, 1], None, True, True, "forward", True, 16),
+        (5, [4, 3, 1], None, True, True, "forward", True, 16),
+        (0, [4, 3, 1], None, False, True, "forward", True, 16),
+        (1, [4, 3, 1], None, False, True, "forward", True, 16),
+        (3, [4, 3, 1], None, False, True, "forward", True, 16),
+        (5, [4, 3, 1], None, False, True, "forward", True, 16),
+        (0, [4, 3, 1], None, True, True, "ibp", True, 16),
+        (1, [4, 3, 1], None, True, True, "ibp", True, 16),
+        (3, [4, 3, 1], None, True, True, "ibp", True, 16),
+        (5, [4, 3, 1], None, True, True, "ibp", True, 16),
+        (0, [4, 3, 1], None, False, True, "ibp", True, 16),
+        (1, [4, 3, 1], None, False, True, "ibp", True, 16),
+        (3, [4, 3, 1], None, False, True, "ibp", True, 16),
+        (5, [4, 3, 1], None, False, True, "ibp", True, 16),
+    ],
+)
 def test_convert_forward_1D(n, archi, activation, sequential, use_bias, mode, use_input, floatx):
 
-    K.set_floatx('float{}'.format(floatx))
+    K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     decimal = 5
     if floatx == 16:
@@ -1449,30 +1505,31 @@ def test_convert_forward_1D(n, archi, activation, sequential, use_bias, mode, us
     ref_nn = toy_network_tutorial(dtype=K.floatx())
     ref_nn(inputs[1])
 
-    IBP=True; forward=True
-    if mode=="forward":
-        IBP=False
-    if mode=="ibp":
-        forward=False
+    IBP = True
+    forward = True
+    if mode == "forward":
+        IBP = False
+    if mode == "ibp":
+        forward = False
 
-    input_tensors= inputs[2:]
-    if mode=='ibp':
-        input_tensors=[u_c, l_c]
-    if mode=='forward':
+    input_tensors = inputs[2:]
+    if mode == "ibp":
+        input_tensors = [u_c, l_c]
+    if mode == "forward":
         input_tensors = [z, W_u, b_u, W_l, b_l]
 
-    _,  output, _, _ = convert_forward(ref_nn, IBP=IBP, forward=forward, shared=True, input_tensors=input_tensors)
+    _, output, _, _ = convert_forward(ref_nn, IBP=IBP, forward=forward, shared=True, input_tensors=input_tensors)
 
     f_dense = K.function(inputs[2:], output)
     f_ref = K.function(inputs, ref_nn(inputs[1]))
 
     y_ref = f_ref(inputs_)
-    u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = [None]*6
-    if mode == 'hybrid':
+    u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = [None] * 6
+    if mode == "hybrid":
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
-    if mode == 'ibp':
+    if mode == "ibp":
         u_c_, l_c_ = f_dense(inputs_[2:])
-    if mode =='forward':
+    if mode == "forward":
         z_, w_u_, b_u_, w_l_, b_l_ = f_dense(inputs_[2:])
 
     assert_output_properties_box(
@@ -1489,8 +1546,7 @@ def test_convert_forward_1D(n, archi, activation, sequential, use_bias, mode, us
         w_l_,
         b_l_,
         "dense_{}".format(n),
-        decimal=decimal
+        decimal=decimal,
     )
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)
-

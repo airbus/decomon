@@ -1,20 +1,22 @@
 # Test unit for decomon with Dense layers
 from __future__ import absolute_import
-import pytest
+
 import numpy as np
+import pytest
 import tensorflow.python.keras.backend as K
-from decomon.backward_layers.backward_layers import get_backward
-from decomon.layers.decomon_layers import DecomonDense, to_monotonic
-from tensorflow.keras.layers import Input, Dense
-from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
-    assert_output_properties_box_linear,
-    get_standard_values_multid_box,
-    get_tensor_decomposition_multid_box,
-)
+from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.models import Model
 
+from decomon.backward_layers.backward_layers import get_backward
+from decomon.layers.decomon_layers import DecomonDense, to_monotonic
+
+from . import (
+    assert_output_properties_box_linear,
+    get_standard_values_multid_box,
+    get_standart_values_1d_box,
+    get_tensor_decomposition_1d_box,
+    get_tensor_decomposition_multid_box,
+)
 
 ###### native
 

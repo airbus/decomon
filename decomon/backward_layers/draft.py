@@ -74,7 +74,6 @@ def call_no_previous(self, inputs):
         w_out_u_ = K.sum(K.expand_dims(w_out_u, 1) * weights, 2)
         w_out_l_ = K.sum(K.expand_dims(w_out_l, 1) * weights, 2)
 
-
     else:
         z_value = K.cast(0.0, K.floatx())
         y_ = x[-1]

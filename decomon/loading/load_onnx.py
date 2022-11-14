@@ -2,17 +2,17 @@
 
 # Python code for automatic conversion in channel last from an onnx file
 
+import numpy as np
+
 # Requirements
 import onnx
-import numpy as np
 from onnx2keras import onnx_to_keras
-
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.utils.generic_utils import to_list
 
-CHANNEL_FIRST = 'channels_first'
-CHANNEL_LAST = 'channels_last'
+CHANNEL_FIRST = "channels_first"
+CHANNEL_LAST = "channels_last"
 
 
 def get_all_input_names(onnx_model):
@@ -21,9 +21,9 @@ def get_all_input_names(onnx_model):
 
 
 # check for issue with data_format
-def check_compatibility_data_format(k_model, allowed_format=['channels_last']):
+def check_compatibility_data_format(k_model, allowed_format=["channels_last"]):
     for layer in k_model.layers:
-        if hasattr(layer, 'data_format') and layer.data_format not in allowed_format:
+        if hasattr(layer, "data_format") and layer.data_format not in allowed_format:
             return True
 
     return False
@@ -32,11 +32,11 @@ def check_compatibility_data_format(k_model, allowed_format=['channels_last']):
 def get_data_format(node):
     layer_ = node.outbound_layer
 
-    if hasattr(layer_, 'data_format'):
+    if hasattr(layer_, "data_format"):
         return layer_.data_format
-    if getattr(layer_, 'get_weights') and len(layer_.get_weights()):
+    if getattr(layer_, "get_weights") and len(layer_.get_weights()):
         return CHANNEL_LAST
-    return 'None'
+    return "None"
 
 
 def get_tensor_input(node):
@@ -67,10 +67,9 @@ def clone(layer, data_format=CHANNEL_LAST, prev_format=CHANNEL_LAST, node=None):
         layer_ = globals()[class_name].from_config(config_layer)
 
         input_shape = list(layer.get_input_shape_at(0)[1:])
-        input_shape_ = [1]+input_shape[1:]+[input_shape[0]]
+        input_shape_ = [1] + input_shape[1:] + [input_shape[0]]
         _ = layer_(np.zeros(input_shape_))
         layer_.set_weights(layer.get_weights())
-
 
     else:
         if isinstance(layer, Dense):
@@ -79,7 +78,7 @@ def clone(layer, data_format=CHANNEL_LAST, prev_format=CHANNEL_LAST, node=None):
                 W, b = layer.get_weights()
                 # retrive input_shape before Flatten
                 input_shape = get_tensor_input(node)
-                transpose_indices = np.array(get_input_transpose(input_shape), dtype='int')
+                transpose_indices = np.array(get_input_transpose(input_shape), dtype="int")
                 W = W[transpose_indices, :]
                 layer_.set_weights([W, b])
 
@@ -97,10 +96,9 @@ def clone(layer, data_format=CHANNEL_LAST, prev_format=CHANNEL_LAST, node=None):
                 config_layer["name"] = layer.name + "_last"
                 layer_ = globals()[class_name].from_config(config_layer)
                 input_shape = list(layer.get_input_shape_at(0)[1:])
-                if len(input_shape)>2:
+                if len(input_shape) > 2:
                     input_shape_ = [1] + input_shape[1:] + [input_shape[0]]
                     _ = layer_(np.zeros(input_shape_))
-
 
     return layer_
 
@@ -195,32 +193,33 @@ def get_input_transpose(input_shape):
 def get_parents_format_(node_):
     # recursive approach until encountering a layer that has a data_format or has some trainable weights
     if isinstance(node_, list):
-        import pdb;
+        import pdb
+
         pdb.set_trace()
     parents = to_list(node_.parent_nodes)
     parents_format = []
 
     for node_p in parents:
         layer_ = node_p.outbound_layer
-        if hasattr(layer_, 'data_format'):
+        if hasattr(layer_, "data_format"):
             parents_format.append(layer_.data_format)
         else:
-            if getattr(layer_, 'get_weights') and len(layer_.get_weights()):
+            if getattr(layer_, "get_weights") and len(layer_.get_weights()):
                 parents_format.append(CHANNEL_LAST)
             else:
                 parent_rec = to_list(node_p.parent_nodes)
                 if len(parent_rec) == 0:
-                    parents_format.append('None')
+                    parents_format.append("None")
                 for p_rec in parent_rec:
-                    toto =get_data_format(p_rec)
-                    if toto=='None':
+                    toto = get_data_format(p_rec)
+                    if toto == "None":
                         toto = get_parents_format_(p_rec)
                     if not len(toto):
                         parents_format.append(get_data_format(p_rec))
                     else:
                         if isinstance(toto, list):
                             toto = toto[0]
-                        #parents_format.append(get_data_format(p_rec))
+                        # parents_format.append(get_data_format(p_rec))
                         parents_format.append(toto)
     return parents_format
 

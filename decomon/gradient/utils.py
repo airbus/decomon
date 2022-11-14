@@ -1,7 +1,8 @@
 # compute gradient of function based on bounds on its input
-from ..layers import F_HYBRID, F_IBP, F_FORWARD, StaticVariables
 from tensorflow.python.keras import backend as K
-from ..layers.utilsimport get_upper, get_lower
+
+from ..layers import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
+from ..layers.utilsimportget_upper import get_lower
 
 
 def gradient_relu(inputs, dc_decomp=False, mode=F_HYBRID.name, convex_domain={}, **kwargs):
@@ -58,16 +59,15 @@ def gradient_relu(inputs, dc_decomp=False, mode=F_HYBRID.name, convex_domain={},
     return output
 
 
-
 def get_linear_hull_sign(upper, lower, **kwargs):
 
     z_value = K.cast(0.0, K.floatx())
     o_value = K.cast(1.0, K.floatx())
 
-    #ones all the time
-    active = K.clip(K.sign(lower)+o_value, z_value, o_value)# active =1 if lower >=0
+    # ones all the time
+    active = K.clip(K.sign(lower) + o_value, z_value, o_value)  # active =1 if lower >=0
     # zero all the time
-    inactive = -K.clip(K.sign(upper)-o_value, -o_value, z_value) # inactive =1 if upper<=0
+    inactive = -K.clip(K.sign(upper) - o_value, -o_value, z_value)  # inactive =1 if upper<=0
 
     # else either w_u = 0, b_u=1 or (w_u*0+b_u=1, w_u*lower+b_u=0) => b_u=1 and w_u = -1/lower
 
@@ -78,41 +78,27 @@ def get_linear_hull_sign(upper, lower, **kwargs):
 
     # condition for the first case: |lower|**2<= upper**2
 
-    condition_bool = K.maximum(K.sign( upper**2 - K.abs(lower)**2 ), z_value) # 1 then w_u=0, b_u=1
+    condition_bool = K.maximum(K.sign(upper**2 - K.abs(lower) ** 2), z_value)  # 1 then w_u=0, b_u=1
 
-    w_u_ = (o_value-condition_bool)/K.maximum(K.abs(lower), K.epsilon())
-    b_u_ = condition_bool + (o_value-condition_bool)*lower
+    w_u_ = (o_value - condition_bool) / K.maximum(K.abs(lower), K.epsilon())
+    b_u_ = condition_bool + (o_value - condition_bool) * lower
 
     # w_l=0, b_l=1
     # b_l=0 w_u = 1/upper
 
-    w_l_ = condition_bool/K.maximum(K.abs(upper),K.epsilon())
-    b_l_ = (o_value - condition_bool)
+    w_l_ = condition_bool / K.maximum(K.abs(upper), K.epsilon())
+    b_l_ = o_value - condition_bool
 
     # apply linear conditions
-    w_u_ = (o_value - active)*w_u_
-    b_u_ = (o_value - active)*b_u_ + active
+    w_u_ = (o_value - active) * w_u_
+    b_u_ = (o_value - active) * b_u_ + active
     w_l_ = (o_value - active) * w_l_
     b_l_ = (o_value - active) * b_l_ + active
 
     # dead conditions
-    w_u_ = (o_value - inactive)*w_u_
+    w_u_ = (o_value - inactive) * w_u_
     b_u_ = (o_value - inactive) * b_u_
     w_l_ = (o_value - inactive) * w_l_
     b_l_ = (o_value - inactive) * b_l_
 
     return [w_u_, b_u_, w_l_, b_l_]
-
-
-
-
-
-
-
-
-
-
-
-
-
-

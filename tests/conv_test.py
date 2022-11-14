@@ -1,16 +1,19 @@
 # Test unit for decomon with Dense layers
 from __future__ import absolute_import
-import pytest
+
 import numpy as np
-from . import (
-    get_standard_values_images_box,
-    get_tensor_decomposition_images_box,
-    assert_output_properties_box,
-    assert_output_properties_box_linear,
-)
+import pytest
 import tensorflow.python.keras.backend as K
 from tensorflow.keras.layers import Conv2D
+
 from decomon.layers.decomon_layers import DecomonConv2D, to_monotonic
+
+from . import (
+    assert_output_properties_box,
+    assert_output_properties_box_linear,
+    get_standard_values_images_box,
+    get_tensor_decomposition_images_box,
+)
 
 
 @pytest.mark.parametrize(

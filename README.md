@@ -26,7 +26,7 @@
 
 ## Introduction
 
-**What is DecoMon?** `DecoMon` is a library that allows the derivation of upper and lower bounds 
+**What is DecoMon?** `DecoMon` is a library that allows the derivation of upper and lower bounds
 for the predictions of a Tensorflow/Keras neural network with perturbed inputs.
 In the current release, these bounds are represented as affine functions with respect to some variable under perturbation.
 
@@ -41,11 +41,11 @@ So far we support interval bound propagation, forward mode perturbation, backwar
 `DecoMon` is compatible with a wider range of perturbation: boxes, $L_{\inf, 1, 2}$ norms or general
 convex sets described by their vertices.
 
-We believe that DecoMon is a complementary tool to existing libraries for the certification of neural networks. 
+We believe that DecoMon is a complementary tool to existing libraries for the certification of neural networks.
 
 Since we rely on Tensorflow and not Pytorch, we are opening up the possibility for a new community
 to formally assess the robustness of their networks, without worrying about the technicality of
-the implementation. In this way, we hope to promote the formal certification of neural networks 
+the implementation. In this way, we hope to promote the formal certification of neural networks
 into safety critical systems.
 
 If you encounter any problems with this library, feel free to create an issue or a pull request. We
@@ -54,7 +54,7 @@ is aligned with [Black](https://github.com/psf/black) format.
 
 ## Installation
 
-Python 3.7+ and Tensorflow 2.4 are required. We recommend that you manage your python version using 
+Python 3.7+ and Tensorflow 2.4 are required. We recommend that you manage your python version using
 [asdf](https://asdf-vm.com/#/core-manage-asdf)
 
 Please install DecoMon first before running any examples following
@@ -72,7 +72,7 @@ This library is still under heavy development.
 First define your Keras Neural Network and convert it into its `DecoMon` version
 using the `convert` method. You can then call `get_upper_box` and `get_lower_box` to
 respectively obtain certified upper and lower bounds for the network's outputs
-within a box domain. 
+within a box domain.
 
 ````python
 # import
@@ -94,7 +94,7 @@ upper_bound = get_upper_box(decomon_model, x_min, x_max)
 lower_bound = get_lower_box(decomon_model, x_min, x_max)
 ````
 
-As mentioned other types of domains are possible and illustrated 
+As mentioned other types of domains are possible and illustrated
 in our [tutorials](tutorials).
 
 ## Units Tests

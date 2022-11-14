@@ -1,18 +1,31 @@
 # Test unit for decomon with Dense layers
 from __future__ import absolute_import
-import pytest
-import numpy as np
-from numpy.testing import assert_allclose, assert_almost_equal
-from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
-    assert_output_properties_box,
-    get_tensor_decomposition_multid_box,
-    get_standard_values_multid_box,
-)
-import tensorflow.python.keras.backend as K
 
-from decomon.layers.utils import get_upper, get_lower, relu_, max_, maximum, add, minus, substract, log, exp
+import numpy as np
+import pytest
+import tensorflow.python.keras.backend as K
+from numpy.testing import assert_allclose, assert_almost_equal
+
+from decomon.layers.utils import (
+    add,
+    exp,
+    get_lower,
+    get_upper,
+    log,
+    max_,
+    maximum,
+    minus,
+    relu_,
+    substract,
+)
+
+from . import (
+    assert_output_properties_box,
+    get_standard_values_multid_box,
+    get_standart_values_1d_box,
+    get_tensor_decomposition_1d_box,
+    get_tensor_decomposition_multid_box,
+)
 
 
 @pytest.mark.parametrize("odd, floatx", [(0, 32), (0, 64), (0, 16)])
@@ -1283,8 +1296,7 @@ def test_relu_1D_box_nodc(n):
     assert_allclose(len(f_relu_(inputs_[2:])), 7)
 
 
-
-#TO DO not working
+# TO DO not working
 """
 @pytest.mark.parametrize(
     "n, mode, floatx",
@@ -1566,4 +1578,3 @@ def test_log_exp_1D_box(n, mode, floatx):
     K.set_floatx("float32")
     K.set_epsilon(eps)
 """
-

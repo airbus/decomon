@@ -1,6 +1,9 @@
 from __future__ import absolute_import
-from tensorflow.keras.layers import Layer
+
 from abc import ABC, abstractmethod
+
+from tensorflow.keras.layers import Layer
+
 from ..types import Optional
 
 #  the different forward (from input to output) linear based relaxation perturbation analysis
@@ -28,21 +31,23 @@ class Ball:
 class Box:
     name = "box"  # Hypercube
 
+
 class Grid:
-    name= "grid"
+    name = "grid"
 
 
 class Vertex:
     name = "vertex"  # convex set represented by its vertices
     # (no verification is proceeded to assess that the set is convex)
 
+
 class DEEL_LIP:
-    name='deel-lip>'
+    name = "deel-lip>"
 
 
 class Option:
-    lagrangian='lagrangian'
-    milp='milp'
+    lagrangian = "lagrangian"
+    milp = "milp"
 
 
 class StaticVariables:
@@ -50,7 +55,7 @@ class StaticVariables:
     Storing static values on the number of input tensors for our layers
     """
 
-    def __init__(self, dc_decomp:Optional[bool]=False, mode:Optional[str]=F_HYBRID.name):
+    def __init__(self, dc_decomp: Optional[bool] = False, mode: Optional[str] = F_HYBRID.name):
         """
 
         :param dc_decomp: boolean that indicates whether we return a difference of convex decomposition of our layer
@@ -81,11 +86,14 @@ class DecomonLayer(ABC, Layer):
     """
 
     def __init__(
-        self, convex_domain={}, dc_decomp:Optional[bool]=False,
-            mode:Optional[str]=F_HYBRID.name,
-            finetune:Optional[bool]=False,
-            shared:Optional[bool]=False,
-            fast:Optional[bool]=True, **kwargs
+        self,
+        convex_domain={},
+        dc_decomp: Optional[bool] = False,
+        mode: Optional[str] = F_HYBRID.name,
+        finetune: Optional[bool] = False,
+        shared: Optional[bool] = False,
+        fast: Optional[bool] = True,
+        **kwargs,
     ):
         """
 
@@ -107,8 +115,8 @@ class DecomonLayer(ABC, Layer):
         self.shared = shared
         self.fast = fast
         self.init_layer = False
-        self.linear_layer=False
-        self.has_backward_bounds = False # optimizing Forward LiRPA for adversarial perturbation
+        self.linear_layer = False
+        self.has_backward_bounds = False  # optimizing Forward LiRPA for adversarial perturbation
 
     def build(self, input_shape):
         """

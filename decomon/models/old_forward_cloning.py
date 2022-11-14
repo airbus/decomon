@@ -4,39 +4,38 @@ It inherits from keras Sequential class.
 
 """
 from __future__ import absolute_import
+
 import inspect
 import warnings
-import tensorflow as tf
-from tensorflow.keras.models import Sequential, Model
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Lambda, Flatten
-from ..layers.decomon_layers import to_monotonic
-from ..layers.core import Box, StaticVariables
-from tensorflow.keras.layers import InputLayer, Input, Layer
-from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
 from copy import deepcopy
+
 import numpy as np
+import tensorflow as tf
+import tensorflow.keras.backend as K
+from tensorflow.keras.layers import Flatten, Input, InputLayer, Lambda, Layer
+from tensorflow.keras.models import Model, Sequential
+from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
+
+from decomon.layers.utils import get_lower, get_upper, linear_to_softmax
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
-from decomon.layers.utils import get_upper, get_lower, linear_to_softmax
+
 from ..backward_layers.backward_layers import get_backward as get_backward_
 from ..backward_layers.backward_layers import join
-from ..backward_layers.utils import backward_linear_prod
-from ..backward_layers.utils import V_slope, S_slope
-
-from .models import DecomonModel, DecomonSequential, Forward, Backward
-from ..backward_layers.backward_layers import get_backward as get_backward_
-
+from ..backward_layers.utils import S_slope, V_slope, backward_linear_prod
+from ..layers.core import Box, StaticVariables
+from ..layers.decomon_layers import to_monotonic
 from ..utils import M_BACKWARD, M_FORWARD, M_REC_BACKWARD
+from .models import Backward, DecomonModel, DecomonSequential, Forward
 from .utils import (
     check_input_tensors_functionnal,
     check_input_tensors_sequential,
-    include_dim_layer_fn,
-    get_node_by_id,
-    set_name,
     get_inputs,
-    get_original_layer_name,
-    pre_process_inputs,
     get_mode,
+    get_node_by_id,
+    get_original_layer_name,
+    include_dim_layer_fn,
+    pre_process_inputs,
+    set_name,
 )
 
 
@@ -262,7 +261,7 @@ def convert_forward_functional_model(
     forward_map={},
     name_history=set(),
     finetune_output=False,
-    opt_linear=True, # detect linear successive parts by design
+    opt_linear=True,  # detect linear successive parts by design
     back_bounds=[],
 ):
 
@@ -394,16 +393,18 @@ def convert_forward_functional_model(
 
             if isinstance(layer_, Model):
                 opt_linear_ = False
-                if count_==0 and opt_linear:
-                    opt_linear_=True
+                if count_ == 0 and opt_linear:
+                    opt_linear_ = True
                 if opt_linear:
-                    import pdb; pdb.set_trace()
+                    import pdb
+
+                    pdb.set_trace()
                     # check the state of the previous layers
                     raise NotImplementedError()
                 if depth:
-                    back_bounds_=[]
+                    back_bounds_ = []
                 else:
-                    back_bounds_=back_bounds
+                    back_bounds_ = back_bounds
                 toto, output_, l_map, f_map = convert_forward_functional_model(
                     layer_,
                     input_tensors=output,
@@ -417,7 +418,7 @@ def convert_forward_functional_model(
                     forward=forward,
                     name_history=name_history,
                     opt_init=opt_linear_,
-                    back_bounds=back_bounds_
+                    back_bounds=back_bounds_,
                 )
 
                 # output_from_input = pre_process_inputs(output, get_mode(IBP, forward))
@@ -432,15 +433,22 @@ def convert_forward_functional_model(
 
             else:
                 layer_decomon = layer_fn(layer_, depth)
-                if count_==0:
+                if count_ == 0:
                     layer_decomon[0].set_linear(opt_linear)
                 if opt_linear and count_:
                     parents = to_list(node.parent_nodes)
 
-                    bool_linear = min([layer_map["{}_{}".format(parent.outbound_layer.name, get_node_by_id(parent))][-1].get_linear() for parent in parents])
+                    bool_linear = min(
+                        [
+                            layer_map["{}_{}".format(parent.outbound_layer.name, get_node_by_id(parent))][
+                                -1
+                            ].get_linear()
+                            for parent in parents
+                        ]
+                    )
                     layer_decomon[0].set_linear(bool_linear)
 
-                if len(back_bounds)!=0 and not depth:
+                if len(back_bounds) != 0 and not depth:
                     layer_decomon[-1].set_back_bounds(True)
 
                 # rename if necessary
@@ -453,7 +461,7 @@ def convert_forward_functional_model(
                         set_name(layer_decomon_i, count)
                     name_history.add(layer_decomon_i.name)
                     if layer_decomon_i.has_backward_bounds:
-                        output+=back_bounds
+                        output += back_bounds
                     output = layer_decomon_i(output)
                     forward_map["{}_{}".format(layer_decomon_i.name, id_node)] = output
 

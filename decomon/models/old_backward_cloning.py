@@ -1,32 +1,57 @@
 from __future__ import absolute_import
-import tensorflow as tf
-from tensorflow.keras.layers import InputLayer, Input, Layer
-from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
+
 import numpy as np
-from ..backward_layers.backward_layers import get_backward as get_backward_
-from tensorflow.keras.layers import Lambda, Reshape, Concatenate, Flatten, Minimum, Maximum, Conv2D, Dense
-from ..utils import get_upper_layer, get_lower_layer, backward_minimum, backward_maximum, F_HYBRID, F_FORWARD, F_IBP, get_upper_layer_box, get_lower_layer_box
+import tensorflow as tf
+import tensorflow.python.keras.backend as K
+from tensorflow.keras.layers import (
+    Concatenate,
+    Conv2D,
+    Dense,
+    Flatten,
+    Input,
+    InputLayer,
+    Lambda,
+    Layer,
+    Maximum,
+    Minimum,
+    Reshape,
+)
 from tensorflow.keras.models import Model, Sequential
+from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
+
+from decomon.layers.decomon_layers import DecomonMaximum, DecomonMinimum
+from decomon.layers.utils import linear_to_softmax
+from decomon.layers.utils import softmax_to_linear as softmax_2_linear
+
+from ..backward_layers.backward_layers import get_backward as get_backward_
+from ..utils import (
+    F_FORWARD,
+    F_HYBRID,
+    F_IBP,
+    backward_maximum,
+    backward_minimum,
+    get_lower_layer,
+    get_lower_layer_box,
+    get_upper_layer,
+    get_upper_layer_box,
+)
 from .utils import (
     check_input_tensors_sequential,
-    get_mode,
-    get_IBP,
-    get_FORWARD,
-    get_node_by_id,
     convert_to_backward_bounds,
+    fuse_forward_backward,
+    get_back_bounds_model,
+    get_FORWARD,
+    get_IBP,
     get_input_dim,
     get_key,
-    get_back_bounds_model,
-    fuse_forward_backward,
+    get_mode,
+    get_node_by_id,
 )
-from decomon.layers.decomon_layers import DecomonMinimum, DecomonMaximum
-import tensorflow.python.keras.backend as K
-from decomon.layers.utils import softmax_to_linear as softmax_2_linear, linear_to_softmax
 
 
 def update_input(backward_bound, input_tensors, mode, output_shape, reshape=False, **kwargs):
 
-    if 'final_mode' in kwargs:
+    if "final_mode" in kwargs:
         final_mode = kwargs["final_mode"]
     else:
         final_mode = mode
@@ -49,11 +74,10 @@ def update_input(backward_bound, input_tensors, mode, output_shape, reshape=Fals
     if mode == F_IBP.name:
         u_c, l_c = input_tensors
 
-
     if mode == F_IBP.name:
 
         # case 1: we do not change the mode
-        if final_mode in [F_IBP.name,  F_HYBRID.name]:
+        if final_mode in [F_IBP.name, F_HYBRID.name]:
 
             if "flatten" in kwargs:
                 op_flatten = kwargs["flatten"]
@@ -83,10 +107,9 @@ def update_input(backward_bound, input_tensors, mode, output_shape, reshape=Fals
         if final_mode == F_IBP.name:
             return [u_c_out, l_c_out]
         if final_mode == F_FORWARD.name:
-            return [x]+backward_bound
+            return [x] + backward_bound
         if final_mode == F_HYBRID.name:
             return [x, u_c_out, w_out_u, b_out_u, l_c_out, w_out_l, b_out_l]
-
 
     # the mode is necessary with linear bounds
 
@@ -118,12 +141,8 @@ def update_input(backward_bound, input_tensors, mode, output_shape, reshape=Fals
             K.expand_dims(w_l_neg, 1) * K.expand_dims(w_u_, -1), 2
         )
 
-        b_out_u_0 = (
-                K.sum(w_u_pos * K.expand_dims(b_u_, -1), 1) + K.sum(w_u_neg * K.expand_dims(b_l_, -1), 1) + b_out_u
-        )
-        b_out_l_0 = (
-                K.sum(w_l_pos * K.expand_dims(b_l_, -1), 1) + K.sum(w_l_neg * K.expand_dims(b_u_, -1), 1) + b_out_l
-        )
+        b_out_u_0 = K.sum(w_u_pos * K.expand_dims(b_u_, -1), 1) + K.sum(w_u_neg * K.expand_dims(b_l_, -1), 1) + b_out_u
+        b_out_l_0 = K.sum(w_l_pos * K.expand_dims(b_l_, -1), 1) + K.sum(w_l_neg * K.expand_dims(b_u_, -1), 1) + b_out_l
 
         return w_out_u_0, b_out_u_0, w_out_l_0, b_out_l_0
 
@@ -150,14 +169,12 @@ def update_input(backward_bound, input_tensors, mode, output_shape, reshape=Fals
         u_c_out = upper_layer([x, w_out_u_, b_out_u_])
         l_c_out = lower_layer([x, w_out_l_, b_out_l_])
 
-
     if final_mode == F_IBP.name:
         return [u_c_out, l_c_out]
     if final_mode == F_FORWARD.name:
         return [x, w_out_u_, b_out_u_, w_out_l_, b_out_l_]
     if final_mode == F_HYBRID.name:
         return [x, u_c_out, w_out_u_, b_out_u_, l_c_out, w_out_l_, b_out_l_]
-
 
 
 def pre_process_inputs(input_layer_, mode, **kwargs):
@@ -284,7 +301,9 @@ def fuse_backward_bounds(back_bounds_list, input_tensors, mode, **kwargs):
     return output
 
 
-def get_backward_layer_input(layer_, id_node, forward_map, mode, back_bounds, finetune, convex_domain, input_dim, rec=1):
+def get_backward_layer_input(
+    layer_, id_node, forward_map, mode, back_bounds, finetune, convex_domain, input_dim, rec=1
+):
 
     # assume back_bounds is either an empty dict
 
@@ -295,7 +314,7 @@ def get_backward_layer_input(layer_, id_node, forward_map, mode, back_bounds, fi
         finetune=finetune,
         convex_domain=convex_domain,
         input_dim=input_dim,
-        rec=rec
+        rec=rec,
     )
     input_layer_ = forward_map["{}_{}".format(layer_.name, id_node)]
     back_bounds_ = layer_back(input_layer_ + back_bounds)
@@ -351,7 +370,9 @@ def get_output_layer(node, layer_map, forward_map, mode, input_dim, rec=1, **kwa
     else:
         if len(to_list(layer_.get_output_shape_at(0))) > 1:
             raise NotImplementedError("Decomon cannot handle nodes with a list of output tensors")
-        backward_map = get_backward_layer(node, layer_map, forward_map, mode, [], input_dim, rec=rec, **kwargs)# recursiv approach
+        backward_map = get_backward_layer(
+            node, layer_map, forward_map, mode, [], input_dim, rec=rec, **kwargs
+        )  # recursiv approach
         outputs = []
         if "convex_domain" in kwargs:
             convex_domain = kwargs["convex_domain"]
@@ -359,18 +380,20 @@ def get_output_layer(node, layer_map, forward_map, mode, input_dim, rec=1, **kwa
             convex_domain = {}
         kwargs["convex_domain"] = convex_domain
         for key in backward_map:
-            tmp = update_input(backward_map[key], forward_map[key], mode, layer_.get_output_shape_at(0), reshape=True, **kwargs)
+            tmp = update_input(
+                backward_map[key], forward_map[key], mode, layer_.get_output_shape_at(0), reshape=True, **kwargs
+            )
             outputs += tmp
 
-        if len(backward_map.keys())>1:
+        if len(backward_map.keys()) > 1:
             output_max = DecomonMinimum(mode=mode, convex_domain=convex_domain)(outputs)
             output_min = DecomonMaximum(mode=mode, convex_domain=convex_domain)(outputs)
         else:
             output_max = outputs
-            output_min=outputs
+            output_min = outputs
 
         if mode == F_IBP.name:
-            forward_map["{}_{}".format(layer_.name, id_node)]= [output_max[0], output_min[-1]]
+            forward_map["{}_{}".format(layer_.name, id_node)] = [output_max[0], output_min[-1]]
             return [output_max[0], output_min[-1]]
         if mode == F_FORWARD.name:
             forward_map["{}_{}".format(layer_.name, id_node)] = output_max[:3] + output_min[-2:]
@@ -383,10 +406,9 @@ def get_output_layer(node, layer_map, forward_map, mode, input_dim, rec=1, **kwa
 def get_fake_input(layer_, mode):
     # get input_shape
     n_in = layer_.get_input_shape_at(0)[1:]
-    vec = K.zeros([1]+to_list(n_in))
+    vec = K.zeros([1] + to_list(n_in))
     f = lambda x: vec
-    return [Lambda(f)()] # enough ?
-
+    return [Lambda(f)()]  # enough ?
 
 
 def get_backward_layer(node, layer_map, forward_map, mode, back_bounds, input_dim, rec=1, **kwargs):
@@ -431,7 +453,7 @@ def get_backward_layer(node, layer_map, forward_map, mode, back_bounds, input_di
             finetune=finetune,
             convex_domain=convex_domain,
             input_dim=input_dim,
-            rec=rec
+            rec=rec,
         )
         back_bounds_ = back_layer_i(inputs_i + back_bounds)
         if isinstance(back_bounds_, tuple):
@@ -523,23 +545,25 @@ def get_backward_layer(node, layer_map, forward_map, mode, back_bounds, input_di
             rec=rec,
         )
 
-
-        if not isinstance(layer_, Dense) or not isinstance(layer_, Conv2D) or layer_.get_config()['activation'] != 'linear' or not len(
-                back_bounds):  # Linear layer do not need recursive calls
+        if (
+            not isinstance(layer_, Dense)
+            or not isinstance(layer_, Conv2D)
+            or layer_.get_config()["activation"] != "linear"
+            or not len(back_bounds)
+        ):  # Linear layer do not need recursive calls
             for node_i in input_nodes:
-                tmp = get_output_layer(node_i, layer_map, forward_map, mode, input_dim, rec=rec,**kwargs)
+                tmp = get_output_layer(node_i, layer_map, forward_map, mode, input_dim, rec=rec, **kwargs)
 
                 input_layer_ += tmp
         else:
             # generate fake inputs
-            input_layer_ = kwargs['fake_input']
+            input_layer_ = kwargs["fake_input"]
             """
             for node_i in input_nodes:
                 tmp = get_output_layer(node_i, layer_map, forward_map, mode, input_dim, **kwargs)
 
                 input_layer_ += tmp
             """
-
 
         back_bounds_ = back_layer(input_layer_ + back_bounds)
     if isinstance(back_bounds_, tuple):
@@ -548,13 +572,13 @@ def get_backward_layer(node, layer_map, forward_map, mode, back_bounds, input_di
 
     if len(input_nodes) == 1:
         return get_backward_layer(
-            input_nodes[0], layer_map, forward_map, mode, back_bounds, input_dim=input_dim, rec=rec+1, **kwargs
+            input_nodes[0], layer_map, forward_map, mode, back_bounds, input_dim=input_dim, rec=rec + 1, **kwargs
         )
     else:
         dico_backward = {}
         for node_i, bound_i in zip(input_nodes, back_bounds):
             backward_map_i = get_backward_layer(
-                node_i, layer_map, forward_map, mode, bound_i, input_dim=input_dim, rec=rec+1, **kwargs
+                node_i, layer_map, forward_map, mode, bound_i, input_dim=input_dim, rec=rec + 1, **kwargs
             )
 
             for key_i in backward_map_i:
@@ -631,28 +655,30 @@ def get_backward_model(
             input_dim = input_tensors[i][0].shape[-1]
 
     mode = get_mode(IBP=IBP, forward=forward)
-    if 'final_ibp' in kwargs or 'final_forward' in kwargs:
-        final_IBP=False
-        final_forward=False
+    if "final_ibp" in kwargs or "final_forward" in kwargs:
+        final_IBP = False
+        final_forward = False
 
-        if 'final_ibp' in kwargs:
-            final_IBP=kwargs['final_ibp']
-        if 'final_forward' in kwargs:
-            final_forward = kwargs['final_forward']
+        if "final_ibp" in kwargs:
+            final_IBP = kwargs["final_ibp"]
+        if "final_forward" in kwargs:
+            final_forward = kwargs["final_forward"]
         if final_IBP or final_forward:
             final_mode = get_mode(final_IBP, final_forward)
         else:
-            final_mode=mode
+            final_mode = mode
     else:
-        final_mode=None
+        final_mode = None
 
-    if 'mode_output' not in kwargs:
+    if "mode_output" not in kwargs:
         mode_output = mode
     else:
-        mode_output = kwargs['mode_output']
+        mode_output = kwargs["mode_output"]
 
     if not isinstance(back_bounds, list):
-        import pdb; pdb.set_trace()
+        import pdb
+
+        pdb.set_trace()
 
     if len(back_bounds) and not isinstance(back_bounds[0], list):
         back_bounds = [back_bounds]
@@ -668,10 +694,10 @@ def get_backward_model(
     nodes_output = model._nodes_by_depth[0]
     output = []
     for node_i, bounds_i in zip(nodes_output, back_bounds):
-        if len(bounds_i)==1:
+        if len(bounds_i) == 1:
             w_u = bounds_i[0]
             w_l = w_u
-            b_u = 0*w_u[:, 0]
+            b_u = 0 * w_u[:, 0]
             b_l = b_u
             bounds_i = [w_u, b_u, w_l, b_l]
 
@@ -706,11 +732,16 @@ def get_backward_model(
                     if final_mode:
                         # do not return the same mode as the one used in the internal layers
                         output_i = update_input(
-                            output_i, inputs_tensors_i, mode, node_i.outbound_layer.output_shape, final_mode=final_mode, **kwargs
+                            output_i,
+                            inputs_tensors_i,
+                            mode,
+                            node_i.outbound_layer.output_shape,
+                            final_mode=final_mode,
+                            **kwargs,
                         )
                     else:
                         output_i = update_input(
-                            output_i, inputs_tensors_i, mode, node_i.outbound_layer.output_shape,**kwargs
+                            output_i, inputs_tensors_i, mode, node_i.outbound_layer.output_shape, **kwargs
                         )
 
                     """
@@ -740,8 +771,8 @@ def get_backward_model(
                         lambda_f = Lambda(lambda x: func(x))
                         output_i = lambda_f(max_bounds + min_bounds)
                     """
-                    forward_map["{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i))]=output_i
-                    #print("{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i)))
+                    forward_map["{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i))] = output_i
+                    # print("{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i)))
                     back_bound_i.append(output_i)
 
         output += back_bound_i

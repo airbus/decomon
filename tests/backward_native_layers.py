@@ -1,19 +1,27 @@
 # Test unit for decomon with Dense layers
 from __future__ import absolute_import
-import pytest
+
 import numpy as np
+import pytest
 import tensorflow.python.keras.backend as K
+from tensorflow.keras.layers import Activation, Flatten, Input, Reshape
+from tensorflow.keras.models import Model
+
 from decomon.backward_layers.backward_layers import get_backward
-from decomon.layers.decomon_layers import DecomonActivation, DecomonPermute, DecomonReshape, DecomonFlatten
-from tensorflow.keras.layers import Input, Activation, Flatten, Reshape
+from decomon.layers.decomon_layers import (
+    DecomonActivation,
+    DecomonFlatten,
+    DecomonPermute,
+    DecomonReshape,
+)
+
 from . import (
-    get_tensor_decomposition_1d_box,
-    get_standart_values_1d_box,
     assert_output_properties_box_linear,
     get_standard_values_multid_box,
+    get_standart_values_1d_box,
+    get_tensor_decomposition_1d_box,
     get_tensor_decomposition_multid_box,
 )
-from tensorflow.keras.models import Model
 
 
 @pytest.mark.parametrize(
@@ -216,10 +224,10 @@ def test_Backward_NativeActivation_1D_box_model(n, activation, mode, previous, f
         output = layer(input_mode)
         u_c_0, l_c_0 = output
 
-    w_out = Input((1, 1), dtype= K.floatx())
-    b_out = Input((1,), dtype= K.floatx())
+    w_out = Input((1, 1), dtype=K.floatx())
+    b_out = Input((1,), dtype=K.floatx())
     # get backward layer
-    layer_backward = get_backward(Activation(activation, dtype= K.floatx()), previous=previous, mode=mode)
+    layer_backward = get_backward(Activation(activation, dtype=K.floatx()), previous=previous, mode=mode)
     if previous:
         w_out_u_, b_out_u_, w_out_l_, b_out_l_ = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
         model = Model(inputs[2:] + [w_out, b_out], [w_out_u_, b_out_u_, w_out_l_, b_out_l_])
@@ -362,7 +370,7 @@ def test_Backward_NativeActivation_multiD_box(odd, activation, floatx, mode, pre
         K.set_epsilon(1e-2)
         decimal = 2
 
-    layer = DecomonActivation(activation, dc_decomp=False, mode=mode, dtype= K.floatx())
+    layer = DecomonActivation(activation, dc_decomp=False, mode=mode, dtype=K.floatx())
 
     inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
     inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
@@ -384,10 +392,10 @@ def test_Backward_NativeActivation_multiD_box(odd, activation, floatx, mode, pre
     # output = layer(inputs[2:])
     # z_0, u_c_0, _, _, l_c_0, _, _ = output
 
-    w_out = Input((1, 1), dtype= K.floatx())
-    b_out = Input((1,), dtype= K.floatx())
+    w_out = Input((1, 1), dtype=K.floatx())
+    b_out = Input((1,), dtype=K.floatx())
     # get backward layer
-    layer_backward = get_backward(Activation(activation,  dtype=K.floatx()), previous=previous, mode=mode)
+    layer_backward = get_backward(Activation(activation, dtype=K.floatx()), previous=previous, mode=mode)
     if previous:
         w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
         f_dense = K.function(inputs + [w_out, b_out], [w_out_u, b_out_u, w_out_l, b_out_l])
@@ -516,7 +524,7 @@ def test_Backward_NativeFlatten_multiD_box(odd, floatx, mode, previous, data_for
         K.set_epsilon(1e-2)
         decimal = 2
 
-    layer = DecomonFlatten("channels_last", dc_decomp=False, mode=mode, dtype= K.floatx())
+    layer = DecomonFlatten("channels_last", dc_decomp=False, mode=mode, dtype=K.floatx())
 
     inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
     inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
@@ -538,10 +546,10 @@ def test_Backward_NativeFlatten_multiD_box(odd, floatx, mode, previous, data_for
     # output = layer(inputs[2:])
     # z_0, u_c_0, _, _, l_c_0, _, _ = output
 
-    w_out = Input((1, 1), dtype= K.floatx())
-    b_out = Input((1,), dtype= K.floatx())
+    w_out = Input((1, 1), dtype=K.floatx())
+    b_out = Input((1,), dtype=K.floatx())
     # get backward layer
-    layer_backward = get_backward(Flatten("channels_last", dtype= K.floatx()), previous=previous, mode=mode)
+    layer_backward = get_backward(Flatten("channels_last", dtype=K.floatx()), previous=previous, mode=mode)
     if previous:
         w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
         f_dense = K.function(inputs + [w_out, b_out], [w_out_u, b_out_u, w_out_l, b_out_l])

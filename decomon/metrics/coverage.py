@@ -1,9 +1,12 @@
 ## Measuring the percentage of the input space that could be discarded as we are able to prove the property on it
-from decomon.models.models import DecomonModel
-from decomon.models.convert import clone as convert
 import numpy as np
+
+from decomon.models.convert import clone as convert
+from decomon.models.models import DecomonModel
+
 from .layers.core import Ball, Box
 from .models.decomon_sequential import Backward, Forward
+
 
 def get_adv_coverage_box(
     model,
@@ -212,4 +215,3 @@ def get_adv_coverage_box(
         adv_score = np.max(np.reshape(adv_score, (-1, n_split)), -1)
 
     return adv_score
-

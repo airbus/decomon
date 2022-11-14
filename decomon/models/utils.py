@@ -1,19 +1,30 @@
 from __future__ import absolute_import
+
 import inspect
-import numpy as np
 import warnings
-import tensorflow as tf
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import InputLayer, Input
-from ..layers.core import Box
-import tensorflow.keras.backend as K
-from decomon.layers.decomon_layers import to_monotonic
 from copy import deepcopy
-from decomon.layers.core import F_FORWARD, F_IBP, F_HYBRID
-from tensorflow.python.keras.utils.generic_utils import to_list
-from tensorflow.keras.layers import Lambda, Concatenate, Flatten, Minimum, Maximum
-from ..utils import get_upper_layer, get_lower_layer, get_upper, get_lower
+
+import numpy as np
+import tensorflow as tf
+import tensorflow.keras.backend as K
 import tensorflow.python.keras.backend as K
+from tensorflow.keras.layers import (
+    Concatenate,
+    Flatten,
+    Input,
+    InputLayer,
+    Lambda,
+    Maximum,
+    Minimum,
+)
+from tensorflow.keras.models import Model, Sequential
+from tensorflow.python.keras.utils.generic_utils import to_list
+
+from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP
+from decomon.layers.decomon_layers import to_monotonic
+
+from ..layers.core import Box
+from ..utils import get_lower, get_lower_layer, get_upper, get_upper_layer
 
 
 def include_dim_layer_fn(
@@ -29,7 +40,7 @@ def include_dim_layer_fn(
     :return:
     """
     if convex_domain is None:
-        convex_domain={}
+        convex_domain = {}
     if input_dim <= 0:
         raise ValueError()
     else:
@@ -89,7 +100,7 @@ def check_input_tensors_sequential(
 ):
 
     if convex_domain is None:
-        convex_domain={}
+        convex_domain = {}
     if input_tensors is None:  # no predefined input tensors
 
         input_shape = list(K.int_shape(model.input)[1:])
@@ -480,14 +491,14 @@ def get_depth_dict(model):
     depth_keys = list(model._nodes_by_depth.keys())
     depth_keys.sort(reverse=True)
 
-    nodes_list=[]
+    nodes_list = []
 
-    dico_depth=dict()
-    dico_nodes=dict()
+    dico_depth = dict()
+    dico_nodes = dict()
 
     def fill_dico(node, dico_depth=None):
         if dico_depth is None:
-            dico_depth=dict()
+            dico_depth = dict()
 
         parents = node.parent_nodes
         if len(parents):
@@ -495,13 +506,13 @@ def get_depth_dict(model):
                 if id(parent) not in dico_depth:
                     dico_depth = fill_dico(parent, dico_depth)
 
-                depth = np.min([dico_depth[id(parent)]-1 for parent in parents])
+                depth = np.min([dico_depth[id(parent)] - 1 for parent in parents])
                 if id(node) in dico_depth:
                     dico_depth[id(node)] = max(depth, dico_depth[id(node)])
                 else:
                     dico_depth[id(node)] = depth
         else:
-            dico_depth[id(node)]=max(depth_keys)
+            dico_depth[id(node)] = max(depth_keys)
 
         return dico_depth
 
@@ -517,7 +528,7 @@ def get_depth_dict(model):
         if depth in dico_nodes:
             dico_nodes[depth].append(node)
         else:
-            dico_nodes[depth]= [node]
+            dico_nodes[depth] = [node]
 
     return dico_nodes
 
@@ -529,15 +540,14 @@ def get_inner_layers(model):
         if isinstance(layer, Model):
             count += get_inner_layers(layer)
         else:
-            count+=1
+            count += 1
     return count
 
 
 def convert_2_mode(mode_from, mode_to, convex_domain, dtype=K.floatx()):
-
     def get_2_mode_priv(inputs_):
 
-        if mode_from==mode_to:
+        if mode_from == mode_to:
             return inputs_
 
         if mode_from in [F_FORWARD.name, F_HYBRID.name]:
@@ -547,10 +557,10 @@ def convert_2_mode(mode_from, mode_to, convex_domain, dtype=K.floatx()):
             if mode_to in [F_FORWARD.name, F_HYBRID.name]:
                 x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
                 z_value = K.cast(0.0, u_c.dtype)
-                o_value = K.cast(1., u_c.dtype)
-                w = tf.linalg.diag(z_value*l_c)
-                b = z_value*l_c + o_value
-                w_u=w
+                o_value = K.cast(1.0, u_c.dtype)
+                w = tf.linalg.diag(z_value * l_c)
+                b = z_value * l_c + o_value
+                w_u = w
                 b_u = b
                 w_l = w
                 b_l = b
@@ -565,12 +575,11 @@ def convert_2_mode(mode_from, mode_to, convex_domain, dtype=K.floatx()):
         if mode_from == F_HYBRID.name:
             _, u_c, w_u, b_u, l_c, w_l, b_l = inputs_
 
-        if mode_to==F_IBP.name:
+        if mode_to == F_IBP.name:
             return [u_c, l_c]
-        if mode_to==F_FORWARD.name:
+        if mode_to == F_FORWARD.name:
             return [x_0, w_u, b_u, w_l, b_l]
-        if mode_to==F_HYBRID.name:
-            return [x_0, u_c, w_u, b_u, l_c, w_l, b_l ]
-
+        if mode_to == F_HYBRID.name:
+            return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
 
     return Lambda(get_2_mode_priv, dtype=dtype)
