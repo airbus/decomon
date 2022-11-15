@@ -20,7 +20,7 @@ from . import (
     get_tensor_decomposition_1d_box,
     get_tensor_decomposition_multid_box,
 )
-from .clone_forward import (
+from .test_clone_forward import (
     dense_NN_1D,
     toy_network_tutorial,
     toy_struct_v0_1D,
