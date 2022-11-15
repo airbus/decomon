@@ -27,7 +27,7 @@ include = ["decomon*"]
 [tool.setuptools_scm]
 
 [tool.pytest.ini_options]
-addopts = "--ignore=tests/lirpa_comparison"
+addopts = "--ignore=tests/lirpa_comparison --ignore=tests/test_deel_lip.py"
 
 [tool.black]
 line-length = 120
