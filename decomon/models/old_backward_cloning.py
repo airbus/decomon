@@ -496,14 +496,11 @@ def get_backward_layer(node, layer_map, forward_map, mode, back_bounds, input_di
         else:
             f_map = {}
 
-        kwargs_ = dict(
-            [
-                (key, kwargs[key])
-                for key in kwargs
-                if key
-                not in ["forward_map", "layer_map", "convex_domain", "IBP", "forward", "finetune", "fuse_with_input"]
-            ]
-        )
+        kwargs_ = {
+            key: kwargs[key]
+            for key in kwargs
+            if key not in ["forward_map", "layer_map", "convex_domain", "IBP", "forward", "finetune", "fuse_with_input"]
+        }
 
         back_bounds_ = get_backward_model(
             layer_,
