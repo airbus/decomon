@@ -87,7 +87,7 @@ class DecomonLayer(ABC, Layer):
 
     def __init__(
         self,
-        convex_domain={},
+        convex_domain=None,
         dc_decomp: Optional[bool] = False,
         mode: Optional[str] = F_HYBRID.name,
         finetune: Optional[bool] = False,
@@ -105,6 +105,8 @@ class DecomonLayer(ABC, Layer):
         """
         super(DecomonLayer, self).__init__(**kwargs)
 
+        if convex_domain is None:
+            convex_domain = {}
         self.nb_tensors = StaticVariables(dc_decomp, mode).nb_tensors
         self.dc_decomp = dc_decomp
         self.convex_domain = convex_domain

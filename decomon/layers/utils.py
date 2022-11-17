@@ -322,7 +322,7 @@ def get_lower_ball(x_0, eps, p, w, b, **kwargs):
         return K.sum(w * x_0, 1) + lower
 
 
-def get_upper(x, w, b, convex_domain={}, **kwargs):
+def get_upper(x, w, b, convex_domain=None, **kwargs):
     """
     Meta function that aggregates all the way
     to compute a constant upper bounds depending on the convex domain
@@ -332,6 +332,8 @@ def get_upper(x, w, b, convex_domain={}, **kwargs):
     :param convex_domain: the type of convex domain (see ???)
     :return: a constant upper bound of the affine function
     """
+    if convex_domain is None:
+        convex_domain = {}
     if convex_domain is None or len(convex_domain) == 0:
         # box
         x_min = x[:, 0]
@@ -357,7 +359,7 @@ def get_upper(x, w, b, convex_domain={}, **kwargs):
     raise NotImplementedError()
 
 
-def get_lower(x, w, b, convex_domain={}, **kwargs):
+def get_lower(x, w, b, convex_domain=None, **kwargs):
     """
      Meta function that aggregates all the way
      to compute a constant lower bound depending on the convex domain
@@ -367,6 +369,8 @@ def get_lower(x, w, b, convex_domain={}, **kwargs):
     :param convex_domain: the type of convex domain (see ???)
     :return: a constant upper bound of the affine function
     """
+    if convex_domain is None:
+        convex_domain = {}
     if convex_domain is None or len(convex_domain) == 0:
 
         # box
@@ -662,8 +666,10 @@ class Project_initializer_neg(Initializer):
         return K.minimum(0.0, w_)
 
 
-def relu_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, slope=V_slope.name, **kwargs):
+def relu_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, slope=V_slope.name, **kwargs):
 
+    if convex_domain is None:
+        convex_domain = {}
     if mode not in [F_HYBRID.name, F_IBP.name, F_FORWARD.name]:
         raise ValueError("unknown mode {}".format(mode))
 
@@ -731,8 +737,10 @@ def relu_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, slope=V_slop
     return output
 
 
-def softplus_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, slope=V_slope.name, **kwargs):
+def softplus_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, slope=V_slope.name, **kwargs):
 
+    if convex_domain is None:
+        convex_domain = {}
     if mode not in [F_HYBRID.name, F_IBP.name, F_FORWARD.name]:
         raise ValueError("unknown mode {}".format(mode))
 
@@ -781,7 +789,7 @@ def softplus_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, slope=V_
         return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
 
-def substract(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
+def substract(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
     """
     LiRPA implementation of inputs_0-inputs_1
 
@@ -792,13 +800,15 @@ def substract(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBR
     :param convex_domain: the type of convex domain
     :return: inputs_0 - inputs_1
     """
+    if convex_domain is None:
+        convex_domain = {}
     inputs_1_ = minus(inputs_1, mode=mode, dc_decomp=dc_decomp)
     output = add(inputs_0, inputs_1_, dc_decomp=dc_decomp, mode=mode, convex_domain=convex_domain)
 
     return output
 
 
-def add(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
+def add(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
     """
     LiRPA implementation of inputs_0+inputs_1
 
@@ -809,6 +819,8 @@ def add(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.nam
     :param convex_domain: the type of convex domain
     :return: inputs_0 + inputs_1
     """
+    if convex_domain is None:
+        convex_domain = {}
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if dc_decomp:
         h_0, g_0 = inputs_0[-2:]
@@ -896,8 +908,10 @@ def sum(x, axis=-1, dc_decomp=False, mode=F_HYBRID.name, **kwargs):
         return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
 
-def frac_pos(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+def frac_pos(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
     # frac_pos is convex for positive values
@@ -933,7 +947,7 @@ def frac_pos(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs)
             return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
 
-def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, finetune=False, **kwargs):
+def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, finetune=False, **kwargs):
     """
     LiRPA implementation of element-wise max
 
@@ -944,6 +958,8 @@ def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID
     :param convex_domain: the type of convex domain
     :return: maximum(inputs_0, inputs_1)
     """
+    if convex_domain is None:
+        convex_domain = {}
     output_0 = substract(inputs_1, inputs_0, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
     if finetune:
         finetune = kwargs["finetune_params"]
@@ -960,7 +976,7 @@ def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID
     )
 
 
-def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, finetune=False, **kwargs):
+def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, finetune=False, **kwargs):
     """
     LiRPA implementation of element-wise min
 
@@ -972,6 +988,8 @@ def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     return minus(
         maximum(
             minus(inputs_0, dc_decomp=dc_decomp, mode=mode),
@@ -988,7 +1006,7 @@ def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID
 
 
 # convex hull of the maximum between two functions
-def max_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, finetune=False, **kwargs):
+def max_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1, finetune=False, **kwargs):
     """
     LiRPA implementation of max(x, axis)
 
@@ -1000,6 +1018,8 @@ def max_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, fine
     :return: max operation  along an axis
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         h, g = x[-2:]
 
@@ -1248,7 +1268,7 @@ def minus(inputs, mode=F_HYBRID.name, dc_decomp=False, **kwargs):
     return output
 
 
-def multiply_old(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
+def multiply_old(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
     """
     LiRPA implementation of (element-wise) multiply(x,y)=-x*y.
 
@@ -1262,6 +1282,8 @@ def multiply_old(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_H
     :return: maximum(inputs_0, inputs_1)
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -1379,7 +1401,7 @@ def multiply_old(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_H
     return output
 
 
-def multiply(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
+def multiply(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
     """
     LiRPA implementation of (element-wise) multiply(x,y)=-x*y.
 
@@ -1393,6 +1415,8 @@ def multiply(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRI
     :return: maximum(inputs_0, inputs_1)
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -1622,7 +1646,7 @@ def split(input_, axis=-1, mode=F_HYBRID.name):
     return outputs
 
 
-def sort(input_, axis=-1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
+def sort(input_, axis=-1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
     """
     LiRPA implementation of sort by selection
 
@@ -1634,6 +1658,8 @@ def sort(input_, axis=-1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name)
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
     # remove grad bounds
@@ -1742,7 +1768,7 @@ def sort(input_, axis=-1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name)
     return output
 
 
-def pow(inputs_, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
+def pow(inputs_, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
     """
     LiRPA implementation of pow(x )=x**2
 
@@ -1753,10 +1779,12 @@ def pow(inputs_, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     return multiply(inputs_, inputs_, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def abs(inputs_, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
+def abs(inputs_, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
     """
     LiRPA implementation of |x|
 
@@ -1767,6 +1795,8 @@ def abs(inputs_, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     inputs_0 = relu_(inputs_, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
     inputs_1 = minus(
         relu_(minus(inputs_, mode=mode), dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode), mode=mode
@@ -1775,7 +1805,7 @@ def abs(inputs_, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
     return add(inputs_0, inputs_1, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def frac_pos_hull(inputs_, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
+def frac_pos_hull(inputs_, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
     """
     LiRPA implementation of 1/x for x>0
     :param inputs_:
@@ -1785,6 +1815,8 @@ def frac_pos_hull(inputs_, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
@@ -1822,7 +1854,7 @@ def frac_pos_hull(inputs_, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name
 
 
 # convex hull for min
-def min_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, finetune=False, **kwargs):
+def min_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1, finetune=False, **kwargs):
     """
     LiRPA implementation of min(x, axis=axis)
     :param x:
@@ -1833,6 +1865,8 @@ def min_(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, fine
     :return:
     """
     # return - max - x
+    if convex_domain is None:
+        convex_domain = {}
     return minus(
         max_(
             minus(x, mode=mode),
@@ -1899,7 +1933,7 @@ def expand_dims(inputs_, dc_decomp=False, mode=F_HYBRID.name, axis=-1, **kwargs)
     return output
 
 
-def log(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+def log(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     """Exponential activation function.
 
     :param x: list of input tensors
@@ -1911,6 +1945,8 @@ def log(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
     :return: the updated list of tensors
 
     """
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -1948,7 +1984,7 @@ def log(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
         return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
 
-def exp(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+def exp(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     """Exponential activation function.
 
     :param x: list of input tensors
@@ -1960,6 +1996,8 @@ def exp(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
     :return: the updated list of tensors
 
     """
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 

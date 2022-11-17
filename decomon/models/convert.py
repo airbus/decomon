@@ -84,15 +84,15 @@ def convert(
     method=CROWN.name,
     ibp=False,
     forward=False,
-    back_bounds=[],
+    back_bounds=None,
     layer_fn=to_monotonic,
     input_dim=-1,
-    convex_domain={},
+    convex_domain=None,
     finetune=False,
     shared=True,
     softmax_to_linear=True,
-    layer_map={},
-    forward_map={},
+    layer_map=None,
+    forward_map=None,
     finetune_forward=False,
     finetune_backward=False,
     final_ibp=False,
@@ -100,6 +100,14 @@ def convert(
     **kwargs,
 ):
 
+    if back_bounds is None:
+        back_bounds = []
+    if convex_domain is None:
+        convex_domain = {}
+    if layer_map is None:
+        layer_map = {}
+    if forward_map is None:
+        forward_map = {}
     if finetune:
         finetune_forward = True
         finetune_backward = True
@@ -162,21 +170,29 @@ def clone(
     model,
     layer_fn=to_monotonic,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     ibp=True,
     forward=True,
     method="crown",
-    back_bounds=[],
+    back_bounds=None,
     finetune=False,
     shared=True,
     finetune_forward=False,
     finetune_backward=False,
-    extra_inputs=[],
+    extra_inputs=None,
     to_keras=True,
-    dico_grid={},
+    dico_grid=None,
     **kwargs,
 ):
 
+    if convex_domain is None:
+        convex_domain = {}
+    if back_bounds is None:
+        back_bounds = []
+    if extra_inputs is None:
+        extra_inputs = []
+    if dico_grid is None:
+        dico_grid = {}
     if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
 

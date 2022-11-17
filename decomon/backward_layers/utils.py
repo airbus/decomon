@@ -42,7 +42,7 @@ class O_slope:
     name = "one-lb"
 
 
-def backward_add(inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain={}, mode=F_HYBRID.name):
+def backward_add(inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain=None, mode=F_HYBRID.name):
     """
     Backward  LiRPA of inputs_0+inputs_1
     :param inputs_0:
@@ -55,6 +55,8 @@ def backward_add(inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, con
     :param mode:
     :return:
     """
+    if convex_domain is None:
+        convex_domain = {}
     op_flat = Flatten(dtype=K.floatx())  # pas terrible  a revoir
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_IBP.name:
@@ -156,7 +158,16 @@ def merge_with_previous(inputs):
 
 
 def backward_relu_(
-    x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, fast=True, **kwargs
+    x,
+    w_out_u,
+    b_out_u,
+    w_out_l,
+    b_out_l,
+    convex_domain=None,
+    slope=V_slope.name,
+    mode=F_HYBRID.name,
+    fast=True,
+    **kwargs,
 ):
     """
     Backward  LiRPA of relu
@@ -172,6 +183,8 @@ def backward_relu_(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_HYBRID.name:
         # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
@@ -235,7 +248,16 @@ def backward_relu_(
 
 
 def backward_softplus_(
-    x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, fast=True, **kwargs
+    x,
+    w_out_u,
+    b_out_u,
+    w_out_l,
+    b_out_l,
+    convex_domain=None,
+    slope=V_slope.name,
+    mode=F_HYBRID.name,
+    fast=True,
+    **kwargs,
 ):
     """
     Backward  LiRPA of relu
@@ -251,6 +273,8 @@ def backward_softplus_(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_HYBRID.name:
         # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
@@ -361,7 +385,7 @@ def backward_maximum(
     b_out_u,
     w_out_l,
     b_out_l,
-    convex_domain={},
+    convex_domain=None,
     slope=V_slope.name,
     mode=F_HYBRID.name,
     **kwargs,
@@ -380,6 +404,8 @@ def backward_maximum(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     input_step_a_0 = substract(inputs_0, inputs_1, dc_decomp=False, convex_domain=convex_domain, mode=mode)
 
     input_step_0_ = relu_(input_step_a_0, dc_decomp=False, convex_domain=convex_domain, mode=mode, **kwargs)
@@ -400,7 +426,7 @@ def backward_maximum(
 
 # convex hull of the maximum between two functions
 def backward_max_(
-    x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, axis=-1, **kwargs
+    x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, axis=-1, **kwargs
 ):
     """
     Backward  LiRPA of max
@@ -413,6 +439,8 @@ def backward_max_(
     :param axis: axis to perform the maximum
     :return: max operation  along an axis
     """
+    if convex_domain is None:
+        convex_domain = {}
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     z_value = K.cast(0.0, x.dtype)
     if mode == F_HYBRID.name:
@@ -537,7 +565,7 @@ def backward_minimum(
     b_out_u,
     w_out_l,
     b_out_l,
-    convex_domain={},
+    convex_domain=None,
     slope=V_slope.name,
     mode=F_HYBRID.name,
     **kwargs,
@@ -556,6 +584,8 @@ def backward_minimum(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     w_out_u_, b_out_u_, w_out_l_, b_out_l_ = backward_minus(
         w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, slope=slope, mode=mode
     )
@@ -585,7 +615,7 @@ def backward_minimum(
     return bounds_0_, bounds_1_
 
 
-def backward_minus(w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name):
+def backward_minus(w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name):
     """
     Backward  LiRPA of -x
     :param w_out_u:
@@ -598,6 +628,8 @@ def backward_minus(w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=V
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     w_u_ = -w_out_l
     b_u_ = -b_out_l
     w_l_ = -w_out_u
@@ -625,7 +657,7 @@ def backward_scale(scale_factor, w_out_u, b_out_u, w_out_l, b_out_l):
 
 
 def backward_substract(
-    inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain={}, mode=F_HYBRID.name
+    inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain=None, mode=F_HYBRID.name
 ):
     """
     Backward  LiRPA of inputs_0 - inputs_1
@@ -640,6 +672,8 @@ def backward_substract(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     inputs_1_ = minus(inputs_1, mode=mode)
     bounds_0, bounds_1 = backward_add(
         inputs_0, inputs_1_, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain=convex_domain, mode=mode
@@ -650,7 +684,7 @@ def backward_substract(
 
 
 def backward_multiply(
-    inputs_0, inputs_1, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name
+    inputs_0, inputs_1, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name
 ):
     """
     Backward  LiRPA of element-wise multiply inputs_0*inputs_1
@@ -671,6 +705,8 @@ def backward_multiply(
     # b_out_u = b_out_u[:, 0]
     # b_out_l = b_out_l[:, 0]
 
+    if convex_domain is None:
+        convex_domain = {}
     if mode == F_IBP.name:
         u_0, l_0 = inputs_0
         u_1, l_1 = inputs_1
@@ -748,7 +784,7 @@ def backward_sort(
     w_out_l,
     b_out_l,
     axis=-1,
-    convex_domain={},
+    convex_domain=None,
     slope=V_slope.name,
     mode=F_HYBRID.name,
     **kwargs,
@@ -766,6 +802,8 @@ def backward_sort(
     :param mode:
     :return:
     """
+    if convex_domain is None:
+        convex_domain = {}
     z_value = K.cast(0.0, w_out_u.dtype)
     # build the tightest contain bounds for inputs_
     if mode == F_IBP.name:

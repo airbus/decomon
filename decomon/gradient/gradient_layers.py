@@ -33,13 +33,15 @@ class GradientDense(Layer):
         layer,
         previous=True,
         mode=F_HYBRID.name,
-        convex_domain={},
+        convex_domain=None,
         finetune=False,
         input_dim=-1,
         **kwargs,
     ):
         super(GradientDense, self).__init__(**kwargs)
 
+        if convex_domain is None:
+            convex_domain = {}
         self.layer = layer
 
     def call(self, inputs, mode, convex_domain):

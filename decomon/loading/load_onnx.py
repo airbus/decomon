@@ -21,7 +21,9 @@ def get_all_input_names(onnx_model):
 
 
 # check for issue with data_format
-def check_compatibility_data_format(k_model, allowed_format=["channels_last"]):
+def check_compatibility_data_format(k_model, allowed_format=None):
+    if allowed_format is None:
+        allowed_format = ["channels_last"]
     for layer in k_model.layers:
         if hasattr(layer, "data_format") and layer.data_format not in allowed_format:
             return True

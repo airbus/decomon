@@ -214,16 +214,20 @@ def convert_forward(
     layer_fn=to_monotonic,
     input_dim=-1,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     IBP=True,
     forward=True,
     finetune=False,
     shared=True,
     softmax_to_linear=True,
-    back_bounds=[],
+    back_bounds=None,
     **kwargs,
 ):
 
+    if convex_domain is None:
+        convex_domain = {}
+    if back_bounds is None:
+        back_bounds = []
     if not isinstance(model, Model):
         raise ValueError()
 
@@ -251,20 +255,30 @@ def convert_forward_functional_model(
     layer_fn=to_monotonic,
     input_dim=1,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     IBP=True,
     forward=True,
     finetune=False,
     shared=True,
     softmax_to_linear=True,
-    layer_map={},
-    forward_map={},
-    name_history=set(),
+    layer_map=None,
+    forward_map=None,
+    name_history=None,
     finetune_output=False,
     opt_linear=True,  # detect linear successive parts by design
-    back_bounds=[],
+    back_bounds=None,
 ):
 
+    if convex_domain is None:
+        convex_domain = {}
+    if layer_map is None:
+        layer_map = {}
+    if forward_map is None:
+        forward_map = {}
+    if name_history is None:
+        name_history = set()
+    if back_bounds is None:
+        back_bounds = []
     if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
 

@@ -589,19 +589,23 @@ def get_input_nodes(
 def crown_model(
     model,
     input_tensors=None,
-    back_bounds=[],
+    back_bounds=None,
     input_dim=-1,
     IBP=True,
     forward=True,
     convex_domain=None,
     finetune=False,
-    forward_map={},
+    forward_map=None,
     softmax_to_linear=True,
     joint=True,
     layer_fn=get_backward_,
     fuse=True,
     **kwargs,
 ):
+    if back_bounds is None:
+        back_bounds = []
+    if forward_map is None:
+        forward_map = {}
     if not isinstance(model, Model):
         raise ValueError()
     # import time
@@ -709,13 +713,13 @@ def crown_model(
 def get_backward_model(
     model,
     input_tensors=None,
-    back_bounds=[],
+    back_bounds=None,
     input_dim=-1,
     IBP=True,
     forward=True,
     convex_domain=None,
     finetune=False,
-    forward_map={},
+    forward_map=None,
     softmax_to_linear=True,
     joint=True,
     layer_fn=get_backward_,
@@ -723,6 +727,10 @@ def get_backward_model(
     final_forward=False,
     **kwargs,
 ):
+    if back_bounds is None:
+        back_bounds = []
+    if forward_map is None:
+        forward_map = {}
     if len(back_bounds):
         if len(back_bounds) == 1:
             C = back_bounds[0]

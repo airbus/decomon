@@ -365,9 +365,11 @@ def get_back_bounds_model(back_bounds, model):
 
 
 def fuse_forward_backward(
-    mode, inputs, back_bounds, upper_layer=None, lower_layer=None, convex_domain={}, x_tensor=None
+    mode, inputs, back_bounds, upper_layer=None, lower_layer=None, convex_domain=None, x_tensor=None
 ):
 
+    if convex_domain is None:
+        convex_domain = {}
     if mode in [F_IBP.name, F_HYBRID.name]:
 
         if upper_layer is None:

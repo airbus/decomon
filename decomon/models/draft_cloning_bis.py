@@ -54,15 +54,21 @@ def back_bounds_from_model(
     back_bounds,
     mode,
     finetune,
-    convex_domain={},
-    layer_map={},
-    forward_map={},
+    convex_domain=None,
+    layer_map=None,
+    forward_map=None,
     shared=True,
     softmax_to_linear=True,
     input_tensors=None,
     input_dim=-1,
 ):
 
+    if convex_domain is None:
+        convex_domain = {}
+    if layer_map is None:
+        layer_map = {}
+    if forward_map is None:
+        forward_map = {}
     if layer.name in layer_map:
         _, output_tensor, _, _ = convert_backward(
             layer,
@@ -105,15 +111,21 @@ def get_backward_layer(
     back_bounds,
     mode,
     finetune,
-    convex_domain={},
-    layer_map={},
-    forward_map={},
+    convex_domain=None,
+    layer_map=None,
+    forward_map=None,
     shared=True,
     softmax_to_linear=True,
     input_tensors=None,
     input_dim=-1,
 ):
 
+    if convex_domain is None:
+        convex_domain = {}
+    if layer_map is None:
+        layer_map = {}
+    if forward_map is None:
+        forward_map = {}
     if isinstance(layer, Model):
 
         if layer.name in layer_map:
@@ -174,7 +186,7 @@ def clone_backward_layer(
     mode,
     back_bounds,
     finetune=False,
-    convex_domain={},
+    convex_domain=None,
     input_tensors=None,
     upper_layer=None,
     lower_layer=None,
@@ -182,6 +194,8 @@ def clone_backward_layer(
     combine_with_input=False,
 ):
 
+    if convex_domain is None:
+        convex_domain = {}
     layer_ = node.outbound_layer
     id_node = get_node_by_id(node)
 
@@ -472,16 +486,22 @@ def convert_backward(
     input_tensors=None,
     back_bounds=None,
     input_dim=-1,
-    convex_domain={},
+    convex_domain=None,
     IBP=True,
     forward=True,
     finetune=False,
     shared=True,
     softmax_to_linear=True,
-    layer_map={},
-    forward_map={},
+    layer_map=None,
+    forward_map=None,
     **kwargs,
 ):
+    if convex_domain is None:
+        convex_domain = {}
+    if layer_map is None:
+        layer_map = {}
+    if forward_map is None:
+        forward_map = {}
     if not isinstance(model, Model):
         raise ValueError()
 
