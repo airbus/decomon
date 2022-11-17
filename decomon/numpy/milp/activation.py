@@ -71,6 +71,10 @@ def bound_A_ortools(x_min, x_max, m, W_up, b_up, W_low, b_low, mask_A):
     W_low : (None, n_dim, n_out)
     b_low: (None, n_out)
     """
+    # Check ortools available
+    if not ortools_available:
+        raise ImportError("'ortools' must be installed to use this function.")
+
     # compute a mask that removes the constraints where we know it is not achievable
     n_out = W_up.shape[2]
     n_dim = W_up.shape[1]
@@ -142,6 +146,9 @@ def bound_B_ortools(x_min, x_max, m, W_up, b_up, W_low, b_low, mask_B):
     W_low : (None, n_dim, n_out)
     b_low: (None, n_out)
     """
+    # Check ortools available
+    if not ortools_available:
+        raise ImportError("'ortools' must be installed to use this function.")
 
     n_out = W_up.shape[2]
     n_dim = W_up.shape[1]
