@@ -1,12 +1,10 @@
 # Goal: compute bounds with lirpa and decomon and assess that they are the same (up to numerical precision)
+
 import os
 
 import numpy as np
 import onnx
-import onnx2keras
-import tensorflow.keras as keras
-import torch
-import torch.nn as nn
+import pytest
 import torchvision
 from auto_LiRPA import BoundedModule, BoundedTensor
 from auto_LiRPA.perturbations import PerturbationLpNorm
@@ -14,27 +12,28 @@ from numpy.testing import assert_almost_equal
 from onnx2keras import onnx_to_keras
 from onnx2torch import convert
 
-from decomon import get_lower_box, get_upper_box
 from decomon.models.convert import clone as convert
+
+test_dir = os.path.abspath(os.path.dirname(__file__))
 
 
 @pytest.mark.parametrize(
-    "path, onnx_filename, method, eps, N",
+    "onnx_filename, method, eps, N",
     [
-        (".", "mnist_relu_3_50_comparison.onnx", "IBP", 0.01, 3),
-        (".", "mnist_relu_3_50_comparison.onnx", "IBP", 0.1, 3),
-        (".", "mnist_relu_3_50_comparison.onnx", "IBP+backward", 0.01, 3),
-        (".", "mnist_relu_3_50_comparison.onnx", "IBP+backward", 0.1, 3),
-        (".", "mnist_relu_3_50_comparison.onnx", "backward", 0.01, 3),
-        (".", "mnist_relu_3_50_comparison.onnx", "backward", 0.1, 3),
+        ("mnist_relu_3_50_comparison.onnx", "IBP", 0.01, 3),
+        ("mnist_relu_3_50_comparison.onnx", "IBP", 0.1, 3),
+        ("mnist_relu_3_50_comparison.onnx", "IBP+backward", 0.01, 3),
+        ("mnist_relu_3_50_comparison.onnx", "IBP+backward", 0.1, 3),
+        ("mnist_relu_3_50_comparison.onnx", "backward", 0.01, 3),
+        ("mnist_relu_3_50_comparison.onnx", "backward", 0.1, 3),
     ],
 )
-def test_with_lirpa(path, onnx_filename, method, eps, N):
+def test_with_lirpa(onnx_filename, method, eps, N):
 
     equ_method = {"IBP": "IBP", "backward": "crown", "IBP+backward": "CROWN-IBP"}
 
     # use use onnx2torch to load the network in torch
-    onnx_model = onnx.load(onnx_filename)
+    onnx_model = onnx.load(f"{test_dir}/{onnx_filename}")
     torch_model = convert(onnx_model)
 
     ## Step 2: Prepare dataset as usual
