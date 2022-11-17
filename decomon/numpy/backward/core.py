@@ -8,7 +8,7 @@ CROWN implementation in numpy (useful for MILP compatibility)
 
 
 class BackwardNumpyLayer(object):
-    def __init__(self, keras_layer, convex_domain={}, mode=F_FORWARD.name, rec=1, params=[], **kwargs):
+    def __init__(self, keras_layer, convex_domain=None, mode=F_FORWARD.name, rec=1, params=None, **kwargs):
         """
 
         :param convex_domain: type of convex input domain (None or dict)
@@ -17,6 +17,10 @@ class BackwardNumpyLayer(object):
         :param mode: type of Forward propagation (IBP, Forward or Hybrid)
         :param kwargs: extra parameters
         """
+        if convex_domain is None:
+            convex_domain = {}
+        if params is None:
+            params = []
         self.update_slope = False
         self.reuse_slope = False
         if "update_slope" in kwargs:
@@ -39,10 +43,14 @@ class BackwardNumpyLayer(object):
 
         pass
 
-    def store_layer(self, joint=False, convex_domain={}, reuse_slope=False):
+    def store_layer(self, joint=False, convex_domain=None, reuse_slope=False):
+        if convex_domain is None:
+            convex_domain = {}
         return False
 
-    def store_output(self, joint=False, convex_domain={}, reuse_slope=False):
+    def store_output(self, joint=False, convex_domain=None, reuse_slope=False):
+        if convex_domain is None:
+            convex_domain = {}
         return True
 
     def update(self, x, params):

@@ -602,7 +602,7 @@ def to_monotonic_merge(
     layer,
     input_dim,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     finetune=False,
     IBP=True,
     forward=True,
@@ -623,6 +623,8 @@ def to_monotonic_merge(
     """
 
     # get class name
+    if convex_domain is None:
+        convex_domain = {}
     class_name = layer.__class__.__name__
     # check if layer has a built argument that built is set to True
     if hasattr(layer, "built"):

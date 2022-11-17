@@ -121,8 +121,10 @@ def toy_struct_cnn(dtype="float32"):
 # @pytest.mark.parametrize(
 #    "n, activation, mode, shared, floatx",
 #
-def test_toy_network_1D(n=0, archi=[4, 1], activation="relu", use_bias=True):
+def test_toy_network_1D(n=0, archi=None, activation="relu", use_bias=True):
 
+    if archi is None:
+        archi = [4, 1]
     inputs = get_tensor_decomposition_1d_box()
     inputs_ = get_standart_values_1d_box(n)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
@@ -140,8 +142,10 @@ def test_toy_network_1D(n=0, archi=[4, 1], activation="relu", use_bias=True):
     np.allclose(y_0, y_1)
 
 
-def test_toy_network_multiD(odd=0, archi=[4, 1], activation="relu", use_bias=True):
+def test_toy_network_multiD(odd=0, archi=None, activation="relu", use_bias=True):
 
+    if archi is None:
+        archi = [4, 1]
     inputs = get_tensor_decomposition_multid_box(odd)
     inputs_ = get_standard_values_multid_box(odd)
 

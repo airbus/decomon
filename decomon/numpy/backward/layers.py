@@ -15,7 +15,9 @@ CROWN implementation in numpy (useful for MILP compatibility)
 
 
 class BackwardNumpyActivation(BackwardNumpyLayer):
-    def __init__(self, keras_layer, previous=False, convex_domain={}, mode=F_FORWARD.name, rec=1, params=[], **kwargs):
+    def __init__(
+        self, keras_layer, previous=False, convex_domain=None, mode=F_FORWARD.name, rec=1, params=None, **kwargs
+    ):
         """
 
         :param convex_domain: type of convex input domain (None or dict)
@@ -27,6 +29,10 @@ class BackwardNumpyActivation(BackwardNumpyLayer):
         super(BackwardNumpyActivation, self).__init__(
             keras_layer=keras_layer, convex_domain=convex_domain, mode=mode, rec=rec, params=params, **kwargs
         )
+        if convex_domain is None:
+            convex_domain = {}
+        if params is None:
+            params = []
         self.activation_name = keras_layer.get_config()["activation"]
         self.activation = get(keras_layer.get_config()["activation"])
 
@@ -65,13 +71,17 @@ class BackwardNumpyActivation(BackwardNumpyLayer):
     def call_no_previous(self, inputs, **kwargs):
         return self.activation(inputs, convex_domain=self.convex_domain, mode=self.mode, params=self.params, **kwargs)
 
-    def store_output(self, joint=False, convex_domain={}, reuse_slope=False):
+    def store_output(self, joint=False, convex_domain=None, reuse_slope=False):
+        if convex_domain is None:
+            convex_domain = {}
         if joint:
             return not reuse_slope
 
         return False
 
-    def store_layer(self, joint=False, convex_domain={}, reuse_slope=False):
+    def store_layer(self, joint=False, convex_domain=None, reuse_slope=False):
+        if convex_domain is None:
+            convex_domain = {}
         if joint:
             return not reuse_slope
 
@@ -80,7 +90,7 @@ class BackwardNumpyActivation(BackwardNumpyLayer):
 
 class BackwardNumpyInputLayer(BackwardNumpyLayer):
     def __init__(
-        self, keras_layer, previous=False, fusion=True, convex_domain={}, mode=F_FORWARD.name, rec=1, **kwargs
+        self, keras_layer, previous=False, fusion=True, convex_domain=None, mode=F_FORWARD.name, rec=1, **kwargs
     ):
         """
 
@@ -94,6 +104,8 @@ class BackwardNumpyInputLayer(BackwardNumpyLayer):
             keras_layer=keras_layer, convex_domain=convex_domain, mode=mode, rec=rec, **kwargs
         )
 
+        if convex_domain is None:
+            convex_domain = {}
         if not isinstance(self.keras_layer, InputLayer):
             raise KeyError()
 
@@ -126,7 +138,7 @@ class BackwardNumpyInputLayer(BackwardNumpyLayer):
 
 
 class BackwardNumpyDense(BackwardNumpyLayer):
-    def __init__(self, keras_layer, previous=False, convex_domain={}, mode=F_FORWARD.name, rec=1, **kwargs):
+    def __init__(self, keras_layer, previous=False, convex_domain=None, mode=F_FORWARD.name, rec=1, **kwargs):
         """
 
         :param convex_domain: type of convex input domain (None or dict)
@@ -139,6 +151,8 @@ class BackwardNumpyDense(BackwardNumpyLayer):
             keras_layer=keras_layer, convex_domain=convex_domain, mode=mode, rec=rec, **kwargs
         )
 
+        if convex_domain is None:
+            convex_domain = {}
         if not isinstance(self.keras_layer, Dense):
             raise KeyError()
 
@@ -179,10 +193,14 @@ class BackwardNumpyDense(BackwardNumpyLayer):
         return [w_, b_, w_, b_]
 
 
-def get_backward(keras_layer, previous=True, mode=F_FORWARD.name, convex_domain={}, rec=1, params=[], **kwargs):
+def get_backward(keras_layer, previous=True, mode=F_FORWARD.name, convex_domain=None, rec=1, params=None, **kwargs):
 
     # do it better
     # either a Decomon layer or its pure Keras version
+    if convex_domain is None:
+        convex_domain = {}
+    if params is None:
+        params = []
     class_name = keras_layer.__class__.__name__
 
     backward_class_name = "BackwardNumpy{}".format(class_name)

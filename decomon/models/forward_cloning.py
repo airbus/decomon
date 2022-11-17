@@ -47,17 +47,21 @@ def convert_forward(
     layer_fn=to_monotonic,
     input_dim=-1,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     IBP=True,
     forward=True,
     finetune=False,
     shared=True,
     softmax_to_linear=True,
-    back_bounds=[],
+    back_bounds=None,
     joint=True,
     **kwargs,
 ):
 
+    if convex_domain is None:
+        convex_domain = {}
+    if back_bounds is None:
+        back_bounds = []
     if not isinstance(model, Model):
         raise ValueError()
 

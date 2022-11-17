@@ -22,7 +22,7 @@ class DecomonModel(tf.keras.Model):
         self,
         input,
         output,
-        convex_domain={},
+        convex_domain=None,
         dc_decomp=False,
         method=Forward.name,
         optimize="True",
@@ -34,6 +34,8 @@ class DecomonModel(tf.keras.Model):
         **kwargs,
     ):
         super(DecomonModel, self).__init__(input, output, **kwargs)
+        if convex_domain is None:
+            convex_domain = {}
         self.convex_domain = convex_domain
         self.optimize = optimize
         self.nb_tensors = StaticVariables(dc_decomp).nb_tensors
@@ -81,7 +83,7 @@ class DecomonSequential(tf.keras.Sequential):
     def __init__(
         self,
         layers=None,
-        convex_domain={},
+        convex_domain=None,
         dc_decomp=False,
         mode=Forward.name,
         optimize="False",
@@ -91,6 +93,8 @@ class DecomonSequential(tf.keras.Sequential):
         **kwargs,
     ):
         super(DecomonSequential, self).__init__(layers=layers, name=name, **kwargs)
+        if convex_domain is None:
+            convex_domain = {}
         self.convex_domain = convex_domain
         self.optimize = optimize
         self.nb_tensors = StaticVariables(dc_decomp).nb_tensors

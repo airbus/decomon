@@ -596,19 +596,27 @@ def get_backward_layer(node, layer_map, forward_map, mode, back_bounds, input_di
 def get_backward_model(
     model,
     input_tensors=None,
-    back_bounds=[],
+    back_bounds=None,
     input_dim=-1,
-    convex_domain={},
+    convex_domain=None,
     IBP=True,
     forward=True,
     finetune=False,
-    layer_map={},
-    forward_map={},
+    layer_map=None,
+    forward_map=None,
     fuse_with_input=True,
     softmax_to_linear=True,
     rec=1,
     **kwargs,
 ):
+    if back_bounds is None:
+        back_bounds = []
+    if convex_domain is None:
+        convex_domain = {}
+    if layer_map is None:
+        layer_map = {}
+    if forward_map is None:
+        forward_map = {}
     if not isinstance(model, Model):
         raise ValueError()
 

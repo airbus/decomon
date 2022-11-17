@@ -5,9 +5,11 @@ from ..layers import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
 from ..layers.utils import get_lower, get_upper
 
 
-def gradient_relu(inputs, dc_decomp=False, mode=F_HYBRID.name, convex_domain={}, **kwargs):
+def gradient_relu(inputs, dc_decomp=False, mode=F_HYBRID.name, convex_domain=None, **kwargs):
 
     # get upper and lower
+    if convex_domain is None:
+        convex_domain = {}
     if mode not in [F_HYBRID.name, F_IBP.name, F_FORWARD.name]:
         raise ValueError("unknown mode {}".format(mode))
 

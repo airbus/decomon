@@ -7,9 +7,11 @@ from ..layers.utils import add, exp, expand_dims, log, minus, sum
 # compute categorical cross entropy
 
 
-def categorical_cross_entropy(input_, dc_decomp=False, mode=F_HYBRID.name, convex_domain={}):
+def categorical_cross_entropy(input_, dc_decomp=False, mode=F_HYBRID.name, convex_domain=None):
 
     # step 1: exponential
+    if convex_domain is None:
+        convex_domain = {}
     exp_ = exp(input_, mode=mode, convex_domain=convex_domain, dc_decomp=dc_decomp)
     # step 2: sum
     sum_exp_ = sum(exp_, axis=-1, mode=mode)

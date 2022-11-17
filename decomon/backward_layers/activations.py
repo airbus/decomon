@@ -40,7 +40,7 @@ LINEAR = "linear"
 def backward_relu(
     x,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     alpha=0.0,
     max_value=None,
     threshold=0.0,
@@ -62,6 +62,8 @@ def backward_relu(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -100,7 +102,7 @@ def backward_relu(
 
 
 def backward_sigmoid(
-    inputs, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    inputs, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
 ):
     """
     Backward  LiRPA of sigmoid
@@ -112,6 +114,8 @@ def backward_sigmoid(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -147,7 +151,7 @@ def backward_sigmoid(
 
 
 def backward_tanh(
-    inputs, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    inputs, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
 ):
     """
     Backward  LiRPA of tanh
@@ -159,6 +163,8 @@ def backward_tanh(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -201,7 +207,7 @@ def backward_tanh(
 
 
 def backward_hard_sigmoid(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    x, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
 ):
     """
     Backward  LiRPA of hard sigmoid
@@ -213,6 +219,8 @@ def backward_hard_sigmoid(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -220,7 +228,9 @@ def backward_hard_sigmoid(
     raise NotImplementedError()
 
 
-def backward_elu(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs):
+def backward_elu(
+    x, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+):
     """
     Backward  LiRPA of Exponential Linear Unit
     :param x:
@@ -231,6 +241,8 @@ def backward_elu(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -239,7 +251,7 @@ def backward_elu(x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=
 
 
 def backward_selu(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    x, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
 ):
     """
     Backward LiRPA of Scaled Exponential Linear Unit (SELU)
@@ -251,6 +263,8 @@ def backward_selu(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -259,7 +273,7 @@ def backward_selu(
 
 
 def backward_linear(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    x, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
 ):
     """
     Backward LiRPA of linear
@@ -270,6 +284,8 @@ def backward_linear(
     :param mode:
     :return:
     """
+    if convex_domain is None:
+        convex_domain = {}
     if previous:
         return x[-4:]
 
@@ -277,7 +293,7 @@ def backward_linear(
 
 
 def backward_exponential(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    x, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
 ):
     """
     Backward LiRPAof exponential
@@ -288,6 +304,8 @@ def backward_exponential(
     :param mode:
     :return:
     """
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -296,7 +314,7 @@ def backward_exponential(
 
 
 def backward_softplus(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    x, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
 ):
     """
     Backward LiRPA of softplus
@@ -308,6 +326,8 @@ def backward_softplus(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
     if previous:
@@ -332,7 +352,7 @@ def backward_softplus(
 
 
 def backward_softsign(
-    x, dc_decom=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    x, dc_decom=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
 ):
     """
     Backward LiRPA of softsign
@@ -347,6 +367,8 @@ def backward_softsign(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if previous:
         y = x[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = x[-4:]
@@ -377,8 +399,10 @@ def backward_softsign(
         return [w_u_, b_u_, w_l_, b_l_]
 
 
-def backward_softsign_(y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+def backward_softsign_(y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, mode=F_HYBRID.name, **kwargs):
 
+    if convex_domain is None:
+        convex_domain = {}
     w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
         y, func=K.softsign, f_prime=softsign_prime, convex_domain=convex_domain, mode=mode
     )
@@ -399,7 +423,7 @@ def backward_softsign_(y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain={}, 
 
 
 def backward_softmax(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_HYBRID.name, previous=True, axis=-1, **kwargs
+    x, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, axis=-1, **kwargs
 ):
     """
     Backward LiRPA of softmax
@@ -413,6 +437,8 @@ def backward_softmax(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 

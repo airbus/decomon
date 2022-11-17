@@ -38,7 +38,7 @@ def include_dim_layer_fn(
     layer_fn,
     input_dim,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     IBP=True,
     forward=True,
     finetune=True,
@@ -52,6 +52,8 @@ def include_dim_layer_fn(
     :param finetune:
     :return:
     """
+    if convex_domain is None:
+        convex_domain = {}
     if input_dim <= 0:
 
         # if n_subgrad and "n_subgrad" in inspect.signature(layer_fn).parameters:
@@ -120,7 +122,7 @@ def clone(
     layer_fn=to_monotonic,
     input_dim=-1,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     mode="backward",
     slope_backward=V_slope.name,
     IBP=True,
@@ -139,6 +141,8 @@ def clone(
     :return: a decomon model
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if mode.lower() not in [Forward.name, Backward.name]:
         raise NotImplementedError()
 
@@ -179,7 +183,7 @@ def clone_sequential_model(
     layer_fn=to_monotonic,
     input_dim=-1,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     IBP=True,
     forward=True,
     finetune=False,
@@ -203,6 +207,8 @@ def clone_sequential_model(
     :return: An instance of `Sequential` reproducing the behavior of the original model with decomon layers.
     :raises: ValueError: in case of invalid `model` argument value or `layer_fn` argument value.
     """
+    if convex_domain is None:
+        convex_domain = {}
     if input_dim == -1:
         input_dim_init = -1
         input_dim = np.prod(model.input_shape[1:])
@@ -391,7 +397,7 @@ def clone_functional_model(
     layer_fn=to_monotonic,
     input_dim=1,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     IBP=True,
     forward=True,
     finetune=False,
@@ -409,6 +415,8 @@ def clone_functional_model(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
     if isinstance(model, Sequential):
@@ -724,14 +732,14 @@ def convert(
     input_tensors=None,
     layer_fn=to_monotonic,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     mode="backward",
     slope_backward=V_slope.name,
     IBP=True,
     forward=False,
     linearize=True,
     finetune=False,
-    options={},
+    options=None,
 ):
     """
 
@@ -746,6 +754,10 @@ def convert(
     """
 
     # raise NotImplementedError()
+    if convex_domain is None:
+        convex_domain = {}
+    if options is None:
+        options = {}
     if not mode.lower() in [Forward.name, Backward.name]:
         raise NotImplementedError()
 
@@ -886,7 +898,7 @@ class DecomonModel(tf.keras.Model):
         self,
         input,
         output,
-        convex_domain={},
+        convex_domain=None,
         dc_decomp=False,
         mode=Forward.name,
         optimize="True",
@@ -896,6 +908,8 @@ class DecomonModel(tf.keras.Model):
         **kwargs,
     ):
         super(DecomonModel, self).__init__(input, output, **kwargs)
+        if convex_domain is None:
+            convex_domain = {}
         self.convex_domain = convex_domain
         self.optimize = optimize
         self.nb_tensors = StaticVariables(dc_decomp).nb_tensors
@@ -942,7 +956,7 @@ class DecomonSequential(tf.keras.Sequential):
     def __init__(
         self,
         layers=None,
-        convex_domain={},
+        convex_domain=None,
         dc_decomp=False,
         mode=Forward.name,
         optimize="False",
@@ -952,6 +966,8 @@ class DecomonSequential(tf.keras.Sequential):
         **kwargs,
     ):
         super(DecomonSequential, self).__init__(layers=layers, name=name, **kwargs)
+        if convex_domain is None:
+            convex_domain = {}
         self.convex_domain = convex_domain
         self.optimize = optimize
         self.nb_tensors = StaticVariables(dc_decomp).nb_tensors
@@ -994,7 +1010,7 @@ class DecomonSequential(tf.keras.Sequential):
 
 
 # BACKWARD MODE
-def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, options={}):
+def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, options=None):
     """
 
     :param model:
@@ -1007,6 +1023,8 @@ def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, opti
     # it implies that the bounds are on the input of the network directly
 
     # input_backward = model.input
+    if options is None:
+        options = {}
     input_backward = []
     for elem in to_list(model.input):
         input_backward.append(Input(elem.shape[1:]))
@@ -1128,8 +1146,10 @@ def get_backward_model_(model, back_bounds, input_model, slope=V_slope.name):
     return output_bounds
 
 
-def get_backward_model(model, back_bounds, input_model, slope=V_slope.name, options={}):
+def get_backward_model(model, back_bounds, input_model, slope=V_slope.name, options=None):
     # retrieve all layers inside
+    if options is None:
+        options = {}
     if hasattr(model, "dc_decomp") and model.dc_decomp:
         raise NotImplementedError()
 
@@ -1205,8 +1225,10 @@ def get_backward_model(model, back_bounds, input_model, slope=V_slope.name, opti
     return output_bounds
 
 
-def get_backward_layer(layer, back_bounds, input_layers, input_tensors, slope=V_slope.name, options={}):
+def get_backward_layer(layer, back_bounds, input_layers, input_tensors, slope=V_slope.name, options=None):
 
+    if options is None:
+        options = {}
     input = input_tensors[layer.name]
     if isinstance(layer, Model):
 

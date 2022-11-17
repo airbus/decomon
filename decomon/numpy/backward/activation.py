@@ -26,14 +26,14 @@ LINEAR = "linear"
 def backward_relu(
     x,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     alpha=0.0,
     max_value=None,
     threshold=0.0,
     slope=V_slope.name,
     mode=F_FORWARD.name,
     previous=False,
-    params=[],
+    params=None,
     **kwargs,
 ):
     """
@@ -49,6 +49,10 @@ def backward_relu(
     :return:
     """
 
+    if params is None:
+        params = []
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -71,11 +75,11 @@ def backward_relu(
 def backward_sigmoid(
     inputs,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     slope=V_slope.name,
     mode=F_FORWARD.name,
     previous=True,
-    params=[],
+    params=None,
     **kwargs,
 ):
     """
@@ -87,17 +91,21 @@ def backward_sigmoid(
     :param mode:
     :return:
     """
+    if convex_domain is None:
+        convex_domain = {}
+    if params is None:
+        params = []
     raise NotImplementedError()
 
 
 def backward_tanh(
     inputs,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     slope=V_slope.name,
     mode=F_FORWARD.name,
     previous=True,
-    params=[],
+    params=None,
     **kwargs,
 ):
     """
@@ -109,11 +117,22 @@ def backward_tanh(
     :param mode:
     :return:
     """
+    if convex_domain is None:
+        convex_domain = {}
+    if params is None:
+        params = []
     raise NotImplementedError()
 
 
 def backward_hard_sigmoid(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True, params=[], **kwargs
+    x,
+    dc_decomp=False,
+    convex_domain=None,
+    slope=V_slope.name,
+    mode=F_FORWARD.name,
+    previous=True,
+    params=None,
+    **kwargs,
 ):
     """
     Backward  LiRPA of hard sigmoid
@@ -125,6 +144,10 @@ def backward_hard_sigmoid(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
+    if params is None:
+        params = []
     if dc_decomp:
         raise NotImplementedError()
 
@@ -133,7 +156,14 @@ def backward_hard_sigmoid(
 
 
 def backward_elu(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True, params=[], **kwargs
+    x,
+    dc_decomp=False,
+    convex_domain=None,
+    slope=V_slope.name,
+    mode=F_FORWARD.name,
+    previous=True,
+    params=None,
+    **kwargs,
 ):
     """
     Backward  LiRPA of Exponential Linear Unit
@@ -145,6 +175,10 @@ def backward_elu(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
+    if params is None:
+        params = []
     if dc_decomp:
         raise NotImplementedError()
 
@@ -153,7 +187,14 @@ def backward_elu(
 
 
 def backward_selu(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True, params=[], **kwargs
+    x,
+    dc_decomp=False,
+    convex_domain=None,
+    slope=V_slope.name,
+    mode=F_FORWARD.name,
+    previous=True,
+    params=None,
+    **kwargs,
 ):
     """
     Backward LiRPA of Scaled Exponential Linear Unit (SELU)
@@ -165,6 +206,10 @@ def backward_selu(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
+    if params is None:
+        params = []
     if dc_decomp:
         raise NotImplementedError()
 
@@ -173,7 +218,14 @@ def backward_selu(
 
 
 def backward_linear(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=False, params=[], **kwargs
+    x,
+    dc_decomp=False,
+    convex_domain=None,
+    slope=V_slope.name,
+    mode=F_FORWARD.name,
+    previous=False,
+    params=None,
+    **kwargs,
 ):
     """
     Backward LiRPA of linear
@@ -184,6 +236,10 @@ def backward_linear(
     :param mode:
     :return:
     """
+    if convex_domain is None:
+        convex_domain = {}
+    if params is None:
+        params = []
     if previous:
         z, _, _, _, _, w_b_u, b_b_u, w_b_l, b_b_l = x
         return [z, w_b_u, b_b_u, w_b_l, b_b_l]
@@ -197,7 +253,14 @@ def backward_linear(
 
 
 def backward_exponential(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True, params=[], **kwargs
+    x,
+    dc_decomp=False,
+    convex_domain=None,
+    slope=V_slope.name,
+    mode=F_FORWARD.name,
+    previous=True,
+    params=None,
+    **kwargs,
 ):
     """
     Backward LiRPAof exponential
@@ -208,6 +271,10 @@ def backward_exponential(
     :param mode:
     :return:
     """
+    if convex_domain is None:
+        convex_domain = {}
+    if params is None:
+        params = []
     if dc_decomp:
         raise NotImplementedError()
 
@@ -216,7 +283,14 @@ def backward_exponential(
 
 
 def backward_softplus(
-    x, dc_decomp=False, convex_domain={}, slope=V_slope.name, mode=F_FORWARD.name, previous=True, params=[], **kwargs
+    x,
+    dc_decomp=False,
+    convex_domain=None,
+    slope=V_slope.name,
+    mode=F_FORWARD.name,
+    previous=True,
+    params=None,
+    **kwargs,
 ):
     """
     Backward LiRPA of softplus
@@ -228,6 +302,10 @@ def backward_softplus(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
+    if params is None:
+        params = []
     if dc_decomp:
         raise NotImplementedError()
 
@@ -238,11 +316,11 @@ def backward_softplus(
 def backward_softsign(
     inputs,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     slope=V_slope.name,
     mode=F_FORWARD.name,
     previous=True,
-    params=[],
+    params=None,
     **kwargs,
 ):
     """
@@ -257,6 +335,10 @@ def backward_softsign(
     :param mode:
     :return:
     """
+    if convex_domain is None:
+        convex_domain = {}
+    if params is None:
+        params = []
     if dc_decomp:
         raise NotImplementedError()
 
@@ -267,12 +349,12 @@ def backward_softsign(
 def backward_softmax(
     x,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     slope=V_slope.name,
     mode=F_FORWARD.name,
     previous=True,
     axis=-1,
-    params=[],
+    params=None,
     **kwargs,
 ):
     """
@@ -287,6 +369,10 @@ def backward_softmax(
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
+    if params is None:
+        params = []
     if dc_decomp:
         raise NotImplementedError()
 

@@ -1791,7 +1791,15 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
 
 
 def to_monotonic(
-    layer, input_dim, dc_decomp=False, convex_domain={}, finetune=False, IBP=True, forward=True, shared=True, fast=True
+    layer,
+    input_dim,
+    dc_decomp=False,
+    convex_domain=None,
+    finetune=False,
+    IBP=True,
+    forward=True,
+    shared=True,
+    fast=True,
 ):
     """Transform a standard keras layer into a Decomon layer.
 
@@ -1809,6 +1817,8 @@ def to_monotonic(
     """
 
     # get class name
+    if convex_domain is None:
+        convex_domain = {}
     class_name = layer.__class__.__name__
     # remove deel-lip dependency
     if class_name[: len(DEEL_LIP.name)] == DEEL_LIP.name:

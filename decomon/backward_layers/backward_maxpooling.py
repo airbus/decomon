@@ -24,12 +24,14 @@ class BackwardMaxPooling2D(Layer):
         slope=V_slope.name,
         previous=True,
         mode=F_HYBRID.name,
-        convex_domain={},
+        convex_domain=None,
         finetune=False,
         input_dim=-1,
         **kwargs,
     ):  # __init__(self, layer, slope=V_slope.name,
         super(BackwardMaxPooling2D, self).__init__(**kwargs)
+        if convex_domain is None:
+            convex_domain = {}
         raise NotImplementedError()
         self.mode = layer.mode
         self.pool_size = layer.pool_size
@@ -55,10 +57,12 @@ class BackwardMaxPooling2D(Layer):
         strides,
         padding,
         data_format,
-        convex_domain={},
+        convex_domain=None,
         slope=V_slope.name,
     ):
 
+        if convex_domain is None:
+            convex_domain = {}
         if self.fast:
             return self._pooling_function_fast(
                 inputs,
@@ -99,10 +103,12 @@ class BackwardMaxPooling2D(Layer):
         strides,
         padding,
         data_format,
-        convex_domain={},
+        convex_domain=None,
         slope=V_slope.name,
     ):
 
+        if convex_domain is None:
+            convex_domain = {}
         if self.mode == F_HYBRID.name:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:7]
         if self.mode == F_FORWARD.name:
@@ -146,7 +152,7 @@ class BackwardMaxPooling2D(Layer):
         strides,
         padding,
         data_format,
-        convex_domain={},
+        convex_domain=None,
         slope=V_slope.name,
     ):
         """
@@ -159,6 +165,8 @@ class BackwardMaxPooling2D(Layer):
         :return:
         """
 
+        if convex_domain is None:
+            convex_domain = {}
         if self.mode == F_HYBRID.name:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:7]
         if self.mode == F_FORWARD.name:

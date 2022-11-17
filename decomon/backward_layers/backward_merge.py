@@ -48,7 +48,7 @@ class BackwardAdd(BackwardMerge):
         slope=V_slope.name,
         previous=True,
         mode=F_HYBRID.name,
-        convex_domain={},
+        convex_domain=None,
         finetune=False,
         input_dim=-1,
         **kwargs,
@@ -56,6 +56,8 @@ class BackwardAdd(BackwardMerge):
         super(BackwardAdd, self).__init__(**kwargs)
         # if not isinstance(layer, DecomonAdd):
         #    raise KeyError()
+        if convex_domain is None:
+            convex_domain = {}
         self.layer = layer
         self.slope = slope
         if hasattr(self.layer, "mode"):
@@ -192,13 +194,15 @@ class BackwardAverage(BackwardMerge):
         slope=V_slope.name,
         previous=True,
         mode=F_HYBRID.name,
-        convex_domain={},
+        convex_domain=None,
         finetune=False,
         input_dim=-1,
         **kwargs,
     ):
         super(BackwardAverage, self).__init__(**kwargs)
 
+        if convex_domain is None:
+            convex_domain = {}
         self.layer = layer
         self.slope = slope
         if hasattr(self.layer, "mode"):

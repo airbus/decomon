@@ -11,19 +11,33 @@ from ..backward.utils import merge_with_previous
 
 def crown_(
     node,
-    backward_bounds=[],
-    forward_init=[],
-    log_bounds=dict(),
-    log_layers={},
-    convex_domain={},
-    dico_grid={},
-    slope_grid={},
+    backward_bounds=None,
+    forward_init=None,
+    log_bounds=None,
+    log_layers=None,
+    convex_domain=None,
+    dico_grid=None,
+    slope_grid=None,
     update_slope=False,
     reuse_slope=True,
     joint=False,
     rec=1,
 ):
 
+    if backward_bounds is None:
+        backward_bounds = []
+    if forward_init is None:
+        forward_init = []
+    if log_bounds is None:
+        log_bounds = dict()
+    if log_layers is None:
+        log_layers = {}
+    if convex_domain is None:
+        convex_domain = {}
+    if dico_grid is None:
+        dico_grid = {}
+    if slope_grid is None:
+        slope_grid = {}
     previous = bool(len(backward_bounds))
 
     params_key = "{}_{}".format(node.outbound_layer.name, rec)
@@ -133,16 +147,28 @@ def crown_(
 
 def crown_old(
     node,
-    backward_bounds=[],
-    forward_init=[],
-    log_bounds=dict(),
-    convex_domain={},
-    dico_grid={},
-    slope_grid={},
+    backward_bounds=None,
+    forward_init=None,
+    log_bounds=None,
+    convex_domain=None,
+    dico_grid=None,
+    slope_grid=None,
     update_slope=False,
     reuse_slope=True,
     rec=1,
 ):
+    if backward_bounds is None:
+        backward_bounds = []
+    if forward_init is None:
+        forward_init = []
+    if log_bounds is None:
+        log_bounds = dict()
+    if convex_domain is None:
+        convex_domain = {}
+    if dico_grid is None:
+        dico_grid = {}
+    if slope_grid is None:
+        slope_grid = {}
     previous = bool(len(backward_bounds))
 
     params_key = "{}_{}".format(node.outbound_layer.name, rec)
@@ -222,16 +248,26 @@ def crown_old(
 
 def crown(
     model,
-    backward_bounds=[],
-    forward_init=[],
-    convex_domain={},
-    dico_grid={},
-    slope_grid={},
+    backward_bounds=None,
+    forward_init=None,
+    convex_domain=None,
+    dico_grid=None,
+    slope_grid=None,
     reuse_slope=False,
     update_slope=False,
     joint=False,
 ):
     # get nodes by depth
+    if backward_bounds is None:
+        backward_bounds = []
+    if forward_init is None:
+        forward_init = []
+    if convex_domain is None:
+        convex_domain = {}
+    if dico_grid is None:
+        dico_grid = {}
+    if slope_grid is None:
+        slope_grid = {}
     outputs_nodes = model._nodes_by_depth[0][0]
 
     if len(forward_init) == 1:
@@ -261,15 +297,21 @@ class NumpyModel(object):
         model,
         ibp=False,
         forward=True,
-        convex_domain={},
+        convex_domain=None,
         has_back_bounds=False,
-        dico_grid={},
-        slope_grid={},
+        dico_grid=None,
+        slope_grid=None,
         update_slope=False,
         reuse_slope=False,
         joint=False,
         **kwargs,
     ):
+        if convex_domain is None:
+            convex_domain = {}
+        if dico_grid is None:
+            dico_grid = {}
+        if slope_grid is None:
+            slope_grid = {}
         self.IBP = ibp
         self.forward = forward
         self.convex_domain = convex_domain
@@ -291,10 +333,10 @@ class NumpyCROWNModel(NumpyModel):
         model,
         ibp=False,
         forward=True,
-        convex_domain={},
+        convex_domain=None,
         has_back_bounds=False,
-        dico_grid={},
-        slope_grid={},
+        dico_grid=None,
+        slope_grid=None,
         update_slope=False,
         reuse_slope=False,
         joint=False,
@@ -313,6 +355,12 @@ class NumpyCROWNModel(NumpyModel):
             joint=joint,
             **kwargs,
         )
+        if convex_domain is None:
+            convex_domain = {}
+        if dico_grid is None:
+            dico_grid = {}
+        if slope_grid is None:
+            slope_grid = {}
 
     def predict(self, inputs):
         if not isinstance(inputs, list):

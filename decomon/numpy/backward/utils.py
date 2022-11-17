@@ -29,7 +29,9 @@ def get_upper_box(x, w, b):
     return np.sum(np.maximum(0.0, w) * x[:, 1, :, None], 1) + np.sum(np.minimum(0.0, w) * x[:, 0, :, None], 1) + b
 
 
-def get_lower(x, w, b, convex_domain={}):
+def get_lower(x, w, b, convex_domain=None):
+    if convex_domain is None:
+        convex_domain = {}
     if not len(convex_domain) or convex_domain["name"] in [Box.name, Grid.name]:
         return get_lower_box(x, w, b)
     else:
@@ -38,7 +40,9 @@ def get_lower(x, w, b, convex_domain={}):
         )
 
 
-def get_upper(x, w, b, convex_domain={}):
+def get_upper(x, w, b, convex_domain=None):
+    if convex_domain is None:
+        convex_domain = {}
     if not len(convex_domain) or convex_domain["name"] in [Box.name, Grid.name]:
         return get_upper_box(x, w, b)
     else:
@@ -47,17 +51,21 @@ def get_upper(x, w, b, convex_domain={}):
         )
 
 
-def get_linear_hull_relu(inputs, convex_domain, params=[], **kwargs):
+def get_linear_hull_relu(inputs, convex_domain, params=None, **kwargs):
 
+    if params is None:
+        params = []
     if len(convex_domain) and convex_domain["name"] == Grid.name:
         return get_linear_hull_relu_quantized(inputs, convex_domain=convex_domain, params=params, **kwargs)
     else:
         return get_linear_hull_relu_continuous(inputs, convex_domain=convex_domain, **kwargs)
 
 
-def get_linear_hull_relu_quantized(inputs, convex_domain, params=[], **kwargs):
+def get_linear_hull_relu_quantized(inputs, convex_domain, params=None, **kwargs):
 
     # compute upper, lower, A, B
+    if params is None:
+        params = []
     x, w_f_u, b_f_u, w_f_l, b_f_l = inputs[:5]
     # computer upper and lower bounds
 
@@ -397,8 +405,10 @@ def get_linear_lower_crown_old(upper, lower, A, B):
     return [w_l, b_l]
 
 
-def get_linear_hull_relu_continuous(inputs, convex_domain={}, **kwargs):
+def get_linear_hull_relu_continuous(inputs, convex_domain=None, **kwargs):
 
+    if convex_domain is None:
+        convex_domain = {}
     x, w_f_u, b_f_u, w_f_l, b_f_l = inputs[:5]
     # computer upper and lower bounds
     upper = get_upper(x, w_f_u, b_f_u, convex_domain)

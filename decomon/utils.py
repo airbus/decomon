@@ -257,7 +257,7 @@ def get_lower_ball(x_0, eps, p, w, b):
         return K.sum(w * x_0, 1) + lower
 
 
-def get_upper(x, w, b, convex_domain={}):
+def get_upper(x, w, b, convex_domain=None):
     """
     Meta function that aggregates all the way
     to compute a constant upper bounds depending on the convex domain
@@ -268,6 +268,8 @@ def get_upper(x, w, b, convex_domain={}):
     :return: a constant upper bound of the affine function
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if convex_domain is None or len(convex_domain) == 0:
         # box
         x_min = x[:, 0]
@@ -291,7 +293,7 @@ def get_upper(x, w, b, convex_domain={}):
     raise NotImplementedError()
 
 
-def get_lower(x, w, b, convex_domain={}):
+def get_lower(x, w, b, convex_domain=None):
     """
      Meta function that aggregates all the way
      to compute a constant lower bound depending on the convex domain
@@ -301,6 +303,8 @@ def get_lower(x, w, b, convex_domain={}):
     :param convex_domain: the type of convex domain (see ???)
     :return: a constant upper bound of the affine function
     """
+    if convex_domain is None:
+        convex_domain = {}
     if convex_domain is None or len(convex_domain) == 0:
 
         # box
@@ -327,14 +331,20 @@ def get_lower(x, w, b, convex_domain={}):
     raise NotImplementedError()
 
 
-def get_lower_layer(convex_domain={}):
+def get_lower_layer(convex_domain=None):
+    if convex_domain is None:
+        convex_domain = {}
+
     def func(inputs):
         return get_lower(inputs[0], inputs[1], inputs[2], convex_domain=convex_domain)
 
     return Lambda(func)
 
 
-def get_upper_layer(convex_domain={}):
+def get_upper_layer(convex_domain=None):
+    if convex_domain is None:
+        convex_domain = {}
+
     def func(inputs):
         return get_upper(inputs[0], inputs[1], inputs[2], convex_domain=convex_domain)
 
@@ -571,7 +581,7 @@ def get_linear_softplus_hull(upper, lower, slope, **kwargs):
     return [w_u_, b_u_, w_l_, b_l_]
 
 
-def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
+def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
     """
     LiRPA implementation of element-wise max
 
@@ -582,6 +592,8 @@ def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID
     :param convex_domain: the type of convex domain
     :return: maximum(inputs_0, inputs_1)
     """
+    if convex_domain is None:
+        convex_domain = {}
     output_0 = substract(inputs_1, inputs_0, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
     output_1 = relu_(
         output_0,
@@ -599,7 +611,7 @@ def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID
     )
 
 
-def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name):
+def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
     """
     LiRPA implementation of element-wise min
 
@@ -611,10 +623,12 @@ def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain={}, mode=F_HYBRID
     :return:
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     return minus(maximum(minus(inputs_0), minus(inputs_1), dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode))
 
 
-def get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+def get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     """
     Computing the linear hull of shape functions  given the pre activation neurons
 
@@ -626,6 +640,8 @@ def get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, convex_dom
     :return: the updated list of tensors
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     z_value = K.cast(0.0, dtype=x[0].dtype)
     o_value = K.cast(1.0, dtype=x[0].dtype)
     t_value = K.cast(2.0, dtype=x[0].dtype)
@@ -812,8 +828,10 @@ def get_t_lower(u_c_flat, l_c_flat, s_u, func=K.sigmoid, f_prime=sigmoid_prime):
     return [w_l, b_l]
 
 
-def set_mode(x, final_mode, mode, convex_domain={}):
+def set_mode(x, final_mode, mode, convex_domain=None):
 
+    if convex_domain is None:
+        convex_domain = {}
     if final_mode == mode:
         return x
 

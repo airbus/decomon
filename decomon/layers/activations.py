@@ -42,7 +42,9 @@ LINEAR = "linear"
 GROUP_SORT_2 = "GroupSort2"
 
 
-def relu(x, dc_decomp=False, convex_domain={}, alpha=0.0, max_value=None, threshold=0.0, mode=F_HYBRID.name, **kwargs):
+def relu(
+    x, dc_decomp=False, convex_domain=None, alpha=0.0, max_value=None, threshold=0.0, mode=F_HYBRID.name, **kwargs
+):
     """
 
     :param x: list of input tensors
@@ -57,6 +59,8 @@ def relu(x, dc_decomp=False, convex_domain={}, alpha=0.0, max_value=None, thresh
     :return: the updated list of tensors
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if threshold != 0:
         raise NotImplementedError()
 
@@ -72,7 +76,7 @@ def linear_hull_s_shape(
     func=K.sigmoid,
     f_prime=sigmoid_prime,
     dc_decomp=False,
-    convex_domain={},
+    convex_domain=None,
     mode=F_HYBRID.name,
 ):
     """
@@ -87,6 +91,8 @@ def linear_hull_s_shape(
     :return: the updated list of tensors
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -142,7 +148,7 @@ def linear_hull_s_shape(
     # TO DO linear relaxation
 
 
-def sigmoid(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+def sigmoid(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     """LiRPA for Sigmoid activation function .
     `1 / (1 + exp(-x))`.
 
@@ -155,12 +161,14 @@ def sigmoid(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
     :return: the updated list of tensors
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     func = K.sigmoid
     f_prime = sigmoid_prime
     return linear_hull_s_shape(x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def tanh(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+def tanh(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     """LiRPA for Hyperbolic activation function.
     `tanh(x)=2*sigmoid(2*x)+1`
 
@@ -173,12 +181,14 @@ def tanh(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
     :return: the updated list of tensors
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     func = K.tanh
     f_prime = tanh_prime
     return linear_hull_s_shape(x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def hard_sigmoid(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+def hard_sigmoid(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     """LiRPA for Hard sigmoid activation function.
        Faster to compute than sigmoid activation.
 
@@ -191,6 +201,8 @@ def hard_sigmoid(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwa
     :return: the updated list of tensors
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -198,7 +210,7 @@ def hard_sigmoid(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwa
     raise NotImplementedError()
 
 
-def elu(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+def elu(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     """LiRPA for Exponential linear unit.
 
     :param x: list of input tensors
@@ -210,6 +222,8 @@ def elu(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
     :return: the updated list of tensors
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -217,7 +231,7 @@ def elu(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
     raise NotImplementedError()
 
 
-def selu(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+def selu(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     """LiRPA for Scaled Exponential Linear Unit (SELU).
 
     SELU is equal to: `scale * elu(x, alpha)`, where alpha and scale
@@ -236,6 +250,8 @@ def selu(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
     :return: the updated list of tensors
 
     """
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -243,7 +259,7 @@ def selu(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
     raise NotImplementedError()
 
 
-def linear(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+def linear(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     """LiRPA foe Linear (i.e. identity) activation function.
 
     :param x: list of input tensors
@@ -255,10 +271,12 @@ def linear(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
     :return: the updated list of tensors
 
     """
+    if convex_domain is None:
+        convex_domain = {}
     return x
 
 
-def exponential(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+def exponential(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     """LiRPA for Exponential activation function.
 
     :param x: list of input tensors
@@ -271,10 +289,12 @@ def exponential(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwar
 
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     return exp(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, **kwargs)
 
 
-def softplus(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+def softplus(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     """LiRPA for Softplus activation function `log(exp(x) + 1)`.
 
     :param x: list of input tensors
@@ -286,6 +306,8 @@ def softplus(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs)
     :return: the updated list of tensors
 
     """
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -294,7 +316,7 @@ def softplus(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs)
     raise NotImplementedError()
 
 
-def softsign(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs):
+def softsign(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     """LiRPA for Softsign activation function `x / (abs(x) + 1)`.
 
     :param x: list of input tensors
@@ -307,12 +329,14 @@ def softsign(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, **kwargs)
 
     """
 
+    if convex_domain is None:
+        convex_domain = {}
     func = K.softsign
     f_prime = softsign_prime
     return linear_hull_s_shape(x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def softmax(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, clip=True, **kwargs):
+def softmax(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1, clip=True, **kwargs):
     """LiRPA for Softmax activation function.
 
     :param x: list of input tensors
@@ -324,6 +348,8 @@ def softmax(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, c
     :return: the updated list of tensors
 
     """
+    if convex_domain is None:
+        convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
 
@@ -355,8 +381,10 @@ def softmax(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, axis=-1, c
     raise NotImplementedError()
 
 
-def group_sort_2(x, dc_decomp=False, convex_domain={}, mode=F_HYBRID.name, data_format="channels_last", **kwargs):
+def group_sort_2(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, data_format="channels_last", **kwargs):
 
+    if convex_domain is None:
+        convex_domain = {}
     raise NotImplementedError()
 
     input_shape = x[-1].shape

@@ -38,13 +38,15 @@ class BackwardDense(Layer):
         slope=V_slope.name,
         previous=True,
         mode=F_HYBRID.name,
-        convex_domain={},
+        convex_domain=None,
         finetune=False,
         input_dim=-1,
         **kwargs,
     ):
         super(BackwardDense, self).__init__(**kwargs)
 
+        if convex_domain is None:
+            convex_domain = {}
         self.layer = layer
         self.activation = get(layer.get_config()["activation"])  # ??? not sur
         self.activation_name = layer.get_config()["activation"]
@@ -88,12 +90,14 @@ class BackwardGroupSort2(Layer):
         slope=V_slope.name,
         previous=True,
         mode=F_HYBRID.name,
-        convex_domain={},
+        convex_domain=None,
         finetune=False,
         input_dim=-1,
         **kwargs,
     ):
         super(BackwardGroupSort2, self).__init__(kwargs)
+        if convex_domain is None:
+            convex_domain = {}
         self.layer = layer
         self.slope = slope
         self.finetune = finetune
