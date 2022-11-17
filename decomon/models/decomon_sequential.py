@@ -1155,7 +1155,7 @@ def get_backward_model(model, back_bounds, input_model, slope=V_slope.name, opti
 
     name = [layer.name for layer in model.layers]
 
-    dico = dict([(l.name, []) for l in model.layers])
+    dico = {l.name: [] for l in model.layers}
     for l in model.layers:
         output_nodes = l.outbound_nodes
         for output_node in output_nodes:
