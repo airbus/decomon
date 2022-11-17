@@ -26,9 +26,6 @@ def bound_B(x_min, x_max, m, W_up, b_up, W_low, b_low, mask, solver=ORTOOLS):
 
     return bound_B_ortools(x_min, x_max, m, W_low, b_low, W_up, b_up, mask)
 
-    func = get(solver)
-    return -func(x_min, x_max, m, -W_low, -b_low, -W_up, -b_up)
-
 
 def deserialize(name):
     """Get the activation from name.
