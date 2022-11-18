@@ -124,7 +124,7 @@ def update_input(backward_bound, input_tensors, mode, output_shape, **kwargs):
 
             return w_out_u_, b_out_u_, w_out_l_, b_out_l_
 
-        lambda_ = Lambda(lambda var: func(var))
+        lambda_ = Lambda(func)
 
         w_out_u_, b_out_u_, w_out_l_, b_out_l_ = lambda_([w_u, b_u, w_l, b_l] + backward_bound)
         w_out_u_ = op_reshape_w(w_out_u_)
@@ -219,7 +219,7 @@ def fuse_backward_bounds(back_bounds_list, input_tensors, mode, **kwargs):
 
         return [w_u, b_u, w_l, b_l]
 
-    lambda_f = Lambda(lambda x: func(x))
+    lambda_f = Lambda(func)
     output = lambda_f(max_bounds + min_bounds)
     return output
 

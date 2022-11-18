@@ -1044,7 +1044,7 @@ def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, opti
 
             return [w_out_, b_out_, w_out_, b_out_]
 
-        lambda_backward = Lambda(lambda x: get_init_backward(x))
+        lambda_backward = Lambda(get_init_backward)
         back_bounds = lambda_backward(y_pred)
 
     back_bounds = list(get_backward_model(model, back_bounds, input_backward, slope=slope, options=options))

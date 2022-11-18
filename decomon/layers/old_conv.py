@@ -86,7 +86,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         if self.dc_decomp:
             self.input_spec += [InputSpec(min_ndim=4), InputSpec(min_ndim=4)]
 
-        self.diag_op = Lambda(lambda x: tf.linalg.diag(x))
+        self.diag_op = Lambda(tf.linalg.diag)
 
     def build(self, input_shape):
         """
