@@ -125,8 +125,6 @@ def check_input_tensors_sequential(
         if forward:
             b_u_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
             b_l_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
-
-        if forward:
             if input_dim_init > 0:
                 w_u_tensor = Input(tuple([input_dim] + input_shape), dtype=model.layers[0].dtype)
                 w_l_tensor = Input(tuple([input_dim] + input_shape), dtype=model.layers[0].dtype)
@@ -137,8 +135,6 @@ def check_input_tensors_sequential(
         if IBP:
             u_c_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
             l_c_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
-
-        if IBP:
             if forward:  # hybrid mode
                 input_tensors = [
                     z_tensor,
@@ -155,7 +151,7 @@ def check_input_tensors_sequential(
                     u_c_tensor,
                     l_c_tensor,
                 ]
-        else:
+        elif forward:
             # forward mode
             input_tensors = [
                 z_tensor,
@@ -164,6 +160,8 @@ def check_input_tensors_sequential(
                 w_l_tensor,
                 b_l_tensor,
             ]
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
         if dc_decomp:
             input_tensors += [h_tensor, g_tensor]
@@ -314,9 +312,9 @@ def convert_to_backward_bounds(mode, inputs, input_dim):
     if mode == F_HYBRID.name:
         _, _, w_u, b_u, _, w_l, b_l = inputs
         # reshaping !
-    if mode == F_FORWARD.name:
+    elif mode == F_FORWARD.name:
         _, w_u, b_u, w_l, b_l = inputs
-    if mode == F_IBP.name:
+    elif mode == F_IBP.name:
         u_c, l_c = inputs
         z_value = K.cast(0.0, u_c.dtype)
         n_out = np.prod(u_c.shape[1:])
@@ -324,7 +322,8 @@ def convert_to_backward_bounds(mode, inputs, input_dim):
         b_l = K.reshape(l_c, (-1, n_out))
         w_u = K.zeros((1, input_dim, 1)) + z_value * K.expand_dims(b_u, 1)
         w_l = K.zeros((1, input_dim, 1)) + z_value * K.expand_dims(b_l, 1)
-
+    else:
+        raise ValueError(f"Unknown mode {mode}")
     return w_u, b_u, w_l, b_l
 
 
@@ -386,51 +385,56 @@ def fuse_forward_backward(
         l_out_c = lower_layer([x_tensor, w_out_l, b_out_l])
 
         return [u_out_c, l_out_c]
+    elif mode in {F_FORWARD.name, F_HYBRID.name}:
+        if mode == F_FORWARD.name:
+            _, w_u, b_u, w_l, b_l = inputs
+        else:
+            _, _, w_u, b_u, _, w_l, b_l = inputs
 
-    if mode == F_HYBRID.name:
-        _, _, w_u, b_u, _, w_l, b_l = inputs
-    if mode == F_FORWARD.name:
-        _, w_u, b_u, w_l, b_l = inputs
+        def func(variables):
+            w_u, b_u, w_l, b_l, w_out_u, b_out_u, w_out_l, b_out_l = variables
+            if len(w_u.shape) == 2:
+                return w_out_u, b_out_u, w_out_l, b_out_l
+            z_value = K.cast(0.0, w_u.dtype)
+            w_u_ = K.reshape(w_u, [-1, w_u.shape[1], np.prod(w_u.shape[2:])])
+            w_l_ = K.reshape(w_l, [-1, w_l.shape[1], np.prod(w_l.shape[2:])])
+            b_u_ = K.reshape(b_u, [-1, np.prod(b_u.shape[1:])])
+            b_l_ = K.reshape(b_l, [-1, np.prod(b_l.shape[1:])])
 
-    def func(variables):
+            w_u_pos = K.maximum(w_out_u, z_value)
+            w_u_neg = K.minimum(w_out_u, z_value)
+            w_l_pos = K.maximum(w_out_l, z_value)
+            w_l_neg = K.minimum(w_out_l, z_value)
 
-        w_u, b_u, w_l, b_l, w_out_u, b_out_u, w_out_l, b_out_l = variables
-        if len(w_u.shape) == 2:
-            return w_out_u, b_out_u, w_out_l, b_out_l
-        z_value = K.cast(0.0, w_u.dtype)
-        w_u_ = K.reshape(w_u, [-1, w_u.shape[1], np.prod(w_u.shape[2:])])
-        w_l_ = K.reshape(w_l, [-1, w_l.shape[1], np.prod(w_l.shape[2:])])
-        b_u_ = K.reshape(b_u, [-1, np.prod(b_u.shape[1:])])
-        b_l_ = K.reshape(b_l, [-1, np.prod(b_l.shape[1:])])
+            w_out_u_ = K.sum(K.expand_dims(w_u_pos, 1) * K.expand_dims(w_u_, -1), 2) + K.sum(
+                K.expand_dims(w_u_neg, 1) * K.expand_dims(w_l_, -1), 2
+            )
+            w_out_l_ = K.sum(K.expand_dims(w_l_pos, 1) * K.expand_dims(w_l_, -1), 2) + K.sum(
+                K.expand_dims(w_l_neg, 1) * K.expand_dims(w_u_, -1), 2
+            )
 
-        w_u_pos = K.maximum(w_out_u, z_value)
-        w_u_neg = K.minimum(w_out_u, z_value)
-        w_l_pos = K.maximum(w_out_l, z_value)
-        w_l_neg = K.minimum(w_out_l, z_value)
+            b_out_u_ = (
+                K.sum(w_u_pos * K.expand_dims(b_u_, -1), 1) + K.sum(w_u_neg * K.expand_dims(b_l_, -1), 1) + b_out_u
+            )
+            b_out_l_ = (
+                K.sum(w_l_pos * K.expand_dims(b_l_, -1), 1) + K.sum(w_l_neg * K.expand_dims(b_u_, -1), 1) + b_out_l
+            )
 
-        w_out_u_ = K.sum(K.expand_dims(w_u_pos, 1) * K.expand_dims(w_u_, -1), 2) + K.sum(
-            K.expand_dims(w_u_neg, 1) * K.expand_dims(w_l_, -1), 2
-        )
-        w_out_l_ = K.sum(K.expand_dims(w_l_pos, 1) * K.expand_dims(w_l_, -1), 2) + K.sum(
-            K.expand_dims(w_l_neg, 1) * K.expand_dims(w_u_, -1), 2
-        )
+            return w_out_u_, b_out_u_, w_out_l_, b_out_l_
 
-        b_out_u_ = K.sum(w_u_pos * K.expand_dims(b_u_, -1), 1) + K.sum(w_u_neg * K.expand_dims(b_l_, -1), 1) + b_out_u
-        b_out_l_ = K.sum(w_l_pos * K.expand_dims(b_l_, -1), 1) + K.sum(w_l_neg * K.expand_dims(b_u_, -1), 1) + b_out_l
+        lambda_ = Lambda(func, dtype=w_u.dtype)
 
-        return w_out_u_, b_out_u_, w_out_l_, b_out_l_
+        w_out_u_, b_out_u_, w_out_l_, b_out_l_ = lambda_([w_u, b_u, w_l, b_l] + back_bounds)
 
-    lambda_ = Lambda(func, dtype=w_u.dtype)
+        if mode == F_FORWARD.name:
+            return [inputs[0], w_out_u_, b_out_u_, w_out_l_, b_out_l_]
+        else:
+            u_out_c = upper_layer([x_tensor, w_out_u_, b_out_u_])
+            l_out_c = lower_layer([x_tensor, w_out_l_, b_out_l_])
 
-    w_out_u_, b_out_u_, w_out_l_, b_out_l_ = lambda_([w_u, b_u, w_l, b_l] + back_bounds)
-
-    if mode == F_FORWARD.name:
-        return [inputs[0], w_out_u_, b_out_u_, w_out_l_, b_out_l_]
-
-    u_out_c = upper_layer([x_tensor, w_out_u_, b_out_u_])
-    l_out_c = lower_layer([x_tensor, w_out_l_, b_out_l_])
-
-    return [inputs[0], u_out_c, w_out_u_, b_out_u_, l_out_c, w_out_l_, b_out_l_]
+            return [inputs[0], u_out_c, w_out_u_, b_out_u_, l_out_c, w_out_l_, b_out_l_]
+    else:
+        raise ValueError(f"Unknown mode {mode}")
 
 
 def pre_process_inputs(input_layer_, mode, **kwargs):
@@ -438,7 +442,7 @@ def pre_process_inputs(input_layer_, mode, **kwargs):
     if mode == F_IBP.name:
         return input_layer_
     # convert input_layer_ according
-    if mode in [F_HYBRID.name, F_FORWARD.name]:
+    elif mode in {F_HYBRID.name, F_FORWARD.name}:
         if "upper_layer" in kwargs:
             upper_layer = kwargs["upper_layer"]
             lower_layer = kwargs["lower_layer"]
@@ -451,41 +455,46 @@ def pre_process_inputs(input_layer_, mode, **kwargs):
             upper_layer = get_upper_layer(convex_domain)
             lower_layer = get_lower_layer(convex_domain)
 
-    if mode == F_FORWARD.name:
-        x, w_u, b_u, w_l, b_l = input_layer_
-        u_c_out, l_c_out = [upper_layer([x, w_u, b_u]), lower_layer([x, w_u, b_u])]
+        if mode == F_FORWARD.name:
+            x, w_u, b_u, w_l, b_l = input_layer_
+            u_c_out, l_c_out = [upper_layer([x, w_u, b_u]), lower_layer([x, w_u, b_u])]
 
-    if mode == F_HYBRID.name:
-        x, u_c, w_u, b_u, l_c, w_l, b_l = input_layer_
-        u_c_out, l_c_out = [Minimum()([u_c, upper_layer([x, w_u, b_u])]), Maximum()([l_c, lower_layer([x, w_u, b_u])])]
+        else:
+            x, u_c, w_u, b_u, l_c, w_l, b_l = input_layer_
+            u_c_out, l_c_out = [
+                Minimum()([u_c, upper_layer([x, w_u, b_u])]),
+                Maximum()([l_c, lower_layer([x, w_u, b_u])]),
+            ]
 
-    if "flatten" in kwargs:
-        op_flatten = kwargs["flatten"]
+        if "flatten" in kwargs:
+            op_flatten = kwargs["flatten"]
+        else:
+            op_flatten = Flatten()
+
+        u_c_out_flatten = op_flatten(u_c_out)
+        l_c_out_flatten = op_flatten(l_c_out)
+
+        if "concatenate" in kwargs:
+            op_concat = kwargs["concatenate"]
+        else:
+            op_concat = Concatenate(axis=1)
+
+        x_ = op_concat([l_c_out_flatten[:, None], u_c_out_flatten[:, None]])
+        z_value = K.cast(0.0, u_c_out.dtype)
+
+        def func_create_weights(z):
+            return tf.linalg.diag(z_value * z)
+
+        init_weights = Lambda(func_create_weights, dtype=u_c_out.dtype)
+
+        if mode == F_FORWARD.name:
+            input_model = [x_, init_weights(u_c_out), u_c_out, init_weights(l_c_out), l_c_out]
+        else:
+            input_model = [x_, u_c_out, init_weights(u_c_out), u_c_out, l_c_out, init_weights(l_c_out), l_c_out]
+
+        return input_model
     else:
-        op_flatten = Flatten()
-
-    u_c_out_flatten = op_flatten(u_c_out)
-    l_c_out_flatten = op_flatten(l_c_out)
-
-    if "concatenate" in kwargs:
-        op_concat = kwargs["concatenate"]
-    else:
-        op_concat = Concatenate(axis=1)
-
-    x_ = op_concat([l_c_out_flatten[:, None], u_c_out_flatten[:, None]])
-    z_value = K.cast(0.0, u_c_out.dtype)
-
-    def func_create_weights(z):
-        return tf.linalg.diag(z_value * z)
-
-    init_weights = Lambda(func_create_weights, dtype=u_c_out.dtype)
-
-    if mode == F_FORWARD.name:
-        input_model = [x_, init_weights(u_c_out), u_c_out, init_weights(l_c_out), l_c_out]
-    if mode == F_HYBRID.name:
-        input_model = [x_, u_c_out, init_weights(u_c_out), u_c_out, l_c_out, init_weights(l_c_out), l_c_out]
-
-    return input_model
+        raise ValueError(f"Unknown mode {mode}")
 
 
 def get_depth_dict(model):
@@ -554,7 +563,7 @@ def convert_2_mode(mode_from, mode_to, convex_domain, dtype=K.floatx()):
 
         if mode_from in [F_FORWARD.name, F_HYBRID.name]:
             x_0 = inputs_[0]
-        else:
+        elif mode_from == F_IBP.name:
             u_c, l_c = inputs_
             if mode_to in [F_FORWARD.name, F_HYBRID.name]:
                 x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
@@ -566,22 +575,29 @@ def convert_2_mode(mode_from, mode_to, convex_domain, dtype=K.floatx()):
                 b_u = b
                 w_l = w
                 b_l = b
+            else:
+                raise ValueError(f"Unknown mode {mode_to}")
+        else:
+            raise ValueError(f"Unknown mode {mode_from}")
 
         if mode_from == F_FORWARD.name:
             _, w_u, b_u, w_l, b_l = inputs_
             if mode_to in [F_IBP.name, F_HYBRID.name]:
                 u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
                 l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
-        if mode_from == F_IBP.name:
+        elif mode_from == F_IBP.name:
             u_c, l_c = inputs_
-        if mode_from == F_HYBRID.name:
+        elif mode_from == F_HYBRID.name:
             _, u_c, w_u, b_u, l_c, w_l, b_l = inputs_
+        else:
+            raise ValueError(f"Unknown mode {mode_from}")
 
         if mode_to == F_IBP.name:
             return [u_c, l_c]
-        if mode_to == F_FORWARD.name:
+        elif mode_to == F_FORWARD.name:
             return [x_0, w_u, b_u, w_l, b_l]
-        if mode_to == F_HYBRID.name:
+        elif mode_to == F_HYBRID.name:
             return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
+        raise ValueError(f"Unknown mode {mode_to}")
 
     return Lambda(get_2_mode_priv, dtype=dtype)

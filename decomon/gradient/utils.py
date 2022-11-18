@@ -26,6 +26,8 @@ def gradient_relu(inputs, dc_decomp=False, mode=F_HYBRID.name, convex_domain=Non
     elif mode == F_FORWARD.name:
         # y, x_0, w_u, b_u, w_l, b_l = x[:6]
         x_0, w_u, b_u, w_l, b_l = x[:nb_tensors]
+    else:
+        raise ValueError(f"Unknown mode {mode}")
 
     if mode == F_FORWARD.name:
         upper = get_upper(x_0, w_u, b_u, convex_domain)

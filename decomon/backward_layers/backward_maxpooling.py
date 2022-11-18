@@ -111,15 +111,15 @@ class BackwardMaxPooling2D(Layer):
             convex_domain = {}
         if self.mode == F_HYBRID.name:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:7]
-        if self.mode == F_FORWARD.name:
+        elif self.mode == F_FORWARD.name:
             x_0, w_u, b_u, w_l, b_l = inputs[:5]
-        if self.mode == F_IBP.name:
-            u_c, l_c = inputs[:2]
-
-        if self.mode == F_FORWARD.name:
-
             u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
             l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
+        elif self.mode == F_IBP.name:
+            u_c, l_c = inputs[:2]
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
+
         op_flat = Flatten()
 
         b_u_ = K.pool2d(u_c, pool_size, strides, padding, data_format, pool_mode="max")
@@ -169,10 +169,14 @@ class BackwardMaxPooling2D(Layer):
             convex_domain = {}
         if self.mode == F_HYBRID.name:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:7]
-        if self.mode == F_FORWARD.name:
+        elif self.mode == F_FORWARD.name:
             x_0, w_u, b_u, w_l, b_l = inputs[:5]
-        if self.mode == F_IBP.name:
+            u_c, l_c = 0, 0
+        elif self.mode == F_IBP.name:
             u_c, l_c = inputs[:2]
+            b_u, w_l, b_l, w_u = 0, 0, 0, 0
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
 
         y = inputs[-1]
 
@@ -185,6 +189,9 @@ class BackwardMaxPooling2D(Layer):
 
         y_list_ = [self.internal_op(elem) for elem in tf.split(y, input_shape[axis], axis)]
         y_list = K.concatenate(y_list_, -2)
+
+        # initialize vars
+        x_0, u_c_list, w_u_list, b_u_list, l_c_list, w_l_list, b_l_list = None, None, None, None, None, None, None
 
         if self.mode in [F_IBP.name, F_HYBRID.name]:
             u_c_list = K.concatenate([self.internal_op(elem) for elem in tf.split(u_c, input_shape[-1], -1)], -2)
@@ -202,7 +209,7 @@ class BackwardMaxPooling2D(Layer):
                 u_c_list,
                 l_c_list,
             ]
-        if self.mode == F_HYBRID.name:
+        elif self.mode == F_HYBRID.name:
             output_list = [
                 x_0,
                 u_c_list,
@@ -212,7 +219,7 @@ class BackwardMaxPooling2D(Layer):
                 w_l_list,
                 b_l_list,
             ]
-        if self.mode == F_FORWARD.name:
+        elif self.mode == F_FORWARD.name:
             output_list = [
                 x_0,
                 u_c_list,
@@ -222,6 +229,8 @@ class BackwardMaxPooling2D(Layer):
                 w_l_list,
                 b_l_list,
             ]
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
 
         w_out_u, b_out_u, w_out_l, b_out_l = backward_max_(
             output_list,

@@ -192,10 +192,12 @@ def get_adv_brightness(
 
     if IBP and forward:
         _, z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = output[:8]
-    if not IBP and forward:
+    elif not IBP and forward:
         _, z, w_u_f, b_u_f, w_l_f, b_l_f = output[:6]
-    if IBP and not forward:
+    elif IBP and not forward:
         _, z, u_c, l_c = output[:4]
+    else:
+        raise NotImplementedError("not IBP and not forward not implemented")
 
     if IBP:
         adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels)
@@ -216,10 +218,12 @@ def get_adv_brightness(
 
     if IBP and not forward:
         adv_score = adv_ibp
-    if IBP and forward:
+    elif IBP and forward:
         adv_score = np.minimum(adv_ibp, adv_f)
-    if not IBP and forward:
+    elif not IBP and forward:
         adv_score = adv_f
+    else:
+        raise NotImplementedError("not IBP and not forward not implemented")
 
     if mode == "backward":
         w_u_b, b_u_b, w_l_b, b_l_b = output[-4:]

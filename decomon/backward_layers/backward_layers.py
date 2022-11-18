@@ -104,8 +104,6 @@ class BackwardDense(BackwardLayer):
 
         # start with the activation: determine the upper and lower bounds before the weights
         weights = self.layer.kernel
-        if self.layer.use_bias:
-            bias = self.layer.bias
 
         if self.activation_name != "linear":
             # here update x
@@ -145,6 +143,7 @@ class BackwardDense(BackwardLayer):
             w_out_l = tf.linalg.diag(w_out_l)
 
         if self.layer.use_bias:
+            bias = self.layer.bias
             bias = K.expand_dims(K.expand_dims(bias, 0), -1)  # (None, n_out, 1)
             b_out_u_ = K.sum(w_out_u * bias, 1) + b_out_u  # (None, n_back)
             b_out_l_ = K.sum(w_out_l * bias, 1)
@@ -168,8 +167,6 @@ class BackwardDense(BackwardLayer):
 
         # start with the activation: determine the upper and lower bounds before the weights
         weights = self.layer.kernel
-        if self.layer.use_bias:
-            bias = self.layer.bias
         if self.activation_name != "linear":
             # here update x
             x = self.layer.call_linear(x_)
@@ -220,7 +217,7 @@ class BackwardDense(BackwardLayer):
                 w_out_l = tf.linalg.diag(w_out_l)
             weights = K.expand_dims(K.expand_dims(weights, 0), -1)  # (1, n_in, n_out, 1)
             if self.layer.use_bias:
-
+                bias = self.layer.bias
                 bias = K.expand_dims(K.expand_dims(bias, 0), -1)  # (None, n_out, 1)
                 b_out_u_ = K.sum(w_out_u * bias, 1) + b_out_u  # (None, n_back)
                 b_out_l_ = K.sum(w_out_l * bias, 1) + b_out_l
@@ -238,6 +235,7 @@ class BackwardDense(BackwardLayer):
             z_value = K.cast(0.0, self.dtype)
             w_out_u_, w_out_l_ = [weights[None] + z_value * K.expand_dims(y_, -1)] * 2
             if self.layer.use_bias:
+                bias = self.layer.bias
                 b_out_u_, b_out_l_ = [bias[None] + z_value * w_out_u_[:, 0]] * 2  # not sure....
             else:
                 b_out_u_, b_out_l_ = [z_value * w_out_u_[:, 0]] * 2

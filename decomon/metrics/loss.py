@@ -33,7 +33,7 @@ def get_model(model):
 
         output_ = Lambda(func)(output)
 
-    if mode == F_FORWARD.name:
+    elif mode == F_FORWARD.name:
 
         def func(output_):
             x_0, w_u, b_u, w_l, b_l = output_
@@ -52,7 +52,7 @@ def get_model(model):
 
         output_ = Lambda(func)(output)
 
-    if mode == F_HYBRID.name:
+    elif mode == F_HYBRID.name:
 
         def func(output_):
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = output_
@@ -76,6 +76,9 @@ def get_model(model):
             return K.concatenate([x_0_, w_b_u_l], -1)  # (None, n_in+1, n_comp+2*n_out)
 
         output_ = Lambda(func)(output)
+
+    else:
+        raise ValueError(f"Unknown mode {mode}")
 
     return DecomonModel(
         input=inputs,
@@ -118,7 +121,7 @@ def get_upper_loss(model):
         if mode == F_IBP.name:
             u_c = y_pred[:, :, 0]
 
-        if mode == F_FORWARD.name:
+        elif mode == F_FORWARD.name:
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-1, :n_comp], (0, 2, 1))
             else:
@@ -127,7 +130,7 @@ def get_upper_loss(model):
             w_u = y_pred[:, :-1, n_comp : n_comp + n_out]
             b_u = y_pred[:, -1, n_comp : n_comp + n_out]
 
-        if mode == F_HYBRID.name:
+        elif mode == F_HYBRID.name:
 
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-2, :n_comp], (0, 2, 1))
@@ -138,6 +141,9 @@ def get_upper_loss(model):
             b_u = y_pred[:, -2, n_comp : n_comp + n_out]
             u_c = y_pred[:, -1, n_comp : n_comp + n_out]
 
+        else:
+            raise ValueError(f"Unknown mode {mode}")
+
         if IBP:
             score_ibp = upper_ibp(u_c, y_true)
         if forward:
@@ -145,9 +151,9 @@ def get_upper_loss(model):
 
         if mode == F_IBP.name:
             return K.mean(score_ibp)
-        if mode == F_FORWARD.name:
+        elif mode == F_FORWARD.name:
             return K.mean(score_forward)
-        if mode == F_HYBRID.name:
+        elif mode == F_HYBRID.name:
             return K.mean(K.minimum(score_ibp, score_forward))
 
         raise NotImplementedError()
@@ -186,7 +192,7 @@ def get_lower_loss(model):
         if mode == F_IBP.name:
             l_c = y_pred[:, :, 1]
 
-        if mode == F_FORWARD.name:
+        elif mode == F_FORWARD.name:
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-1, :n_comp], (0, 2, 1))
             else:
@@ -195,7 +201,7 @@ def get_lower_loss(model):
             w_l = y_pred[:, :-1, n_comp + n_out :]
             b_l = y_pred[:, -1, n_comp + n_out :]
 
-        if mode == F_HYBRID.name:
+        elif mode == F_HYBRID.name:
 
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-2, :n_comp], (0, 2, 1))
@@ -206,6 +212,9 @@ def get_lower_loss(model):
             b_l = y_pred[:, -2, n_comp + n_out :]
             l_c = y_pred[:, -1, n_comp + n_out :]
 
+        else:
+            raise ValueError(f"Unknown mode {mode}")
+
         if IBP:
             score_ibp = lower_ibp(l_c, y_true)
         if forward:
@@ -213,9 +222,9 @@ def get_lower_loss(model):
 
         if mode == F_IBP.name:
             return K.mean(score_ibp)
-        if mode == F_FORWARD.name:
+        elif mode == F_FORWARD.name:
             return K.mean(score_forward)
-        if mode == F_HYBRID.name:
+        elif mode == F_HYBRID.name:
             return K.mean(K.minimum(score_ibp, score_forward))
 
         raise NotImplementedError()
@@ -282,7 +291,7 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
             if softmax:
                 u_c, l_c = softmax_([u_c, l_c], mode=mode, convex_domain=convex_domain, clip=False)
 
-        if mode == F_FORWARD.name:
+        elif mode == F_FORWARD.name:
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-1, :n_comp], (0, 2, 1))
             else:
@@ -298,7 +307,7 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
                     [x_0, w_u, b_u, w_l, b_l], mode=mode, convex_domain=convex_domain, clip=False
                 )
 
-        if mode == F_HYBRID.name:
+        elif mode == F_HYBRID.name:
 
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-2, :n_comp], (0, 2, 1))
@@ -316,6 +325,9 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
                 [x_0, u_c, w_u, b_u, l_c, w_l, b_l], mode=mode, convex_domain=convex_domain, clip=False
             )
 
+        else:
+            raise ValueError(f"Unknown mode {mode}")
+
         if IBP:
             score_ibp = adv_ibp(u_c, l_c, y_true)
             if clip_value is not None:
@@ -330,12 +342,12 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
                 return K.mean(K.sigmoid(score_ibp))
             else:
                 return K.mean(score_ibp)
-        if mode == F_FORWARD.name:
+        elif mode == F_FORWARD.name:
             if sigmoid:
                 return K.mean(K.sigmoid(score_forward))
             else:
                 return K.mean(score_forward)
-        if mode == F_HYBRID.name:
+        elif mode == F_HYBRID.name:
             if sigmoid:
                 return K.mean(K.sigmoid(K.minimum(score_ibp, score_forward)))
             else:

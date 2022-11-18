@@ -5,14 +5,11 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 
-def get_linear_lower_slope_relu(upper, lower, upper_g_, lower_g_, **kwargs):
+def get_linear_lower_slope_relu(upper, lower, upper_g_: tf.Variable, lower_g_: tf.Variable, **kwargs):
 
     # test the nature of A and B (variable or tensor)
-    if isinstance(upper_g_, tf.Variable):
-        # import pdb; pdb.set_trace()
-        upper_g = 0.0 * upper + upper_g_
-    if isinstance(lower_g_, tf.Variable):
-        lower_g = 0.0 * upper + lower_g_
+    upper_g = 0.0 * upper + upper_g_
+    lower_g = 0.0 * upper + lower_g_
 
     A = K.minimum(upper_g, 0.0)
     B = K.maximum(lower_g, 0.0)

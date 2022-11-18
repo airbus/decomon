@@ -83,12 +83,14 @@ def backward_relu(
             nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
             if mode == F_IBP.name:
                 upper, lower = x[:nb_tensors]
-            if mode == F_FORWARD.name:
+            elif mode == F_FORWARD.name:
                 z_, w_u_, b_u_, w_l_, b_l_ = x[:nb_tensors]
                 upper = get_upper(z_, w_u_, b_u_)
                 lower = get_lower(z_, w_l_, b_l_)
-            if mode == F_HYBRID.name:
+            elif mode == F_HYBRID.name:
                 _, upper, _, _, lower, _, _ = x[:nb_tensors]
+            else:
+                raise ValueError(f"Unknown mode {mode}")
             bounds = get_linear_hull_relu(upper, lower, slope=slope, **kwargs)
             shape = np.prod(x[-1].shape[1:])
             bounds = [K.reshape(elem, (-1, shape)) for elem in bounds]
@@ -141,12 +143,14 @@ def backward_sigmoid(
 
         if mode == F_IBP.name:
             upper, lower = inputs[:nb_tensors]
-        if mode == F_FORWARD.name:
+        elif mode == F_FORWARD.name:
             z_, w_u_, b_u_, w_l_, b_l_ = inputs[:nb_tensors]
             upper = get_upper(z_, w_u_, b_u_)
             lower = get_lower(z_, w_l_, b_l_)
-        if mode == F_HYBRID.name:
+        elif mode == F_HYBRID.name:
             _, upper, _, _, lower, _, _ = inputs[:nb_tensors]
+        else:
+            raise ValueError(f"Unknown mode {mode}")
         return get_linear_hull_sigmoid(upper, lower, slope=slope, **kwargs)
 
 
@@ -176,11 +180,6 @@ def backward_tanh(
         )
 
         # here balance the results for convex linear relaxations
-        w_u_ = K.expand_dims(K.expand_dims(w_u_, 1), -1)
-        w_l_ = K.expand_dims(K.expand_dims(w_l_, 1), -1)
-        b_u_ = K.expand_dims(K.expand_dims(b_u_, 1), -1)
-        b_l_ = K.expand_dims(K.expand_dims(b_l_, 1), -1)
-
         w_u_0 = K.expand_dims(K.expand_dims(w_u_0, 1), -1)
         w_l_0 = K.expand_dims(K.expand_dims(w_l_0, 1), -1)
         b_u_0 = K.expand_dims(K.expand_dims(b_u_0, 1), -1)
@@ -197,12 +196,14 @@ def backward_tanh(
 
         if mode == F_IBP.name:
             upper, lower = inputs[:nb_tensors]
-        if mode == F_FORWARD.name:
+        elif mode == F_FORWARD.name:
             z_, w_u_, b_u_, w_l_, b_l_ = inputs[:nb_tensors]
             upper = get_upper(z_, w_u_, b_u_)
             lower = get_lower(z_, w_l_, b_l_)
-        if mode == F_HYBRID.name:
+        elif mode == F_HYBRID.name:
             _, upper, _, _, lower, _, _ = inputs[:nb_tensors]
+        else:
+            raise ValueError(f"Unknown mode {mode}")
         return get_linear_hull_tanh(upper, lower, slope=slope, **kwargs)
 
 
@@ -342,12 +343,14 @@ def backward_softplus(
 
         if mode == F_IBP.name:
             upper, lower = x[:nb_tensors]
-        if mode == F_FORWARD.name:
+        elif mode == F_FORWARD.name:
             z_, w_u_, b_u_, w_l_, b_l_ = x[:nb_tensors]
             upper = get_upper(z_, w_u_, b_u_)
             lower = get_lower(z_, w_l_, b_l_)
-        if mode == F_HYBRID.name:
+        elif mode == F_HYBRID.name:
             _, upper, _, _, lower, _, _ = x[:nb_tensors]
+        else:
+            raise ValueError(f"Unknown mode {mode}")
         return get_linear_hull_softplus(upper, lower, slope=slope, **kwargs)
 
 

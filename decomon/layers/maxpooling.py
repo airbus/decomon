@@ -123,25 +123,23 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
 
         output_shape_ = super().compute_output_shape(input_shape[0])
         input_dim = input_shape[-1][1]
-        if self.mode in [F_HYBRID.name, F_FORWARD.name]:
-            x_shape = input_shape[1]
-
-        output_shape = []
         if self.mode == F_IBP.name:
             # output_shape = [output_shape_, input_shape[2:3], output_shape_, output_shape_]
             output_shape = [output_shape_] * 2
-        if self.mode in [F_HYBRID.name, F_FORWARD.name]:
-
+        elif self.mode in [F_HYBRID.name, F_FORWARD.name]:
+            x_shape = input_shape[1]
             w_shape_ = tuple([output_shape_[0], input_dim] + list(output_shape_)[1:])
             if self.mode == F_FORWARD.name:
                 # output_shape = [output_shape_, input_shape[2:3], w_shape_, output_shape_, w_shape_, output_shape_]
                 output_shape = [x_shape] + [w_shape_, output_shape_] * 2
-            if self.mode == F_HYBRID.name:
+            else:
                 # output_shape = [output_shape_,input_shape[2:3],output_shape_,w_shape_,output_shape_,output_shape_,
                 #    w_shape_,
                 #    output_shape_,
                 # ]
                 output_shape = [x_shape] + [output_shape_, w_shape_, output_shape_] * 2
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
 
         if self.dc_decomp:
             output_shape += [output_shape_] * 2
@@ -156,14 +154,14 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
         if mode == F_HYBRID.name:
             # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:8]
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: self.nb_tensors]
-
-        if mode == F_FORWARD.name:
+        elif mode == F_FORWARD.name:
             # y, x_0, w_u, b_u, w_l, b_l = inputs[:6]
             x_0, w_u, b_u, w_l, b_l = inputs[: self.nb_tensors]
-        if mode == F_IBP.name:
+        elif mode == F_IBP.name:
             # y, x_0, u_c, l_c = inputs[:4]
             u_c, l_c = inputs[: self.nb_tensors]
-
+        else:
+            raise ValueError(f"Unknown mode {mode}")
         # y_ = K.pool2d(y, pool_size, strides, padding, data_format, pool_mode="max")
 
         if mode in [F_IBP.name, F_HYBRID.name]:
@@ -188,7 +186,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
         if mode == F_IBP.name:
             # output = [y_,x_0,u_c_,l_c_,]
             output = [u_c_, l_c_]
-        if mode == F_HYBRID.name:
+        elif mode == F_HYBRID.name:
             # output = [y_,x_0,u_c_,w_u_,b_u_,l_c_,w_l_,b_l_,]
             output = [
                 x_0,
@@ -199,7 +197,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
                 w_l_,
                 b_l_,
             ]
-        if mode == F_FORWARD.name:
+        elif mode == F_FORWARD.name:
             # output = [y_,x_0,w_u_,b_u_,w_l_,b_l_,]
             output = [
                 x_0,
@@ -208,7 +206,8 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
                 w_l_,
                 b_l_,
             ]
-
+        else:
+            raise ValueError(f"Unknown mode {mode}")
         return output
 
     def _pooling_function_not_fast(self, inputs, pool_size, strides, padding, data_format, mode):
@@ -220,12 +219,14 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
         if mode == F_HYBRID.name:
             # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:8]
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
-        if mode == F_FORWARD.name:
+        elif mode == F_FORWARD.name:
             # y, x_0, w_u, b_u, w_l, b_l = inputs[:6]
             x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
-        if mode == F_IBP.name:
+        elif mode == F_IBP.name:
             # y, x_0, u_c, l_c = inputs[:4]
             u_c, l_c = inputs[:nb_tensors]
+        else:
+            raise ValueError(f"Unknown mode {mode}")
 
         # y_ = K.pool2d(inputs[-1], pool_size, strides, padding, data_format, pool_mode="max")
         input_shape = K.int_shape(inputs[-1])
@@ -262,7 +263,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
         if mode == F_IBP.name:
             # output_list = [y_list,x_0,u_c_list,l_c_list,]
             output_list = [u_c_list, l_c_list]
-        if mode == F_HYBRID.name:
+        elif mode == F_HYBRID.name:
             # output_list = [y_list,x_0,u_c_list,w_u_list,b_u_list,
             #    l_c_list,w_l_list,b_l_list,]
             output_list = [
@@ -274,7 +275,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
                 w_l_list,
                 b_l_list,
             ]
-        if mode == F_FORWARD.name:
+        elif mode == F_FORWARD.name:
             # output_list = [y_list,x_0,w_u_list,b_u_list,w_l_list,b_l_list,]
             output_list = [
                 x_0,
@@ -283,7 +284,8 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
                 w_l_list,
                 b_l_list,
             ]
-
+        else:
+            raise ValueError(f"Unknown mode {mode}")
         if self.dc_decomp:
             output_list += [h_list, g_list]
 
