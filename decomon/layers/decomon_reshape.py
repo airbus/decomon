@@ -21,7 +21,7 @@ class DecomonReshape(Reshape, DecomonLayer):
         :param kwargs:
 
         """
-        super(DecomonReshape, self).__init__(target_shape=target_shape, mode=mode, **kwargs)
+        super().__init__(target_shape=target_shape, mode=mode, **kwargs)
 
         if self.mode == F_HYBRID.name:
             self.input_spec = [
@@ -63,11 +63,11 @@ class DecomonReshape(Reshape, DecomonLayer):
         """
 
         y_input_shape = input_shape[0]
-        super(DecomonReshape, self).build(y_input_shape)
+        super().build(y_input_shape)
 
     def call(self, inputs):
 
-        op = super(DecomonReshape, self).call
+        op = super().call
         nb_tensors = self.nb_tensors
         if self.dc_decomp:
             h, g = inputs[-2:]
@@ -135,7 +135,7 @@ class DecomonPermute(Permute, DecomonLayer):
         :param kwargs:
 
         """
-        super(DecomonPermute, self).__init__(dims=dims, mode=mode, **kwargs)
+        super().__init__(dims=dims, mode=mode, **kwargs)
 
         if self.mode == F_HYBRID.name:
             self.input_spec = [
@@ -177,11 +177,11 @@ class DecomonPermute(Permute, DecomonLayer):
         """
 
         y_input_shape = input_shape[-1]
-        super(DecomonPermute, self).build(y_input_shape)
+        super().build(y_input_shape)
 
     def call(self, inputs):
 
-        op = super(DecomonPermute, self).call
+        op = super().call
         nb_tensors = self.nb_tensors
         if self.dc_decomp:
             h, g = inputs[-2:]

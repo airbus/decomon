@@ -349,7 +349,7 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
 # create a layer
 class DecomonLossFusion(DecomonLayer):
     def __init__(self, mode=F_HYBRID.name, asymptotic=False, backward=False, **kwargs):
-        super(DecomonLossFusion, self).__init__(mode=mode, **kwargs)
+        super().__init__(mode=mode, **kwargs)
         self.final_mode = F_IBP.name
         self.asymptotic = asymptotic
         self.backward = backward
@@ -419,7 +419,7 @@ class DecomonLossFusion(DecomonLayer):
 # new layer for new loss functions
 class DecomonRadiusRobust(DecomonLayer):
     def __init__(self, mode=F_HYBRID.name, backward=False, **kwargs):
-        super(DecomonRadiusRobust, self).__init__(mode=mode, **kwargs)
+        super().__init__(mode=mode, **kwargs)
 
         if self.mode == F_IBP.name:
             raise NotImplementedError

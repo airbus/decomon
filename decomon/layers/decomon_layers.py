@@ -81,7 +81,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         activation = kwargs["activation"]
         if "activation" in kwargs:
             kwargs["activation"] = None
-        super(DecomonConv2D, self).__init__(filters=filters, kernel_size=kernel_size, mode=mode, **kwargs)
+        super().__init__(filters=filters, kernel_size=kernel_size, mode=mode, **kwargs)
         self.kernel_constraint_pos_ = NonNeg()
         self.kernel_constraint_neg_ = NonPos()
 
@@ -713,7 +713,7 @@ class DecomonDense(Dense, DecomonLayer):
         activation = kwargs["activation"]
         kwargs["units"] = units
         kwargs["kernel_constraint"] = None
-        super(DecomonDense, self).__init__(mode=mode, **kwargs)
+        super().__init__(mode=mode, **kwargs)
         self.mode = mode
         self.kernel_constraint_pos_ = NonNeg()
         self.kernel_constraint_neg_ = NonPos()
@@ -1311,7 +1311,7 @@ class DecomonActivation(Activation, DecomonLayer):
 
     def __init__(self, activation, mode=F_HYBRID.name, **kwargs):
 
-        super(DecomonActivation, self).__init__(activation, mode=mode, **kwargs)
+        super().__init__(activation, mode=mode, **kwargs)
 
         self.supports_masking = True
         self.activation = activations.get(activation)
@@ -1403,7 +1403,7 @@ class DecomonFlatten(Flatten, DecomonLayer):
         :param kwargs:
 
         """
-        super(DecomonFlatten, self).__init__(data_format=data_format, mode=mode, **kwargs)
+        super().__init__(data_format=data_format, mode=mode, **kwargs)
 
         if self.mode == F_HYBRID.name:
             self.input_spec = [
@@ -1446,7 +1446,7 @@ class DecomonFlatten(Flatten, DecomonLayer):
 
     def call(self, inputs):
 
-        op = super(DecomonFlatten, self).call
+        op = super().call
 
         if self.dc_decomp:
             h, g = inputs[-2:]
@@ -1517,7 +1517,7 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
         mode=F_HYBRID.name,
         **kwargs,
     ):
-        super(DecomonBatchNormalization, self).__init__(
+        super().__init__(
             axis=axis,
             momentum=momentum,
             epsilon=epsilon,
@@ -1536,13 +1536,13 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
         )
 
     def build(self, input_shape):
-        super(DecomonBatchNormalization, self).build(input_shape[0])
+        super().build(input_shape[0])
 
         self.input_spec = [InputSpec(min_ndim=len(elem)) for elem in input_shape]
 
     def compute_output_shape(self, input_shape):
 
-        output_shape_ = super(DecomonBatchNormalization, self).compute_output_shape(input_shape[-1])
+        output_shape_ = super().compute_output_shape(input_shape[-1])
 
         if self.mode in [F_FORWARD.name, F_HYBRID.name]:
             x_shape = input_shape[0]
@@ -1577,7 +1577,7 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
         if training:
             raise NotImplementedError("not working during training")
 
-        call_op = super(DecomonBatchNormalization, self).call
+        call_op = super().call
 
         if self.dc_decomp:
             raise NotImplementedError()
@@ -1660,13 +1660,13 @@ class DecomonDropout(Dropout, DecomonLayer):
     """
 
     def __init__(self, rate, noise_shape=None, seed=None, mode=F_HYBRID.name, **kwargs):
-        super(DecomonDropout, self).__init__(rate=rate, noise_shape=noise_shape, seed=seed, mode=mode, **kwargs)
+        super().__init__(rate=rate, noise_shape=noise_shape, seed=seed, mode=mode, **kwargs)
 
     def compute_output_shape(self, input_shape):
         return input_shape
 
     def build(self, input_shape):
-        super(DecomonDropout, self).build(input_shape[0])
+        super().build(input_shape[0])
         self.input_spec = [InputSpec(min_ndim=len(elem)) for elem in input_shape]
 
     def call(self, inputs, training=None):
@@ -1680,7 +1680,7 @@ class DecomonDropout(Dropout, DecomonLayer):
 
         return inputs
 
-        call_op = super(DecomonDropout, self).call
+        call_op = super().call
 
         if self.mode == F_HYBRID.name:
             if self.dc_decomp:
@@ -1752,7 +1752,7 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
     ):
 
         if type_spec is not None:
-            super(DecomonInputLayer, self).__init__(
+            super().__init__(
                 input_shape=input_shape,
                 batch_size=batch_size,
                 dtype=dtype,
@@ -1765,7 +1765,7 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
                 **kwargs,
             )
         else:
-            super(DecomonInputLayer, self).__init__(
+            super().__init__(
                 input_shape=input_shape,
                 batch_size=batch_size,
                 dtype=dtype,

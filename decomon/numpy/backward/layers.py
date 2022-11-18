@@ -26,7 +26,7 @@ class BackwardNumpyActivation(BackwardNumpyLayer):
         :param mode: type of Forward propagation (IBP, Forward or Hybrid)
         :param kwargs: extra parameters
         """
-        super(BackwardNumpyActivation, self).__init__(
+        super().__init__(
             keras_layer=keras_layer, convex_domain=convex_domain, mode=mode, rec=rec, params=params, **kwargs
         )
         if convex_domain is None:
@@ -100,9 +100,7 @@ class BackwardNumpyInputLayer(BackwardNumpyLayer):
         :param mode: type of Forward propagation (IBP, Forward or Hybrid)
         :param kwargs: extra parameters
         """
-        super(BackwardNumpyInputLayer, self).__init__(
-            keras_layer=keras_layer, convex_domain=convex_domain, mode=mode, rec=rec, **kwargs
-        )
+        super().__init__(keras_layer=keras_layer, convex_domain=convex_domain, mode=mode, rec=rec, **kwargs)
 
         if convex_domain is None:
             convex_domain = {}
@@ -147,9 +145,7 @@ class BackwardNumpyDense(BackwardNumpyLayer):
         :param mode: type of Forward propagation (IBP, Forward or Hybrid)
         :param kwargs: extra parameters
         """
-        super(BackwardNumpyDense, self).__init__(
-            keras_layer=keras_layer, convex_domain=convex_domain, mode=mode, rec=rec, **kwargs
-        )
+        super().__init__(keras_layer=keras_layer, convex_domain=convex_domain, mode=mode, rec=rec, **kwargs)
 
         if convex_domain is None:
             convex_domain = {}

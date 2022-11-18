@@ -43,7 +43,7 @@ class BackwardDense(Layer):
         input_dim=-1,
         **kwargs,
     ):
-        super(BackwardDense, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if convex_domain is None:
             convex_domain = {}
@@ -95,7 +95,7 @@ class BackwardGroupSort2(Layer):
         input_dim=-1,
         **kwargs,
     ):
-        super(BackwardGroupSort2, self).__init__(kwargs)
+        super().__init__(kwargs)
         if convex_domain is None:
             convex_domain = {}
         self.layer = layer

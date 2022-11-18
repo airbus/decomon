@@ -22,7 +22,7 @@ class Adversarial_score(Layer):
         :param convex_domain: the type of input convex domain for the linear relaxation
         :param kwargs:
         """
-        super(Adversarial_score, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.ibp = ibp
         self.forward = forward
         self.mode = mode
@@ -132,7 +132,7 @@ class Adversarial_check(Layer):
         :param convex_domain: the type of input convex domain for the linear relaxation
         :param kwargs:
         """
-        super(Adversarial_check, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.ibp = ibp
         self.forward = forward
         self.mode = mode
@@ -271,7 +271,7 @@ class Upper_score(Layer):
     """
 
     def __init__(self, ibp, forward, mode, convex_domain, **kwargs):
-        super(Upper_score, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.ibp = ibp
         self.forward = forward
         self.mode = mode

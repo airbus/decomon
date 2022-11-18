@@ -43,7 +43,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         activation = kwargs["activation"]
         if "activation" in kwargs:
             kwargs["activation"] = None
-        super(DecomonConv2D, self).__init__(filters=filters, kernel_size=kernel_size, mode=mode, **kwargs)
+        super().__init__(filters=filters, kernel_size=kernel_size, mode=mode, **kwargs)
         self.kernel_constraint_pos_ = NonNeg()
         self.kernel_constraint_neg_ = NonPos()
 

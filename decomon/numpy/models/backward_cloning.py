@@ -342,7 +342,7 @@ class NumpyCROWNModel(NumpyModel):
         joint=False,
         **kwargs,
     ):
-        super(NumpyCROWNModel, self).__init__(
+        super().__init__(
             model,
             ibp=ibp,
             forward=forward,
