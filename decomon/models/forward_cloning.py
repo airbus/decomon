@@ -189,12 +189,12 @@ def convert_forward_functional_model(
                 list_layer_decomon = layer_fn(layer)
                 layer_map[id(node)] = []
                 for layer_decomon in list_layer_decomon:
-                    layer_decomon._name = "{}_{}".format(layer_decomon.name, count)
+                    layer_decomon._name = f"{layer_decomon.name}_{count}"
                     count += 1
                     output = layer_decomon(output)
                     layer_map[id(node)].append(layer_decomon)
                     if len(list_layer_decomon) > 1:
-                        output_map["{}_{}".format(id(node), layer_decomon.name)] = output
+                        output_map[f"{id(node)}_{layer_decomon.name}"] = output
 
                 # output_map['{}_{}'.format(id(node), layer_decomon.name)]
             output_map[id(node)] = output

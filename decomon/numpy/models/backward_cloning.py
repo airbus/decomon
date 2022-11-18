@@ -40,7 +40,7 @@ def crown_(
         slope_grid = {}
     previous = bool(len(backward_bounds))
 
-    params_key = "{}_{}".format(node.outbound_layer.name, rec)
+    params_key = f"{node.outbound_layer.name}_{rec}"
     if params_key in dico_grid.keys():
         params = dico_grid[params_key]
         if params_key in slope_grid.keys():
@@ -49,9 +49,9 @@ def crown_(
         params = [None, None]
 
     if joint:
-        layer_key = "{}".format(node.outbound_layer.name)
+        layer_key = f"{node.outbound_layer.name}"
     else:
-        layer_key = "{}_{}".format(node.outbound_layer.name, rec)
+        layer_key = f"{node.outbound_layer.name}_{rec}"
 
     if layer_key in log_layers.keys():
         crown_layer = log_layers[layer_key]
@@ -171,7 +171,7 @@ def crown_old(
         slope_grid = {}
     previous = bool(len(backward_bounds))
 
-    params_key = "{}_{}".format(node.outbound_layer.name, rec)
+    params_key = f"{node.outbound_layer.name}_{rec}"
     if params_key in dico_grid.keys():
         params = dico_grid[params_key]
         if params_key in slope_grid.keys():

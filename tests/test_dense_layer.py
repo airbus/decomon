@@ -566,7 +566,7 @@ from . import (
 )
 def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
 
-    K.set_floatx("float{}".format(floatx))
+    K.set_floatx(f"float{floatx}")
     eps = K.epsilon()
     decimal = 5
     if floatx == 16:
@@ -619,7 +619,7 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
             l_c_,
             w_l_,
             b_l_,
-            "dense_{}".format(n),
+            f"dense_{n}",
             decimal=decimal,
         )
 
@@ -640,7 +640,7 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
             l_c_,
             w_l_,
             b_l_,
-            "dense_{}".format(n),
+            f"dense_{n}",
             decimal=decimal,
         )
 
@@ -659,7 +659,7 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
             l_c_,
             None,
             None,
-            "dense_{}".format(n),
+            f"dense_{n}",
             decimal=decimal,
         )
     if not shared:
@@ -681,7 +681,7 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
             l_c_,
             w_l_,
             b_l_,
-            "dense_{}".format(n),
+            f"dense_{n}",
             decimal=decimal,
         )
 
@@ -702,7 +702,7 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
             l_c_,
             w_l_,
             b_l_,
-            "dense_{}".format(n),
+            f"dense_{n}",
             decimal=decimal,
         )
 
@@ -721,12 +721,12 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
             l_c_,
             None,
             None,
-            "dense_{}".format(n),
+            f"dense_{n}",
             decimal=decimal,
         )
 
     K.set_epsilon(eps)
-    K.set_floatx("float{}".format(32))
+    K.set_floatx("float32")
 
 
 @pytest.mark.parametrize(
@@ -792,7 +792,7 @@ def test_DecomonDense_multiD_box(odd, activation, mode):
             l_c_,
             w_l_,
             b_l_,
-            "dense_multid_{}".format(odd),
+            f"dense_multid_{odd}",
         )
     if mode == "forward":
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
@@ -811,7 +811,7 @@ def test_DecomonDense_multiD_box(odd, activation, mode):
             l_c_,
             w_l_,
             b_l_,
-            "dense_multid_{}".format(odd),
+            f"dense_multid_{odd}",
         )
     if mode == "ibp":
         u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])

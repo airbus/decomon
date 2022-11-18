@@ -11,7 +11,7 @@ def gradient_relu(inputs, dc_decomp=False, mode=F_HYBRID.name, convex_domain=Non
     if convex_domain is None:
         convex_domain = {}
     if mode not in [F_HYBRID.name, F_IBP.name, F_FORWARD.name]:
-        raise ValueError("unknown mode {}".format(mode))
+        raise ValueError(f"unknown mode {mode}")
 
     z_value = K.cast(0.0, K.floatx())
     o_value = K.cast(1.0, K.floatx())

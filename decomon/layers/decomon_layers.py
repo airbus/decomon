@@ -269,7 +269,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             raise ValueError("A merge layer should be called " "on a list of inputs.")
 
         if self.mode not in [F_HYBRID.name, F_IBP.name, F_FORWARD.name]:
-            raise ValueError("unknown  forward mode {}".format(self.mode))
+            raise ValueError(f"unknown  forward mode {self.mode}")
 
         if self.mode == F_HYBRID.name:
             if self.dc_decomp:
@@ -1241,7 +1241,7 @@ class DecomonDense(Dense, DecomonLayer):
                 params += self.get_weights()[2:]
             self.set_weights(params)
         else:
-            raise ValueError("the layer {} has not been built yet".format(dense.name))
+            raise ValueError(f"the layer {dense.name} has not been built yet")
 
     def freeze_weights(self):
 
@@ -1827,7 +1827,7 @@ def to_monotonic(
     # check if layer has a built argument that built is set to True
     if hasattr(layer, "built"):
         if not layer.built:
-            raise ValueError("the layer {} has not been built yet".format(layer.name))
+            raise ValueError(f"the layer {layer.name} has not been built yet")
 
     if isinstance(layer, Merge):
         return to_monotonic_merge(layer, input_dim, dc_decomp, convex_domain, finetune, IBP, forward)
@@ -1838,10 +1838,10 @@ def to_monotonic(
         # two runs before sending a failure
         if k == 2:
             # the immediate parent is not a native Keras class
-            raise KeyError("unknown class {}".format(class_name))
+            raise KeyError(f"unknown class {class_name}")
         try:
 
-            monotonic_class_name = "Decomon{}".format(class_name)
+            monotonic_class_name = f"Decomon{class_name}"
             config_layer = layer.get_config()
             config_layer["name"] = layer.name + "_monotonic"
             config_layer["dc_decomp"] = dc_decomp

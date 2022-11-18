@@ -701,14 +701,14 @@ class BackwardActivation(BackwardLayer):
             finetune_grid_A = self.add_weight(
                 shape=(input_dim,),
                 initializer="zeros",
-                name="A_{}_{}".format(self.layer.name, self.rec),
+                name=f"A_{self.layer.name}_{self.rec}",
                 regularizer=None,
                 trainable=False,
             )  # constraint=NonPos()
             finetune_grid_B = self.add_weight(
                 shape=(input_dim,),
                 initializer="zeros",
-                name="B_{}_{}".format(self.layer.name, self.rec),
+                name=f"B_{self.layer.name}_{self.rec}",
                 regularizer=None,
                 trainable=False,
             )  # constraint=NonNeg()
@@ -1133,7 +1133,7 @@ def get_backward(
     if class_name[:7] == "Decomon":
         class_name = "".join(layer.__class__.__name__.split("Decomon")[1:])
 
-    backward_class_name = "Backward{}".format(class_name)
+    backward_class_name = f"Backward{class_name}"
     class_ = globals()[backward_class_name]
     try:
         return class_(

@@ -316,23 +316,23 @@ def get_backward_layer_input(
         input_dim=input_dim,
         rec=rec,
     )
-    input_layer_ = forward_map["{}_{}".format(layer_.name, id_node)]
+    input_layer_ = forward_map[f"{layer_.name}_{id_node}"]
     back_bounds_ = layer_back(input_layer_ + back_bounds)
     if isinstance(back_bounds_, tuple):
         back_bounds_ = list(back_bounds_)
 
-    return {"{}_{}".format(layer_.name, id_node): back_bounds}
+    return {f"{layer_.name}_{id_node}": back_bounds}
 
 
 def get_output_model(node, layer_map, forward_map, mode, input_dim, rec=1, **kwargs):
 
     layer_ = node.outbound_layer
     id_node = get_node_by_id(node)
-    if "{}_{}".format(layer_.name, id_node) in forward_map:
+    if f"{layer_.name}_{id_node}" in forward_map:
         if isinstance(layer_, Model):
-            return forward_map["{}_{}".format(layer_.name, id_node)][0], False
+            return forward_map[f"{layer_.name}_{id_node}"][0], False
         else:
-            return forward_map["{}_{}".format(layer_.name, id_node)], False
+            return forward_map[f"{layer_.name}_{id_node}"], False
     else:
         if len(to_list(layer_.output_shape)) > 1:
             raise NotImplementedError("Decomon cannot handle nodes with a list of output tensors")
@@ -362,11 +362,11 @@ def get_output_layer(node, layer_map, forward_map, mode, input_dim, rec=1, **kwa
 
     layer_ = node.outbound_layer
     id_node = get_node_by_id(node)
-    if "{}_{}".format(layer_.name, id_node) in forward_map:
+    if f"{layer_.name}_{id_node}" in forward_map:
         if isinstance(layer_, Model):
-            return forward_map["{}_{}".format(layer_.name, id_node)][0]
+            return forward_map[f"{layer_.name}_{id_node}"][0]
         else:
-            return forward_map["{}_{}".format(layer_.name, id_node)]
+            return forward_map[f"{layer_.name}_{id_node}"]
     else:
         if len(to_list(layer_.get_output_shape_at(0))) > 1:
             raise NotImplementedError("Decomon cannot handle nodes with a list of output tensors")
@@ -393,13 +393,13 @@ def get_output_layer(node, layer_map, forward_map, mode, input_dim, rec=1, **kwa
             output_min = outputs
 
         if mode == F_IBP.name:
-            forward_map["{}_{}".format(layer_.name, id_node)] = [output_max[0], output_min[-1]]
+            forward_map[f"{layer_.name}_{id_node}"] = [output_max[0], output_min[-1]]
             return [output_max[0], output_min[-1]]
         if mode == F_FORWARD.name:
-            forward_map["{}_{}".format(layer_.name, id_node)] = output_max[:3] + output_min[-2:]
+            forward_map[f"{layer_.name}_{id_node}"] = output_max[:3] + output_min[-2:]
             return output_max[:3] + output_min[-2:]
         if mode == F_HYBRID.name:
-            forward_map["{}_{}".format(layer_.name, id_node)] = output_max[:4] + output_min[-3:]
+            forward_map[f"{layer_.name}_{id_node}"] = output_max[:4] + output_min[-3:]
             return output_max[:4] + output_min[-3:]
 
 
@@ -430,21 +430,21 @@ def get_backward_layer(node, layer_map, forward_map, mode, back_bounds, input_di
             layer_, id_node, forward_map, mode, back_bounds, finetune, convex_domain, input_dim, rec=rec
         )
 
-    if "{}_{}".format(layer_.name, id_node) not in layer_map or isinstance(layer_, Model):
+    if f"{layer_.name}_{id_node}" not in layer_map or isinstance(layer_, Model):
         layer_list = [layer_]
     else:
-        layer_list = to_list(layer_map["{}_{}".format(layer_.name, id_node)])
+        layer_list = to_list(layer_map[f"{layer_.name}_{id_node}"])
         layer_list = layer_list[::-1]
 
     for i in range(len(layer_list) - 1):
         # if layer_list has more than one element, then there has been a forward pass
         # hence forward_map contains the related input
-        if "{}_{}".format(layer_list[i + 1].name, id_node) not in forward_map:
+        if f"{layer_list[i + 1].name}_{id_node}" not in forward_map:
             # split name
-            new_name = "{}{}".format(layer_list[i + 1].name.split("_monotonic")[0], "_monotonic")
-            inputs_i = forward_map["{}_{}".format(new_name, id_node)]
+            new_name = f"{layer_list[i + 1].name.split('_monotonic')[0]}_monotonic"
+            inputs_i = forward_map[f"{new_name}_{id_node}"]
         else:
-            inputs_i = forward_map["{}_{}".format(layer_list[i + 1].name, id_node)]
+            inputs_i = forward_map[f"{layer_list[i + 1].name}_{id_node}"]
 
         back_layer_i = get_backward_(
             layer_list[i],
@@ -486,13 +486,13 @@ def get_backward_layer(node, layer_map, forward_map, mode, back_bounds, input_di
             finetune_ = kwargs["finetune"]
         if "convex_domain" in kwargs:
             convex_domain_ = kwargs["convex_domain"]
-        if "{}_{}".format(layer_.name, id_node) in layer_map:
-            l_map = layer_map["{}_{}".format(layer_.name, id_node)]
+        if f"{layer_.name}_{id_node}" in layer_map:
+            l_map = layer_map[f"{layer_.name}_{id_node}"]
         else:
             l_map = {}
 
-        if "{}_{}".format(layer_.name, id_node) in forward_map:
-            f_map = forward_map["{}_{}".format(layer_.name, id_node)][-1]
+        if f"{layer_.name}_{id_node}" in forward_map:
+            f_map = forward_map[f"{layer_.name}_{id_node}"][-1]
         else:
             f_map = {}
 
@@ -639,13 +639,13 @@ def get_backward_model(
         for node_i in nodes_input:
             layer_i = node_i.outbound_layer
             id_node_i = get_node_by_id(node_i)
-            if "{}_{}".format(layer_i, id_node_i) not in forward_map:
+            if f"{layer_i}_{id_node_i}" not in forward_map:
                 if input_dim == -1:
                     input_dim_i = np.prod(layer_i.input_shape[1:])
                 else:
                     input_dim_i = input_dim
-                if "{}_{}".format(layer_i.name, id_node_i) not in forward_map:
-                    forward_map["{}_{}".format(layer_i.name, id_node_i)] = check_input_tensors_sequential(
+                if f"{layer_i.name}_{id_node_i}" not in forward_map:
+                    forward_map[f"{layer_i.name}_{id_node_i}"] = check_input_tensors_sequential(
                         model, None, input_dim_i, input_dim_init, IBP, forward, False, convex_domain
                     )
     else:
@@ -654,8 +654,8 @@ def get_backward_model(
         for i, node_i in enumerate(nodes_input):
             layer_i = node_i.outbound_layer
             id_node_i = get_node_by_id(node_i)
-            if "{}_{}".format(layer_i.name, id_node_i) not in forward_map:
-                forward_map["{}_{}".format(layer_i.name, id_node_i)] = input_tensors[i]
+            if f"{layer_i.name}_{id_node_i}" not in forward_map:
+                forward_map[f"{layer_i.name}_{id_node_i}"] = input_tensors[i]
 
             input_dim = input_tensors[i][0].shape[-1]
 
@@ -725,14 +725,14 @@ def get_backward_model(
             layer_name_j = layer_j.name
             id_j = get_node_by_id(node_j)
 
-            if "{}_{}".format(layer_name_j, id_j) not in back_bound_i_dict:
+            if f"{layer_name_j}_{id_j}" not in back_bound_i_dict:
                 raise NotImplementedError()
             else:
-                output_i = back_bound_i_dict["{}_{}".format(layer_name_j, id_j)]
+                output_i = back_bound_i_dict[f"{layer_name_j}_{id_j}"]
                 if not fuse_with_input:
                     back_bound_i.append(output_i)
                 else:
-                    inputs_tensors_i = forward_map["{}_{}".format(layer_name_j, id_j)]
+                    inputs_tensors_i = forward_map[f"{layer_name_j}_{id_j}"]
                     kwargs["convex_domain"] = convex_domain
                     if final_mode:
                         # do not return the same mode as the one used in the internal layers
@@ -776,7 +776,7 @@ def get_backward_model(
                         lambda_f = Lambda(lambda x: func(x))
                         output_i = lambda_f(max_bounds + min_bounds)
                     """
-                    forward_map["{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i))] = output_i
+                    forward_map[f"{node_i.outbound_layer.name}_{get_node_by_id(node_i)}"] = output_i
                     # print("{}_{}".format(node_i.outbound_layer.name, get_node_by_id(node_i)))
                     back_bound_i.append(output_i)
 
@@ -794,7 +794,7 @@ def get_backward_model(
         layer_j = node_j.outbound_layer
         layer_name_j = layer_j.name
         id_j = get_node_by_id(node_j)
-        inputs_ += forward_map["{}_{}".format(layer_name_j, id_j)]
+        inputs_ += forward_map[f"{layer_name_j}_{id_j}"]
 
     for elem in back_bounds:
         inputs_ += elem

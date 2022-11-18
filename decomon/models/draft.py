@@ -53,21 +53,21 @@ def get_forward_map(inputs, model, id_node_init=None):
             layer = node.outbound_layer
             extra_names = get_original_layer_name(layer)
 
-            if "{}_{}".format(layer.name, id_node) in forward_map:
+            if f"{layer.name}_{id_node}" in forward_map:
                 import pdb
 
                 pdb.set_trace()
 
             if depth == max(depth_keys):
                 if isinstance(layer, InputLayer):
-                    forward_map["{}_{}".format(layer.name, id_node)] = inputs
+                    forward_map[f"{layer.name}_{id_node}"] = inputs
                     for extra_name in extra_names:
-                        forward_map["{}_{}".format(extra_name, id_node)] = inputs
+                        forward_map[f"{extra_name}_{id_node}"] = inputs
                 else:
                     tmp_0 = layer(inputs)
-                    forward_map["{}_{}".format(layer.name, id_node)] = tmp_0
+                    forward_map[f"{layer.name}_{id_node}"] = tmp_0
                     for extra_name in extra_names:
-                        forward_map["{}_{}".format(extra_name, id_node)] = tmp_0
+                        forward_map[f"{extra_name}_{id_node}"] = tmp_0
             else:
                 node_inbound = to_list(node.parent_nodes)
                 # input_layers = to_list(node.inbound_layers)
@@ -78,7 +78,7 @@ def get_forward_map(inputs, model, id_node_init=None):
                     if not isinstance(layer_i, InputLayer):
                         input_layer_only = False
                     if layer_i.name in list_layers:
-                        inputs_ += forward_map["{}_{}".format(layer_i.name, get_node_by_id(node_i))]
+                        inputs_ += forward_map[f"{layer_i.name}_{get_node_by_id(node_i)}"]
                 if len(inputs_) == 0:
                     inputs_ = inputs
 
@@ -89,21 +89,21 @@ def get_forward_map(inputs, model, id_node_init=None):
                     forward_map = {**forward_map, **f_map}
 
                 tmp_1 = layer(inputs_)
-                forward_map["{}_{}".format(layer.name, id_node)] = tmp_1
+                forward_map[f"{layer.name}_{id_node}"] = tmp_1
                 for extra_name in extra_names:
-                    forward_map["{}_{}".format(extra_name, id_node)] = tmp_1
+                    forward_map[f"{extra_name}_{id_node}"] = tmp_1
 
                 if input_layer_only and not (id_node_init is None):
-                    forward_map["{}_{}".format(layer.name, id_node_init)] = tmp_1
+                    forward_map[f"{layer.name}_{id_node_init}"] = tmp_1
                     for extra_name in extra_names:
-                        forward_map["{}_{}".format(extra_name, id_node_init)] = tmp_1
+                        forward_map[f"{extra_name}_{id_node_init}"] = tmp_1
 
     output = []
     nodes = model._nodes_by_depth[0]
     for node in nodes:
         id_node = get_node_by_id(node)
         layer = node.outbound_layer
-        output += forward_map["{}_{}".format(layer.name, id_node)]
+        output += forward_map[f"{layer.name}_{id_node}"]
 
     return output, forward_map
 
@@ -230,15 +230,15 @@ def convert_forward_functional_model(
 
             id_node = get_node_by_id(node)
             layer_ = node.outbound_layer
-            if "{}_{}".format(layer_, id_node) in tensor_map.keys():
+            if f"{layer_}_{id_node}" in tensor_map.keys():
                 continue
 
             input_layers = to_list(node.inbound_layers)
 
             if isinstance(layer_, InputLayer):
                 output = input_tensors
-                tensor_map["{}_{}".format(layer_.name, id_node)] = output
-                forward_map["{}_{}".format(layer_.name, id_node)] = output
+                tensor_map[f"{layer_.name}_{id_node}"] = output
+                forward_map[f"{layer_.name}_{id_node}"] = output
                 continue
             if len(input_layers) == 0:
                 output = input_tensors
@@ -258,7 +258,7 @@ def convert_forward_functional_model(
                     forward=forward,
                     name_history=name_history,
                 )
-                name_ = "{}_to_monotonic".format(layer_.name)
+                name_ = f"{layer_.name}_to_monotonic"
                 """
                 if '{}_to_monotonic'.format(layer_.name) in name_history:
                     count=0
@@ -276,7 +276,7 @@ def convert_forward_functional_model(
             for layer_decomon_i in layer_decomon:
                 if layer_decomon_i.name in name_history:
                     count = 0
-                    while "{}_{}".format(layer_decomon_i.name, count) in name_history:
+                    while f"{layer_decomon_i.name}_{count}" in name_history:
                         count += 1
                     # set the name in l_map as well
                     set_name(layer_decomon_i, count)
@@ -296,16 +296,16 @@ def convert_forward_functional_model(
                     output = layer_decomon_i(output)
                     # forward_map[layer_decomon_i.name] = output
 
-                    forward_map["{}_{}".format(layer_decomon_i.name, id_node)] = output
+                    forward_map[f"{layer_decomon_i.name}_{id_node}"] = output
 
-            forward_map["{}_{}".format(layer_.name, id_node)] = output
-            tensor_map["{}_{}".format(layer_.name, id_node)] = output
+            forward_map[f"{layer_.name}_{id_node}"] = output
+            tensor_map[f"{layer_.name}_{id_node}"] = output
 
             if isinstance(layer_, Model):
                 # layer_map = {**layer_map, **l_map}
-                layer_map["{}_{}".format(layer_.name, id_node)] = l_map
+                layer_map[f"{layer_.name}_{id_node}"] = l_map
             else:
-                layer_map["{}_{}".format(layer_.name, id_node)] = layer_decomon
+                layer_map[f"{layer_.name}_{id_node}"] = layer_decomon
 
     output = []
     nodes = model._nodes_by_depth[0]

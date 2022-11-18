@@ -231,7 +231,7 @@ def clone_backward_layer(
         # else:
         #    return update_input(back_bounds, x_tensor, mode, upper_layer, lower_layer), layer_map, forward_map
 
-    if "{}_{}".format(layer_.name, id_node) not in layer_map:
+    if f"{layer_.name}_{id_node}" not in layer_map:
         # crown mode
 
         input_nodes = node.parent_nodes
@@ -295,15 +295,15 @@ def clone_backward_layer(
                 # tensorflow can create fake inputs when we reach the first layers of the model, those are not stored
                 # in our forward  map
                 input_tensor_list = []
-                f_map = forward_map["{}_{}".format(layer_.name, id_node)][1]
+                f_map = forward_map[f"{layer_.name}_{id_node}"][1]
                 for inbound_node in inbound_nodes:
                     input_layer_i = inbound_node.outbound_layer
                     node_id_i = get_node_by_id(inbound_node)
-                    if "{}_{}".format(input_layer_i.name, node_id_i) in f_map:
+                    if f"{input_layer_i.name}_{node_id_i}" in f_map:
                         if isinstance(input_layer_i, Model):
-                            input_tensor_list.append(f_map["{}_{}".format(input_layer_i.name, node_id_i)][0])
+                            input_tensor_list.append(f_map[f"{input_layer_i.name}_{node_id_i}"][0])
                         else:
-                            input_tensor_list.append(f_map["{}_{}".format(input_layer_i.name, node_id_i)])
+                            input_tensor_list.append(f_map[f"{input_layer_i.name}_{node_id_i}"])
                     else:
                         import pdb
 
@@ -332,7 +332,7 @@ def clone_backward_layer(
                     IBP=get_IBP(mode),
                     forward=get_FORWARD(mode),
                     finetune=finetune,
-                    layer_map=layer_map["{}_{}".format(layer_.name, id_node)],
+                    layer_map=layer_map[f"{layer_.name}_{id_node}"],
                     forward_map=forward_map,
                     fuse_with_input=False,
                     x_tensor=x_tensor,
@@ -346,7 +346,7 @@ def clone_backward_layer(
                     IBP=get_IBP(mode),
                     forward=get_FORWARD(mode),
                     finetune=finetune,
-                    layer_map=layer_map["{}_{}".format(layer_.name, id_node)],
+                    layer_map=layer_map[f"{layer_.name}_{id_node}"],
                     forward_map=forward_map,
                     fuse_with_input=False,
                 )
@@ -363,7 +363,7 @@ def clone_backward_layer(
 
             # layer_list = to_list(layer_map[layer_.name])
             # update the key
-            layer_list = to_list(layer_map["{}_{}".format(layer_.name, id_node)])
+            layer_list = to_list(layer_map[f"{layer_.name}_{id_node}"])
             layer_list = layer_list[::-1]
 
             for i in range(len(layer_list) - 1):
@@ -374,10 +374,10 @@ def clone_backward_layer(
                     finetune=finetune,
                     convex_domain=convex_domain,
                 )
-                if "{}_{}".format(layer_list[i + 1].name, id_node) not in forward_map:
+                if f"{layer_list[i + 1].name}_{id_node}" not in forward_map:
                     input_tensor_i = forward_map[get_key(layer_list[i + 1], id_node, forward_map)]
                 else:
-                    input_tensor_i = forward_map["{}_{}".format(layer_list[i + 1].name, id_node)]
+                    input_tensor_i = forward_map[f"{layer_list[i + 1].name}_{id_node}"]
                 back_bounds_ = layer_back(input_tensor_i + back_bounds)
                 if back_bounds_[0].shape[-1] != back_bounds_[1].shape[-1]:
                     import pdb
@@ -401,12 +401,12 @@ def clone_backward_layer(
                     node_id_i = get_node_by_id(inbound_node)
 
                     if isinstance(input_layer_i, Model):
-                        toto = forward_map["{}_{}".format(input_layer_i.name, node_id_i)][0]
+                        toto = forward_map[f"{input_layer_i.name}_{node_id_i}"][0]
                         input_tensor_list.append(toto)
                     else:
 
-                        if "{}_{}".format(input_layer_i.name, node_id_i) in forward_map:
-                            input_tensor_list.append(forward_map["{}_{}".format(input_layer_i.name, node_id_i)])
+                        if f"{input_layer_i.name}_{node_id_i}" in forward_map:
+                            input_tensor_list.append(forward_map[f"{input_layer_i.name}_{node_id_i}"])
                         else:
                             if input_layer_i.name[-6::] == "_input":
                                 input_tensor_list.append(input_tensors)

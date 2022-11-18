@@ -340,7 +340,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             raise ValueError("A merge layer should be called " "on a list of inputs.")
 
         if self.mode not in [F_HYBRID.name, F_IBP.name, F_FORWARD.name]:
-            raise ValueError("unknown  forward mode {}".format(self.mode))
+            raise ValueError(f"unknown  forward mode {self.mode}")
 
         if self.mode == F_HYBRID.name:
             if self.dc_decomp:

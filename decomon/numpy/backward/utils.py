@@ -35,9 +35,7 @@ def get_lower(x, w, b, convex_domain=None):
     if not len(convex_domain) or convex_domain["name"] in [Box.name, Grid.name]:
         return get_lower_box(x, w, b)
     else:
-        raise NotImplementedError(
-            "get_lower is not implemented yet in numpy for the {} domain".format(convex_domain["name"])
-        )
+        raise NotImplementedError(f"get_lower is not implemented yet in numpy for the {convex_domain['name']} domain")
 
 
 def get_upper(x, w, b, convex_domain=None):
@@ -46,9 +44,7 @@ def get_upper(x, w, b, convex_domain=None):
     if not len(convex_domain) or convex_domain["name"] in [Box.name, Grid.name]:
         return get_upper_box(x, w, b)
     else:
-        raise NotImplementedError(
-            "get_upper is not implemented yet in numpy for the {} domain".format(convex_domain["name"])
-        )
+        raise NotImplementedError(f"get_upper is not implemented yet in numpy for the {convex_domain['name']} domain")
 
 
 def get_linear_hull_relu(inputs, convex_domain, params=None, **kwargs):

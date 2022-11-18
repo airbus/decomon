@@ -231,20 +231,20 @@ def get_backward_layer_input(layer_, id_node, forward_map, mode, back_bounds, fi
     layer_back = get_backward_(
         layer_, previous=(len(back_bounds) > 0), mode=mode, finetune=finetune, convex_domain=convex_domain
     )
-    input_layer_ = forward_map["{}_{}".format(layer_.name, id_node)]
+    input_layer_ = forward_map[f"{layer_.name}_{id_node}"]
     back_bounds_ = layer_back(input_layer_ + back_bounds)
     if isinstance(back_bounds_, tuple):
         back_bounds_ = list(back_bounds_)
 
-    return {"{}_{}".format(layer_.name, id_node): back_bounds}
+    return {f"{layer_.name}_{id_node}": back_bounds}
 
 
 def get_output_layer(node, layer_map, forward_map, mode, **kwargs):
 
     layer_ = node.outbound_layer
     id_node = get_node_by_id(node)
-    if "{}_{}".format(layer_.name, id_node) in forward_map:
-        return forward_map["{}_{}".format(layer_.name, id_node)]
+    if f"{layer_.name}_{id_node}" in forward_map:
+        return forward_map[f"{layer_.name}_{id_node}"]
     else:
         if len(layer_.output_shape) > 1:
             raise NotImplementedError("Decomon cannot handle nodes with a list of output tensors")
@@ -285,16 +285,16 @@ def get_backward_layer(node, layer_map, forward_map, mode, back_bounds, **kwargs
         # return back_bounds, dict of backward bounds associated to inputs
         return get_backward_layer_input(layer_, id_node, forward_map, mode, back_bounds, finetune, convex_domain)
 
-    if "{}_{}".format(layer_.name, id_node) not in layer_map:
+    if f"{layer_.name}_{id_node}" not in layer_map:
         layer_list = [layer_]
     else:
-        layer_list = to_list(layer_map["{}_{}".format(layer_.name, id_node)])
+        layer_list = to_list(layer_map[f"{layer_.name}_{id_node}"])
         layer_list = layer_list[::-1]
 
     for i in range(len(layer_list) - 1):
         # if layer_list has more than one element, then there has been a forward pass
         # hence forward_map contains the related input
-        inputs_i = forward_map["{}_{}".format(layer_list[i + 1].name, id_node)]
+        inputs_i = forward_map[f"{layer_list[i + 1].name}_{id_node}"]
         back_layer_i = get_backward_(
             layer_, previous=(len(back_bounds) > 0), mode=mode, finetune=finetune, convex_domain=convex_domain
         )
@@ -403,21 +403,21 @@ def get_backward_model(
         for node_i in nodes_input:
             layer_i = node_i.outbound_layer
             id_node_i = get_node_by_id(node_i)
-            if "{}_{}".format(layer_i, id_node_i) not in forward_map:
+            if f"{layer_i}_{id_node_i}" not in forward_map:
                 if input_dim == -1:
                     input_dim_i = np.prod(layer_i.input_shape[1:])
                 else:
                     input_dim_i = input_dim
 
-                forward_map["{}_{}".format(layer_i, id_node_i)] = check_input_tensors_sequential(
+                forward_map[f"{layer_i}_{id_node_i}"] = check_input_tensors_sequential(
                     model, None, input_dim_i, input_dim_init, IBP, forward, False, convex_domain
                 )
     else:
         for i, node_i in enumerate(nodes_input):
             layer_i = node_i.outbound_layer
             id_node_i = get_node_by_id(node_i)
-            if "{}_{}".format(layer_i, id_node_i) not in forward_map:
-                forward_map["{}_{}".format(layer_i, id_node_i)] = input_tensors[i]
+            if f"{layer_i}_{id_node_i}" not in forward_map:
+                forward_map[f"{layer_i}_{id_node_i}"] = input_tensors[i]
             else:
                 raise ValueError
 
@@ -442,9 +442,9 @@ def get_backward_model(
             for node_j in nodes_input:
                 layer_name_j = node_j.outbound_layer.name
                 id_j = get_node_by_id(node_j)
-                inputs_tensors_i = forward_map["{}_{}".format(layer_name_j.name, id_j)]
-                if "{}_{}".format(layer_name_j, id_j) in back_bound_i_dict:
-                    output_i = back_bound_i_dict["{}_{}".format(layer_name_j, id_j)]
+                inputs_tensors_i = forward_map[f"{layer_name_j.name}_{id_j}"]
+                if f"{layer_name_j}_{id_j}" in back_bound_i_dict:
+                    output_i = back_bound_i_dict[f"{layer_name_j}_{id_j}"]
                     if mode == F_IBP.name:
                         back_bound_i.append(output_i)
                     else:

@@ -82,7 +82,7 @@ def bound_A_ortools(x_min, x_max, m, W_up, b_up, W_low, b_low, mask_A):
     # lambda are binary variables.
 
     lambda_ = [
-        [[solver.IntVar(0, m, "lambda_{}_{}_{}".format(j, i, k)) for i in range(n_dim)] for k in range(n_out)]
+        [[solver.IntVar(0, m, f"lambda_{j}_{i}_{k}") for i in range(n_dim)] for k in range(n_out)]
         for j in range(n_batch)
     ]
 
@@ -155,7 +155,7 @@ def bound_B_ortools(x_min, x_max, m, W_up, b_up, W_low, b_low, mask_B):
     solver = pywraplp.Solver.CreateSolver("SCIP")
     # lambda are binary variables.
     lambda_ = [
-        [[solver.IntVar(0, m, "lambda_{}_{}_{}".format(j, i, k)) for i in range(n_dim)] for k in range(n_out)]
+        [[solver.IntVar(0, m, f"lambda_{j}_{i}_{k}") for i in range(n_dim)] for k in range(n_out)]
         for j in range(n_batch)
     ]
 
