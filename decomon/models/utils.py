@@ -420,7 +420,7 @@ def fuse_forward_backward(
 
         return w_out_u_, b_out_u_, w_out_l_, b_out_l_
 
-    lambda_ = Lambda(lambda var: func(var), dtype=w_u.dtype)
+    lambda_ = Lambda(func, dtype=w_u.dtype)
 
     w_out_u_, b_out_u_, w_out_l_, b_out_l_ = lambda_([w_u, b_u, w_l, b_l] + back_bounds)
 

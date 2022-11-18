@@ -340,7 +340,7 @@ def clone_backward_layer(
                 l_c, w_l, b_l = inputs_1[-3:]
                 return [x, u_c, w_u, b_u, l_c, w_l, b_l]
 
-        lambda_f = Lambda(lambda x: func(x))
+        lambda_f = Lambda(func)
 
         output = lambda_f(max_bounds + min_bounds)
         return output, layer_map, forward_map
@@ -721,7 +721,7 @@ def clone_backward_layer_last(
                 l_c, w_l, b_l = inputs_1[-3:]
                 return [x, u_c, w_u, b_u, l_c, w_l, b_l]
 
-        lambda_f = Lambda(lambda x: func(x))
+        lambda_f = Lambda(func)
 
         output = lambda_f(max_bounds + min_bounds)
         return output, layer_map, forward_map
