@@ -26,9 +26,9 @@ from .utils import (
 
 def is_purely_linear(layer):
     return False
-    if isinstance(layer, Reshape) or isinstance(layer, Dropout) or isinstance(layer, Permute):
+    if isinstance(layer, (Reshape, Dropout, Permute)):
         return True
-    if (isinstance(layer, Dense) or isinstance(layer, Conv)) and layer.get_config()["activation"] == "linear":
+    if (isinstance(layer, (Dense, Conv))) and layer.get_config()["activation"] == "linear":
         return True
 
     return False

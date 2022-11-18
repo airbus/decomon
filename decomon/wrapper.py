@@ -69,7 +69,7 @@ def get_adv_box(
 
     z = np.concatenate([x_min, x_max], 1)
 
-    if isinstance(source_labels, int) or isinstance(source_labels, np.int64):
+    if isinstance(source_labels, (int, np.int64)):
         source_labels = np.zeros((n_batch, 1)) + source_labels
 
     if isinstance(source_labels, list):
@@ -260,7 +260,7 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
     x_max = x_max.reshape((-1, 1, input_dim))
 
     z = np.concatenate([x_min, x_max], 1)
-    if isinstance(source_labels, int) or isinstance(source_labels, np.int64):
+    if isinstance(source_labels, (int, np.int64)):
         source_labels = np.zeros((n_batch, 1)) + source_labels
 
     if isinstance(source_labels, list):
@@ -377,7 +377,7 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
     fast = True
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
-    if not (isinstance(model, DecomonModel) or isinstance(model, NumpyModel)):
+    if not (isinstance(model, (DecomonModel, NumpyModel))):
         model_ = convert(model, ibp=True, forward=True)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
@@ -489,7 +489,7 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
     fast = True
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
-    if not (isinstance(model, DecomonModel) or isinstance(model, NumpyModel)):
+    if not (isinstance(model, (DecomonModel, NumpyModel))):
         model_ = convert(model, ibp=True, forward=True)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
@@ -601,7 +601,7 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
     fast = True
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
-    if not (isinstance(model, DecomonModel) or isinstance(model, NumpyModel)):
+    if not (isinstance(model, (DecomonModel, NumpyModel))):
         model_ = convert(model, ibp=True, forward=True)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
@@ -1310,7 +1310,7 @@ def get_adv_noise(
     x_ = x + 0 * x
     x_ = x_.reshape([-1] + input_shape)
 
-    if isinstance(source_labels, int) or isinstance(source_labels, np.int64):
+    if isinstance(source_labels, (int, np.int64)):
         source_labels = np.zeros((n_batch, 1)) + source_labels
 
     if isinstance(source_labels, list):
