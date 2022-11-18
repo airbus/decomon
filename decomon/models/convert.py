@@ -281,7 +281,7 @@ def clone(
 
     for input_layer in model._input_layers:
         if len(input_layer.input_shape) > 1:
-            raise ValueError("Expected one input tensor but got {}".format(len(input_layer.input_shape)))
+            raise ValueError(f"Expected one input tensor but got {len(input_layer.input_shape)}")
         input_shape_vec_ = input_layer.input_shape[0]
         input_shape_ = tuple(list(input_shape_vec_)[1:])
 

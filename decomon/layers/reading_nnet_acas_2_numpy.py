@@ -6,7 +6,7 @@ from NNet.utils.readNNet import readNNet
 
 
 def convert_nnet_2_numpy(repo, filename, clipping=True, normalize_in=True, normalize_out=False, verbose=0):
-    with closing(open("{}/{}".format(repo, filename), "rb")) as f:
+    with closing(open(f"{repo}/{filename}", "rb")) as f:
         lines = f.readlines()
 
     index = 0
@@ -41,7 +41,7 @@ def convert_nnet_2_numpy(repo, filename, clipping=True, normalize_in=True, norma
     MEAN_in = MEAN[:-1]
 
     # retrieve the parameters of the networks (weights and biases)
-    weights, biases = readNNet("{}/{}".format(repo, filename))
+    weights, biases = readNNet(f"{repo}/{filename}")
     params = []
     for w, b in zip(weights, biases):
         params += [w.T, b]

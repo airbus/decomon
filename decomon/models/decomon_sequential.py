@@ -443,7 +443,7 @@ def clone_functional_model(
     model = softmax_to_linear(model)  # do not modify the previous model or send an alert message
 
     # we only handle one input
-    assert len(model._input_layers) == 1, "error: Expected one input only but got {}".format(len(model._input_layers))
+    assert len(model._input_layers) == 1, f"error: Expected one input only but got {len(model._input_layers)}"
 
     def clone(layer):
         return layer.__class__.from_config(layer.get_config())
@@ -571,7 +571,7 @@ def clone_functional_model(
 
             if not K.is_keras_tensor(x):
                 name = model._input_layers[0].name
-                input_tensor = Input(tensor=x, name=name + "_{}".format(names_i[i]))
+                input_tensor = Input(tensor=x, name=name + f"_{names_i[i]}")
                 _input_tensors.append(input_tensor)
                 # Cache newly created input layer.
                 original_input_layer = x._keras_history[0]

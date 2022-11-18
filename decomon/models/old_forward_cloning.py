@@ -55,21 +55,21 @@ def get_forward_map(inputs, model, id_node_init=None):
             layer = node.outbound_layer
             extra_names = get_original_layer_name(layer)
 
-            if "{}_{}".format(layer.name, id_node) in forward_map:
+            if f"{layer.name}_{id_node}" in forward_map:
                 import pdb
 
                 pdb.set_trace()
 
             if depth == max(depth_keys):
                 if isinstance(layer, InputLayer):
-                    forward_map["{}_{}".format(layer.name, id_node)] = inputs
+                    forward_map[f"{layer.name}_{id_node}"] = inputs
                     for extra_name in extra_names:
-                        forward_map["{}_{}".format(extra_name, id_node)] = inputs
+                        forward_map[f"{extra_name}_{id_node}"] = inputs
                 else:
                     tmp_0 = layer(inputs)
-                    forward_map["{}_{}".format(layer.name, id_node)] = tmp_0
+                    forward_map[f"{layer.name}_{id_node}"] = tmp_0
                     for extra_name in extra_names:
-                        forward_map["{}_{}".format(extra_name, id_node)] = tmp_0
+                        forward_map[f"{extra_name}_{id_node}"] = tmp_0
             else:
                 node_inbound = to_list(node.parent_nodes)
                 # input_layers = to_list(node.inbound_layers)
@@ -80,7 +80,7 @@ def get_forward_map(inputs, model, id_node_init=None):
                     if not isinstance(layer_i, InputLayer):
                         input_layer_only = False
                     if layer_i.name in list_layers:
-                        inputs_ += forward_map["{}_{}".format(layer_i.name, get_node_by_id(node_i))]
+                        inputs_ += forward_map[f"{layer_i.name}_{get_node_by_id(node_i)}"]
                 if len(inputs_) == 0:
                     inputs_ = inputs
 
@@ -91,21 +91,21 @@ def get_forward_map(inputs, model, id_node_init=None):
                     forward_map = {**forward_map, **f_map}
 
                 tmp_1 = layer(inputs_)
-                forward_map["{}_{}".format(layer.name, id_node)] = tmp_1
+                forward_map[f"{layer.name}_{id_node}"] = tmp_1
                 for extra_name in extra_names:
-                    forward_map["{}_{}".format(extra_name, id_node)] = tmp_1
+                    forward_map[f"{extra_name}_{id_node}"] = tmp_1
 
                 if input_layer_only and not (id_node_init is None):
-                    forward_map["{}_{}".format(layer.name, id_node_init)] = tmp_1
+                    forward_map[f"{layer.name}_{id_node_init}"] = tmp_1
                     for extra_name in extra_names:
-                        forward_map["{}_{}".format(extra_name, id_node_init)] = tmp_1
+                        forward_map[f"{extra_name}_{id_node_init}"] = tmp_1
 
     output = []
     nodes = model._nodes_by_depth[0]
     for node in nodes:
         id_node = get_node_by_id(node)
         layer = node.outbound_layer
-        output += forward_map["{}_{}".format(layer.name, id_node)]
+        output += forward_map[f"{layer.name}_{id_node}"]
 
     return output, forward_map
 
@@ -130,29 +130,29 @@ def get_forward_mapping_model(model, layer_map, input_tensors, mode):
 
         if isinstance(layer_, Model):
             output_layer_, f_map_from_root = get_forward_mapping_model(
-                layer_, layer_map["{}_{}".format(layer_.name, id_node)], input_i, mode
+                layer_, layer_map[f"{layer_.name}_{id_node}"], input_i, mode
             )
             output_from_input_layer = pre_process_inputs(input_i, mode)
             output_disconnected, f_map_disconnected = get_forward_mapping_model(
-                layer_, layer_map["{}_{}".format(layer_.name, id_node)], output_from_input_layer, mode
+                layer_, layer_map[f"{layer_.name}_{id_node}"], output_from_input_layer, mode
             )
 
-            tensor_map["{}_{}".format(layer_.name, id_node)] = output_layer_
-            f_map["{}_{}".format(layer_name, id_node)] = [
+            tensor_map[f"{layer_.name}_{id_node}"] = output_layer_
+            f_map[f"{layer_name}_{id_node}"] = [
                 output_layer_,
                 f_map_from_root,
                 output_disconnected,
                 f_map_disconnected,
             ]
         else:
-            decomon_inputs = layer_map["{}_{}".format(layer_name, id_node)]
+            decomon_inputs = layer_map[f"{layer_name}_{id_node}"]
             output_i = decomon_inputs[0](input_i)
-            f_map["{}_{}".format(decomon_inputs[0].name, id_node)] = output_i
+            f_map[f"{decomon_inputs[0].name}_{id_node}"] = output_i
             if len(decomon_inputs) > 1:
                 for k in range(1, len(decomon_inputs)):
                     output_i = decomon_inputs[1](output_i)
-                    f_map["{}_{}".format(decomon_inputs[k].name, id_node)] = output_i
-            tensor_map["{}_{}".format(layer_name, id_node)] = output_i
+                    f_map[f"{decomon_inputs[k].name}_{id_node}"] = output_i
+            tensor_map[f"{layer_name}_{id_node}"] = output_i
 
     for depth in depth_keys[1:]:
         nodes = model._nodes_by_depth[depth]
@@ -162,23 +162,23 @@ def get_forward_mapping_model(model, layer_map, input_tensors, mode):
 
             inputs_ = []
             for node_in in node.parent_nodes:
-                if "{}_{}".format(node_in.outbound_layer.name, get_node_by_id(node_in)) not in tensor_map:
+                if f"{node_in.outbound_layer.name}_{get_node_by_id(node_in)}" not in tensor_map:
                     import pdb
 
                     pdb.set_trace()
-                inputs_ += tensor_map["{}_{}".format(node_in.outbound_layer.name, get_node_by_id(node_in))]
+                inputs_ += tensor_map[f"{node_in.outbound_layer.name}_{get_node_by_id(node_in)}"]
 
             if isinstance(layer_, Model):
                 output_layer_, f_map_from_root = get_forward_mapping_model(
-                    layer_, layer_map["{}_{}".format(layer_.name, id_node)], inputs_, mode
+                    layer_, layer_map[f"{layer_.name}_{id_node}"], inputs_, mode
                 )
                 output_from_input_layer = pre_process_inputs(inputs_, mode)
                 output_disconnected, f_map_disconnected = get_forward_mapping_model(
-                    layer_, layer_map["{}_{}".format(layer_.name, id_node)], output_from_input_layer, mode
+                    layer_, layer_map[f"{layer_.name}_{id_node}"], output_from_input_layer, mode
                 )
 
-                tensor_map["{}_{}".format(layer_.name, id_node)] = output_layer_
-                f_map["{}_{}".format(layer_name, id_node)] = [
+                tensor_map[f"{layer_.name}_{id_node}"] = output_layer_
+                f_map[f"{layer_name}_{id_node}"] = [
                     output_layer_,
                     f_map_from_root,
                     output_disconnected,
@@ -188,22 +188,22 @@ def get_forward_mapping_model(model, layer_map, input_tensors, mode):
             else:
                 # retrieve inputs
 
-                decomon_layer_ = layer_map["{}_{}".format(layer_.name, id_node)]
+                decomon_layer_ = layer_map[f"{layer_.name}_{id_node}"]
                 output_i = decomon_layer_[0](inputs_)
-                f_map["{}_{}".format(decomon_layer_[0].name, id_node)] = output_i
+                f_map[f"{decomon_layer_[0].name}_{id_node}"] = output_i
 
                 if len(decomon_layer_) > 1:
                     for k in range(1, len(decomon_layer_)):
                         output_i = decomon_layer_[k](output_i)
-                        f_map["{}_{}".format(decomon_layer_[k].name, id_node)] = output_i
-                tensor_map["{}_{}".format(layer_.name, id_node)] = output_i
+                        f_map[f"{decomon_layer_[k].name}_{id_node}"] = output_i
+                tensor_map[f"{layer_.name}_{id_node}"] = output_i
 
     # get output nodes
     nodes_output = model._nodes_by_depth[0]
     output = []
     for node_output in nodes_output:
 
-        output += tensor_map["{}_{}".format(node_output.outbound_layer.name, get_node_by_id(node_output))]
+        output += tensor_map[f"{node_output.outbound_layer.name}_{get_node_by_id(node_output)}"]
 
     return output, f_map
 
@@ -391,7 +391,7 @@ def convert_forward_functional_model(
 
             id_node = get_node_by_id(node)
             layer_ = node.outbound_layer
-            if "{}_{}".format(layer_, id_node) in tensor_map.keys():
+            if f"{layer_}_{id_node}" in tensor_map.keys():
                 continue  # to check
 
             input_layers = to_list(node.inbound_layers)
@@ -454,9 +454,7 @@ def convert_forward_functional_model(
 
                     bool_linear = min(
                         [
-                            layer_map["{}_{}".format(parent.outbound_layer.name, get_node_by_id(parent))][
-                                -1
-                            ].get_linear()
+                            layer_map[f"{parent.outbound_layer.name}_{get_node_by_id(parent)}"][-1].get_linear()
                             for parent in parents
                         ]
                     )
@@ -469,7 +467,7 @@ def convert_forward_functional_model(
                 for layer_decomon_i in layer_decomon:
                     if layer_decomon_i.name in name_history:
                         count = 0
-                        while "{}_{}".format(layer_decomon_i.name, count) in name_history:
+                        while f"{layer_decomon_i.name}_{count}" in name_history:
                             count += 1
                         # set the name in l_map as well
                         set_name(layer_decomon_i, count)
@@ -477,17 +475,17 @@ def convert_forward_functional_model(
                     if layer_decomon_i.has_backward_bounds:
                         output += back_bounds
                     output = layer_decomon_i(output)
-                    forward_map["{}_{}".format(layer_decomon_i.name, id_node)] = output
+                    forward_map[f"{layer_decomon_i.name}_{id_node}"] = output
 
-            tensor_map["{}_{}".format(layer_.name, id_node)] = output
+            tensor_map[f"{layer_.name}_{id_node}"] = output
 
             if isinstance(layer_, Model):
                 # layer_map = {**layer_map, **l_map}
-                layer_map["{}_{}".format(layer_.name, id_node)] = l_map
-                forward_map["{}_{}".format(layer_.name, id_node)] = [output, f_map]  # , output_tmp, f_map_tmp]
+                layer_map[f"{layer_.name}_{id_node}"] = l_map
+                forward_map[f"{layer_.name}_{id_node}"] = [output, f_map]  # , output_tmp, f_map_tmp]
             else:
-                layer_map["{}_{}".format(layer_.name, id_node)] = layer_decomon
-                forward_map["{}_{}".format(layer_.name, id_node)] = output
+                layer_map[f"{layer_.name}_{id_node}"] = layer_decomon
+                forward_map[f"{layer_.name}_{id_node}"] = output
 
     output_list = [[] for _ in range(len(model._output_layers))]
     order_name = [layer.name for layer in model._output_layers]

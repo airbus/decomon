@@ -260,7 +260,7 @@ def get_FORWARD(mode=F_HYBRID.name):
 
 def get_node_by_id_(node):
 
-    return "NODE_{}_{}".format(node.flat_output_ids, node.flat_input_ids)
+    return f"NODE_{node.flat_output_ids}_{node.flat_input_ids}"
 
 
 def get_node_by_id(node, outbound=False, model=None):
@@ -270,16 +270,16 @@ def get_node_by_id(node, outbound=False, model=None):
 
     input_names = str(id(node))
     if outbound:
-        return "{}_NODE_{}".format(layer_.name, input_names)
-    return "NODE_{}".format(input_names)
+        return f"{layer_.name}_NODE_{input_names}"
+    return f"NODE_{input_names}"
 
     if model is None:
         input_names = ""
         for layer_i in layers_i:
             input_names += layer_i.name
         if outbound:
-            return "{}_NODE_{}".format(layer_.name, input_names)
-        return "NODE_{}".format(input_names)
+            return f"{layer_.name}_NODE_{input_names}"
+        return f"NODE_{input_names}"
     else:
         layer_names = [layer.name for layer in model.layers]
         input_names = ""
@@ -288,13 +288,13 @@ def get_node_by_id(node, outbound=False, model=None):
                 input_names += layer_i.name
     input_names = str(id(node))
     if outbound:
-        return "{}_NODE_{}".format(layer_.name, input_names)
-    return "NODE_{}".format(input_names)
+        return f"{layer_.name}_NODE_{input_names}"
+    return f"NODE_{input_names}"
 
 
 def set_name(layer, extra_id):
 
-    layer._name = "{}_{}".format(layer.name, extra_id)
+    layer._name = f"{layer.name}_{extra_id}"
 
 
 def get_inputs(node, tensor_map):

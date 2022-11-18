@@ -629,9 +629,9 @@ def to_monotonic_merge(
     # check if layer has a built argument that built is set to True
     if hasattr(layer, "built"):
         if not layer.built:
-            raise ValueError("the layer {} has not been built yet".format(layer.name))
+            raise ValueError(f"the layer {layer.name} has not been built yet")
 
-    monotonic_class_name = "Decomon{}".format(class_name)
+    monotonic_class_name = f"Decomon{class_name}"
     config_layer = layer.get_config()
     config_layer["name"] = layer.name + "_monotonic"
     config_layer["dc_decomp"] = dc_decomp

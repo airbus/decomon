@@ -203,7 +203,7 @@ def get_backward(keras_layer, previous=True, mode=F_FORWARD.name, convex_domain=
         params = []
     class_name = keras_layer.__class__.__name__
 
-    backward_class_name = "BackwardNumpy{}".format(class_name)
+    backward_class_name = f"BackwardNumpy{class_name}"
     class_ = globals()[backward_class_name]
     try:
         return class_(

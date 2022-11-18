@@ -72,7 +72,7 @@ class StaticVariables:
         elif self.mode == F_FORWARD.name:
             nb_tensors = 5
         else:
-            raise NotImplementedError("unknown forward mode {}".format(mode))
+            raise NotImplementedError(f"unknown forward mode {mode}")
 
         if dc_decomp:
             nb_tensors += 2

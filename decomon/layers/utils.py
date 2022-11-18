@@ -671,7 +671,7 @@ def relu_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, slope=V_sl
     if convex_domain is None:
         convex_domain = {}
     if mode not in [F_HYBRID.name, F_IBP.name, F_FORWARD.name]:
-        raise ValueError("unknown mode {}".format(mode))
+        raise ValueError(f"unknown mode {mode}")
 
     z_value = K.cast(0.0, K.floatx())
     o_value = K.cast(1.0, K.floatx())
@@ -742,7 +742,7 @@ def softplus_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, slope=
     if convex_domain is None:
         convex_domain = {}
     if mode not in [F_HYBRID.name, F_IBP.name, F_FORWARD.name]:
-        raise ValueError("unknown mode {}".format(mode))
+        raise ValueError(f"unknown mode {mode}")
 
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_HYBRID.name:

@@ -60,7 +60,7 @@ def clone(layer, data_format=CHANNEL_LAST, prev_format=CHANNEL_LAST, node=None):
         class_name = layer.__class__.__name__
         if hasattr(layer, "built"):
             if not layer.built:
-                raise ValueError("the layer {} has not been built yet".format(layer.name))
+                raise ValueError(f"the layer {layer.name} has not been built yet")
 
         config_layer = layer.get_config()
         config_layer["name"] = layer.name + "_last"

@@ -866,7 +866,7 @@ def get_AB(model_):
         name = layer.name
         sub_names = name.split("backward_activation")
         if len(sub_names) > 1:
-            key = "{}_{}".format(layer.layer.name, layer.rec)
+            key = f"{layer.layer.name}_{layer.rec}"
             if key not in dico_AB:
                 dico_AB[key] = layer.grid_finetune
     return dico_AB
@@ -885,7 +885,7 @@ def get_AB_finetune(model_):
         name = layer.name
         sub_names = name.split("backward_activation")
         if len(sub_names) > 1:
-            key = "{}_{}".format(layer.layer.name, layer.rec)
+            key = f"{layer.layer.name}_{layer.rec}"
             if key not in dico_AB:
                 dico_AB[key] = layer.alpha_b_l
     return dico_AB
