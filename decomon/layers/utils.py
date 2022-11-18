@@ -646,7 +646,7 @@ class Project_initializer_pos(Initializer):
     """Initializer that generates tensors initialized to 1."""
 
     def __init__(self, initializer, **kwargs):
-        super()
+        super().__init__(**kwargs)
         self.initializer = initializer
 
     def __call__(self, shape, dtype=None):
@@ -658,7 +658,7 @@ class Project_initializer_neg(Initializer):
     """Initializer that generates tensors initialized to 1."""
 
     def __init__(self, initializer, **kwargs):
-        super()
+        super().__init__(**kwargs)
         self.initializer = initializer
 
     def __call__(self, shape, dtype=None):
