@@ -34,7 +34,7 @@ from .utils import (
 
 class BackwardMerge(BackwardLayer):
     def __init__(self, **kwargs):
-        super(BackwardMerge, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
 
 class BackwardAdd(BackwardMerge):
@@ -53,7 +53,7 @@ class BackwardAdd(BackwardMerge):
         input_dim=-1,
         **kwargs,
     ):
-        super(BackwardAdd, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         # if not isinstance(layer, DecomonAdd):
         #    raise KeyError()
         if convex_domain is None:
@@ -199,7 +199,7 @@ class BackwardAverage(BackwardMerge):
         input_dim=-1,
         **kwargs,
     ):
-        super(BackwardAverage, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if convex_domain is None:
             convex_domain = {}
@@ -292,7 +292,7 @@ class BackwardSubtract(BackwardMerge):
     """
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super(BackwardSubtract, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if not isinstance(layer, DecomonSubtract):
             raise KeyError()
 
@@ -334,7 +334,7 @@ class BackwardMaximum(BackwardMerge):
     """
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super(BackwardMaximum, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if not isinstance(layer, DecomonMaximum):
             raise KeyError()
 
@@ -376,7 +376,7 @@ class BackwardMinimum(BackwardMerge):
     """
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super(BackwardMinimum, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if not isinstance(layer, DecomonMinimum):
             raise KeyError()
 
@@ -418,7 +418,7 @@ class BackwardConcatenate(BackwardMerge):
     """
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super(BackwardConcatenate, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if not isinstance(layer, DecomonConcatenate):
             raise KeyError()
 
@@ -458,7 +458,7 @@ class BackwardMultiply(BackwardMerge):
     """
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super(BackwardMultiply, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if not isinstance(layer, DecomonMultiply):
             raise KeyError()
 
@@ -500,7 +500,7 @@ class BackwardDot(BackwardMerge):
     """
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super(BackwardDot, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if not isinstance(layer, DecomonDot):
             raise KeyError()
 

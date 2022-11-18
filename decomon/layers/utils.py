@@ -628,7 +628,7 @@ class MultipleConstraint(Constraint):
     """
 
     def __init__(self, constraint_0, constraint_1, **kwargs):
-        super(MultipleConstraint, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if constraint_0:
             self.constraints = [constraint_0, constraint_1]
         else:
@@ -646,7 +646,7 @@ class Project_initializer_pos(Initializer):
     """Initializer that generates tensors initialized to 1."""
 
     def __init__(self, initializer, **kwargs):
-        super(Project_initializer_pos, **kwargs)
+        super()
         self.initializer = initializer
 
     def __call__(self, shape, dtype=None):
@@ -658,7 +658,7 @@ class Project_initializer_neg(Initializer):
     """Initializer that generates tensors initialized to 1."""
 
     def __init__(self, initializer, **kwargs):
-        super(Project_initializer_neg, **kwargs)
+        super()
         self.initializer = initializer
 
     def __call__(self, shape, dtype=None):

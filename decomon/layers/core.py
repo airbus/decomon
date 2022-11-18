@@ -103,7 +103,7 @@ class DecomonLayer(ABC, Layer):
         :param mode: type of Forward propagation (IBP, Forward or Hybrid)
         :param kwargs: extra parameters
         """
-        super(DecomonLayer, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if convex_domain is None:
             convex_domain = {}

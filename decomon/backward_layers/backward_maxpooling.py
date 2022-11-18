@@ -29,7 +29,7 @@ class BackwardMaxPooling2D(Layer):
         input_dim=-1,
         **kwargs,
     ):  # __init__(self, layer, slope=V_slope.name,
-        super(BackwardMaxPooling2D, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if convex_domain is None:
             convex_domain = {}
         raise NotImplementedError()

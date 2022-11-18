@@ -59,7 +59,7 @@ except:
 
 class DecomonGroupSort(DecomonLayer):
     def __init__(self, n=None, data_format="channels_last", k_coef_lip=1.0, mode=F_HYBRID.name, **kwargs):
-        super(DecomonGroupSort, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.mode = mode
 
         if data_format == "channels_last":
@@ -123,7 +123,7 @@ class DecomonGroupSort(DecomonLayer):
 
 class DecomonGroupSort2(DecomonLayer):
     def __init__(self, n=2, data_format="channels_last", k_coef_lip=1.0, mode=F_HYBRID.name, **kwargs):
-        super(DecomonGroupSort2, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.mode = mode
         self.data_format = data_format
 

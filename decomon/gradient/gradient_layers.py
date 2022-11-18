@@ -38,7 +38,7 @@ class GradientDense(Layer):
         input_dim=-1,
         **kwargs,
     ):
-        super(GradientDense, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if convex_domain is None:
             convex_domain = {}

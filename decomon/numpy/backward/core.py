@@ -30,7 +30,7 @@ class BackwardNumpyLayer:
 
         kwargs.pop("update_slope")
         kwargs.pop("reuse_slope")
-        super(BackwardNumpyLayer, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if mode != F_FORWARD.name:
             raise NotImplementedError()
         self.keras_layer = keras_layer

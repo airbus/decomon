@@ -907,7 +907,7 @@ class DecomonModel(tf.keras.Model):
         finetune=False,
         **kwargs,
     ):
-        super(DecomonModel, self).__init__(input, output, **kwargs)
+        super().__init__(input, output, **kwargs)
         if convex_domain is None:
             convex_domain = {}
         self.convex_domain = convex_domain
@@ -965,7 +965,7 @@ class DecomonSequential(tf.keras.Sequential):
         finetune=False,
         **kwargs,
     ):
-        super(DecomonSequential, self).__init__(layers=layers, name=name, **kwargs)
+        super().__init__(layers=layers, name=name, **kwargs)
         if convex_domain is None:
             convex_domain = {}
         self.convex_domain = convex_domain

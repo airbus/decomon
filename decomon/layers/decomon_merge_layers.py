@@ -38,8 +38,8 @@ class DecomonAdd(Add, DecomonLayer):
     """
 
     def __init__(self, mode=F_HYBRID.name, **kwargs):
-        super(DecomonAdd, self).__init__(mode=mode, **kwargs)
-        # self.op = super(DecomonAdd, self).call
+        super().__init__(mode=mode, **kwargs)
+        # self.op = super().call
 
     def build(self, input_shape):
         n_comp = self.nb_tensors
@@ -48,7 +48,7 @@ class DecomonAdd(Add, DecomonLayer):
         # if self.mode == F_HYBRID.name:
         #    n_comp = 8
         input_shape_y = input_shape[::n_comp]
-        super(DecomonAdd, self).build(input_shape_y)
+        super().build(input_shape_y)
 
     def compute_output_shape(self, input_shape):
         return input_shape  # ????
@@ -156,8 +156,8 @@ class DecomonAverage(Average, DecomonLayer):
     """
 
     def __init__(self, mode=F_HYBRID.name, **kwargs):
-        super(DecomonAverage, self).__init__(mode=mode, **kwargs)
-        # self.op = super(DecomonAverage, self).call
+        super().__init__(mode=mode, **kwargs)
+        # self.op = super().call
         self.op = Lambda(lambda x: sum(x) / len(x))
 
     def compute_output_shape(self, input_shape):
@@ -171,7 +171,7 @@ class DecomonAverage(Average, DecomonLayer):
         # if self.mode == F_HYBRID.name:
         #    n_comp = 8
         input_shape_y = input_shape[::n_comp]
-        super(DecomonAverage, self).build(input_shape_y)
+        super().build(input_shape_y)
 
     def call(self, inputs):
 
@@ -244,7 +244,7 @@ class DecomonSubtract(DecomonLayer):
     """
 
     def __init__(self, mode=F_HYBRID.name, **kwargs):
-        super(DecomonSubtract, self).__init__(mode=mode, **kwargs)
+        super().__init__(mode=mode, **kwargs)
 
     def compute_output_shape(self, input_shape):
 
@@ -277,7 +277,7 @@ class DecomonMinimum(DecomonLayer):
     """
 
     def __init__(self, mode=F_HYBRID.name, **kwargs):
-        super(DecomonMinimum, self).__init__(mode=mode, **kwargs)
+        super().__init__(mode=mode, **kwargs)
 
     def compute_output_shape(self, input_shape):
 
@@ -322,7 +322,7 @@ class DecomonMaximum(DecomonLayer):
     """
 
     def __init__(self, mode=F_HYBRID.name, **kwargs):
-        super(DecomonMaximum, self).__init__(mode=mode, **kwargs)
+        super().__init__(mode=mode, **kwargs)
 
     def compute_output_shape(self, input_shape):
         return input_shape  # ????
@@ -363,9 +363,9 @@ class DecomonConcatenate(Concatenate, DecomonLayer):
     """
 
     def __init__(self, axis=-1, mode=F_HYBRID.name, **kwargs):
-        super(DecomonConcatenate, self).__init__(axis=axis, mode=mode, **kwargs)
+        super().__init__(axis=axis, mode=mode, **kwargs)
 
-        self.op = super(DecomonConcatenate, self).call
+        self.op = super().call
         if self.axis == -1:
             self.op_w = self.op
         else:
@@ -387,7 +387,7 @@ class DecomonConcatenate(Concatenate, DecomonLayer):
             input_shape_y = input_shape[1::n_comp]
         if self.mode == F_FORWARD.name:
             input_shape_y = input_shape[2::n_comp]
-        super(DecomonConcatenate, self).build(input_shape_y)
+        super().build(input_shape_y)
 
     def call(self, inputs):
         if self.dc_decomp:
@@ -457,7 +457,7 @@ class DecomonMultiply(Multiply, DecomonLayer):
     """
 
     def __init__(self, mode=F_HYBRID.name, **kwargs):
-        super(DecomonMultiply, self).__init__(mode=mode, **kwargs)
+        super().__init__(mode=mode, **kwargs)
 
     def build(self, input_shape):
 
@@ -473,7 +473,7 @@ class DecomonMultiply(Multiply, DecomonLayer):
         if self.mode == F_FORWARD.name:
             input_shape_ = input_shape[2::n_comp]
         # input_shape_ = input_shape[::n_comp]
-        super(DecomonMultiply, self).build(input_shape_)
+        super().build(input_shape_)
 
     def call(self, inputs):
 
@@ -508,7 +508,7 @@ class DecomonDot(Dot, DecomonLayer):
     """
 
     def __init__(self, axes=(-1, -1), mode=F_HYBRID.name, **kwargs):
-        super(DecomonDot, self).__init__(axes=axes, mode=mode, **kwargs)
+        super().__init__(axes=axes, mode=mode, **kwargs)
         self.axes = axes
 
     def build(self, input_shape):
@@ -525,7 +525,7 @@ class DecomonDot(Dot, DecomonLayer):
         if self.mode == F_FORWARD.name:
             input_shape_ = input_shape[2::n_comp]
         # input_shape_ = input_shape[::n_comp]
-        super(DecomonDot, self).build(input_shape_)
+        super().build(input_shape_)
 
     def call(self, inputs):
 

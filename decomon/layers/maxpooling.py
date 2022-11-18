@@ -25,7 +25,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
         self, pool_size=(2, 2), strides=None, padding="valid", data_format=None, mode=F_HYBRID.name, fast=True, **kwargs
     ):
 
-        super(DecomonMaxPooling2D, self).__init__(
+        super().__init__(
             pool_size=pool_size,
             strides=strides,
             padding=padding,
@@ -121,7 +121,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
         if self.grad_bounds:
             raise NotImplementedError()
 
-        output_shape_ = super(DecomonMaxPooling2D, self).compute_output_shape(input_shape[0])
+        output_shape_ = super().compute_output_shape(input_shape[0])
         input_dim = input_shape[-1][1]
         if self.mode in [F_HYBRID.name, F_FORWARD.name]:
             x_shape = input_shape[1]
