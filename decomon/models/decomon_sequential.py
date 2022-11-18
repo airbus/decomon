@@ -1111,7 +1111,7 @@ def get_backward_model_(model, back_bounds, input_model, slope=V_slope.name):
     names = [l.name for l in model.layers]
     for layer in model.layers:
         for n_ in layer._outbound_nodes:
-            if n_.layer.name not in names or isinstance(n_.layer, InputLayer) or isinstance(n_.layer, Lambda):
+            if n_.layer.name not in names or isinstance(n_.layer, (InputLayer, Lambda)):
                 continue
             if n_.layer.name in input_neighbors:
                 input_neighbors[n_.layer.name] += [layer]
@@ -1255,7 +1255,7 @@ def get_backward_layer(layer, back_bounds, input_layers, input_tensors, slope=V_
         return get_backward_layer(layers_[0], back_bounds, input_layers, input_tensors, slope=slope)
     else:
         if not isinstance(back_bounds[0], list) and not len(
-            [l for l in layers_ if not (isinstance(l, InputLayer) or isinstance(l, Lambda))]
+            [l for l in layers_ if not (isinstance(l, (InputLayer, Lambda)))]
         ):
             return back_bounds
             # check that we reach an input layer
