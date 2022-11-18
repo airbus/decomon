@@ -262,7 +262,7 @@ def clone_sequential_model(
             ]
 
         if isinstance(layer, Layer):
-            return layer_fn(layer)
+            return layer_fn(layer=layer, input_dim=input_dim)
         raise ValueError
 
     monotonic_layers = []

@@ -304,7 +304,7 @@ class Upper_score(Layer):
 
         if not self.ibp and self.forward:
             _, _, w_u_f, b_u_f = inputs[:6]
-            upper_score = self.linear_upper(z_tensor, y_tensor, w_u_f)
+            upper_score = self.linear_upper(z_tensor, y_tensor, w_u_f, b_u_f)
 
         if self.ibp and not self.forward:
             _, _, u_c, l_c = inputs[:4]
