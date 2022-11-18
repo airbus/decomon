@@ -29,7 +29,7 @@ def crown_(
     if forward_init is None:
         forward_init = []
     if log_bounds is None:
-        log_bounds = dict()
+        log_bounds = {}
     if log_layers is None:
         log_layers = {}
     if convex_domain is None:
@@ -162,7 +162,7 @@ def crown_old(
     if forward_init is None:
         forward_init = []
     if log_bounds is None:
-        log_bounds = dict()
+        log_bounds = {}
     if convex_domain is None:
         convex_domain = {}
     if dico_grid is None:
@@ -280,7 +280,7 @@ def crown(
         outputs_nodes,
         backward_bounds=backward_bounds,
         forward_init=forward_init,
-        log_bounds=dict(),
+        log_bounds={},
         convex_domain=convex_domain,
         dico_grid=dico_grid,
         slope_grid=slope_grid,

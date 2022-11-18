@@ -857,7 +857,7 @@ def set_mode(x, final_mode, mode, convex_domain=None):
 
 
 def get_AB(model_):
-    dico_AB = dict()
+    dico_AB = {}
     convex_domain = model_.convex_domain
     if not (len(convex_domain) and convex_domain["name"] == "grid" and convex_domain["option"] == "milp"):
         return dico_AB
@@ -873,7 +873,7 @@ def get_AB(model_):
 
 
 def get_AB_finetune(model_):
-    dico_AB = dict()
+    dico_AB = {}
     convex_domain = model_.convex_domain
     if not (len(convex_domain) and convex_domain["name"] == "grid" and convex_domain["option"] == "milp"):
         return dico_AB

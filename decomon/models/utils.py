@@ -495,12 +495,12 @@ def get_depth_dict(model):
 
     nodes_list = []
 
-    dico_depth = dict()
-    dico_nodes = dict()
+    dico_depth = {}
+    dico_nodes = {}
 
     def fill_dico(node, dico_depth=None):
         if dico_depth is None:
-            dico_depth = dict()
+            dico_depth = {}
 
         parents = node.parent_nodes
         if len(parents):
