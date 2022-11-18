@@ -78,12 +78,14 @@ class DecomonReshape(Reshape, DecomonLayer):
         if self.mode == F_HYBRID.name:
             # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:8]
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
-        if self.mode == F_IBP.name:
+        elif self.mode == F_IBP.name:
             # y, x_0, u_c, l_c = inputs[:4]
             u_c, l_c = inputs[:nb_tensors]
-        if self.mode == F_FORWARD.name:
+        elif self.mode == F_FORWARD.name:
             # y, x_0, w_u, b_u, w_l, b_l = inputs[:6]
             x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
 
         # y_ = op(y)
         if self.mode in [F_IBP.name, F_HYBRID.name]:
@@ -109,12 +111,14 @@ class DecomonReshape(Reshape, DecomonLayer):
         if self.mode == F_HYBRID.name:
             # output = [y_, x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
             output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
-        if self.mode == F_FORWARD.name:
+        elif self.mode == F_FORWARD.name:
             # output = [y_, x_0, w_u_, b_u_, w_l_, b_l_]
             output = [x_0, w_u_, b_u_, w_l_, b_l_]
-        if self.mode == F_IBP.name:
+        elif self.mode == F_IBP.name:
             # output = [y_, x_0, u_c_, l_c_]
             output = [u_c_, l_c_]
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
 
         if self.dc_decomp:
             output += [h_, g_]
@@ -192,12 +196,14 @@ class DecomonPermute(Permute, DecomonLayer):
         if self.mode == F_HYBRID.name:
             # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:8]
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
-        if self.mode == F_IBP.name:
+        elif self.mode == F_IBP.name:
             # y, x_0, u_c, l_c = inputs[:4]
             u_c, l_c = inputs[:nb_tensors]
-        if self.mode == F_FORWARD.name:
+        elif self.mode == F_FORWARD.name:
             # y, x_0, w_u, b_u, w_l, b_l = inputs[:6]
             x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
 
         # y_ = op(y)
         if self.mode in [F_IBP.name, F_HYBRID.name]:
@@ -222,12 +228,14 @@ class DecomonPermute(Permute, DecomonLayer):
         if self.mode == F_HYBRID.name:
             # output = [y_, x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
             output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
-        if self.mode == F_FORWARD.name:
+        elif self.mode == F_FORWARD.name:
             # output = [y_, x_0, w_u_, b_u_, w_l_, b_l_]
             output = [x_0, w_u_, b_u_, w_l_, b_l_]
-        if self.mode == F_IBP.name:
+        elif self.mode == F_IBP.name:
             # output = [y_, x_0, u_c_, l_c_]
             output = [u_c_, l_c_]
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
 
         if self.dc_decomp:
             output += [h_, g_]

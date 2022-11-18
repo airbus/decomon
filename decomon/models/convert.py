@@ -352,11 +352,13 @@ def clone(
     if ibp_ and forward_:
         # input_tensors = [z_tensor] + [u_c_tensor] * 3 + [l_c_tensor] * 3
         input_tensors = [z_tensor] + [u_c_tensor, W, b] + [l_c_tensor, W, b]
-    if ibp_ and not forward_:
+    elif ibp_ and not forward_:
         input_tensors = [u_c_tensor, l_c_tensor]
-    if not ibp_ and forward_:
+    elif not ibp_ and forward_:
         # input_tensors = [z_tensor] + [u_c_tensor] * 2 + [l_c_tensor] * 2
         input_tensors = [z_tensor] + [W, b] + [W, b]
+    else:
+        raise NotImplementedError("not IBP and not forward not implemented")
 
     _, output, _, _ = convert(
         model,

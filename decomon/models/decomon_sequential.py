@@ -842,7 +842,8 @@ def convert(
                 w_tensor,
                 b_tensor,
             ]
-
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
         if dc_decomp:
             output += [h_tensor, g_tensor]
 

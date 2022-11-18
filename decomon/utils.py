@@ -182,15 +182,13 @@ def get_lq_norm(x, p, axis=-1):
     :param axis: the axis on which we compute the norm
     :return: ||w||^p
     """
-
-    if p not in [1, 2]:
-        raise NotImplementedError()
-
     if p == 1:
         # x_p = K.sum(K.abs(x), axis)
         x_q = K.max(K.abs(x), axis)
-    if p == 2:
+    elif p == 2:
         x_q = K.sqrt(K.sum(K.pow(x, p), axis))
+    else:
+        raise NotImplementedError("p must be equal to 1 or 2")
 
     return x_q
 
@@ -533,23 +531,21 @@ def get_linear_softplus_hull(upper, lower, slope, **kwargs):
     if slope == V_slope.name:
         # 1 if upper<=-lower else 0
         index_a = -K.clip(K.sign(upper + lower) - o_value, -o_value, z_value)
-
         # 1 if upper>-lower else 0
         index_b = o_value - index_a
         w_l_ = index_b
         b_l_ = z_value * b_u_
-
-    if slope == Z_slope.name:
+    elif slope == Z_slope.name:
         w_l_ = z_value * w_u_
         b_l_ = z_value * b_u_
-
-    if slope == O_slope.name:
+    elif slope == O_slope.name:
         w_l_ = z_value * w_u_ + o_value
         b_l_ = z_value * b_u_
-
-    if slope == S_slope.name:
+    elif slope == S_slope.name:
         w_l_ = w_u_
         b_l_ = z_value * b_u_
+    else:
+        raise ValueError(f"Unknown slope {slope}")
 
     if "finetune" in kwargs:
         # weighted linear combination
@@ -650,14 +646,16 @@ def get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, convex_dom
     if mode == F_IBP.name:
         # y, x_0, u_c, l_c = x[:4]
         u_c, l_c = x[:nb_tensor]
-    if mode == F_HYBRID.name:
+    elif mode == F_HYBRID.name:
         # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensor]
-    if mode == F_FORWARD.name:
+    elif mode == F_FORWARD.name:
         # y, x_0, w_u, b_u, w_l, b_l = x[:6]
         x_0, w_u, b_u, w_l, b_l = x[:nb_tensor]
         u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
         l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
+    else:
+        raise ValueError(f"Unknown mode {mode}")
 
     # flatten
     shape = list(u_c.shape[1:])
@@ -829,31 +827,36 @@ def get_t_lower(u_c_flat, l_c_flat, s_u, func=K.sigmoid, f_prime=sigmoid_prime):
 
 
 def set_mode(x, final_mode, mode, convex_domain=None):
-
     if convex_domain is None:
         convex_domain = {}
+
     if final_mode == mode:
         return x
 
+    x_0, u_c, w_u, b_u, l_c, w_l, b_l = None, None, None, None, None, None, None
     if mode == F_IBP.name:
         u_c, l_c = x
-    if mode == F_FORWARD.name:
+        if final_mode != mode:
+            raise NotImplementedError(f"If mode if {F_IBP}, final_mode must be also {F_IBP}.")
+    elif mode == F_FORWARD.name:
         x_0, w_u, b_u, w_l, b_l = x
-
         if final_mode in [F_IBP.name, F_HYBRID.name]:
             # compute constant bounds
             u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
             l_c = get_lower(x_0, w_u, b_u, convex_domain=convex_domain)
-
-    if mode == F_HYBRID.name:
+    elif mode == F_HYBRID.name:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
+    else:
+        raise ValueError(f"Unknown mode {mode}")
 
     if final_mode == F_IBP.name:
         return [u_c, l_c]
-    if final_mode == F_FORWARD.name:
+    elif final_mode == F_FORWARD.name:
         return [x_0, w_u, b_u, w_l, b_l]
-    if final_mode == F_HYBRID.name:
+    elif final_mode == F_HYBRID.name:
         return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
+    else:
+        raise ValueError(f"Unknown final_mode {final_mode}")
 
 
 def get_AB(model_):

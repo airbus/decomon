@@ -193,10 +193,12 @@ def get_adv_coverage_box(
 
         if IBP and forward:
             z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = output[:7]
-        if not IBP and forward:
+        elif not IBP and forward:
             z, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
-        if IBP and not forward:
+        elif IBP and not forward:
             u_c, l_c = output[:2]
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
         if IBP:
             adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels)
@@ -205,11 +207,12 @@ def get_adv_coverage_box(
 
         if IBP and not forward:
             adv_score = adv_ibp
-
-        if IBP and forward:
+        elif IBP and forward:
             adv_score = np.minimum(adv_ibp, adv_f)
-        if not IBP and forward:
+        elif not IBP and forward:
             adv_score = adv_f
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
     if n_split > 1:
         adv_score = np.max(np.reshape(adv_score, (-1, n_split)), -1)

@@ -8,6 +8,17 @@ from .layers.core import Ball, Box, Grid
 from .models.decomon_sequential import Backward, Forward
 
 
+def _get_dual_ord(p):
+    if p == np.inf:
+        return 1
+    elif p == 1:
+        return np.inf
+    elif p == 2:
+        return 2
+    else:
+        raise ValueError(f"p must be equal to 1, 2, or np.inf, unknown value {p}.")
+
+
 ##### ADVERSARIAL ROBUSTTNESS #####
 def get_adv_box(
     model,
@@ -194,10 +205,12 @@ def get_adv_box(
 
         if IBP and forward:
             z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = output[:7]
-        if not IBP and forward:
+        elif not IBP and forward:
             z, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
-        if IBP and not forward:
+        elif IBP and not forward:
             u_c, l_c = output[:2]
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
         if IBP:
             adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels, backward=model_.backward_bounds)
@@ -208,10 +221,12 @@ def get_adv_box(
 
         if IBP and not forward:
             adv_score = adv_ibp
-        if IBP and forward:
+        elif IBP and forward:
             adv_score = np.minimum(adv_ibp, adv_f)
-        if not IBP and forward:
+        elif not IBP and forward:
             adv_score = adv_f
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
     if n_split > 1:
         adv_score = np.max(np.reshape(adv_score, (-1, n_split)), -1)
@@ -296,7 +311,7 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
         else:
             T_ = [target_labels] * (len(x_) // batch_size + r)
 
-        adv_score = np.concatenate(
+        return np.concatenate(
             [check_adv_box(model_, X_min_[i], X_max_[i], S_[i], T_[i], -1, fast=fast) for i in range(len(X_min_))]
         )
 
@@ -349,14 +364,12 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
 
             return np.max(np.max(upper, -2), -1)
 
-        if IBP and forward:
+        if IBP:
             z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = output[:7]
-        if not IBP and forward:
+        else:
             z, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
 
-    alpha = get_forward_sample(z, w_l_f, b_l_f, w_u_f, b_u_f, source_labels)
-
-    return alpha
+        return get_forward_sample(z, w_l_f, b_l_f, w_u_f, b_u_f, source_labels)
 
 
 #### FORMAL BOUNDS ######
@@ -428,10 +441,13 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         shape_ = np.prod(shape)
 
         if forward:
-            if not IBP:
-                _, w_u_f, b_u_f, _, _ = output[:5]
+            if IBP:
+                _, u_i, w_u_f, b_u_f, _, _, _ = output[:7]
+                if len(u_i.shape) > 2:
+                    u_i = np.reshape(u_i, (-1, shape_))
+
             else:
-                _, _, w_u_f, b_u_f, _, _, _ = output[:7]
+                _, w_u_f, b_u_f, _, _ = output[:5]
 
             # reshape if necessary
             if len(w_u_f.shape) > 3:
@@ -444,12 +460,6 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
                 + b_u_f
             )
 
-            if IBP:
-                u_i = output[1]
-
-                if len(u_i.shape) > 2:
-                    u_i = np.reshape(u_i, (-1, shape_))
-
         else:
             u_i = output[0]
             if len(u_i.shape) > 2:
@@ -458,10 +468,12 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
 
         if IBP and forward:
             u_ = np.minimum(u_i, u_f)
-        if IBP and not forward:
+        elif IBP and not forward:
             u_ = u_i
-        if not IBP and forward:
+        elif not IBP and forward:
             u_ = u_f
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
         if len(shape) > 1:
             u_ = np.reshape(u_, [-1] + list(shape))
@@ -541,10 +553,12 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         shape_ = np.prod(shape)
 
         if forward:
-            if not IBP:
-                _, _, _, w_l_f, b_l_f = output[:5]
+            if IBP:
+                _, _, _, _, l_i, w_l_f, b_l_f = output[:7]
+                if len(l_i.shape) > 2:
+                    l_i = np.reshape(l_i, (-1, shape_))
             else:
-                _, _, _, _, _, w_l_f, b_l_f = output[:7]
+                _, _, _, w_l_f, b_l_f = output[:5]
 
             # reshape if necessary
             if len(w_l_f.shape) > 3:
@@ -557,12 +571,6 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
                 + b_l_f
             )
 
-            if IBP:
-                l_i = output[4]
-
-                if len(l_i.shape) > 2:
-                    l_i = np.reshape(l_i, (-1, shape_))
-
         else:
             l_i = output[1]
             if len(l_i.shape) > 2:
@@ -571,10 +579,12 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
 
         if IBP and forward:
             l_ = np.maximum(l_i, l_f)
-        if IBP and not forward:
+        elif IBP and not forward:
             l_ = l_i
-        if not IBP and forward:
+        elif not IBP and forward:
             l_ = l_f
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
         if len(shape) > 1:
             l_ = np.reshape(l_, [-1] + list(shape_))
@@ -656,10 +666,13 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         shape_ = np.prod(shape)
 
         if forward:
-            if not IBP:
-                _, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
+            if IBP:
+                _, u_i, w_u_f, b_u_f, l_i, w_l_f, b_l_f = output[:7]
+                if len(u_i.shape) > 2:
+                    u_i = np.reshape(u_i, (-1, u_i.shape_))
+                    l_i = np.reshape(l_i, (-1, l_i.shape_))
             else:
-                _, _, w_u_f, b_u_f, _, w_l_f, b_l_f = output[:7]
+                _, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
 
             # reshape if necessary
             if len(w_u_f.shape) > 3:
@@ -679,14 +692,6 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
                 + b_l_f
             )
 
-            if IBP:
-                u_i = output[1]
-                l_i = output[4]
-
-                if len(u_i.shape) > 2:
-                    u_i = np.reshape(u_i, (-1, u_i.shape_))
-                    l_i = np.reshape(l_i, (-1, l_i.shape_))
-
         else:
             u_i = output[0]
             l_i = output[1]
@@ -697,12 +702,14 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         if IBP and forward:
             u_ = np.minimum(u_i, u_f)
             l_ = np.maximum(l_i, l_f)
-        if IBP and not forward:
+        elif IBP and not forward:
             u_ = u_i
             l_ = l_i
-        if not IBP and forward:
+        elif not IBP and forward:
             u_ = u_f
             l_ = l_f
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
         #####
         if len(shape) > 1:
@@ -764,21 +771,15 @@ def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
     shape_ = np.prod(shape)
 
     x_ = x_.reshape((len(x_), -1))
-    if p not in [1, 2, np.inf]:
-        raise NotImplementedError()
-
-    if p == np.inf:
-        ord = 1
-    if p == 1:
-        ord = np.inf
-    if p == 2:
-        ord = 2
+    ord = _get_dual_ord(p)
 
     if forward:
-        if not IBP:
-            _, w_u_f, b_u_f, _, _ = output[:5]
+        if IBP:
+            _, u_i, w_u_f, b_u_f, _, _, _ = output[:7]
+            if len(u_i.shape) > 2:
+                u_i = np.reshape(u_i, (-1, input_dim))
         else:
-            _, _, w_u_f, b_u_f, _, _, _ = output[:7]
+            _, w_u_f, b_u_f, _, _ = output[:5]
 
         # reshape if necessary
         if len(w_u_f.shape) > 3:
@@ -786,12 +787,6 @@ def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
             b_u_f = np.reshape(b_u_f, (-1, shape_))
 
         u_f = eps * np.linalg.norm(w_u_f, ord=ord, axis=1) + np.sum(w_u_f * x_[:, :, None], 1) + b_u_f
-
-        if IBP:
-            u_i = output[1]
-
-            if len(u_i.shape) > 2:
-                u_i = np.reshape(u_i, (-1, input_dim))
 
     else:
         u_i = output[0]
@@ -801,10 +796,12 @@ def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
 
     if IBP and forward:
         u_ = np.minimum(u_i, u_f)
-    if IBP and not forward:
+    elif IBP and not forward:
         u_ = u_i
-    if not IBP and forward:
+    elif not IBP and forward:
         u_ = u_f
+    else:
+        raise NotImplementedError("not IBP and not forward not implemented")
 
     if len(shape) > 1:
         u_ = np.reshape(u_ + [-1] + list(shape))
@@ -859,33 +856,21 @@ def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
     shape_ = np.prod(shape)
 
     x_ = x_.reshape((len(x_), -1))
-    if p not in [1, 2, np.inf]:
-        raise NotImplementedError()
-
-    if p == np.inf:
-        ord = 1
-    if p == 1:
-        ord = np.inf
-    if p == 2:
-        ord = 2
+    ord = _get_dual_ord(p)
 
     if forward:
-        if not IBP:
-            _, _, _, w_l_f, b_l_f = output[:5]
+        if IBP:
+            _, _, _, _, l_i, w_l_f, b_l_f = output[:7]
+            if len(l_i.shape) > 2:
+                l_i = np.reshape(l_i, (-1, shape_))
         else:
-            _, _, _, _, _, w_l_f, b_l_f = output[:7]
+            _, _, _, w_l_f, b_l_f = output[:5]
 
         # reshape if necessary
         if len(w_l_f.shape) > 3:
             w_l_f = np.reshape(w_l_f, (-1, input_dim, shape_))
             b_l_f = np.reshape(b_l_f, (-1, shape_))
         l_f = -eps * np.linalg.norm(w_l_f, ord=ord, axis=1) + np.sum(w_l_f * x_[:, :, None], 1) + b_l_f
-
-        if IBP:
-            l_i = output[4]
-
-            if len(l_i.shape) > 2:
-                l_i = np.reshape(l_i, (-1, shape_))
 
     else:
         l_i = output[1]
@@ -895,10 +880,12 @@ def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
 
     if IBP and forward:
         l_ = np.maximum(l_i, l_f)
-    if IBP and not forward:
+    elif IBP and not forward:
         l_ = l_i
-    if not IBP and forward:
+    elif not IBP and forward:
         l_ = l_f
+    else:
+        raise NotImplementedError("not IBP and not forward not implemented")
 
     if len(shape) > 1:
         l_ = np.reshape(l_, [-1] + shape)
@@ -958,21 +945,16 @@ def get_range_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
     shape_ = np.prod(shape)
 
     x_ = x_.reshape((len(x_), -1))
-    if p not in [1, 2, np.inf]:
-        raise NotImplementedError()
-
-    if p == np.inf:
-        ord = 1
-    if p == 1:
-        ord = np.inf
-    if p == 2:
-        ord = 2
+    ord = _get_dual_ord(p)
 
     if forward:
-        if not IBP:
-            _, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
+        if IBP:
+            _, u_i, w_u_f, b_u_f, l_i, w_l_f, b_l_f = output[:7]
+            if len(u_i.shape) > 2:
+                u_i = np.reshape(u_i, (-1, shape_))
+                l_i = np.reshape(l_i, (-1, shape_))
         else:
-            _, _, w_u_f, b_u_f, _, w_l_f, b_l_f = output[:7]
+            _, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
 
         # reshape if necessary
         if len(w_u_f.shape) > 3:
@@ -983,14 +965,6 @@ def get_range_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
 
         u_f = eps * np.linalg.norm(w_u_f, ord=ord, axis=1) + np.sum(w_u_f * x_[:, :, None], 1) + b_u_f
         l_f = -eps * np.linalg.norm(w_l_f, ord=ord, axis=1) + np.sum(w_l_f * x_[:, :, None], 1) + b_l_f
-
-        if IBP:
-            u_i = output[1]
-            l_i = output[4]
-
-            if len(u_i.shape) > 2:
-                u_i = np.reshape(u_i, (-1, shape_))
-                l_i = np.reshape(l_i, (-1, shape_))
 
     else:
         u_i = output[0]
@@ -1003,12 +977,14 @@ def get_range_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
     if IBP and forward:
         u_ = np.minimum(u_i, u_f)
         l_ = np.maximum(l_i, l_f)
-    if IBP and not forward:
+    elif IBP and not forward:
         u_ = u_i
         l_ = l_i
-    if not IBP and forward:
+    elif not IBP and forward:
         u_ = u_f
         l_ = l_f
+    else:
+        raise NotImplementedError("not IBP and not forward not implemented")
 
     if len(shape) > 1:
         u_ = np.reshape(u_, [-1] + shape)
@@ -1305,10 +1281,12 @@ def get_adv_noise(
             # compute dual norm
             if p == 2:
                 upper_1 = eps * np.sum(w_u_f**2, 1)
-            if p == 1:
+            elif p == 1:
                 upper_1 = eps * np.max(np.abs(w_u_f), 1)
-            if p == np.inf:
+            elif p == np.inf:
                 upper_1 = eps * np.sum(np.abs(w_u_f), 1)
+            else:
+                raise ValueError(f"p must be equal to 1, 2, or np.inf, unknown value {p}.")
 
             upper = upper_0 + upper_1
 
@@ -1328,6 +1306,8 @@ def get_adv_noise(
             z, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
         if IBP and not forward:
             u_c, l_c = output[:2]
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
         if IBP:
             adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels)
@@ -1336,10 +1316,12 @@ def get_adv_noise(
 
         if IBP and not forward:
             adv_score = adv_ibp
-        if IBP and forward:
+        elif IBP and forward:
             adv_score = np.minimum(adv_ibp, adv_f)
-        if not IBP and forward:
+        elif not IBP and forward:
             adv_score = adv_f
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
         if n_split > 1:
             adv_score = np.max(np.reshape(adv_score, (-1, n_split)), -1)

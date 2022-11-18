@@ -266,7 +266,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         o_value = K.cast(1.0, self.dtype)
 
         if not isinstance(inputs, list):
-            raise ValueError("A merge layer should be called " "on a list of inputs.")
+            raise ValueError("A merge layer should be called on a list of inputs.")
 
         if self.mode not in [F_HYBRID.name, F_IBP.name, F_FORWARD.name]:
             raise ValueError(f"unknown  forward mode {self.mode}")
@@ -557,6 +557,8 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         elif self.mode == F_FORWARD.name:
             # output = [y_, x_0, w_u_, b_u_, w_l_, b_l_]
             output = [x_0, w_u_, b_u_, w_l_, b_l_]
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
 
         if self.dc_decomp:
             output += [h_, g_]
@@ -589,14 +591,14 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         if self.mode == F_IBP.name:
             y_shape = input_shape[0]
-
-        if self.mode == F_FORWARD.name:
+        elif self.mode == F_FORWARD.name:
             x_0_shape = input_shape[0]
             y_shape = input_shape[2]
-
-        if self.mode == F_HYBRID.name:
+        elif self.mode == F_HYBRID.name:
             x_0_shape = input_shape[0]
             y_shape = input_shape[1]
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
 
         # y_shape, x_0_shape = input_shape[:2]
 
@@ -604,6 +606,8 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             space = y_shape[1:-1]
         elif self.data_format == "channels_first":
             space = y_shape[2:]
+        else:
+            raise ValueError(f"Unknown data_format {self.data_format}")
 
         new_space = []
         for i in range(len(space)):
@@ -619,6 +623,8 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             output_shape = (y_shape[0],) + tuple(new_space) + (self.filters,)
         elif self.data_format == "channels_first":
             output_shape = (y_shape[0], self.filters) + tuple(new_space)
+        else:
+            raise ValueError(f"Unknown data_format {self.data_format}")
 
         # b_u_shape_, b_l_shape_, u_c_shape, l_c_shape = [output_shape] * 4
         # input_dim = x_0_shape[-1]
@@ -629,14 +635,14 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         else:
             input_dim = x_0_shape[-1]
             w_shape_ = tuple([output_shape[0], input_dim] + list(output_shape)[1:])
-
-        if self.mode == F_FORWARD.name:
-            # output_shape_ = [output_shape, x_0_shape] + [w_shape_, output_shape] * 2
-            output_shape_ = [x_0_shape] + [w_shape_, output_shape] * 2
-
-        if self.mode == F_HYBRID.name:
-            # output_shape_ = [output_shape, x_0_shape] + [output_shape, w_shape_, output_shape] * 2
-            output_shape_ = [x_0_shape] + [output_shape, w_shape_, output_shape] * 2
+            if self.mode == F_FORWARD.name:
+                # output_shape_ = [output_shape, x_0_shape] + [w_shape_, output_shape] * 2
+                output_shape_ = [x_0_shape] + [w_shape_, output_shape] * 2
+            elif self.mode == F_HYBRID.name:
+                # output_shape_ = [output_shape, x_0_shape] + [output_shape, w_shape_, output_shape] * 2
+                output_shape_ = [x_0_shape] + [output_shape, w_shape_, output_shape] * 2
+            else:
+                raise ValueError(f"Unknown mode {self.mode}")
 
         if self.dc_decomp:
             output_shape_ += [output_shape] * 2
@@ -744,12 +750,14 @@ class DecomonDense(Dense, DecomonLayer):
 
         if self.mode == F_IBP.name:
             input_dim = input_shape[0][-1]
-        if self.mode == F_HYBRID.name:
+        elif self.mode == F_HYBRID.name:
             input_dim = input_shape[1][-1]
             input_x = input_shape[0][-1]
-        if self.mode == F_FORWARD.name:
+        elif self.mode == F_FORWARD.name:
             input_dim = input_shape[2][-1]
             input_x = input_shape[0][-1]
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
 
         # here pay attention to compute input_dim
 
@@ -891,9 +899,6 @@ class DecomonDense(Dense, DecomonLayer):
         if self.has_backward_bounds:
             back_bound = inputs[-1]
             inputs = inputs[:-1]
-
-        if self.has_backward_bounds:
-
             kernel_ = K.sum(self.kernel[None, :, :, None] * back_bound[:, None], 2)
             kernel_pos_back = K.maximum(z_value, kernel_)
             kernel_neg_back = K.minimum(z_value, kernel_)
@@ -912,22 +917,20 @@ class DecomonDense(Dense, DecomonLayer):
             h, g = inputs[-2:]
             h_ = K.dot(h, kernel_pos) + K.dot(g, kernel_neg)
             g_ = K.dot(g, kernel_pos) + K.dot(h, kernel_neg)
-
-        if self.dc_decomp:
             rest = 2
         else:
             rest = 0
         if self.mode == F_HYBRID.name:
             # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:8]
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: self.nb_tensors - rest]
-
-        if self.mode == F_IBP.name:
+        elif self.mode == F_IBP.name:
             # y, x_0, u_c, l_c = inputs[:4]
             u_c, l_c = inputs[: self.nb_tensors - rest]
-        if self.mode == F_FORWARD.name:
+        elif self.mode == F_FORWARD.name:
             # y, x_0, w_u, b_u, w_l, b_l = inputs[:6]
             x_0, w_u, b_u, w_l, b_l = inputs[: self.nb_tensors - rest]
-
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
         # y_ = K.dot(y, self.kernel)  # + K.dot(y, self.kernel_neg)
 
         # mask_b = 0 * (y)
@@ -935,8 +938,6 @@ class DecomonDense(Dense, DecomonLayer):
         if self.mode in [F_HYBRID.name, F_FORWARD.name]:
             if len(w_u.shape) != len(b_u.shape):
                 x_max = get_upper(x_0, w_u - w_l, b_u - b_l, self.convex_domain)
-                mask_b = o_value - K.sign(x_max)
-                mask_a = o_value - mask_b
 
         if self.mode in [F_HYBRID.name, F_IBP.name]:
             if not self.linear_layer:
@@ -1032,9 +1033,6 @@ class DecomonDense(Dense, DecomonLayer):
                     b_l_ = K.dot(b_l, kernel_pos) + \
                            K.dot(mask_a * (b_u) + mask_b * (b_l), kernel_neg_gamma)
                     """
-                # else:
-                mask_a = K.expand_dims(mask_a, 1)
-                mask_b = K.expand_dims(mask_b, 1)
 
                 # if not self.n_subgrad or self.mode == F_FORWARD.name:
                 if self.finetune and self.mode == F_HYBRID.name:
@@ -1461,6 +1459,8 @@ class DecomonFlatten(Flatten, DecomonLayer):
         elif self.mode == F_FORWARD.name:
             # y, x_0, w_u, b_u, w_l, b_l = inputs
             x_0, w_u, b_u, w_l, b_l = inputs[: self.nb_tensors]
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
 
         # y_ = op(y)
         if self.mode in [F_HYBRID.name, F_IBP.name]:
@@ -1480,12 +1480,14 @@ class DecomonFlatten(Flatten, DecomonLayer):
         if self.mode == F_HYBRID.name:
             # output = [y_, x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
             output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
-        if self.mode == F_IBP.name:
+        elif self.mode == F_IBP.name:
             # output = [y_, x_0, u_c_, l_c_]
             output = [u_c_, l_c_]
-        if self.mode == F_FORWARD.name:
+        elif self.mode == F_FORWARD.name:
             # output = [y_, x_0, w_u_, b_u_, w_l_, b_l_]
             output = [x_0, w_u_, b_u_, w_l_, b_l_]
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
 
         if self.dc_decomp:
             output += [h_, g_]
@@ -1544,15 +1546,13 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
 
         output_shape_ = super().compute_output_shape(input_shape[-1])
 
-        if self.mode in [F_FORWARD.name, F_HYBRID.name]:
-            x_shape = input_shape[0]
-            input_dim = x_shape[-1]
-
-        output = []
         if self.mode == F_IBP.name:
             # output = [output_shape_, x_shape, output_shape_, output_shape_]
             output = [output_shape_] * 2
-        if self.mode in [F_HYBRID.name, F_FORWARD.name]:
+
+        elif self.mode in [F_FORWARD.name, F_HYBRID.name]:
+            x_shape = input_shape[0]
+            input_dim = x_shape[-1]
             w_shape = list(output_shape_)[:, None]
             w_shape[:, 0] = input_dim
             if self.mode == F_FORWARD.name:
@@ -1561,6 +1561,8 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
             else:
                 # output = [output_shape_,x_shape,output_shape_,w_shape,output_shape_,output_shape_,w_shape,output_shape_]
                 output = [x_shape] + [output_shape_, w_shape, output_shape_] * 2
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
 
         if self.dc_decomp:
             output += [output_shape_, output_shape_]
@@ -1938,6 +1940,8 @@ def to_monotonic(
         elif mode == F_FORWARD.name:
             # input_ = [y_shape, x_shape, w_shape, y_shape, w_shape, y_shape]
             input_ = [x_shape, w_shape, y_shape, w_shape, y_shape]
+        else:
+            raise ValueError(f"Unknown mode {mode}")
 
         if dc_decomp:
             input_ += [y_shape, y_shape]

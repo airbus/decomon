@@ -280,23 +280,25 @@ def get_disconnected_input(mode, convex_domain, dtype=K.floatx()):
 
         if mode == F_IBP.name:
             return inputs_
-        if mode == F_FORWARD.name:
-            x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs_
-            u_c = get_upper(x_0, w_f_u, b_f_u, convex_domain=convex_domain)
-            l_c = get_lower(x_0, w_f_l, b_f_l, convex_domain=convex_domain)
+        elif mode in {F_FORWARD.name, F_HYBRID.name}:
+            if mode == F_FORWARD.name:
+                x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs_
+                u_c = get_upper(x_0, w_f_u, b_f_u, convex_domain=convex_domain)
+                l_c = get_lower(x_0, w_f_l, b_f_l, convex_domain=convex_domain)
+            else:
+                _, u_c, _, _, l_c, _, _ = inputs_
 
-        if mode == F_HYBRID.name:
-            _, u_c, _, _, l_c, _, _ = inputs_
+            x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
+            w_u_ = tf.linalg.diag(K.cast(0.0, x_0.dtype) * u_c + K.cast(1.0, x_0.dtype))
+            b_u_ = K.cast(0.0, x_0.dtype) * u_c
+            # w_u_ = tf.linalg.diag(K.cast(0., x_0.dtype)*u_c)
 
-        x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
-        w_u_ = tf.linalg.diag(K.cast(0.0, x_0.dtype) * u_c + K.cast(1.0, x_0.dtype))
-        b_u_ = K.cast(0.0, x_0.dtype) * u_c
-        # w_u_ = tf.linalg.diag(K.cast(0., x_0.dtype)*u_c)
-
-        if mode == F_FORWARD.name:
-            return [x_0, w_u_, b_u_, w_u_, b_u_]
-        if mode == F_HYBRID.name:
-            return [x_0, u_c, w_u_, b_u_, l_c, w_u_, b_u_]
+            if mode == F_FORWARD.name:
+                return [x_0, w_u_, b_u_, w_u_, b_u_]
+            else:
+                return [x_0, u_c, w_u_, b_u_, l_c, w_u_, b_u_]
+        else:
+            raise ValueError(f"Unknown mode {mode}")
 
     return Lambda(disco_priv, dtype=dtype)
 

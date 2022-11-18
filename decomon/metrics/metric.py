@@ -93,10 +93,12 @@ class Adversarial_score(Layer):
 
         if self.ibp and self.forward:
             _, z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = inputs[:8]
-        if not self.ibp and self.forward:
+        elif not self.ibp and self.forward:
             _, z, w_u_f, b_u_f, w_l_f, b_l_f = inputs[:6]
-        if self.ibp and not self.forward:
+        elif self.ibp and not self.forward:
             _, z, u_c, l_c = inputs[:4]
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
         if self.ibp:
             adv_ibp = get_ibp_score(u_c, l_c, y_tensor)
@@ -105,10 +107,12 @@ class Adversarial_score(Layer):
 
         if self.ibp and not self.forward:
             adv_score = adv_ibp
-        if self.ibp and self.forward:
+        elif self.ibp and self.forward:
             adv_score = K.minimum(adv_ibp, adv_f)
-        if not self.ibp and self.forward:
+        elif not self.ibp and self.forward:
             adv_score = adv_f
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
         if self.mode == "backward":
             w_u_b, b_u_b, w_l_b, b_l_b, _ = inputs[-5:]
@@ -200,10 +204,12 @@ class Adversarial_check(Layer):
 
         if self.ibp and self.forward:
             _, z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = inputs[:8]
-        if not self.ibp and self.forward:
+        elif not self.ibp and self.forward:
             _, z, w_u_f, b_u_f, w_l_f, b_l_f = inputs[:6]
-        if self.ibp and not self.forward:
+        elif self.ibp and not self.forward:
             _, z, u_c, l_c = inputs[:4]
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
         if self.ibp:
             adv_ibp = get_ibp_score(u_c, l_c, y_tensor)
@@ -212,10 +218,12 @@ class Adversarial_check(Layer):
 
         if self.ibp and not self.forward:
             adv_score = adv_ibp
-        if self.ibp and self.forward:
+        elif self.ibp and self.forward:
             adv_score = K.minimum(adv_ibp, adv_f)
-        if not self.ibp and self.forward:
+        elif not self.ibp and self.forward:
             adv_score = adv_f
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
         if self.mode == "backward":
             w_u_b, b_u_b, w_l_b, b_l_b, _ = inputs[-5:]
@@ -301,14 +309,14 @@ class Upper_score(Layer):
             upper_ibp = K.sum(u_c * y_tensor, -1)
             upper_forward = self.linear_upper(z_tensor, y_tensor, w_u_f, b_u_f)
             upper_score = K.minimum(upper_ibp, upper_forward)
-
-        if not self.ibp and self.forward:
+        elif not self.ibp and self.forward:
             _, _, w_u_f, b_u_f = inputs[:6]
             upper_score = self.linear_upper(z_tensor, y_tensor, w_u_f, b_u_f)
-
-        if self.ibp and not self.forward:
+        elif self.ibp and not self.forward:
             _, _, u_c, l_c = inputs[:4]
             upper_score = K.sum(u_c * y_tensor, -1)
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
 
         if self.mode == "backward":
             w_u_b, b_u_b, _, _, _ = inputs[-5:]

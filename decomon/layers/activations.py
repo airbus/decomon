@@ -98,12 +98,14 @@ def linear_hull_s_shape(
 
     if mode == F_IBP.name:
         u_c, l_c = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
-    if mode == F_HYBRID.name:
+    elif mode == F_HYBRID.name:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
-    if mode == F_FORWARD.name:
+    elif mode == F_FORWARD.name:
         x_0, w_u, b_u, w_l, b_l = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
         u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
         l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
+    else:
+        raise ValueError(f"Unknown mode {mode}")
 
     if mode in [F_IBP.name, F_HYBRID.name]:
         u_c_ = func(u_c)
@@ -135,14 +137,14 @@ def linear_hull_s_shape(
     if mode == F_IBP.name:
         # output = [func(y), x_0, u_c_, l_c_]
         output = [u_c_, l_c_]
-
-    if mode == F_HYBRID.name:
+    elif mode == F_HYBRID.name:
         # output = [func(y), x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
         output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
-
-    if mode == F_FORWARD.name:
+    elif mode == F_FORWARD.name:
         # output = [func(y), x_0, w_u_, b_u_, w_l_, b_l_]
         output = [x_0, w_u_, b_u_, w_l_, b_l_]
+    else:
+        raise ValueError(f"Unknown mode {mode}")
 
     return output
     # TO DO linear relaxation
@@ -415,27 +417,28 @@ def deserialize(name):
 
     if name == SOFTMAX:
         return softmax
-    if name == ELU:
+    elif name == ELU:
         return elu
-    if name == SELU:
+    elif name == SELU:
         return selu
-    if name == SOFTPLUS:
+    elif name == SOFTPLUS:
         return softplus
-    if name == SOFTSIGN:
+    elif name == SOFTSIGN:
         return softsign
-    if name == SIGMOID:
+    elif name == SIGMOID:
         return sigmoid
-    if name == TANH:
+    elif name == TANH:
         return tanh
-    if name == RELU:
+    elif name == RELU:
         return relu_
-    if name == EXPONENTIAL:
+    elif name == EXPONENTIAL:
         return exponential
-    if name == LINEAR:
+    elif name == LINEAR:
         return linear
-    if name == GROUP_SORT_2:
+    elif name == GROUP_SORT_2:
         return group_sort_2
-    raise ValueError("Could not interpret " "activation function identifier:", name)
+    else:
+        raise ValueError(f"Could not interpret activation function identifier: {name}")
 
 
 def get(identifier):
@@ -448,7 +451,7 @@ def get(identifier):
     """
     if identifier is None:
         return linear
-    if isinstance(identifier, six.string_types):
+    elif isinstance(identifier, six.string_types):
         identifier = str(identifier)
         return deserialize(identifier)
     elif callable(identifier):
