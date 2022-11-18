@@ -7,7 +7,7 @@ CROWN implementation in numpy (useful for MILP compatibility)
 """
 
 
-class BackwardNumpyLayer(object):
+class BackwardNumpyLayer:
     def __init__(self, keras_layer, convex_domain=None, mode=F_FORWARD.name, rec=1, params=None, **kwargs):
         """
 

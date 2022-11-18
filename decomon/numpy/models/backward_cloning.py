@@ -291,7 +291,7 @@ def crown(
     return toto[0]
 
 
-class NumpyModel(object):
+class NumpyModel:
     def __init__(
         self,
         model,
