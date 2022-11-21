@@ -445,34 +445,7 @@ def crown_(
             return crown_bound, backward_map
         """
         if len(parents) > 1:
-            if isinstance(backward_layer, BackwardMerge):
-                raise NotImplementedError()
-                crown_bound_list = []
-                for (backward_bound, parent) in zip(backward_bounds, parents):
-
-                    crown_bound_i, backward_map_i = crown_(
-                        parent,
-                        IBP,
-                        forward,
-                        convex_domain,
-                        input_map,
-                        layer_fn,
-                        backward_bound,
-                        backward_map,
-                        joint,
-                        fuse,
-                    )
-
-                    crown_bound_list.append(crown_bound_i)
-
-                # import pdb; pdb.set_trace()
-                avg_layer = Average(dtype=node.outbound_layer.dtype)
-
-                # crown_bound = [avg_layer([e[i] for e in crown_bound_list]) for i in range(4)]
-                crown_bound = crown_bound_list[0]
-
-            else:
-                raise NotImplementedError()
+            raise NotImplementedError()
         else:
             crown_bound, backward_map_, output_map_ = crown_(
                 parents[0],
