@@ -257,7 +257,7 @@ class DecomonSubtract(DecomonLayer):
 
         return input_shape  # ????
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
 
         if self.dc_decomp:
             raise NotImplementedError()
@@ -290,7 +290,7 @@ class DecomonMinimum(DecomonLayer):
 
         return input_shape
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
 
         if self.dc_decomp:
             raise NotImplementedError()
@@ -334,7 +334,7 @@ class DecomonMaximum(DecomonLayer):
     def compute_output_shape(self, input_shape):
         return input_shape  # ????
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
 
         if self.dc_decomp:
             raise NotImplementedError()

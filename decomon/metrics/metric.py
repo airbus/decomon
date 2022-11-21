@@ -39,7 +39,7 @@ class Adversarial_score(Layer):
 
         return K.max(adv_score, -1)
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         """
 
         :param inputs:
@@ -150,7 +150,7 @@ class Adversarial_check(Layer):
 
         return K.max(adv_score, -1)
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         """
 
         :param inputs:
@@ -293,7 +293,7 @@ class Upper_score(Layer):
 
         return K.sum(upper_score, -1)
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         """
 
         :param inputs:

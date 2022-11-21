@@ -284,7 +284,7 @@ class BackwardMaxPooling2D(Layer):
 
         return w_out_u_, b_out_u, w_out_l_, b_out_l
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
 
         x = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]

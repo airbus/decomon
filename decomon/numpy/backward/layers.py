@@ -128,7 +128,7 @@ class BackwardNumpyInputLayer(BackwardNumpyLayer):
 
         return [w_u_, b_u_, w_u_, b_u_]
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         if self.previous:
             return self.call_previous(inputs)
         else:
@@ -166,7 +166,7 @@ class BackwardNumpyDense(BackwardNumpyLayer):
 
         self.previous = previous
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         if self.previous:
 
             output = self.call_no_previous(inputs)

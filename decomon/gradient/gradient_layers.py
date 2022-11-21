@@ -44,6 +44,6 @@ class GradientDense(Layer):
             convex_domain = {}
         self.layer = layer
 
-    def call(self, inputs, mode, convex_domain):
+    def call(self, *args, **kwargs):
 
         return self.kernel

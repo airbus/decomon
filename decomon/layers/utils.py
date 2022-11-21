@@ -647,7 +647,7 @@ class Project_initializer_pos(Initializer):
         super().__init__(**kwargs)
         self.initializer = initializer
 
-    def __call__(self, shape, dtype=None):
+    def __call__(self, shape, dtype=None, **kwargs):
         w_ = self.initializer.__call__(shape, dtype)
         return K.maximum(0.0, w_)
 
@@ -659,7 +659,7 @@ class Project_initializer_neg(Initializer):
         super().__init__(**kwargs)
         self.initializer = initializer
 
-    def __call__(self, shape, dtype=None):
+    def __call__(self, shape, dtype=None, **kwargs):
         w_ = self.initializer.__call__(shape, dtype)
         return K.minimum(0.0, w_)
 
