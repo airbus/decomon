@@ -4,6 +4,7 @@ import warnings
 
 import numpy as np
 import six
+from tensorflow.keras.layers import Layer
 
 from decomon.utils import F_FORWARD, V_slope
 
