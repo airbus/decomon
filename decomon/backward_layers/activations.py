@@ -13,9 +13,9 @@ from ..layers import F_FORWARD, F_HYBRID, F_IBP
 from ..layers.core import StaticVariables
 from ..layers.utils import (
     get_linear_hull_s_shape,
+    get_linear_softplus_hull,
     get_lower,
     get_upper,
-    relu_,
     sigmoid_prime,
     softsign_prime,
     tanh_prime,
@@ -351,7 +351,7 @@ def backward_softplus(
             _, upper, _, _, lower, _, _ = x[:nb_tensors]
         else:
             raise ValueError(f"Unknown mode {mode}")
-        return get_linear_hull_softplus(upper, lower, slope=slope, **kwargs)
+        return get_linear_softplus_hull(upper, lower, slope=slope, **kwargs)
 
 
 def backward_softsign(
