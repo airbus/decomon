@@ -15,15 +15,8 @@ from tensorflow.keras.layers import (
 )
 
 from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
-from decomon.layers.utils import (
-    add,
-    broadcast,
-    maximum,
-    minus,
-    multiply,
-    permute_dimensions,
-    substract,
-)
+from decomon.layers.utils import broadcast, multiply, permute_dimensions
+from decomon.utils import add, maximum, minus, substract
 
 ##### Merge Layer ####
 

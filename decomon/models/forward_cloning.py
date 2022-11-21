@@ -21,7 +21,6 @@ from decomon.backward_layers.backward_layers import join
 from decomon.backward_layers.utils import S_slope, V_slope, backward_linear_prod
 from decomon.layers.core import Box, StaticVariables
 from decomon.layers.decomon_layers import to_monotonic
-from decomon.layers.utils import get_lower, get_upper, linear_to_softmax
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.models import Backward, DecomonModel, DecomonSequential, Forward
 from decomon.models.utils import (

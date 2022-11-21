@@ -10,7 +10,7 @@ from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
 from decomon.backward_layers.backward_layers import get_backward as get_backward_
 from decomon.backward_layers.backward_merge import BackwardMerge
 from decomon.backward_layers.utils import merge_with_previous
-from decomon.layers.utils import get_lower, get_upper
+from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.utils import (
     check_input_tensors_sequential,
@@ -18,7 +18,7 @@ from decomon.models.utils import (
     get_depth_dict,
     get_mode,
 )
-from decomon.utils import F_FORWARD, F_HYBRID, F_IBP, get_lower, get_upper
+from decomon.utils import get_lower, get_upper
 
 
 def is_purely_linear(layer):

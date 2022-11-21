@@ -26,7 +26,6 @@ from decomon.layers.decomon_merge_layers import (
     DecomonMultiply,
     DecomonSubtract,
 )
-from decomon.layers.utils import relu_
 
 from . import (
     assert_output_properties_box,

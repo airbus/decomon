@@ -6,7 +6,6 @@ import pytest
 import tensorflow.python.keras.backend as K
 from numpy.testing import assert_allclose, assert_almost_equal
 
-from decomon.layers.utils import minus
 from decomon.metrics.utils import categorical_cross_entropy
 
 from . import (

@@ -2,7 +2,7 @@
 from tensorflow.python.keras import backend as K
 
 from decomon.layers import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
-from decomon.layers.utils import get_lower, get_upper
+from decomon.utils import get_lower, get_upper
 
 
 def gradient_relu(inputs, dc_decomp=False, mode=F_HYBRID.name, convex_domain=None, **kwargs):

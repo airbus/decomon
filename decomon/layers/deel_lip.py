@@ -41,8 +41,6 @@ from decomon.layers.utils import (
     Project_initializer_neg,
     Project_initializer_pos,
     expand_dims,
-    get_lower,
-    get_upper,
     grad_descent,
     max_,
     min_,

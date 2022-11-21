@@ -6,6 +6,7 @@ from tensorflow.keras.layers import Activation, Flatten, Layer, Permute
 from tensorflow.python.ops import array_ops
 
 from decomon.backward_layers.activations import get
+from decomon.layers.core import F_FORWARD, F_HYBRID
 from decomon.layers.decomon_layers import (
     DecomonActivation,
     DecomonBatchNormalization,
@@ -17,7 +18,6 @@ from decomon.layers.decomon_layers import (
     DecomonReshape,
     to_monotonic,
 )
-from decomon.layers.utils import F_FORWARD, F_HYBRID, ClipAlpha
 
 
 class GradientDense(Layer):
