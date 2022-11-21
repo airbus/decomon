@@ -77,7 +77,7 @@ class DecomonGroupSort(DecomonLayer):
             mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp
         ).call
 
-    def call(self, input):
+    def call(self, input, **kwargs):
 
         shape_in = list(input[0].shape[1:])
 
@@ -142,7 +142,7 @@ class DecomonGroupSort2(DecomonLayer):
     def compute_output_shape(self, input_shape):
         return input_shape
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
 
         inputs_ = self.op_reshape_in(inputs)
         inputs_max = expand_dims(

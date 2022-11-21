@@ -113,7 +113,7 @@ class BackwardAdd(BackwardMerge):
         bounds = list(get_identity_lirpa(inputs))
         return self.call_previous(inputs + bounds)
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         if self.previous:
             return self.call_previous(inputs)
         else:
@@ -278,7 +278,7 @@ class BackwardAverage(BackwardMerge):
         bounds = list(get_identity_lirpa(inputs))
         return self.call_previous(inputs + bounds)
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         # import pdb; pdb.set_trace()
         if self.previous:
             return self.call_previous(inputs)
@@ -300,7 +300,7 @@ class BackwardSubtract(BackwardMerge):
         self.slope = slope
         self.mode = self.layer.mode
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -342,7 +342,7 @@ class BackwardMaximum(BackwardMerge):
         self.slope = slope
         self.mode = self.layer.mode
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -384,7 +384,7 @@ class BackwardMinimum(BackwardMerge):
         self.slope = slope
         self.mode = self.layer.mode
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -427,7 +427,7 @@ class BackwardConcatenate(BackwardMerge):
         self.mode = self.layer.mode
         self.axis = self.layer.axis
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
@@ -466,7 +466,7 @@ class BackwardMultiply(BackwardMerge):
         self.slope = slope
         self.mode = self.layer.mode
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -513,7 +513,7 @@ class BackwardDot(BackwardMerge):
 
         raise NotImplementedError()
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]

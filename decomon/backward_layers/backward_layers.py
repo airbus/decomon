@@ -241,7 +241,7 @@ class BackwardDense(BackwardLayer):
                 b_out_u_, b_out_l_ = [z_value * w_out_u_[:, 0]] * 2
         return w_out_u_, b_out_u_, w_out_l_, b_out_l_
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         if self.previous:
             return self.call_previous(inputs)
         else:
@@ -515,7 +515,7 @@ class BackwardConv2D(BackwardLayer):
 
         return w_out_u_, b_out_u_, w_out_l_, b_out_l_
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         if self.previous:
             return self.call_previous(inputs)
         else:
@@ -802,8 +802,7 @@ class BackwardActivation(BackwardLayer):
 
         return w_out_u, b_out_u, w_out_l, b_out_l
 
-    def call(self, inputs):
-
+    def call(self, inputs, **kwargs):
         if self.previous:
             y_ = inputs[:-4][-1]
             w_out_u, w_out_l, b_out_u, b_out_l = self.call_previous(inputs)
@@ -857,7 +856,7 @@ class BackwardFlatten(BackwardLayer):
             convex_domain = {}
         self.previous = previous
 
-    def call(self, inputs, slope=V_slope.name):
+    def call(self, inputs, slope=V_slope.name, **kwargs):
         if self.previous:
             return inputs[-4:]
         else:
@@ -932,7 +931,7 @@ class BackwardReshape(BackwardLayer):
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
         return w_out_u, b_out_u, w_out_l, b_out_l
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         if self.previous:
             return self.call_previous(inputs)
         else:
@@ -954,7 +953,7 @@ class BackwardPermute(BackwardLayer):
         self.op = layer.call
         self.previous = previous
 
-    def call(self, inputs, slope=V_slope.name):
+    def call(self, inputs, slope=V_slope.name, **kwargs):
 
         if self.previous:
             w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -1008,7 +1007,7 @@ class BackwardDropout(BackwardLayer):
         if convex_domain is None:
             convex_domain = {}
 
-    def call(self, inputs, slope=V_slope.name):
+    def call(self, inputs, slope=V_slope.name, **kwargs):
 
         if self.previous:
             w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -1044,7 +1043,7 @@ class BackwardBatchNormalization(BackwardLayer):
         self.axis = self.layer.axis
         self.op_flat = Flatten()
 
-    def call(self, inputs, slope=V_slope.name):
+    def call(self, inputs, slope=V_slope.name, **kwargs):
 
         y = inputs[0]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -1113,7 +1112,7 @@ class BackwardInputLayer(BackwardLayer):
 
         return get_identity_lirpa(inputs)
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         if self.previous:
             return self.call_previous(inputs)
         else:

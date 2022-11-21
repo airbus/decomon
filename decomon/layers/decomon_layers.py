@@ -1779,7 +1779,7 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
                 **kwargs,
             )
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         return inputs
 
     def compute_output_shape(self, input_shape):
