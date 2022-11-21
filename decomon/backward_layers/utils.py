@@ -3,48 +3,25 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dropout, Flatten, Lambda
 from tensorflow.python.keras import backend as K
 
-from decomon.corners.utils import get_bound_grid, get_bound_grid_lagrangian
-from decomon.layers import (
-    F_FORWARD,
-    F_HYBRID,
-    F_IBP,
-    StaticVariables,
-    get_lower,
-    get_upper,
-)
+from decomon.layers import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
 from decomon.layers.core import Grid, Option
-from decomon.layers.utils import (
+from decomon.layers.utils import multiply, sort, split
+from decomon.utils import (
+    O_slope,
+    S_slope,
+    V_slope,
+    Z_slope,
     add,
+    get_linear_hull_relu,
     get_lower,
     get_lower_box,
     get_upper,
     get_upper_box,
     maximum,
     minus,
-    multiply,
     relu_,
-    sort,
-    split,
     substract,
 )
-from decomon.utils import get_linear_hull_relu, get_linear_softplus_hull
-
-
-# create static variables for varying convex domain
-class V_slope:
-    name = "volume-slope"
-
-
-class S_slope:
-    name = "same-slope"
-
-
-class Z_slope:
-    name = "zero-lb"
-
-
-class O_slope:
-    name = "one-lb"
 
 
 def backward_add(inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain=None, mode=F_HYBRID.name):

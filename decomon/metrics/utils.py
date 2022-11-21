@@ -1,4 +1,6 @@
-from decomon.layers.utils import F_HYBRID, add, exp, expand_dims, log, minus, sum
+from decomon.layers.core import F_HYBRID
+from decomon.layers.utils import exp, expand_dims, log, sum
+from decomon.utils import add, minus
 
 # compute categorical cross entropy
 

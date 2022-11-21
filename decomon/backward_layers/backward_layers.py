@@ -17,7 +17,7 @@ from decomon.backward_layers.utils import (
     get_identity_lirpa,
     get_input_dim,
 )
-from decomon.layers.core import Grid, Option
+from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, Grid, Option
 from decomon.layers.decomon_layers import (
     DecomonActivation,
     DecomonBatchNormalization,
@@ -29,15 +29,7 @@ from decomon.layers.decomon_layers import (
     DecomonReshape,
     to_monotonic,
 )
-from decomon.layers.utils import (
-    F_FORWARD,
-    F_HYBRID,
-    F_IBP,
-    ClipAlpha,
-    ClipAlphaGrid,
-    NonNeg,
-    NonPos,
-)
+from decomon.layers.utils import ClipAlpha, ClipAlphaGrid, NonNeg, NonPos
 
 
 class BackwardDense(BackwardLayer):

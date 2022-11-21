@@ -111,7 +111,7 @@ def softsign_prime(x):
 ##############
 
 # case 1: a box
-def get_upper_box(x_min, x_max, w, b):
+def get_upper_box(x_min, x_max, w, b, **kwargs):
     """
     #compute the max of an affine function
     within a box (hypercube) defined by its extremal corners
@@ -140,7 +140,7 @@ def get_upper_box(x_min, x_max, w, b):
     return K.sum(w_pos * x_max_ + w_neg * x_min_, 1) + b
 
 
-def get_lower_box(x_min, x_max, w, b):
+def get_lower_box(x_min, x_max, w, b, **kwargs):
     """
 
     :param x_min: lower bound of the box domain
@@ -187,7 +187,7 @@ def get_lq_norm(x, p, axis=-1):
     return x_q
 
 
-def get_upper_ball(x_0, eps, p, w, b):
+def get_upper_ball(x_0, eps, p, w, b, **kwargs):
     """
     max of an affine function over an Lp ball
     :param x_0: the center of the ball
@@ -210,6 +210,9 @@ def get_upper_ball(x_0, eps, p, w, b):
         # use Holder's inequality p+q=1
         # ||w||_q*eps + w*x_0 + b
 
+        if len(kwargs):
+            return get_upper_ball_finetune(x_0, eps, p, w, b, **kwargs)
+
         upper = eps * get_lq_norm(w, p, axis=1) + b
 
         for _ in range(len(w.shape) - len(x_0.shape)):
@@ -218,7 +221,7 @@ def get_upper_ball(x_0, eps, p, w, b):
         return K.sum(w * x_0, 1) + upper
 
 
-def get_lower_ball(x_0, eps, p, w, b):
+def get_lower_ball(x_0, eps, p, w, b, **kwargs):
     """
     min of an affine fucntion over an Lp ball
     :param x_0: the center of the ball
@@ -241,6 +244,9 @@ def get_lower_ball(x_0, eps, p, w, b):
         # use Holder's inequality p+q=1
         # ||w||_q*eps + w*x_0 + b
 
+        if len(kwargs):
+            return get_lower_ball_finetune(x_0, eps, p, w, b, **kwargs)
+
         lower = -eps * get_lq_norm(w, p, axis=1) + b
 
         for _ in range(len(w.shape) - len(x_0.shape)):
@@ -249,7 +255,111 @@ def get_lower_ball(x_0, eps, p, w, b):
         return K.sum(w * x_0, 1) + lower
 
 
-def get_upper(x, w, b, convex_domain=None):
+def get_lower_ball_finetune(x_0, eps, p, w, b, **kwargs):
+
+    if "finetune_lower" in kwargs and "upper" in kwargs or "lower" in kwargs:
+
+        alpha = kwargs["finetune_lower"]
+        # assume alpha is the same shape as w, minus the batch dimension
+        n_shape = len(w.shape) - 2
+
+        if "upper" and "lower" in kwargs:
+            upper = kwargs["upper"]  # flatten vector
+            lower = kwargs["lower"]  # flatten vector
+
+            upper_ = np.reshape(upper, [1, -1] + [1] * n_shape)
+            lower_ = np.reshape(lower, [1, -1] + [1] * n_shape)
+
+            w_alpha = w * alpha[None]
+            w_alpha_bar = w * (1 - alpha)
+
+            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * lower_, 1) + K.sum(K.minimum(0.0, w_alpha_bar) * upper_, 1)
+            score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
+
+            return score_box + score_ball
+
+        if "upper" in kwargs:
+
+            upper = kwargs["upper"]  # flatten vector
+            upper_ = np.reshape(upper, [1, -1] + [1] * n_shape)
+
+            w_alpha = K.minimum(0, w) * alpha[None] + K.maximum(0.0, w)
+            w_alpha_bar = K.minimum(0, w) * (1 - alpha[None])
+
+            score_box = K.sum(K.minimum(0.0, w_alpha_bar) * upper_, 1)
+            score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
+
+            return score_box + score_ball
+
+        if "lower" in kwargs:
+
+            lower = kwargs["lower"]  # flatten vector
+            lower_ = np.reshape(lower, [1, -1] + [1] * n_shape)
+
+            w_alpha = K.maximum(0, w) * alpha[None] + K.minimum(0.0, w)
+            w_alpha_bar = K.maximum(0, w) * (1 - alpha[None])
+
+            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * lower_, 1)
+            score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
+
+            return score_box + score_ball
+
+    return get_lower_ball(x_0, eps, p, w, b)
+
+
+def get_upper_ball_finetune(x_0, eps, p, w, b, **kwargs):
+
+    if "finetune_upper" in kwargs and "upper" in kwargs or "lower" in kwargs:
+
+        alpha = kwargs["finetune_upper"]
+        # assume alpha is the same shape as w, minus the batch dimension
+        n_shape = len(w.shape) - 2
+
+        if "upper" and "lower" in kwargs:
+            upper = kwargs["upper"]  # flatten vector
+            lower = kwargs["lower"]  # flatten vector
+
+            upper_ = np.reshape(upper, [1, -1] + [1] * n_shape)
+            lower_ = np.reshape(lower, [1, -1] + [1] * n_shape)
+
+            w_alpha = w * alpha[None]
+            w_alpha_bar = w * (1 - alpha)
+
+            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * upper_, 1) + K.sum(K.minimum(0.0, w_alpha_bar) * lower_, 1)
+            score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
+
+            return score_box + score_ball
+
+        if "upper" in kwargs:
+
+            upper = kwargs["upper"]  # flatten vector
+            upper_ = np.reshape(upper, [1, -1] + [1] * n_shape)
+
+            w_alpha = K.minimum(0, w) * alpha[None] + K.maximum(0.0, w)
+            w_alpha_bar = K.minimum(0, w) * (1 - alpha[None])
+
+            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * upper_, 1)
+            score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
+
+            return score_box + score_ball
+
+        if "lower" in kwargs:
+
+            lower = kwargs["lower"]  # flatten vector
+            lower_ = np.reshape(lower, [1, -1] + [1] * n_shape)
+
+            w_alpha = K.maximum(0, w) * alpha[None] + K.minimum(0.0, w)
+            w_alpha_bar = K.maximum(0, w) * (1 - alpha[None])
+
+            score_box = K.sum(K.minimum(0.0, w_alpha_bar) * lower_, 1)
+            score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
+
+            return score_box + score_ball
+
+    return get_upper_ball(x_0, eps, p, w, b)
+
+
+def get_upper(x, w, b, convex_domain=None, **kwargs):
     """
     Meta function that aggregates all the way
     to compute a constant upper bounds depending on the convex domain
@@ -260,32 +370,31 @@ def get_upper(x, w, b, convex_domain=None):
     :return: a constant upper bound of the affine function
     """
 
-    if convex_domain is None:
-        convex_domain = {}
     if convex_domain is None or len(convex_domain) == 0:
         # box
         x_min = x[:, 0]
         x_max = x[:, 1]
-        return get_upper_box(x_min, x_max, w, b)
+        return get_upper_box(x_min, x_max, w, b, **kwargs)
 
-    if convex_domain["name"] == Box.name or convex_domain["name"] == Grid.name:
+    elif convex_domain["name"] in {Box.name, Grid.name}:
         x_min = x[:, 0]
         x_max = x[:, 1]
-        return get_upper_box(x_min, x_max, w, b)
+        return get_upper_box(x_min, x_max, w, b, **kwargs)
 
-    if convex_domain["name"] == Ball.name:
+    elif convex_domain["name"] == Ball.name:
 
         eps = convex_domain["eps"]
         p = convex_domain["p"]
-        return get_upper_ball(x, eps, p, w, b)
+        return get_upper_ball(x, eps, p, w, b, **kwargs)
 
-    if convex_domain["name"] == Vertex.name:
+    elif convex_domain["name"] == Vertex.name:
         raise NotImplementedError()
 
-    raise NotImplementedError()
+    else:
+        raise NotImplementedError()
 
 
-def get_lower(x, w, b, convex_domain=None):
+def get_lower(x, w, b, convex_domain=None, **kwargs):
     """
      Meta function that aggregates all the way
      to compute a constant lower bound depending on the convex domain
@@ -295,32 +404,27 @@ def get_lower(x, w, b, convex_domain=None):
     :param convex_domain: the type of convex domain (see ???)
     :return: a constant upper bound of the affine function
     """
-    if convex_domain is None:
-        convex_domain = {}
     if convex_domain is None or len(convex_domain) == 0:
-
         # box
         x_min = x[:, 0]
         x_max = x[:, 1]
+        return get_lower_box(x_min, x_max, w, b, **kwargs)
 
-        return get_lower_box(x_min, x_max, w, b)
-
-    if convex_domain["name"] == Box.name or convex_domain["name"] == Grid.name:
+    elif convex_domain["name"] in {Box.name, Grid.name}:
         x_min = x[:, 0]
         x_max = x[:, 1]
-        return get_lower_box(x_min, x_max, w, b)
+        return get_lower_box(x_min, x_max, w, b, **kwargs)
 
-    if convex_domain["name"] == Ball.name:
-
+    elif convex_domain["name"] == Ball.name:
         eps = convex_domain["eps"]
         p = convex_domain["p"]
+        return get_lower_ball(x, eps, p, w, b, **kwargs)
 
-        return get_lower_ball(x, eps, p, w, b)
-
-    if convex_domain["name"] == Vertex.name:
+    elif convex_domain["name"] == Vertex.name:
         raise NotImplementedError()
 
-    raise NotImplementedError()
+    else:
+        raise NotImplementedError()
 
 
 def get_lower_layer(convex_domain=None):
@@ -409,6 +513,53 @@ def noisy_upper(upper):
     proba = K.random_binomial(upper.shape, p=0.2, dtype=K.floatx())
 
     return proba * upper + (1 - proba) * var_
+
+
+##### corners ######
+def get_lower_bound_grid(x, W, b, n):
+
+    A, B = convert_lower_search_2_subset_sum(x, W, b, n)
+    return subset_sum_lower(A, B, repeat=n)
+
+
+def get_upper_bound_grid(x, W, b, n):
+
+    return -get_lower_bound_grid(x, -W, -b, n)
+
+
+def get_bound_grid(x, W_u, b_u, W_l, b_l, n):
+
+    upper = get_upper_bound_grid(x, W_u, b_u, n)
+    lower = get_lower_bound_grid(x, W_l, b_l, n)
+
+    return upper, lower
+
+
+# convert max Wx +b s.t Wx+b<=0 into a subset-sum problem with positive values
+def convert_lower_search_2_subset_sum(x, W, b, n):
+
+    x_min = x[:, 0]
+    x_max = x[:, 1]
+
+    if len(W.shape) > 3:
+        W = K.reshape(W, (-1, W.shape[1], np.prod(W.shape[2:])))
+        b = K.reshape(b, (-1, np.prod(b.shape[1:])))
+
+    const = get_lower(x, W, b, convex_domain={})
+
+    weights = K.abs(W) * K.expand_dims((x_max - x_min) / n, -1)
+    return weights, const
+
+
+def subset_sum_lower(W, b, repeat=1):
+
+    B = tf.sort(W, 1)
+    C = K.repeat_elements(B, rep=repeat, axis=1)
+    C_ = K.cumsum(C, axis=1)
+    D = K.minimum(K.sign(K.expand_dims(-b, 1) - C_) + 1, 1)
+
+    score = K.minimum(K.sum(D * C, 1) + b, 0.0)
+    return score
 
 
 # define routines to get linear relaxations useful both for forward and backward
@@ -551,7 +702,207 @@ def get_linear_softplus_hull(upper, lower, slope, **kwargs):
     return [w_u_, b_u_, w_l_, b_l_]
 
 
-def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
+def substract(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
+    """
+    LiRPA implementation of inputs_0-inputs_1
+
+    :param inputs_0: tensor
+    :param inputs_1: tensor
+    :param dc_decomp: boolean that indicates
+    whether we return a difference of convex decomposition of our layer
+    :param convex_domain: the type of convex domain
+    :return: inputs_0 - inputs_1
+    """
+    if convex_domain is None:
+        convex_domain = {}
+    inputs_1_ = minus(inputs_1, mode=mode, dc_decomp=dc_decomp)
+    output = add(inputs_0, inputs_1_, dc_decomp=dc_decomp, mode=mode, convex_domain=convex_domain)
+
+    return output
+
+
+def add(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
+    """
+    LiRPA implementation of inputs_0+inputs_1
+
+    :param inputs_0: tensor
+    :param inputs_1: tensor
+    :param dc_decomp: boolean that indicates
+    whether we return a difference of convex decomposition of our layer
+    :param convex_domain: the type of convex domain
+    :return: inputs_0 + inputs_1
+    """
+    if convex_domain is None:
+        convex_domain = {}
+    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    if dc_decomp:
+        h_0, g_0 = inputs_0[-2:]
+        h_1, g_1 = inputs_1[-2:]
+        h_ = h_0 + h_1
+        g_ = g_0 + g_1
+
+    if mode == F_HYBRID.name:
+        x_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0 = inputs_0[:nb_tensor]
+        _, u_c_1, w_u_1, b_u_1, l_c_1, w_l_1, b_l_1 = inputs_1[:nb_tensor]
+    elif mode == F_IBP.name:
+        u_c_0, l_c_0 = inputs_0[:nb_tensor]
+        u_c_1, l_c_1 = inputs_1[:nb_tensor]
+    elif mode == F_FORWARD.name:
+        x_0, w_u_0, b_u_0, w_l_0, b_l_0 = inputs_0[:nb_tensor]
+        _, w_u_1, b_u_1, w_l_1, b_l_1 = inputs_1[:nb_tensor]
+    else:
+        raise ValueError(f"Unknown mode {mode}")
+
+    if mode in [F_HYBRID.name, F_IBP.name]:
+        u_c_ = u_c_0 + u_c_1
+        l_c_ = l_c_0 + l_c_1
+    if mode in [F_HYBRID.name, F_FORWARD.name]:
+
+        w_u_ = w_u_0 + w_u_1
+        w_l_ = w_l_0 + w_l_1
+
+        b_u_ = b_u_0 + b_u_1
+        b_l_ = b_l_0 + b_l_1
+
+    if mode == F_HYBRID.name:
+        upper_ = get_upper(x_0, w_u_, b_u_, convex_domain)
+        u_c_ = K.minimum(upper_, u_c_)
+
+        lower_ = get_lower(x_0, w_l_, b_l_, convex_domain)
+        l_c_ = K.maximum(lower_, l_c_)
+
+    if mode == F_HYBRID.name:
+        output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+    elif mode == F_IBP.name:
+        output = [u_c_, l_c_]
+    elif mode == F_FORWARD.name:
+        output = [x_0, w_u_, b_u_, w_l_, b_l_]
+    else:
+        raise ValueError(f"Unknown mode {mode}")
+
+    if dc_decomp:
+        output += [h_, g_]
+
+    return output
+
+
+def relu_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, slope=V_slope.name, **kwargs):
+
+    if convex_domain is None:
+        convex_domain = {}
+    if mode not in [F_HYBRID.name, F_IBP.name, F_FORWARD.name]:
+        raise ValueError(f"unknown mode {mode}")
+
+    z_value = K.cast(0.0, K.floatx())
+    o_value = K.cast(1.0, K.floatx())
+
+    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    if mode == F_HYBRID.name:
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensors]
+    elif mode == F_IBP.name:
+        u_c, l_c = x[:nb_tensors]
+    elif mode == F_FORWARD.name:
+        x_0, w_u, b_u, w_l, b_l = x[:nb_tensors]
+    else:
+        raise ValueError(f"Unknown mode {mode}")
+
+    if mode == F_FORWARD.name:
+        upper = get_upper(x_0, w_u, b_u, convex_domain)
+        lower = get_lower(x_0, w_l, b_l, convex_domain)
+    elif mode in [F_IBP.name, F_HYBRID.name]:
+        upper = u_c
+        lower = l_c
+    else:
+        raise ValueError(f"Unknown mode {mode}")
+
+    if dc_decomp:
+        h, g = x[-2:]
+        h_ = K.maximum(h, -g)
+        g_ = g
+        index_dead = -K.clip(K.sign(upper) - o_value, -o_value, z_value)  # =1 if inactive state
+        index_linear = K.clip(K.sign(lower) + o_value, z_value, o_value)  # 1 if linear state
+
+        h_ = (o_value - index_dead) * h_
+        g_ = (o_value - index_dead) * g_
+        h_ = (o_value - index_linear) * h_ + index_linear * h
+        g_ = (o_value - index_linear) * g_ + index_linear * g
+
+    u_c_ = K.relu(upper)
+    l_c_ = K.relu(lower)
+
+    if mode in [F_FORWARD.name, F_HYBRID.name]:
+
+        if len(convex_domain) and convex_domain["name"] == Grid.name:
+            upper_g, lower_g = get_bound_grid(x_0, w_u, b_u, w_l, b_l, 1)
+            kwargs.update({"upper_grid": upper_g, "lower_grid": lower_g})
+
+        w_u_, b_u_, w_l_, b_l_ = get_linear_hull_relu(upper, lower, slope, **kwargs)
+        b_u_ = w_u_ * b_u + b_u_
+        b_l_ = w_l_ * b_l + b_l_
+        w_u_ = K.expand_dims(w_u_, 1) * w_u
+        w_l_ = K.expand_dims(w_l_, 1) * w_l
+
+    output = []
+    if mode == F_IBP.name:
+        output += [u_c_, l_c_]
+    elif mode == F_FORWARD.name:
+        output += [x_0, w_u_, b_u_, w_l_, b_l_]
+    elif mode == F_HYBRID.name:
+        output += [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+    else:
+        raise ValueError(f"Unknown mode {mode}")
+
+    if dc_decomp:
+        output += [h_, g_]
+    return output
+
+
+def minus(inputs, mode=F_HYBRID.name, dc_decomp=False, **kwargs):
+    """
+    LiRPA implementation of minus(x)=-x.
+    :param inputs:
+    :param mode:
+    :return:
+    """
+    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    if mode == F_IBP.name:
+        u, l = inputs[:nb_tensor]
+    elif mode == F_FORWARD.name:
+        x, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
+    elif mode == F_HYBRID.name:
+        x, u, w_u, b_u, l, w_l, b_l = inputs[:nb_tensor]
+    else:
+        raise ValueError(f"Unknown mode {mode}")
+
+    if dc_decomp:
+        h, g = inputs[-2:]
+
+    if mode in [F_IBP.name, F_HYBRID.name]:
+        u_ = -l
+        l_ = -u
+
+    if mode in [F_FORWARD.name, F_HYBRID.name]:
+        w_u_ = -w_l
+        b_u_ = -b_l
+        w_l_ = -w_u
+        b_l_ = -b_u
+
+    if mode == F_IBP.name:
+        output = [u_, l_]
+    elif mode == F_FORWARD.name:
+        output = [x, w_u_, b_u_, w_l_, b_l_]
+    elif mode == F_HYBRID.name:
+        output = [x, u_, w_u_, b_u_, l_, w_l_, b_l_]
+    else:
+        raise ValueError(f"Unknown mode {mode}")
+
+    if dc_decomp:
+        output += [-g, -h]
+
+    return output
+
+
+def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, finetune=False, **kwargs):
     """
     LiRPA implementation of element-wise max
 
@@ -565,12 +916,11 @@ def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBR
     if convex_domain is None:
         convex_domain = {}
     output_0 = substract(inputs_1, inputs_0, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
-    output_1 = relu_(
-        output_0,
-        dc_decomp=dc_decomp,
-        convex_domain=convex_domain,
-        mode=mode,
-    )
+    if finetune:
+        finetune = kwargs["finetune_params"]
+        output_1 = relu_(output_0, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, finetune=finetune)
+    else:
+        output_1 = relu_(output_0, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
     return add(
         output_1,
@@ -581,7 +931,7 @@ def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBR
     )
 
 
-def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
+def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, finetune=False, **kwargs):
     """
     LiRPA implementation of element-wise min
 
@@ -595,7 +945,19 @@ def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBR
 
     if convex_domain is None:
         convex_domain = {}
-    return minus(maximum(minus(inputs_0), minus(inputs_1), dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode))
+    return minus(
+        maximum(
+            minus(inputs_0, dc_decomp=dc_decomp, mode=mode),
+            minus(inputs_1, dc_decomp=dc_decomp, mode=mode),
+            dc_decomp=dc_decomp,
+            convex_domain=convex_domain,
+            mode=mode,
+            finetune=finetune,
+            **kwargs,
+        ),
+        dc_decomp=dc_decomp,
+        mode=mode,
+    )
 
 
 def get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, convex_domain=None, mode=F_HYBRID.name, **kwargs):

@@ -15,8 +15,8 @@ from decomon.backward_layers.utils import (
     get_identity_lirpa,
     get_input_dim,
 )
+from decomon.layers.core import F_FORWARD, F_HYBRID
 from decomon.layers.decomon_layers import to_monotonic
-from decomon.layers.utils import F_FORWARD, F_HYBRID, ClipAlpha
 
 logger = logging.getLogger(__name__)
 

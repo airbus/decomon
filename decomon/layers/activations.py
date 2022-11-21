@@ -12,25 +12,13 @@ from decomon.layers.core import (
     DecomonLayer,
     StaticVariables,
 )
-from decomon.layers.utils import (
-    exp,
-    expand_dims,
-    frac_pos,
+from decomon.layers.utils import exp, expand_dims, frac_pos, multiply, softplus_, sum
+from decomon.utils import (
     get_linear_hull_s_shape,
     get_lower,
     get_upper,
     minus,
-    multiply,
     relu_,
-    relu_prime,
-    sigmoid_prime,
-    softplus_,
-    softsign_prime,
-    sum,
-    tanh_prime,
-)
-from decomon.utils import (
-    get_linear_hull_s_shape,
     relu_prime,
     sigmoid_prime,
     softsign_prime,

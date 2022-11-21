@@ -16,8 +16,8 @@ from decomon.layers.utils import (
     maximum,
     minus,
     relu_,
-    substract,
 )
+from decomon.utils import substract
 
 from . import (
     assert_output_properties_box,

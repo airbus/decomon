@@ -54,11 +54,10 @@ from decomon.layers.utils import (
     NonPos,
     Project_initializer_neg,
     Project_initializer_pos,
-    get_lower,
-    get_upper,
     grad_descent,
     sort,
 )
+from decomon.utils import get_lower, get_upper
 
 try:
     from decomon.layers.deel_lip import DecomonGroupSort, DecomonGroupSort2

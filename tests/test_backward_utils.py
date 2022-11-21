@@ -16,7 +16,7 @@ from decomon.backward_layers.utils import (
     backward_softplus_,
     backward_substract,
 )
-from decomon.layers.utils import add, max_, maximum, minus, relu_, softplus_, substract
+from decomon.utils import relu_, substract
 
 from . import (
     assert_output_properties_box_linear,

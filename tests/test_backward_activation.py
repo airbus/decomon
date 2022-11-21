@@ -6,7 +6,7 @@ from tensorflow.keras.layers import Input
 
 from decomon.backward_layers.activations import backward_relu, backward_softsign
 from decomon.layers.activations import softsign
-from decomon.layers.utils import add, max_, maximum, minus, relu_, substract
+from decomon.utils import relu_
 
 from . import (
     assert_output_properties_box_linear,
