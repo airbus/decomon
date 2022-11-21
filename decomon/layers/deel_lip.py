@@ -79,14 +79,6 @@ class DecomonGroupSort(DecomonLayer):
     def call(self, input, **kwargs):
 
         shape_in = list(input[0].shape[1:])
-
-        if self.mode == F_IBP.name:
-            y, x_0, u_c, l_c = input[:4]
-        if self.mode == F_FORWARD.name:
-            y, x_0, w_u, b_u, w_l, b_l = input[:6]
-        if self.mode == F_HYBRID.name:
-            y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = input[:8]
-
         input_ = self.reshape(input)
         import pdb
 
