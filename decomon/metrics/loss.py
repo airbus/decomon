@@ -374,17 +374,6 @@ class DecomonLossFusion(DecomonLayer):
 
             return -l_c + K.log(K.sum(K.exp(u_c - K.max(u_c, -1)[:, None]), -1))[:, None] + K.max(u_c, -1)[:, None]
 
-            shape = u_c.shape[-1]
-
-            def cross_entropy(y_tensor):
-                l_c_ = -l_c * y_tensor
-                u_c_ = u_c * (1 - y_tensor)
-
-                return K.categorical_crossentropy(y_tensor, l_c_ + u_c_, from_logits=True)[:, None]
-
-            source_tensor = tf.linalg.diag(K.ones_like(l_c))
-            return K.concatenate([cross_entropy(source_tensor[:, i]) for i in range(shape)], -1)
-
         else:
             u_c, l_c = set_mode(inputs, self.final_mode, self.mode, self.convex_domain)  # (None, n_out), (None, n_out)
             shape = u_c.shape[-1]

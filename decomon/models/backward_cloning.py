@@ -26,12 +26,6 @@ from .utils import (
 
 def is_purely_linear(layer):
     return False
-    if isinstance(layer, (Reshape, Dropout, Permute)):
-        return True
-    if (isinstance(layer, (Dense, Conv))) and layer.get_config()["activation"] == "linear":
-        return True
-
-    return False
 
 
 def get_input(node, input_tensors, forward_map, output_map):

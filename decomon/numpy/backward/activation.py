@@ -250,7 +250,6 @@ def backward_linear(
         b_ = np.zeros_like(b_f_u)
 
         return [z, w_, b_, w_, b_]
-    raise NotImplementedError()
 
 
 def backward_exponential(

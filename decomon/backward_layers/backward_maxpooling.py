@@ -33,18 +33,6 @@ class BackwardMaxPooling2D(Layer):
         if convex_domain is None:
             convex_domain = {}
         raise NotImplementedError()
-        self.mode = layer.mode
-        self.pool_size = layer.pool_size
-        self.strides = layer.strides
-        self.padding = layer.padding
-        self.data_format = layer.data_format
-
-        # express maxpooling with convolutions
-        self.filters = layer.filters
-        self.internal_op = layer.internal_op
-        self.mode = layer.mode
-        self.fast = True
-        self.layer = layer
 
     def _pooling_function(
         self,

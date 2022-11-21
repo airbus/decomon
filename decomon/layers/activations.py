@@ -314,8 +314,6 @@ def softplus(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwarg
         raise NotImplementedError()
 
     return softplus_(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
-    # TO DO linear relaxation
-    raise NotImplementedError()
 
 
 def softsign(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
@@ -379,30 +377,12 @@ def softmax(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1,
 
     return x_final
 
-    # TO DO linear relaxation
-    raise NotImplementedError()
-
 
 def group_sort_2(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, data_format="channels_last", **kwargs):
 
     if convex_domain is None:
         convex_domain = {}
     raise NotImplementedError()
-
-    input_shape = x[-1].shape
-    if data_format == "channels_last":
-        axis = -1
-        # check dimension
-        if input_shape[-1] % 2 != 0:
-            raise ValueError()
-    else:
-        axis = 1
-        if input_shape[1] % 2 != 0:
-            raise ValueError()
-
-    import pdb
-
-    pdb.set_trace()
 
 
 def deserialize(name):

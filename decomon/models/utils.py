@@ -271,24 +271,6 @@ def get_node_by_id(node, outbound=False, model=None):
         return f"{layer_.name}_NODE_{input_names}"
     return f"NODE_{input_names}"
 
-    if model is None:
-        input_names = ""
-        for layer_i in layers_i:
-            input_names += layer_i.name
-        if outbound:
-            return f"{layer_.name}_NODE_{input_names}"
-        return f"NODE_{input_names}"
-    else:
-        layer_names = [layer.name for layer in model.layers]
-        input_names = ""
-        for layer_i in layers_i:
-            if layer_i.name in layer_names:
-                input_names += layer_i.name
-    input_names = str(id(node))
-    if outbound:
-        return f"{layer_.name}_NODE_{input_names}"
-    return f"NODE_{input_names}"
-
 
 def set_name(layer, extra_id):
 
