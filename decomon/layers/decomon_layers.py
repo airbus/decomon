@@ -1059,13 +1059,6 @@ class DecomonDense(Dense, DecomonLayer):
                     else:
 
                         raise NotImplementedError()  # bug somewhere
-                        w_u_ = K.sum(K.expand_dims(w_u, -1) * K.expand_dims(kernel_pos_back, 1), 2) + K.sum(
-                            K.expand_dims(w_l, -1) * K.expand_dims(kernel_neg_back, 1), 2
-                        )
-
-                        w_l_ = K.sum(K.expand_dims(w_l, -1) * K.expand_dims(kernel_pos_back, 1), 2) + K.sum(
-                            K.expand_dims(w_u, -1) * K.expand_dims(kernel_neg_back, 1), 2
-                        )
 
                     """
                     w_u_ = K.dot(w_u, kernel_pos) + K.dot(
@@ -1583,7 +1576,6 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
 
         if self.dc_decomp:
             raise NotImplementedError()
-            h, g = inputs[-2:]
 
         if self.mode == F_HYBRID.name:
             # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:8]
@@ -1681,56 +1673,6 @@ class DecomonDropout(Dropout, DecomonLayer):
             raise NotImplementedError("not working during training")
 
         return inputs
-
-        call_op = super().call
-
-        if self.mode == F_HYBRID.name:
-            if self.dc_decomp:
-                # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs[: self.nb_tensors]
-                x_0, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs[: self.nb_tensors]
-            else:
-                # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: self.nb_tensors]
-                x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: self.nb_tensors]
-        elif self.mode == F_IBP.name:
-            if self.dc_decomp:
-                # y, x_0, u_c, l_c, h, g = inputs[: self.nb_tensors]
-                u_c, l_c, h, g = inputs[: self.nb_tensors]
-            else:
-                # y, x_0, u_c, l_c = inputs[: self.nb_tensors]
-                u_c, l_c = inputs[: self.nb_tensors]
-        elif self.mode == F_FORWARD.name:
-            if self.dc_decomp:
-                # y, x_0, w_u, b_u, w_l, b_l, h, g = inputs[: self.nb_tensors]
-                x_0, w_u, b_u, w_l, b_l, h, g = inputs[: self.nb_tensors]
-            else:
-                # y, x_0, w_u, b_u, w_l, b_l = inputs[: self.nb_tensors]
-                x_0, w_u, b_u, w_l, b_l = inputs[: self.nb_tensors]
-
-        # y_ = call_op(y, training=training)
-        if self.mode in [F_HYBRID.name, F_IBP.name]:
-            u_c_ = call_op(u_c, training=training)
-            l_c_ = call_op(l_c, training=training)
-
-        if self.mode in [F_HYBRID.name, F_FORWARD.name]:
-            b_u_ = call_op(b_u, training=training)
-            b_l_ = call_op(b_l, training=training)
-            input_dim = w_u.shape[1]
-            w_u_list = tf.split(w_u, input_dim, 1)
-            w_l_list = tf.split(w_l, input_dim, 1)
-            w_u_ = K.concatenate([call_op(w_u_i, training=training) for w_u_i in w_u_list], 1)
-            w_l_ = K.concatenate([call_op(w_l_i, training=training) for w_l_i in w_l_list], 1)
-
-        if self.mode == F_HYBRID.name:
-            # output = [y_, x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
-            output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
-        if self.mode == F_IBP.name:
-            # output = [y_, x_0, u_c_, l_c_]
-            output = [u_c_, l_c_]
-        if self.mode == F_FORWARD.name:
-            # output = [y_, x_0, w_u_, b_u_, w_l_, b_l_]
-            output = [x_0, w_u_, b_u_, w_l_, b_l_]
-
-        return output
 
 
 class DecomonInputLayer(DecomonLayer, InputLayer):

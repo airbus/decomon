@@ -201,16 +201,6 @@ def backward_relu_(
     if len(convex_domain) and convex_domain["name"] == Grid.name and mode != F_IBP.name:
 
         raise NotImplementedError()
-        if convex_domain["option"] == Option.lagrangian:
-            # do something
-            upper_g, lower_g = get_bound_grid_lagrangian(x_0, w_u, b_u, w_l, b_l, kwargs["finetune_grid"])
-        elif convex_domain["option"] == Option.milp:
-            upper_g, lower_g = kwargs["finetune_grid"]
-        else:
-            upper_g, lower_g = get_bound_grid(x_0, w_u, b_u, w_l, b_l, 2)
-
-        extra_kwargs = {"upper_grid": upper_g, "lower_grid": lower_g}
-        kwargs.update(extra_kwargs)  # same result
 
     shape = np.prod(upper.shape[1:])
     upper = K.reshape(upper, [-1, shape])

@@ -66,7 +66,6 @@ class DecomonGroupSort(DecomonLayer):
             self.channel_axis = -1
         elif data_format == "channels_first":
             raise RuntimeError("channels_first not implemented for GroupSort activation")
-            self.channel_axis = 1
         else:
             raise RuntimeError("data format not understood")
         self.n = n

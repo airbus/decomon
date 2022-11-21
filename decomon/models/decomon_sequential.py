@@ -1064,37 +1064,6 @@ def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, opti
     else:
         raise NotImplementedError()
 
-    # incorporate the linear relaxation if not in the convert setting
-    if len(input_backward) == 2:
-
-        return DecomonModel(
-            input_backward,
-            output_forward + list(back_bounds),
-            dc_decomp=model.dc_decomp,
-            convex_domain=model.convex_domain,
-            mode=Backward.name,
-            IBP=model.IBP,
-            forward=model.forward,
-        )
-    if len(input_backward) < 8:
-        raise NotImplementedError()
-
-    lambda_process_input = Lambda(lambda x: backward_linear_prod(x[0], x[1:5], x[5:9], model.convex_domain))
-
-    output = lambda_process_input([input_backward[i] for i in [1, 3, 4, 6, 7]] + back_bounds)
-
-    backward_model = DecomonModel(
-        input_backward,
-        output_forward + output,
-        dc_decomp=model.dc_decomp,
-        convex_domain=model.convex_domain,
-        mode=Backward.name,
-        IBP=model.IBP,
-        forward=model.forward,
-    )
-
-    return backward_model
-
 
 def get_backward_model_(model, back_bounds, input_model, slope=V_slope.name):
     """
