@@ -1,10 +1,14 @@
 from __future__ import absolute_import
 
+import logging
+
 import numpy as np
 
 from decomon.layers.core import Ball, Box
 from decomon.models import DecomonModel, clone, convert
 from decomon.models.decomon_sequential import Backward, Forward
+
+logger = logging.getLogger(__name__)
 
 # check inputs
 
@@ -118,8 +122,9 @@ def get_adv_brightness(
         else:
             output = model_.predict([x_, z, x_max, x_min])
     else:
-        print(
-            "Warning: you have built your decomon model with the classical convert method. Note that regarding geometric transformations, the clone method will be more efficient"
+        logger.warning(
+            "You have built your decomon model with the classical convert method. "
+            "Note that regarding geometric transformations, the clone method will be more efficient"
         )
 
         z_box = np.concatenate([x_min[:, None], x_max[:, None]], 1)
