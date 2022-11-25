@@ -466,9 +466,6 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
                     b_l_ = conv_pos(b_l) + conv_neg(b_u)
 
-                mask_a = K.expand_dims(mask_a, 1)
-                mask_b = K.expand_dims(mask_b, 1)
-
                 if self.mode == F_HYBRID.name and self.finetune:
                     n_x = w_u.shape[1]
 
@@ -754,10 +751,8 @@ class DecomonDense(Dense, DecomonLayer):
             input_dim = input_shape[0][-1]
         elif self.mode == F_HYBRID.name:
             input_dim = input_shape[1][-1]
-            input_x = input_shape[0][-1]
         elif self.mode == F_FORWARD.name:
             input_dim = input_shape[2][-1]
-            input_x = input_shape[0][-1]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
@@ -893,7 +888,6 @@ class DecomonDense(Dense, DecomonLayer):
         :return:
         """
         z_value = K.cast(0.0, self.dtype)
-        o_value = K.cast(1.0, self.dtype)
 
         if not isinstance(inputs, list):
             raise ValueError("A merge layer should be called " "on a list of inputs.")
@@ -937,10 +931,6 @@ class DecomonDense(Dense, DecomonLayer):
 
         # mask_b = 0 * (y)
 
-        if self.mode in [F_HYBRID.name, F_FORWARD.name]:
-            if len(w_u.shape) != len(b_u.shape):
-                x_max = get_upper(x_0, w_u - w_l, b_u - b_l, self.convex_domain)
-
         if self.mode in [F_HYBRID.name, F_IBP.name]:
             if not self.linear_layer:
                 if not self.has_backward_bounds:
@@ -975,7 +965,7 @@ class DecomonDense(Dense, DecomonLayer):
 
             if len(w_u.shape) == len(b_u.shape):
                 y_ = K.dot(b_u, self.kernel)  # + K.dot(y, self.kernel_neg)
-                w_u_ = K.expand_dims(0 * (y_), 1) + K.expand_dims(self.kernel, 0)
+                w_u_ = K.expand_dims(0 * y_, 1) + K.expand_dims(self.kernel, 0)
                 w_l_ = w_u_
                 b_u_ = z_value * y_
                 b_l_ = b_u_
@@ -1569,7 +1559,6 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
             training = K.learning_phase()
 
         z_value = K.cast(0.0, self.dtype)
-        o_value = K.cast(1.0, self.dtype)
 
         if training:
             raise NotImplementedError("not working during training")

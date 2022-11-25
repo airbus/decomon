@@ -385,7 +385,6 @@ def crown_(
         # update back_bounds
         try:
             # backward_layer.previous=False
-            backward_tmp = [r for r in backward_bounds]
             # backward_bounds_ = backward_layer.call_no_previous(inputs)
 
             if id(node) not in output_map.keys():
@@ -490,14 +489,11 @@ def get_input_nodes(
     backward_map = {}
     if convex_domain is None:
         convex_domain = {}
-    output = input_tensors
     crown_map = {}
     set_mode_layer = None
     for depth in keys:
         nodes = dico_nodes[depth]
         for node in nodes:
-            layer = node.outbound_layer
-
             parents = node.parent_nodes
             if not len(parents):
                 # if 'debug' in kwargs.keys():
@@ -579,18 +575,14 @@ def crown_model(
         raise ValueError()
     # import time
     # zero_time = time.process_time()
-    has_softmax = False
     if softmax_to_linear:
         model, has_softmax = softmax_2_linear(model)  # do better because you modify the model eventually
 
     if input_dim == -1:
-        input_dim_init = -1
         if isinstance(model.input_shape, list):
             input_dim = np.prod(model.input_shape[0][1:])
         else:
             input_dim = np.prod(model.input_shape[1:])
-    else:
-        input_dim_init = input_dim
     if input_tensors is None:
         # check that the model has one input else
         input_tensors = []

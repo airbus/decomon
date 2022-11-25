@@ -231,11 +231,6 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
         # y_ = K.pool2d(inputs[-1], pool_size, strides, padding, data_format, pool_mode="max")
         input_shape = K.int_shape(inputs[-1])
 
-        if data_format in [None, "channels_last"]:
-            axis = -1
-        else:
-            axis = 1
-
         # y_list_ = [self.internal_op(elem) for elem in tf.split(y, input_shape[axis], axis)]
         # y_list = K.concatenate(y_list_, -2)
 

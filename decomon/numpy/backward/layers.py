@@ -60,10 +60,6 @@ class BackwardNumpyActivation(BackwardNumpyLayer):
 
     def call_previous(self, inputs, **kwargs):
         output = self.call_no_previous(inputs[:-4], **kwargs)
-        if self.keras_layer.name == "activation_1" and self.rec == 2:
-            upper = np.maximum(inputs[1] + inputs[2], inputs[3] + inputs[4])
-            lower = np.minimum(inputs[1] + inputs[2], inputs[3] + inputs[4])
-            # import pdb; pdb.set_trace()
         return merge_with_previous(output + inputs[-4:])
 
         # to do
@@ -111,13 +107,10 @@ class BackwardNumpyInputLayer(BackwardNumpyLayer):
         self.fusion = fusion
 
     def call_previous(self, inputs):
-        x_ = inputs[:-4]
         if self.fusion:
             return merge_with_previous(inputs[1:])
         else:
-            w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-
-        return inputs[-4:]
+            return inputs[-4:]
 
     def call_no_previous(self, inputs):
         x, _, b_u = inputs[:3]

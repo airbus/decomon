@@ -112,8 +112,6 @@ def get_adv_coverage_box(
 
         output = model_.predict(z)
 
-        n_label = source_labels.shape[-1]
-
         def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
 
             if target_tensor is None:

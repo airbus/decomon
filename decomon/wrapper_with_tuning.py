@@ -24,7 +24,6 @@ def get_upper_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
     if np.min(x_max - x_min) < 0:
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
-    fast = True
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
     model_ = model
@@ -35,13 +34,9 @@ def get_upper_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
     # if not model.finetune or not model.forward:
     #    return baseline_upper
 
-    n_split = 1
-    n_batch = len(x_min)
-
     if n_sub_boxes > 1:
         x_min, x_max = refine_boxes(x_min, x_max, n_sub_boxes)
         # reshape
-        n_split = x_min.shape[1]
         shape = list(x_min.shape[2:])
         x_min = np.reshape(x_min, [-1] + shape)
         x_max = np.reshape(x_max, [-1] + shape)
@@ -106,7 +101,6 @@ def get_lower_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
     if np.min(x_max - x_min) < 0:
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
-    fast = True
     # check that the model is a DecomonModel, else do the conversion
     # input_dim = 0
     model_ = model
@@ -117,13 +111,9 @@ def get_lower_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
     # if not model.finetune or not model.forward:
     #    return baseline_upper
 
-    n_split = 1
-    n_batch = len(x_min)
-
     if n_sub_boxes > 1:
         x_min, x_max = refine_boxes(x_min, x_max, n_sub_boxes)
         # reshape
-        n_split = x_min.shape[1]
         shape = list(x_min.shape[2:])
         x_min = np.reshape(x_min, [-1] + shape)
         x_max = np.reshape(x_max, [-1] + shape)

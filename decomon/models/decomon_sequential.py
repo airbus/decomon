@@ -286,8 +286,6 @@ def clone_sequential_model(
             else:
                 z_tensor = Input((input_dim,))
 
-        y_tensor = Input(tuple(input_shape))
-
         h_tensor = Input(tuple(input_shape))
         g_tensor = Input(tuple(input_shape))
         b_u_tensor = Input(tuple(input_shape))
@@ -426,10 +424,7 @@ def clone_functional_model(
         )
 
     if input_dim == -1:
-        input_dim_ = -1
         input_dim = np.prod(model.input_shape[1:])
-    else:
-        input_dim_ = input_dim
 
     layer_fn = include_dim_layer_fn(
         layer_fn,
@@ -444,9 +439,6 @@ def clone_functional_model(
 
     # we only handle one input
     assert len(model._input_layers) == 1, f"error: Expected one input only but got {len(model._input_layers)}"
-
-    def clone(layer):
-        return layer.__class__.from_config(layer.get_config())
 
     layer_map = {}  # Cache for created layers.
     tensor_map = {}  # Map {reference_tensor: (corresponding_tensor, mask)}
@@ -679,9 +671,6 @@ def clone_functional_model(
                     else:
                         output_masks = [None] * len(output_tensors)
 
-                    computed_tensors = [computed_tensor]
-                    computed_masks = [computed_mask]
-
                 else:
                     computed_tensors = []
                     for x in computed_data:
@@ -784,8 +773,6 @@ def convert(
 
     if mode.lower() == Backward.name:
         model_monotonic = get_backward(model_monotonic, slope=slope_backward, input_dim=-1, options=options)
-
-    input_shape_w = tuple([input_dim] + list(input_shape))
 
     def get_input(input_):
 
@@ -1162,8 +1149,6 @@ def get_backward_model(model, back_bounds, input_model, slope=V_slope.name, opti
                     dico_input[layer_.name] = list_inputs[0]
                 else:
                     if isinstance(layer_, Model):
-                        sort_names = [e.name for e in layer_.inputs]
-                        unsorted_names = [e._keras_history.layer.name for e in list_inputs]
                         import pdb
 
                         pdb.set_trace()

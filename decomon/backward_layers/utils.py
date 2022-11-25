@@ -120,7 +120,6 @@ def merge_with_previous(inputs):
     # w_out_u_*w_b_u_ (None, n_h_in, n_h_out, n_out)
 
     # result (None, n_h_in, n_out)
-    z_value = K.cast(0.0, dtype=w_out_u.dtype)
 
     if len(w_out_u.shape) == 2:
         w_out_u = tf.linalg.diag(w_out_u)
@@ -278,9 +277,6 @@ def backward_softplus_(
 
     shape = np.prod(upper.shape[1:])
     upper = K.reshape(upper, [-1, shape])
-    lower = K.reshape(lower, [-1, shape])
-
-    z_value = K.cast(0.0, upper.dtype)
 
     # w_u_, b_u_, w_l_, b_l_ = get_linear_softplus_hull(upper, lower, slope = slope, **kwargs)
 
@@ -873,6 +869,6 @@ def get_FORWARD(mode=F_HYBRID.name):
 
 def get_input_dim(input_dim, convex_domain):
     if len(convex_domain) == 0:
-        return (2, input_dim)
+        return 2, input_dim
     else:
         return input_dim

@@ -60,7 +60,7 @@ def backward_relu(
     if threshold != 0:
         raise NotImplementedError()
 
-    if not (alpha) and max_value is None:
+    if not alpha and max_value is None:
         # default values: return relu_(x) = max(x, 0)
         output = get_linear_hull_relu(x, convex_domain=convex_domain, params=params, **kwargs)
 

@@ -117,7 +117,6 @@ class BackwardMaxPooling2D(Layer):
         b_l_ = K.expand_dims(K.expand_dims(op_flat(b_l_), 1), -1)
 
         y = inputs[-1]
-        n_in = np.prod(inputs[-1].shape[1:])
         n_out = w_out_u.shape[-1]
 
         w_out_u_ = K.concatenate([K.expand_dims(K.expand_dims(0 * (op_flat(y)), 1), -1)] * n_out, -1)
@@ -174,9 +173,6 @@ class BackwardMaxPooling2D(Layer):
             axis = -1
         else:
             axis = 1
-
-        y_list_ = [self.internal_op(elem) for elem in tf.split(y, input_shape[axis], axis)]
-        y_list = K.concatenate(y_list_, -2)
 
         # initialize vars
         x_0, u_c_list, w_u_list, b_u_list, l_c_list, w_l_list, b_l_list = None, None, None, None, None, None, None

@@ -125,8 +125,6 @@ class DecomonAdd(Add, DecomonLayer):
         if self.mode in [F_HYBRID.name, F_FORWARD.name]:
             input_x = inputs[0]
 
-        op = Add()
-
         inputs_ = [inputs[i * n_comp : (i + 1) * n_comp] for i in range(int(len(inputs) / n_comp))]
 
         if self.mode == F_HYBRID.name:
@@ -141,15 +139,15 @@ class DecomonAdd(Add, DecomonLayer):
         else:
             raise NotImplementedError()
 
-        output = [input_x]
-        output.append(inputs_u[0] + inputs_u[1])
-        output.append(inputs_wu[0] + inputs_wu[1])
-        output.append(inputs_bu[0] + inputs_bu[1])
-        output.append(inputs_l[0] + inputs_l[1])
-        output.append(inputs_wl[0] + inputs_wl[1])
-        output.append(inputs_bl[0] + inputs_bl[1])
-
-        return output
+        return [
+            input_x,
+            inputs_u[0] + inputs_u[1],
+            inputs_wu[0] + inputs_wu[1],
+            inputs_bu[0] + inputs_bu[1],
+            inputs_l[0] + inputs_l[1],
+            inputs_wl[0] + inputs_wl[1],
+            inputs_bl[0] + inputs_bl[1],
+        ]
 
 
 class DecomonAverage(Average, DecomonLayer):

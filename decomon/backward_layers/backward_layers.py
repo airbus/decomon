@@ -477,7 +477,6 @@ class BackwardConv2D(BackwardLayer):
             # here update x
             x_output = self.layer.call_linear(x)
             y_ = x_output[-1]
-            shape = np.prod(y_.shape[1:])
 
             if self.finetune:
                 w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
@@ -716,7 +715,6 @@ class BackwardActivation(BackwardLayer):
         self.built = True
 
     def call_previous(self, inputs):
-        x = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
         # infer the output dimension
@@ -758,7 +756,6 @@ class BackwardActivation(BackwardLayer):
 
         # infer the output dimension
         y_ = inputs[-1]
-        shape = np.prod(y_.shape[1:])
 
         if self.activation_name != "linear":
             # here update x
@@ -804,11 +801,8 @@ class BackwardActivation(BackwardLayer):
 
     def call(self, inputs, **kwargs):
         if self.previous:
-            y_ = inputs[:-4][-1]
             w_out_u, w_out_l, b_out_u, b_out_l = self.call_previous(inputs)
         else:
-            y_ = inputs[-1]
-
             w_out_u, w_out_l, b_out_u, b_out_l = self.call_no_previous(inputs)
 
         return w_out_u, w_out_l, b_out_u, b_out_l
@@ -1103,7 +1097,6 @@ class BackwardInputLayer(BackwardLayer):
         self.previous = previous
 
     def call_previous(self, inputs):
-        x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
         return w_out_u, b_out_u, w_out_l, b_out_l

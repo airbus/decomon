@@ -15,8 +15,6 @@ def convert_nnet_2_numpy(repo, filename, clipping=True, normalize_in=True, norma
 
     # get network architecture
     archi = [int(e) for e in lines[index + 1].decode("utf-8").strip().split(",")[:-1]]
-    input_dim = archi[0]
-    n_layers = archi[1:]
     if verbose:
         print("archi", archi)
 
