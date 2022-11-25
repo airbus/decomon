@@ -18,7 +18,6 @@ def get_adv_brightness(
         raise UserWarning("Inconsistency Error: bright_max < bright_min")
 
     # check that the model is a DecomonModel, else do the conversion
-    # input_dim = 0
     if not isinstance(model, DecomonModel):
         model_ = clone(model, IBP=True, mode="backward", input_dim=1)
     else:
@@ -121,7 +120,6 @@ def get_adv_brightness(
         else:
             output = model_.predict([x_, z, x_max, x_min])
     else:
-        # assert model_.inputs[1].shape[-1]
         print(
             "Warning: you have built your decomon model with the classical convert method. Note that regarding geometric transformations, the clone method will be more efficient"
         )

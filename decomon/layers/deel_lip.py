@@ -6,8 +6,6 @@ import tensorflow.keras.backend as K
 from deel.lip.layers import FrobeniusDense, ScaledL2NormPooling2D
 from tensorflow.keras.backend import bias_add, conv2d
 from tensorflow.keras.constraints import NonNeg
-
-# from tensorflow.python.keras.engine.base_layer import InputSpec
 from tensorflow.keras.layers import (
     Activation,
     BatchNormalization,

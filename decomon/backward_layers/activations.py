@@ -96,8 +96,6 @@ def backward_relu(
             bounds = [K.reshape(elem, (-1, shape)) for elem in bounds]
 
             w_u_, b_u_, w_l_, b_l_ = bounds
-            # w_u_ = tf.linalg.diag(w_u_)
-            # w_l_ = tf.linalg.diag(w_l_)
             return [w_u_, b_u_, w_l_, b_l_]
 
     raise NotImplementedError()
@@ -387,8 +385,6 @@ def backward_softsign(
         bounds = [K.reshape(elem, (-1, shape)) for elem in bounds]
 
         w_u_, b_u_, w_l_, b_l_ = bounds
-        # w_u_ = tf.linalg.diag(w_u_)
-        # w_l_ = tf.linalg.diag(w_l_)
         return [w_u_, b_u_, w_l_, b_l_]
 
 

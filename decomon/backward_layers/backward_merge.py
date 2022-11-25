@@ -54,8 +54,6 @@ class BackwardAdd(BackwardMerge):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        # if not isinstance(layer, DecomonAdd):
-        #    raise KeyError()
         if convex_domain is None:
             convex_domain = {}
         self.layer = layer
@@ -119,69 +117,6 @@ class BackwardAdd(BackwardMerge):
         else:
             return self.call_no_previous(inputs)
 
-    """
-    def call(self, inputs):
-
-        x_ = inputs[:-4]
-
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-
-        n_comp = 4
-        if self.mode == F_FORWARD.name:
-            n_comp = 6
-        if self.mode == F_HYBRID.name:
-            n_comp = 8
-
-        n_elem = len(x_) // n_comp
-        # inputs_list = [inputs[n_comp * i:n_comp * (i + 1)] for i in range(n_elem)]
-
-        if n_elem == 1:
-            return [[w_out_u, b_out_u, w_out_l, b_out_l]]
-        else:
-            bounds = []
-            input_bounds = []
-
-            for j in np.arange(1, n_elem)[::-1]:
-                inputs_1 = x_[n_comp * j : n_comp * (j + 1)]
-                if j == 1:
-                    inputs_0 = x_[:n_comp]
-                else:
-                    inputs_0 = self.layer(x_[: n_comp * j])
-                if len(bounds) == 0:
-                    bounds_0, bounds_1 = backward_add(
-                        inputs_0,
-                        inputs_1,
-                        w_out_u,
-                        b_out_u,
-                        w_out_l,
-                        b_out_l,
-                        convex_domain=self.convex_domain,
-                        mode=self.mode,
-                    )
-                else:
-                    w_out_u_, b_out_u_, w_out_l_, b_out_l_ = bounds[-1]
-                    import pdb; pdb.set_trace()
-                    bounds_0, bounds_1 = backward_add(
-                        inputs_0,
-                        inputs_1,
-                        w_out_u_,
-                        b_out_u_,
-                        w_out_l_,
-                        b_out_l_,
-                        convex_domain=self.convex_domain,
-                        mode=self.mode,
-                    )
-
-                input_bounds.append(bounds_1)
-                bounds.append(bounds_0)
-                if j == 1:
-                    input_bounds.append(bounds_0)
-
-        input_bounds = input_bounds[::-1]
-
-        return input_bounds
-        """
-
 
 class BackwardAverage(BackwardMerge):
     """
@@ -227,8 +162,6 @@ class BackwardAverage(BackwardMerge):
             n_comp = 7
 
         n_elem = len(x_) // n_comp
-        # inputs_list = [inputs[n_comp * i:n_comp * (i + 1)] for i in range(n_elem)]
-
         if n_elem == 1:
             return [[w_out_u, b_out_u, w_out_l, b_out_l]]
         else:
@@ -279,7 +212,6 @@ class BackwardAverage(BackwardMerge):
         return self.call_previous(inputs + bounds)
 
     def call(self, inputs, **kwargs):
-        # import pdb; pdb.set_trace()
         if self.previous:
             return self.call_previous(inputs)
         else:
@@ -564,7 +496,6 @@ class BackwardDot(BackwardMerge):
         bounds_ = [[1.0 / n * elem for elem in bounds_i] for bounds_i in bounds]
 
         # concatenate
-
         reshape_ = [-1, 1] + list(inputs_[0].shape[1:]) + list(w_out_u.shape[3:])
 
         bounds_reshape = [
@@ -609,7 +540,6 @@ class BackwardDot(BackwardMerge):
         if axes[1] == -1:
             axes[1] = len(inputs_1[0].shape)
 
-        # import pdb; pdb.set_trace()
         index_0 = np.arange(len(shape_0))
         index_0[2] = axes[0] + 1
         index_0[axes[0] + 1] = 2
@@ -617,8 +547,6 @@ class BackwardDot(BackwardMerge):
         index_1 = np.arange(len(shape_1))
         index_1[2] = axes[1] + 1
         index_1[axes[1] + 1] = 2
-
-        # import pdb; pdb.set_trace()
 
         bounds_m_0 = [
             K.permute_dimensions(bounds_m_0[0], index_0),

@@ -125,8 +125,6 @@ def update_dico(node, dico_nodes, layer_names):
         parents = node.parent_nodes
         inputs_ = []
         for p_node in parents:
-            # if p_node.outbound_layer.name not in layer_names:
-            #    continue
             try:
                 inputs_ += dico_nodes[id(p_node)]
             except KeyError:
@@ -220,7 +218,6 @@ def get_parents_format_(node_):
                     else:
                         if isinstance(toto, list):
                             toto = toto[0]
-                        # parents_format.append(get_data_format(p_rec))
                         parents_format.append(toto)
     return parents_format
 

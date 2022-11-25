@@ -51,10 +51,6 @@ class BackwardDense(Layer):
         self.activation = get(layer.get_config()["activation"])  # ??? not sur
         self.activation_name = layer.get_config()["activation"]
         self.slope = slope
-        # if hasattr(self.layer, 'finetune'):
-        #    self.finetune=self.layer.finetune
-        # else:
-        #    self.finetune = False
         self.finetune = finetune
         self.previous = previous
         if hasattr(self.layer, "mode"):

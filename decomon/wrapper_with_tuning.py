@@ -25,7 +25,6 @@ def get_upper_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion
-    # input_dim = 0
     model_ = model
 
     baseline_upper = get_upper_box(model, x_min, x_max, batch_size=batch_size, n_sub_boxes=n_sub_boxes)
@@ -102,7 +101,6 @@ def get_lower_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion
-    # input_dim = 0
     model_ = model
 
     baseline_upper = get_lower_box(model, x_min, x_max, batch_size=batch_size, n_sub_boxes=n_sub_boxes)

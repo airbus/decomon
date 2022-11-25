@@ -1,8 +1,6 @@
 from __future__ import absolute_import
 
 import tensorflow.keras.backend as K
-
-# from tensorflow.python.keras.engine.base_layer import InputSpec
 from tensorflow.keras.layers import InputSpec, Permute, Reshape
 
 from .core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
@@ -25,7 +23,6 @@ class DecomonReshape(Reshape, DecomonLayer):
 
         if self.mode == F_HYBRID.name:
             self.input_spec = [
-                # InputSpec(min_ndim=1),  # y
                 InputSpec(min_ndim=1),  # z
                 InputSpec(min_ndim=1),  # u_c
                 InputSpec(min_ndim=1),  # w_u
@@ -36,14 +33,11 @@ class DecomonReshape(Reshape, DecomonLayer):
             ]
         elif self.mode == F_IBP.name:
             self.input_spec = [
-                # InputSpec(min_ndim=1),  # y
-                # InputSpec(min_ndim=1),  # z
                 InputSpec(min_ndim=1),  # u_c
                 InputSpec(min_ndim=1),  # l_c
             ]
         if self.mode == F_FORWARD.name:
             self.input_spec = [
-                # InputSpec(min_ndim=1),  # y
                 InputSpec(min_ndim=1),  # z
                 InputSpec(min_ndim=1),  # w_u
                 InputSpec(min_ndim=1),  # b_u
@@ -76,18 +70,14 @@ class DecomonReshape(Reshape, DecomonLayer):
             nb_tensors -= 2
 
         if self.mode == F_HYBRID.name:
-            # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:8]
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
         elif self.mode == F_IBP.name:
-            # y, x_0, u_c, l_c = inputs[:4]
             u_c, l_c = inputs[:nb_tensors]
         elif self.mode == F_FORWARD.name:
-            # y, x_0, w_u, b_u, w_l, b_l = inputs[:6]
             x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
-        # y_ = op(y)
         if self.mode in [F_IBP.name, F_HYBRID.name]:
             u_c_ = op(u_c)
             l_c_ = op(l_c)
@@ -109,13 +99,10 @@ class DecomonReshape(Reshape, DecomonLayer):
                 w_l_ = K.rnn(step_function=step_func, inputs=w_l, initial_states=[], unroll=False)[1]
 
         if self.mode == F_HYBRID.name:
-            # output = [y_, x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
             output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
         elif self.mode == F_FORWARD.name:
-            # output = [y_, x_0, w_u_, b_u_, w_l_, b_l_]
             output = [x_0, w_u_, b_u_, w_l_, b_l_]
         elif self.mode == F_IBP.name:
-            # output = [y_, x_0, u_c_, l_c_]
             output = [u_c_, l_c_]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
@@ -143,7 +130,6 @@ class DecomonPermute(Permute, DecomonLayer):
 
         if self.mode == F_HYBRID.name:
             self.input_spec = [
-                # InputSpec(min_ndim=1),  # y
                 InputSpec(min_ndim=1),  # z
                 InputSpec(min_ndim=1),  # u_c
                 InputSpec(min_ndim=1),  # w_u
@@ -154,14 +140,11 @@ class DecomonPermute(Permute, DecomonLayer):
             ]
         elif self.mode == F_IBP.name:
             self.input_spec = [
-                # InputSpec(min_ndim=1),  # y
-                # InputSpec(min_ndim=1),  # z
                 InputSpec(min_ndim=1),  # u_c
                 InputSpec(min_ndim=1),  # l_c
             ]
         if self.mode == F_FORWARD.name:
             self.input_spec = [
-                # InputSpec(min_ndim=1),  # y
                 InputSpec(min_ndim=1),  # z
                 InputSpec(min_ndim=1),  # w_u
                 InputSpec(min_ndim=1),  # b_u
@@ -194,18 +177,14 @@ class DecomonPermute(Permute, DecomonLayer):
             nb_tensors -= 2
 
         if self.mode == F_HYBRID.name:
-            # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:8]
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
         elif self.mode == F_IBP.name:
-            # y, x_0, u_c, l_c = inputs[:4]
             u_c, l_c = inputs[:nb_tensors]
         elif self.mode == F_FORWARD.name:
-            # y, x_0, w_u, b_u, w_l, b_l = inputs[:6]
             x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
-        # y_ = op(y)
         if self.mode in [F_IBP.name, F_HYBRID.name]:
             u_c_ = op(u_c)
             l_c_ = op(l_c)
@@ -226,13 +205,10 @@ class DecomonPermute(Permute, DecomonLayer):
                 w_l_ = K.rnn(step_function=step_func, inputs=w_l, initial_states=[], unroll=False)[1]
 
         if self.mode == F_HYBRID.name:
-            # output = [y_, x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
             output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
         elif self.mode == F_FORWARD.name:
-            # output = [y_, x_0, w_u_, b_u_, w_l_, b_l_]
             output = [x_0, w_u_, b_u_, w_l_, b_l_]
         elif self.mode == F_IBP.name:
-            # output = [y_, x_0, u_c_, l_c_]
             output = [u_c_, l_c_]
         else:
             raise ValueError(f"Unknown mode {self.mode}")

@@ -55,25 +55,6 @@ def include_dim_layer_fn(
     if convex_domain is None:
         convex_domain = {}
     if input_dim <= 0:
-
-        # if n_subgrad and "n_subgrad" in inspect.signature(layer_fn).parameters:
-        #    layer_fn_copy = deepcopy(layer_fn)
-        #
-        #    def func(x):
-        #        return layer_fn_copy(
-        #            x,
-        #            input_dim,
-        #            dc_decomp=dc_decomp,
-        #            convex_domain=convex_domain,
-        #            n_subgrad=n_subgrad,
-        #            IBP=IBP,
-        #            forward=forward,
-        #            fast=fast,
-        #        )
-        #
-        #    layer_fn = func
-        # else:
-        #    return layer_fn
         return layer_fn
     else:
         if "input_dim" in inspect.signature(layer_fn).parameters:
@@ -248,7 +229,6 @@ def clone_sequential_model(
                 for layer_ in layer._layers:
                     list_layer += _get_layer(layer_)
                 return list_layer
-            # return [clone_functional_model(layer, layer_fn=layer_fn)]
             return [
                 clone(
                     layer,
@@ -304,7 +284,6 @@ def clone_sequential_model(
         if IBP:
             if forward:  # hybrid mode
                 input_tensors = [
-                    # y_tensor,
                     z_tensor,
                     u_c_tensor,
                     w_u_tensor,
@@ -316,7 +295,6 @@ def clone_sequential_model(
             else:
                 # only IBP
                 input_tensors = [
-                    # y_tensor,
                     z_tensor,
                     u_c_tensor,
                     l_c_tensor,
@@ -324,7 +302,6 @@ def clone_sequential_model(
         else:
             # forward mode
             input_tensors = [
-                # y_tensor,
                 z_tensor,
                 w_u_tensor,
                 b_u_tensor,
@@ -742,7 +719,6 @@ def convert(
     :return: a decomon model
     """
 
-    # raise NotImplementedError()
     if convex_domain is None:
         convex_domain = {}
     if options is None:
@@ -783,9 +759,6 @@ def convert(
 
         # create b_u, b_l, u_c, l_c from the previous tensors (with a lambda layer)
         b_tensor = 0 * y_tensor
-        # b_l_tensor = K.zeros_like(y_tensor)
-
-        # w_tensor = K.reshape(w_tensor, tuple([-1] + list(input_shape_w)))
         w_tensor = b_tensor
 
         # compute upper and lower bound
@@ -814,10 +787,6 @@ def convert(
                 l_c_tensor,
             ]
         elif not IBP and forward:
-            # w_tensor = tf.linalg.diag(1. + 0 * (Flatten()(y_tensor)))
-
-            # n_dim = np.prod(y_tensor.shape[1:])
-            # w_tensor = K.reshape(w_tensor, [-1, n_dim] + list(y_tensor.shape[1:]))
             if not linearize:
                 w_tensor = tf.linalg.diag(1.0 + 0 * (Flatten()(K.expand_dims(y_tensor, 1))))
 
@@ -858,8 +827,6 @@ def convert(
     decomon_model = DecomonModel(
         input_tensors, output, convex_domain=convex_domain, IBP=IBP, forward=forward, mode=model_monotonic.mode
     )
-    # if mode.lower() == Backward.name:
-    #    decomon_model = get_backward(decomon_model, slope=slope_backward)
     return decomon_model
 
 
@@ -1004,13 +971,9 @@ def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, opti
     :param model:
     :return:
     """
-    # assert isinstance(model, DecomonModel) or isinstance(model, DecomonSequential)
-
     # create inputs for back_bounds
     # the convert mode for an easy use has been activated
     # it implies that the bounds are on the input of the network directly
-
-    # input_backward = model.input
     if options is None:
         options = {}
     input_backward = []
@@ -1022,8 +985,6 @@ def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, opti
 
         y_pred = output_forward[0]
         n_dim = np.prod(y_pred.shape[1:])
-
-        # import pdb;pdb.set_trace()
 
         def get_init_backward(y_pred):
             # create identity matrix to init the backward pass
@@ -1225,66 +1186,3 @@ def get_backward_layer(layer, back_bounds, input_layers, input_tensors, slope=V_
             back_bounds = join(layer, back_bounds)  # to define
 
     return back_bounds
-
-
-"""
-
-def get_backward_layer_(layer, back_bounds, edges={}, input_layers=None, slope=V_slope.name):
-    "
-
-    :param layer:
-    :param back_bounds:
-    :param edges:
-    :return:
-    ""
-    # if we cannot find layer in edges, it means that we reach an input layer
-    # then we just return back bounds
-
-    if layer.name not in edges:
-        return back_bounds
-    if isinstance(layer, Model):
-        input_model = input_layers[layer.name]
-        back_bounds = get_backward_model(layer, back_bounds=back_bounds, input_model=input_model, slope=slope)
-        inputs = input_layers[layer.name]
-
-    if layer.__class__.__name__[:7] == "Decomon":
-            backward_layer = get_backward_(layer, slope=slope)
-            if isinstance(back_bounds, tuple):
-                back_bounds = list(back_bounds)
-            back_bounds = list(backward_layer(inputs + back_bounds))
-        else:
-            if layer.name not in edges.keys():
-                return back_bounds
-            elif isinstance(layer, Lambda):
-                edges_layers = edges[layer.name]
-                check = np.min([layer_i.name not in edges.keys() for layer_i in edges_layers])
-                if check:
-                    return back_bounds
-                else:
-                    import pdb
-
-                    pdb.set_trace()
-                    raise KeyError
-            else:
-                import pdb
-
-                pdb.set_trace()
-                raise KeyError
-    else:
-        raise NotImplementedError()
-
-    if layer.name in edges.keys():
-        # retrieve input layers:
-        edges_layers = edges[layer.name]
-        if len(edges_layers) > 1:
-            import pdb
-
-            pdb.set_trace()
-            raise NotImplementedError()
-
-        back_bounds = get_backward_layer(
-            edges_layers[0], back_bounds=back_bounds, edges=edges, input_layers=input_layers, slope=slope
-        )
-
-    return back_bounds
-"""

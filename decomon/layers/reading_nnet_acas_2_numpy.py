@@ -29,8 +29,6 @@ def convert_nnet_2_numpy(repo, filename, clipping=True, normalize_in=True, norma
     MAX = np.array([float(e) for e in MAX])
     MEAN = np.array([float(e) for e in MEAN])
     STD = np.array([float(e) for e in STD])
-    # print('MEAN', MEAN)
-    # print('STD', STD)
 
     # split into normalization of input and output
     STD_out = STD[-1]

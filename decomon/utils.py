@@ -2,9 +2,6 @@ from __future__ import absolute_import
 
 import numpy as np
 import tensorflow as tf
-
-# from .layers.utils import get_linear_hull_s_shape, sigmoid_prime, tanh_prime
-# from tensorflow.python.keras.engine.base_layer import InputSpec
 from tensorflow.keras.layers import Flatten, Lambda
 from tensorflow.math import greater_equal
 from tensorflow.python.keras import backend as K
@@ -183,7 +180,6 @@ def get_lq_norm(x, p, axis=-1):
     :return: ||w||^p
     """
     if p == 1:
-        # x_p = K.sum(K.abs(x), axis)
         x_q = K.max(K.abs(x), axis)
     elif p == 2:
         x_q = K.sqrt(K.sum(K.pow(x, p), axis))
@@ -420,9 +416,6 @@ def noisy_upper(upper):
 # define routines to get linear relaxations useful both for forward and backward
 def get_linear_hull_relu(upper, lower, slope, upper_g=0, lower_g=0, **kwargs):
 
-    # upper = K.in_train_phase(noisy_upper(upper), upper)
-    # lower = K.in_train_phase(noisy_lower(upper), lower)
-
     # in case upper=lower, this cases are
     # considered with index_dead and index_linear
     alpha = (K.relu(upper) - K.relu(lower)) / K.maximum(K.cast(K.epsilon(), dtype=upper.dtype), upper - lower)
@@ -627,13 +620,10 @@ def get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, convex_dom
 
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_IBP.name:
-        # y, x_0, u_c, l_c = x[:4]
         u_c, l_c = x[:nb_tensor]
     elif mode == F_HYBRID.name:
-        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensor]
     elif mode == F_FORWARD.name:
-        # y, x_0, w_u, b_u, w_l, b_l = x[:6]
         x_0, w_u, b_u, w_l, b_l = x[:nb_tensor]
         u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
         l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
@@ -667,8 +657,6 @@ def get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, convex_dom
 
     w_u_ = K.reshape(alpha_u_0 * w_u_0 + alpha_u_1 * w_u_1 + (o_value - alpha_u_0 - alpha_u_1) * w_u_2, [-1] + shape)
     b_u_ = K.reshape(alpha_u_0 * b_u_0 + alpha_u_1 * b_u_1 + (o_value - alpha_u_0 - alpha_u_1) * b_u_2, [-1] + shape)
-    # w_u_ = K.reshape(w_u_, [-1]+shape)
-    # b_u_ = K.reshape(b_u_, [-1]+shape)
 
     # linear hull
     # case 0:
@@ -685,29 +673,6 @@ def get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, convex_dom
 
     w_l_ = K.reshape(alpha_l_0 * w_l_0 + alpha_l_1 * w_l_1 + (o_value - alpha_l_0 - alpha_l_1) * w_l_2, [-1] + shape)
     b_l_ = K.reshape(alpha_l_0 * b_l_0 + alpha_l_1 * b_l_1 + (o_value - alpha_l_0 - alpha_l_1) * b_l_2, [-1] + shape)
-    """
-    if "finetune" in kwargs:
-        shape_w = [-1] + list(w_u_.shape[1:])
-        shape_b = [-1] + list(b_u_.shape[1:])
-        op_flat = Flatten()
-
-        w_u_ = op_flat(w_u_)
-        w_l_ = op_flat(w_l_)
-        b_u_ = op_flat(b_u_)
-        b_l_ = op_flat(b_l_)
-
-        # weighted linear combination
-        alpha_l = kwargs["finetune"]
-        alpha_l_ = alpha_l[None]
-
-        w_l_ = alpha_l_ * w_l_
-        b_l_ = alpha_l_ * b_l_ + (o_value - alpha_l_) * op_flat(K.maximum(l_c, z_value))
-
-        w_u_ = K.reshape(w_u_, shape_w)
-        w_l_ = K.reshape(w_l_, shape_w)
-        b_u_ = K.reshape(b_u_, shape_b)
-        b_l_ = K.reshape(b_l_, shape_b)
-    """
 
     return [w_u_, b_u_, w_l_, b_l_]  # what the hell !!!!
 
