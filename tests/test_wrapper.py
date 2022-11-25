@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import pytest
 from tensorflow.keras.layers import Activation, Dense
 from tensorflow.keras.models import Sequential

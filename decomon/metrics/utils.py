@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from decomon.layers.utils import F_HYBRID
 
 from ..layers.utils import add, exp, expand_dims, log, minus, sum

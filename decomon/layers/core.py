@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from abc import ABC, abstractmethod
 
 from tensorflow.keras.layers import Layer

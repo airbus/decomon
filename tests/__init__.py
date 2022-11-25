@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import numpy as np
 import tensorflow.python.keras.backend as K
 from numpy.testing import assert_almost_equal

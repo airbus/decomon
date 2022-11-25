@@ -3,7 +3,7 @@
 It inherits from keras Sequential class.
 
 """
-from __future__ import absolute_import
+
 
 import inspect
 import warnings

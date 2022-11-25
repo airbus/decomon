@@ -1,5 +1,5 @@
 # Test unit for decomon with Dense layers
-from __future__ import absolute_import
+
 
 import numpy as np
 import pytest

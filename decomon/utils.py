@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Flatten, Lambda
