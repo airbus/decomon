@@ -815,9 +815,6 @@ def convert(
             inputs_ += model_monotonic.inputs[-2:]
 
         input_tensors = inputs_
-    import pdb
-
-    pdb.set_trace()
     input_tensors_ = lambda_layer(inputs_)
 
     # create the model
@@ -1109,9 +1106,7 @@ def get_backward_model(model, back_bounds, input_model, slope=V_slope.name, opti
                     dico_input[layer_.name] = list_inputs[0]
                 else:
                     if isinstance(layer_, Model):
-                        import pdb
-
-                        pdb.set_trace()
+                        pass
                     else:
                         dico_output[layer_.name] = layer_(list_inputs)
                         dico_input[layer_.name] = list_inputs

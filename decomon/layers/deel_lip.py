@@ -78,10 +78,6 @@ class DecomonGroupSort(DecomonLayer):
 
         shape_in = list(input[0].shape[1:])
         input_ = self.reshape(input)
-        import pdb
-
-        pdb.set_trace()
-
         if self.n == 2:
 
             output_max = expand_dims(
@@ -191,4 +187,4 @@ class DecomonGroupSort2(DecomonLayer):
         self.op_reshape_out = DecomonReshape(input_shape[1:], mode=self.mode)
 
     def reset_layer(self, layer):
-        print("kikou")
+        pass

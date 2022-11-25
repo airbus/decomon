@@ -436,8 +436,5 @@ def get(identifier):
                 "layer in a model.".format(identifier=identifier.__class__.__name__)
             )
             return identifier
-        import pdb
-
-        pdb.set_trace()
     else:
         raise ValueError("Could not interpret " "activation function identifier:", identifier)

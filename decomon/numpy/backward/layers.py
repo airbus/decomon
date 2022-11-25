@@ -194,6 +194,4 @@ def get_backward(keras_layer, previous=True, mode=F_FORWARD.name, convex_domain=
             keras_layer, previous=previous, mode=mode, convex_domain=convex_domain, rec=rec, params=params, **kwargs
         )
     except KeyError:
-        import pdb
-
-        pdb.set_trace()
+        pass

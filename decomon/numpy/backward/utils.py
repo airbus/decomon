@@ -114,11 +114,6 @@ def compute_A(n, x, w_u, b_u, w_l, b_l, stable_coeff=1e-6):
     mask_A = np.maximum(np.sign(get_lower(x, w_l, b_l)), 0.0) + np.maximum(np.sign(-get_upper(x, w_u, b_u)), 0.0)
     mask_A = np.minimum(mask_A, 1)
     if np.min(mask_A):
-        if np.min(upper * lower) < 0:
-            import pdb
-
-            pdb.set_trace()
-        print("all linear")
         return 0 * b_u
     A = bound_A(x[:, 0], x[:, 1], n, w_u, b_u, w_l, b_l, mask_A) + stable_coeff
     A = np.minimum(A, 0.0)
@@ -191,8 +186,6 @@ def get_linear_lower_crown(upper, lower, A, B):
             if score[i, j] == 1:
                 index_1[i, j] = 1
             elif score[i, j] == 0:
-                if upper[i, j] * lower[i, j] < 0:
-                    print("kikou")
                 index_2[i, j] = 1
 
     w_l = index_1
@@ -213,8 +206,6 @@ def get_linear_lower_crown_old(upper, lower, A, B):
     rate_B = len(np.where(np.sign(B[0, active]) > 0)) * 1.0 / N
     rate_AB = np.sign(B[0, active] * A[0, active])
     rate_AB = len(np.where(rate_AB < 0)[0]) / N
-
-    print(rate_A * 100, rate_B * 100, rate_AB * 100)
 
     mask_zero = np.sign(np.maximum(upper, 0.0))  # 1=> u>0
     mask_linear = np.sign(np.maximum(-lower, 0.0))  # 1=> l<0
@@ -263,7 +254,6 @@ def get_linear_lower_crown_old(upper, lower, A, B):
     for i in range(len(lower)):
         for j in range(lower.shape[-1]):
             if np.sign(upper * lower)[i, j] < 0 and A[i, j] * B[i, j] < 0:
-                print("kikou")
                 index_2[i, j] = 1
             elif score[i, j] == 1:
                 index_1[i, j] = 1
