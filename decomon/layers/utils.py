@@ -392,7 +392,6 @@ def compute_L(W):
     :param W: Keras Tensor (None, n_dim, n_linear, ...)
     :return: Keras Tensor with an upper bound on the largest magnitude of the gradient
     """
-    # do L2 norm
     return K.sum(K.sqrt(K.sum(W * W, 1)), 1)
 
 
@@ -407,7 +406,7 @@ def compute_R(z, convex_domain):
     if len(convex_domain) == 0:
         # compute the L2 distance z[:, 0], z[:, 1]
         dist_ = K.sqrt(K.sum(K.pow((z[:, 1] - z[:, 0]) / 2.0, 2), -1))
-    elif convex_domain["name"] == Box.name:  # to improve
+    elif convex_domain["name"] == Box.name:
         dist_ = K.sqrt(K.sum(K.pow((z[:, 1] - z[:, 0]) / 2.0, 2), -1))
     elif convex_domain["name"] == Ball.name and convex_domain["p"] == np.inf:
         dist_ = K.sqrt(K.sum(K.pow(z - z + convex_domain["eps"], 2), -1))
@@ -430,7 +429,7 @@ def get_start_point(z, convex_domain):
 
     if len(convex_domain) == 0:
         return z[:, 0]
-    elif convex_domain["name"] == Box.name:  # to improve
+    elif convex_domain["name"] == Box.name:
         return (z[:, 0] + z[:, 1]) / 2.0
     elif convex_domain["name"] == Ball.name and convex_domain["p"] == np.inf:
         return z
@@ -796,10 +795,10 @@ def add(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.n
         b_l_ = b_l_0 + b_l_1
 
     if mode == F_HYBRID.name:
-        upper_ = get_upper(x_0, w_u_, b_u_, convex_domain)  # we can see an improvement
+        upper_ = get_upper(x_0, w_u_, b_u_, convex_domain)
         u_c_ = K.minimum(upper_, u_c_)
 
-        lower_ = get_lower(x_0, w_l_, b_l_, convex_domain)  # we can see an improvement
+        lower_ = get_lower(x_0, w_l_, b_l_, convex_domain)
         l_c_ = K.maximum(lower_, l_c_)
 
     if mode == F_HYBRID.name:
@@ -1816,7 +1815,7 @@ def log(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
         u_c_ = K.log(u_c)
         l_c_ = K.log(l_c)
 
-        y = (u_c + l_c) / 2.0  # do finetuneting
+        y = (u_c + l_c) / 2.0
 
         w_l_0 = (u_c_ - l_c_) / K.maximum(u_c - l_c, K.epsilon())
         b_l_0 = l_c_ - w_l_0 * l_c
@@ -1931,5 +1930,5 @@ def subset_sum_lower(W, b, repeat=1):
     C_ = K.cumsum(C, axis=1)
     D = K.minimum(K.sign(K.expand_dims(-b, 1) - C_) + 1, 1)
 
-    score = K.minimum(K.sum(D * C, 1) + b, 0.0)  # to do: add 2
+    score = K.minimum(K.sum(D * C, 1) + b, 0.0)
     return score

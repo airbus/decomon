@@ -46,7 +46,7 @@ class DecomonAdd(Add, DecomonLayer):
         super().build(input_shape_y)
 
     def compute_output_shape(self, input_shape):
-        return input_shape  # ????
+        return input_shape
 
     def call(self, inputs):
 
@@ -146,7 +146,7 @@ class DecomonAverage(Average, DecomonLayer):
 
     def compute_output_shape(self, input_shape):
 
-        return input_shape  # ????
+        return input_shape
 
     def build(self, input_shape):
         n_comp = self.nb_tensors
@@ -215,7 +215,7 @@ class DecomonSubtract(DecomonLayer):
 
     def compute_output_shape(self, input_shape):
 
-        return input_shape  # ????
+        return input_shape
 
     def call(self, inputs, **kwargs):
 
@@ -284,7 +284,7 @@ class DecomonMaximum(DecomonLayer):
         super().__init__(mode=mode, **kwargs)
 
     def compute_output_shape(self, input_shape):
-        return input_shape  # ????
+        return input_shape
 
     def call(self, inputs, **kwargs):
 
@@ -328,7 +328,7 @@ class DecomonConcatenate(Concatenate, DecomonLayer):
 
     def compute_output_shape(self, input_shape):
 
-        return input_shape  # ????
+        return input_shape
 
     def build(self, input_shape):
         n_comp = self.nb_tensors

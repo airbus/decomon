@@ -118,7 +118,7 @@ def convert_forward_functional_model(
             input_tensors += tmp
 
     if softmax_to_linear:
-        model, has_softmax = softmax_2_linear(model)  # do better because you modify the model eventually
+        model, has_softmax = softmax_2_linear(model)
 
     has_iter = False
     if layer_fn is not None and len(layer_fn.__code__.co_varnames) == 1 and "layer" in layer_fn.__code__.co_varnames:

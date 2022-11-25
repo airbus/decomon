@@ -254,7 +254,6 @@ def crown_(
             output_map.update(output_map_)
         return crown_bound, backward_map, output_map
     else:
-        # do something
         if fuse:
             fuse_layer = get_fuse(get_mode(IBP=IBP, forward=forward), dtype=inputs[0].dtype)
             result = fuse_layer(inputs + backward_bounds)
@@ -299,7 +298,6 @@ def get_input_nodes(
                 else:
                     output = []
                     for parent in parents:
-                        # do something
                         if id(parent) in output_map.keys():
                             output += output_map[id(parent)]
                         else:
@@ -362,7 +360,7 @@ def crown_model(
     if not isinstance(model, Model):
         raise ValueError()
     if softmax_to_linear:
-        model, has_softmax = softmax_2_linear(model)  # do better because you modify the model eventually
+        model, has_softmax = softmax_2_linear(model)
 
     if input_dim == -1:
         if isinstance(model.input_shape, list):

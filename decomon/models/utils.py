@@ -259,7 +259,6 @@ def convert_to_backward_bounds(mode, inputs, input_dim):
 
     if mode == F_HYBRID.name:
         _, _, w_u, b_u, _, w_l, b_l = inputs
-        # reshaping !
     elif mode == F_FORWARD.name:
         _, w_u, b_u, w_l, b_l = inputs
     elif mode == F_IBP.name:

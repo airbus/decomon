@@ -223,7 +223,6 @@ def backward_hard_sigmoid(
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 
@@ -245,7 +244,6 @@ def backward_elu(
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 
@@ -267,7 +265,6 @@ def backward_selu(
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 
@@ -308,7 +305,6 @@ def backward_exponential(
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 
@@ -431,7 +427,6 @@ def backward_softmax(
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 

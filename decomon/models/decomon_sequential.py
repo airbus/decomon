@@ -206,7 +206,7 @@ def clone_sequential_model(
         finetune=finetune,
     )
 
-    model, _ = softmax_to_linear(model)  # do better because you modify the model eventually
+    model, _ = softmax_to_linear(model)
     if not isinstance(model, Sequential):
         raise ValueError(
             "Expected `model` argument " "to be a `Sequential` model instance, " "but got:",
@@ -599,7 +599,7 @@ def clone_functional_model(
                     new_layer = layer_fn(layer_)
 
                 layer_map[layer_] = new_layer
-                layer = new_layer  # ????
+                layer = new_layer
             else:
                 # Reuse previously cloned layer.
                 layer = layer_map[layer_]
@@ -637,7 +637,6 @@ def clone_functional_model(
                         if "mask" not in kwargs:
                             kwargs["mask"] = computed_mask
 
-                    # are we sure that layer is Monotonic ?
                     output_tensors = to_list(layer(computed_tensor, **kwargs))
 
                     if not (isinstance(output_tensors[0], list)):

@@ -48,7 +48,7 @@ class BackwardDense(Layer):
         if convex_domain is None:
             convex_domain = {}
         self.layer = layer
-        self.activation = get(layer.get_config()["activation"])  # ??? not sur
+        self.activation = get(layer.get_config()["activation"])
         self.activation_name = layer.get_config()["activation"]
         self.slope = slope
         self.finetune = finetune

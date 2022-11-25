@@ -1,4 +1,3 @@
-# do it with several solvers
 import numpy as np
 import six
 

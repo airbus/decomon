@@ -30,8 +30,6 @@ def get_adv_brightness(
     x_ = x
     x_ = x_.reshape([-1] + input_shape)
 
-    # to do: a case by case depending on the input; whether it is clone or convert with a warning message
-
     w_ = np.ones_like(x_)[:, None]
     bias_ = x_
     n = len(x_)

@@ -144,7 +144,6 @@ def linear_hull_s_shape(
         raise ValueError(f"Unknown mode {mode}")
 
     return output
-    # TO DO linear relaxation
 
 
 def sigmoid(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
@@ -205,7 +204,6 @@ def hard_sigmoid(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **k
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 
@@ -226,7 +224,6 @@ def elu(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 
@@ -254,7 +251,6 @@ def selu(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 

@@ -87,7 +87,6 @@ def backward_add(inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, con
     u_c_1 = op_flat(u_c_1)
     l_c_0 = op_flat(l_c_0)
     l_c_1 = op_flat(l_c_1)
-    # we need to flatten !
 
     upper_0 = get_upper_box(l_c_0, u_c_0, w_out_u_, b_out_u_)
     upper_1 = get_upper_box(l_c_1, u_c_1, w_out_u_, b_out_u_)
@@ -283,14 +282,12 @@ def backward_linear_prod(x_0, bounds_x, back_bounds, convex_domain):
     w_u_i, b_u_i, w_l_i, b_l_i = bounds_x
     w_u, b_u, w_l, b_l = back_bounds
 
-    if len(w_u_i.shape) > 3:  # ???
+    if len(w_u_i.shape) > 3:
         n_dim = w_u_i.get_input_shape_at(0)[1]
         w_u_i = K.reshape(w_u_i, (-1, n_dim, n_dim))
         w_l_i = K.reshape(w_l_i, (-1, n_dim, n_dim))
         b_u_i = K.reshape(b_u_i, (-1, n_dim))
         b_l_i = K.reshape(b_l_i, (-1, n_dim))
-
-    # reshape bounds_x !!!!
 
     x_max = get_upper(x_0, w_u_i - w_l_i, b_u_i - b_l_i, convex_domain)
     mask_b = o_value - K.sign(x_max)
@@ -710,7 +707,6 @@ def backward_multiply(
     return bounds_0, bounds_1
 
 
-# we can do someting simpler
 def backward_sort(
     inputs_,
     w_out_u,
