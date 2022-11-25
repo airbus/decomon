@@ -1080,7 +1080,7 @@ def refine_box(func, model, x_min, x_max, n_split, source_labels=None, target_la
     def priv_func(X_min, X_max):
         if func.__name__ in [elem.__name__ for elem in [get_upper_box, get_lower_box, get_range_box]]:
 
-            results = func(model_, x_min=X_min_, x_max=X_max_, batch_size=batch_size)
+            results = func(model_, x_min=X_min, x_max=X_max, batch_size=batch_size)
 
             if func.__name__ == get_upper_box.__name__:
                 return results.reshape((n_x, n_split, -1))
@@ -1091,8 +1091,8 @@ def refine_box(func, model, x_min, x_max, n_split, source_labels=None, target_la
 
             results = func(
                 model_,
-                x_min=X_min_,
-                x_max=X_max_,
+                x_min=X_min,
+                x_max=X_max,
                 source_labels=source_labels,
                 target_labels=target_labels,
                 batch_size=batch_size,
