@@ -29,10 +29,6 @@ def get_upper_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
 
     baseline_upper = get_upper_box(model, x_min, x_max, batch_size=batch_size, n_sub_boxes=n_sub_boxes)
 
-    # TO DO
-    # if not model.finetune or not model.forward:
-    #    return baseline_upper
-
     if n_sub_boxes > 1:
         x_min, x_max = refine_boxes(x_min, x_max, n_sub_boxes)
         # reshape
@@ -104,10 +100,6 @@ def get_lower_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
     model_ = model
 
     baseline_upper = get_lower_box(model, x_min, x_max, batch_size=batch_size, n_sub_boxes=n_sub_boxes)
-
-    # TO DO
-    # if not model.finetune or not model.forward:
-    #    return baseline_upper
 
     if n_sub_boxes > 1:
         x_min, x_max = refine_boxes(x_min, x_max, n_sub_boxes)

@@ -200,7 +200,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                 initializer="ones",
                 name="alpha_f",
                 regularizer=None,
-                constraint=ClipAlphaAndSumtoOne(),  # list of constraints ?
+                constraint=ClipAlphaAndSumtoOne(),
             )
 
         self.built = True

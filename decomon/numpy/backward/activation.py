@@ -65,7 +65,6 @@ def backward_relu(
         output = get_linear_hull_relu(x, convex_domain=convex_domain, params=params, **kwargs)
 
         if previous:
-            # TO DO
             return merge_with_previous(output + x[-4:])
         else:
             return output
@@ -152,7 +151,6 @@ def backward_hard_sigmoid(
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 
@@ -183,7 +181,6 @@ def backward_elu(
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 
@@ -214,7 +211,6 @@ def backward_selu(
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 
@@ -278,7 +274,6 @@ def backward_exponential(
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 
@@ -309,7 +304,6 @@ def backward_softplus(
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 
@@ -342,7 +336,6 @@ def backward_softsign(
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 
@@ -376,7 +369,6 @@ def backward_softmax(
     if dc_decomp:
         raise NotImplementedError()
 
-    # TO DO linear relaxation
     raise NotImplementedError()
 
 

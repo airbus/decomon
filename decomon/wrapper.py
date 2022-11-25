@@ -144,8 +144,6 @@ def get_adv_box(
 
             # add penalties on biases
             if backward:
-
-                # TO DO target tensor
                 return np.max(u_c, -1)
             else:
                 upper = u_c[:, :, None] - l_c[:, None]
@@ -1209,7 +1207,7 @@ def get_adv_noise(
 
         IBP = model_.IBP
         forward = model_.forward
-        output = model_.predict(x_)  # to do !!!!
+        output = model_.predict(x_)
 
         def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
 

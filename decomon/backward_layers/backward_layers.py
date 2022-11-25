@@ -64,7 +64,7 @@ class BackwardDense(BackwardLayer):
         if convex_domain is None:
             convex_domain = {}
         self.layer = layer
-        self.activation = get(layer.get_config()["activation"])  # ??? not sur
+        self.activation = get(layer.get_config()["activation"])
         self.activation_name = layer.get_config()["activation"]
         self.slope = slope
         self.finetune = finetune
@@ -102,7 +102,6 @@ class BackwardDense(BackwardLayer):
         weights = self.layer.kernel
 
         if self.activation_name != "linear":
-            # here update x
             x = self.layer.call_linear(x_)
             if self.finetune:
                 if self.activation_name[:4] != "relu":
@@ -164,7 +163,6 @@ class BackwardDense(BackwardLayer):
         # start with the activation: determine the upper and lower bounds before the weights
         weights = self.layer.kernel
         if self.activation_name != "linear":
-            # here update x
             x = self.layer.call_linear(x_)
             if self.finetune:
                 if self.activation_name[:4] != "relu":
@@ -195,7 +193,6 @@ class BackwardDense(BackwardLayer):
                 )
 
             # w_out_u (None, n_out)  b_out_u (None, n_back)
-            # correction:
 
             if len(w_out_u.shape) == 2:
                 w_out_u = tf.linalg.diag(w_out_u)  # (None, n_out, n_back=n_out)
@@ -232,7 +229,7 @@ class BackwardDense(BackwardLayer):
             w_out_u_, w_out_l_ = [weights[None] + z_value * K.expand_dims(y_, -1)] * 2
             if self.layer.use_bias:
                 bias = self.layer.bias
-                b_out_u_, b_out_l_ = [bias[None] + z_value * w_out_u_[:, 0]] * 2  # not sure....
+                b_out_u_, b_out_l_ = [bias[None] + z_value * w_out_u_[:, 0]] * 2
             else:
                 b_out_u_, b_out_l_ = [z_value * w_out_u_[:, 0]] * 2
         return w_out_u_, b_out_u_, w_out_l_, b_out_l_
@@ -321,7 +318,7 @@ class BackwardConv2D(BackwardLayer):
         if convex_domain is None:
             convex_domain = {}
         self.layer = layer
-        self.activation = get(layer.get_config()["activation"])  # ??? not sur
+        self.activation = get(layer.get_config()["activation"])
         self.activation_name = layer.get_config()["activation"]
         self.slope = slope
         if hasattr(self.layer, "mode"):
@@ -436,7 +433,6 @@ class BackwardConv2D(BackwardLayer):
 
         if self.activation_name != "linear":
             x_output = self.layer.call_linear(x)
-            # here update x
             if self.finetune:
                 w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
                     x_output + [w_out_u, b_out_u, w_out_l, b_out_l],
@@ -459,7 +455,6 @@ class BackwardConv2D(BackwardLayer):
         x = inputs
 
         if self.activation_name != "linear":
-            # here update x
             x_output = self.layer.call_linear(x)
             y_ = x_output[-1]
 
@@ -563,7 +558,7 @@ class BackwardActivation(BackwardLayer):
         if convex_domain is None:
             convex_domain = {}
         self.layer = layer
-        self.activation = get(layer.get_config()["activation"])  # ??? not sur
+        self.activation = get(layer.get_config()["activation"])
         self.activation_name = layer.get_config()["activation"]
         self.slope = slope
         if hasattr(self.layer, "mode"):
@@ -697,8 +692,6 @@ class BackwardActivation(BackwardLayer):
         # infer the output dimension
         if self.finetune:
             if self.activation_name != "linear":
-                # here update x
-
                 w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
                     inputs,
                     convex_domain=self.convex_domain,
@@ -709,8 +702,6 @@ class BackwardActivation(BackwardLayer):
                 )
         else:
             if self.activation_name != "linear":
-                # here update x
-
                 w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
                     inputs,
                     convex_domain=self.convex_domain,
@@ -731,7 +722,6 @@ class BackwardActivation(BackwardLayer):
         y_ = inputs[-1]
 
         if self.activation_name != "linear":
-            # here update x
             if self.finetune:
                 w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
                     inputs,
@@ -1063,8 +1053,6 @@ class BackwardInputLayer(BackwardLayer):
 def get_backward(
     layer, slope=V_slope.name, previous=True, mode=F_HYBRID.name, convex_domain=None, finetune=False, **kwargs
 ):
-    # do it better
-    # either a Decomon layer or its pure Keras version
     if convex_domain is None:
         convex_domain = {}
     class_name = layer.__class__.__name__

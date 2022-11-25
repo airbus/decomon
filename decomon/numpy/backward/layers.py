@@ -61,8 +61,6 @@ class BackwardNumpyActivation(BackwardNumpyLayer):
         output = self.call_no_previous(inputs[:-4], **kwargs)
         return merge_with_previous(output + inputs[-4:])
 
-        # to do
-
     def call_no_previous(self, inputs, **kwargs):
         return self.activation(inputs, convex_domain=self.convex_domain, mode=self.mode, params=self.params, **kwargs)
 
@@ -183,8 +181,6 @@ class BackwardNumpyDense(BackwardNumpyLayer):
 
 def get_backward(keras_layer, previous=True, mode=F_FORWARD.name, convex_domain=None, rec=1, params=None, **kwargs):
 
-    # do it better
-    # either a Decomon layer or its pure Keras version
     if convex_domain is None:
         convex_domain = {}
     if params is None:

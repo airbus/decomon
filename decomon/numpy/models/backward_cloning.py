@@ -189,7 +189,6 @@ def crown_old(
 
     # if input bounds: easy
     if len(node.parent_nodes):
-        # do something
         # retrieve child
         if len(node.parent_nodes) > 1:
             raise NotImplementedError()

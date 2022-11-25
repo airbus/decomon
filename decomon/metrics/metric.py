@@ -52,7 +52,6 @@ class Adversarial_score(Layer):
             if target_tensor is None:
                 target_tensor = 1.0 - source_tensor
 
-            # to improve
             score_u = (
                 u_c * target_tensor - K.expand_dims(K.min(l_c * source_tensor, -1), -1) - 1e6 * (1 - target_tensor)
             )
@@ -162,7 +161,6 @@ class Adversarial_check(Layer):
             u_c_ = K.reshape(u_c, (-1, shape))
             l_c_ = K.reshape(l_c, (-1, shape))
 
-            # to improve
             score_u = (
                 l_c_ * target_tensor - K.expand_dims(K.min(u_c_ * source_tensor, -1), -1) - 1e6 * (1 - target_tensor)
             )
