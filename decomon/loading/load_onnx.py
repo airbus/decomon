@@ -88,7 +88,6 @@ def clone(layer, data_format=CHANNEL_LAST, prev_format=CHANNEL_LAST, node=None):
         elif isinstance(layer, InputLayer):
             # do permutation
             input_shape = list(layer.input_shape[0][1:])
-            input_shape_ = input_shape[1:] + [input_shape[0]]
             layer_ = InputLayer(input_shape)
         else:
 

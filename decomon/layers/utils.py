@@ -763,8 +763,6 @@ def softplus_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, slope=
 
     if dc_decomp:
         h, g = x[-2:]
-        h_ = K.maximum(h, -g)
-        g_ = g
 
     if mode == F_FORWARD.name:
         upper = get_upper(x_0, w_u, b_u, convex_domain)
@@ -1068,8 +1066,6 @@ def max_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1, fi
     if dc_decomp:
         h_list = tf.split(h, max_dim, axis)
         g_list = tf.split(g, max_dim, axis)
-        h_tmp = h_list[0] + 0 * (h_list[0])
-        g_tmp = g_list[0] + 0 * (g_list[0])
 
     # y_list = tf.split(y, max_dim, axis)
     # y_tmp = y_list[0] + 0 * (y_list[0])
@@ -1497,8 +1493,6 @@ def multiply(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYB
         b_u_ = cx_u_pos * b_u1 + cx_u_neg * b_l1 + cy_l_pos * b_u0 + cy_l_neg * b_l0 - u0 * l1
 
         # xy >= x_U*y + x*y_U - x_U*y_U
-        cy_u_pos = K.maximum(u1, 0.0)
-        cy_u_neg = K.minimum(u1, 0.0)
         cx_l_pos = K.maximum(l0, 0.0)
         cx_l_neg = K.minimum(l0, 0.0)
 
@@ -1936,9 +1930,6 @@ def expand_dims(inputs_, dc_decomp=False, mode=F_HYBRID.name, axis=-1, **kwargs)
     else:
         raise ValueError(f"Unknown mode {mode}")
 
-    if dc_decomp:
-        h, g = inputs_[-2:]
-
     if mode in [F_HYBRID.name, F_FORWARD.name]:
         if axis == -1:
             axis_w = axis
@@ -2058,7 +2049,6 @@ def exp(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
         l_c_ = K.exp(l_c)
 
         y = (u_c + l_c) / 2.0  # do finetuneting
-        slope = K.exp(y)
 
         w_u_0 = (u_c_ - l_c_) / K.maximum(u_c - l_c, K.epsilon())
         b_u_0 = l_c_ - w_u_0 * l_c

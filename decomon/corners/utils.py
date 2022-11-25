@@ -36,7 +36,6 @@ def convert_lower_search_2_subset_sum(x, W, b, n):
 
     if len(W.shape) > 3:
         W = K.reshape(W, (-1, W.shape[1], np.prod(W.shape[2:])))
-        b = K.reshape(b, (-1, np.prod(b.shape[1:])))
 
     weights = K.abs(W) * K.expand_dims((x_max - x_min) / n, -1)
     return weights, const

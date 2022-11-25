@@ -365,13 +365,11 @@ def get_upper_layer_box():
 
 def backward_maximum(inputs_, convex_domain):
 
-    y, x = inputs_[:2]
     back_bounds_0 = inputs_[2:6]
     back_bounds = inputs_[6:]
 
     output = inputs_[:2] + back_bounds_0
     for i in range(len(back_bounds) / 4):
-        w_u, b_u, w_l, b_l = back_bounds[4 * i : 4 * (i + 1)]
         output = maximum(
             output,
             inputs_[:2] + back_bounds[4 * i : 4 * (i + 1)],
@@ -385,13 +383,11 @@ def backward_maximum(inputs_, convex_domain):
 
 def backward_minimum(inputs_, convex_domain):
 
-    y, x = inputs_[:2]
     back_bounds_0 = inputs_[2:6]
     back_bounds = inputs_[6:]
 
     output = inputs_[:2] + back_bounds_0
     for i in range(len(back_bounds) / 4):
-        w_u, b_u, w_l, b_l = back_bounds[4 * i : 4 * (i + 1)]
         output = minimum(
             output,
             inputs_[:2] + back_bounds[4 * i : 4 * (i + 1)],

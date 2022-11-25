@@ -67,10 +67,6 @@ def get_linear_hull_relu_quantized(inputs, convex_domain, params=None, **kwargs)
 
     upper = get_upper(x, w_f_u, b_f_u, convex_domain)
     lower = get_lower(x, w_f_l, b_f_l, {})
-    relu_u = np.maximum(upper, 0.0)
-    relu_l = np.maximum(lower, 0.0)
-
-    index_unstate = np.maximum(np.sign(upper), 0.0) * np.maximum(np.sign(-lower), 0.0)
     index_linear = np.clip(np.sign(lower) + 1, 0.0, 1.0)
     index_zero = np.clip(-np.sign(upper) + 1, 0.0, 1.0)
 
@@ -86,10 +82,6 @@ def get_linear_hull_relu_quantized(inputs, convex_domain, params=None, **kwargs)
     w_u = (1 - index_linear) * w_u + index_linear
     b_u = (1 - index_linear) * b_u
 
-    if "stable_coeff" in convex_domain:
-        stable_coeff = convex_domain["stable_coeff"]
-    else:
-        stable_coeff = Grid.stable_coeff
     stable_coeff = 0.0
     A = compute_A(convex_domain["n"], x, w_f_u, b_f_u, w_f_l, b_f_l, stable_coeff)
     B = compute_B(convex_domain["n"], x, w_f_u, b_f_u, w_f_l, b_f_l, stable_coeff)
@@ -319,7 +311,7 @@ def get_linear_lower_crown_old(upper, lower, A, B):
     mask_zero = np.sign(np.maximum(upper, 0.0))  # 1=> u>0
     mask_linear = np.sign(np.maximum(-lower, 0.0))  # 1=> l<0
 
-    e_0_ = ((upper - B) * (upper + B)) * (mask_zero)
+    e_0_ = ((upper - B) * (upper + B)) * mask_zero
     e_1_ = (-(A - lower) * (A + lower)) * mask_linear
 
     # id
@@ -334,7 +326,7 @@ def get_linear_lower_crown_old(upper, lower, A, B):
 
     denum = np.maximum(B - A, 1e-6)
     e_2_ = np.maximum(
-        B / (denum) * (A - lower) * (B - lower) * (1 - mask_A) - A / denum * (upper - B) * (1 - mask_B) ** 2, 0.0
+        B / denum * (A - lower) * (B - lower) * (1 - mask_A) - A / denum * (upper - B) * (1 - mask_B) ** 2, 0.0
     )
 
     # penalize e_2_ if upper<=0 or lower>=0
@@ -345,15 +337,13 @@ def get_linear_lower_crown_old(upper, lower, A, B):
     M = np.maximum(e_0_, e_1_, e_2_)
     # if A==lower do not take e_0
 
-    e_0_ += (mask_A) * (M + 1)
+    e_0_ += mask_A * (M + 1)
     # if B==upper do not take e_0
-    e_1_ += (mask_B) * (M + 1)
+    e_1_ += mask_B * (M + 1)
 
     e_0 = e_0_
     e_1 = e_1_
     e_2 = e_2_
-
-    toto = np.maximum(-np.sign(upper * lower), 0.0) * e_2
 
     """
     ttt = np.sign(upper**2-lower**2)*np.sign(e_0-e_1)
@@ -368,7 +358,6 @@ def get_linear_lower_crown_old(upper, lower, A, B):
         e_1 = ttt*e_1 + (1-ttt)*lower ** 2
     """
     # e_2 = (1-np.sign(-A*B))*e_2
-    error = np.minimum(np.minimum(e_0, e_1), e_2)
     # consider e_2 when A<0 and B>0
 
     error_ = np.concatenate([e_0[None], e_1[None], e_2[None]])

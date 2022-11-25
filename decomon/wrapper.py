@@ -327,8 +327,6 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
             IBP = False
             forward = True
 
-        n_label = source_labels.shape[-1]
-
         def get_forward_sample(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None):
 
             if target_tensor is None:
@@ -1178,14 +1176,12 @@ def get_adv_noise(
 
     # reshape x_mmin, x_max
     input_shape = list(model_.input_shape[1:])
-    input_dim = np.prod(input_shape)
     x_ = x + 0 * x
     x_ = x_.reshape([-1] + input_shape)
     n_split = 1
     n_batch = len(x_)
 
     input_shape = list(model_.input_shape[1:])
-    input_dim = np.prod(input_shape)
     x_ = x + 0 * x
     x_ = x_.reshape([-1] + input_shape)
 

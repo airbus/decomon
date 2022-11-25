@@ -23,7 +23,7 @@ def get_linear_lower_slope_relu(upper, lower, upper_g_: tf.Variable, lower_g_: t
     # id
 
     denum = K.maximum(B - A, 1e-6)
-    e_2_ = K.maximum(B / (denum) * (A - lower) * (B - lower) - A / denum * (upper - B) ** 2, 0.0)
+    e_2_ = K.maximum(B / denum * (A - lower) * (B - lower) - A / denum * (upper - B) ** 2, 0.0)
 
     # penalize e_2_ if upper<=0 or lower>=0
     e_2_ += 10.0 * (1 - mask_linear) + 10 * (1 - mask_zero)

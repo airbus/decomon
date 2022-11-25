@@ -13,9 +13,6 @@ def gradient_relu(inputs, dc_decomp=False, mode=F_HYBRID.name, convex_domain=Non
     if mode not in [F_HYBRID.name, F_IBP.name, F_FORWARD.name]:
         raise ValueError(f"unknown mode {mode}")
 
-    z_value = K.cast(0.0, K.floatx())
-    o_value = K.cast(1.0, K.floatx())
-
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_HYBRID.name:
         # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]

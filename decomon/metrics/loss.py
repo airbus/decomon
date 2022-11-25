@@ -452,9 +452,7 @@ class DecomonRadiusRobust(DecomonLayer):
             W_adv = (
                 K.sum(-w_l * (s_tensor[:, None]), -1, keepdims=True) + w_u * t_tensor[:, None] + w_l * y_tensor[:, None]
             )  # (None, n_in, n_out)
-            b_adv = (
-                K.sum(-b_l * (s_tensor), -1, keepdims=True) + b_u * t_tensor + (b_l - 1e6) * y_tensor
-            )  # (None, n_out)
+            b_adv = K.sum(-b_l * s_tensor, -1, keepdims=True) + b_u * t_tensor + (b_l - 1e6) * y_tensor  # (None, n_out)
 
             score = K.sum(W_adv * x_0[:, :, None], 1) + b_adv  # (None, n_out)
 
@@ -483,10 +481,6 @@ class DecomonRadiusRobust(DecomonLayer):
         shape = b_l.shape[-1]
 
         def radius_label(y_tensor):
-
-            t_tensor = 1 - y_tensor
-            s_tensor = y_tensor
-
             W_adv = w_u
             b_adv = b_u - 1e6 * y_tensor
 

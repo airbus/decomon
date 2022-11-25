@@ -70,7 +70,7 @@ def backward_relu(
     if threshold != 0:
         raise NotImplementedError()
 
-    if not (alpha) and max_value is None:
+    if not alpha and max_value is None:
         # default values: return relu_(x) = max(x, 0)
         if previous:
             y = x[:-4]
@@ -380,16 +380,6 @@ def backward_softsign(
             y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, mode=mode, **kwargs
         )
     else:
-        nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
-        if mode == F_IBP.name:
-            upper, lower = x[:nb_tensors]
-        if mode == F_FORWARD.name:
-            z_, w_u_, b_u_, w_l_, b_l_ = x[:nb_tensors]
-            upper = get_upper(z_, w_u_, b_u_)
-            lower = get_lower(z_, w_l_, b_l_)
-        if mode == F_HYBRID.name:
-            _, upper, _, _, lower, _, _ = x[:nb_tensors]
-
         bounds = get_linear_hull_s_shape(
             x, func=K.softsign, f_prime=softsign_prime, convex_domain=convex_domain, mode=mode
         )

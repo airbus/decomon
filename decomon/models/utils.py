@@ -6,7 +6,6 @@ from copy import deepcopy
 
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras.backend as K
 import tensorflow.python.keras.backend as K
 from tensorflow.keras.layers import (
     Concatenate,
@@ -118,7 +117,6 @@ def check_input_tensors_sequential(
             else:
                 z_tensor = Input((input_dim,), dtype=model.layers[0].dtype)
 
-        y_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
         if dc_decomp:
             h_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
             g_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
@@ -208,9 +206,6 @@ def check_input_tensors_sequential(
 
 
 def get_input_tensor_x(model, input_tensors, input_dim, input_dim_init, convex_domain):
-
-    input_shape = list(K.int_shape(model.input)[1:])
-
     if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
         input_dim_ = (2, input_dim)
         z_tensor = Input(input_dim_, dtype=model.layers[0].dtype)
@@ -262,10 +257,7 @@ def get_node_by_id_(node):
 
 
 def get_node_by_id(node, outbound=False, model=None):
-
     layer_ = node.outbound_layer
-    layers_i = to_list(node.inbound_layers)
-
     input_names = str(id(node))
     if outbound:
         return f"{layer_.name}_NODE_{input_names}"
@@ -315,7 +307,7 @@ def get_input_dim(x_tensor):
 
 def get_original_layer_name(layer, pattern="_monotonic"):
 
-    pattern_layer = (layer.name).split(pattern)
+    pattern_layer = layer.name.split(pattern)
     if len(pattern_layer) == 1:
         return []
     return ["".join(pattern_layer[:-1])]

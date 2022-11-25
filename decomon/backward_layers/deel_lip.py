@@ -125,11 +125,9 @@ class BackwardGroupSort2(Layer):
 
     def call_previous(self, inputs):
 
-        x = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
         if self.layer.data_format == "channels_last":
             shape = int(w_out_u.shape[1] / 2)
             n_out = w_out_u.shape[-1]
             w_out_u_ = K.reshape(w_out_u, [-1, shape, self.layer.n, n_out])
-            w

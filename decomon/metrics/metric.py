@@ -31,7 +31,6 @@ class Adversarial_score(Layer):
     def linear_adv(self, z_tensor, y_tensor, w_u, b_u, w_l, b_l):
 
         t_tensor = 1 - y_tensor
-        mask = K.expand_dims(t_tensor, -1) * K.expand_dims(y_tensor)
         w_upper = w_u * (1 - y_tensor[:, None]) - K.expand_dims(K.sum(w_l * y_tensor[:, None], -1), -1)
         b_upper = b_u * (1 - y_tensor) - b_l * y_tensor
 
@@ -47,16 +46,11 @@ class Adversarial_score(Layer):
         """
 
         y_tensor = inputs[-1]
-        z_tensor = inputs[1]
 
         def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
 
             if target_tensor is None:
                 target_tensor = 1.0 - source_tensor
-
-            shape = np.prod(u_c.shape[1:])
-            u_c_ = K.reshape(u_c, (-1, shape))
-            l_c_ = K.reshape(l_c, (-1, shape))
 
             # to improve
             score_u = (
@@ -158,7 +152,6 @@ class Adversarial_check(Layer):
         """
 
         y_tensor = inputs[-1]
-        z_tensor = inputs[1]
 
         def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
 

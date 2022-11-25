@@ -27,7 +27,6 @@ def get_adv_brightness(
 
     # reshape x_min, x_max
     input_shape = list(model_.input_shape[0][1:])
-    input_dim = 1
 
     x_ = x
     x_ = x_.reshape([-1] + input_shape)
@@ -55,13 +54,9 @@ def get_adv_brightness(
         bright_max = bright_max * np.ones((n, 1))
 
     if x_min is None:
-        x_min = x
-        x_min = x_min.reshape((len(x_), -1))
         x_min = x + bright_min
         x_min = np.reshape(x_min, x_.shape)
     if x_max is None:
-        x_max = x
-        x_max = x_max.reshape((len(x_), -1))
         x_max = x + bright_max
         x_max = np.reshape(x_max, x_.shape)
 
@@ -134,8 +129,6 @@ def get_adv_brightness(
         z_box = np.concatenate([x_min[:, None], x_max[:, None]], 1)
         z_box = np.reshape(z_box, (len(z_box), 2, -1))
         output = model_.predict([x_, z_box])
-
-    n_label = source_labels.shape[-1]
 
     def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
 

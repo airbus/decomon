@@ -254,7 +254,6 @@ def clone(
         finetune_forward = True
         finetune_backward = True
 
-    input_dim_init = -1
     input_dim = np.prod(model.input_shape[1:])
 
     """

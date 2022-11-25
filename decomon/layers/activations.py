@@ -64,7 +64,7 @@ def relu(
     if threshold != 0:
         raise NotImplementedError()
 
-    if not (alpha) and max_value is None:
+    if not alpha and max_value is None:
         # default values: return relu_(x) = max(x, 0)
         return relu_(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, **kwargs)
 
