@@ -1,8 +1,18 @@
+import logging
 from contextlib import closing
 
-import NNet  # https://github.com/sisl/NNet
 import numpy as np
-from NNet.utils.readNNet import readNNet
+
+logger = logging.getLogger(__name__)
+
+try:
+    import NNet  # https://github.com/sisl/NNet
+except ImportError:
+    logger.warning(
+        "Could not import NNet. " "Please install NNet to use this module (see https://github.com/sisl/NNet)"
+    )
+else:
+    from NNet.utils.readNNet import readNNet
 
 
 def convert_nnet_2_numpy(repo, filename, clipping=True, normalize_in=True, normalize_out=False, verbose=0):

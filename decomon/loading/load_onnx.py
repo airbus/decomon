@@ -1,15 +1,21 @@
 # load a keras network from an onnx file
-
 # Python code for automatic conversion in channel last from an onnx file
 
-import numpy as np
+import logging
 
-# Requirements
-import onnx
-from onnx2keras import onnx_to_keras
+import numpy as np
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.utils.generic_utils import to_list
+
+logger = logging.getLogger(__name__)
+
+try:
+    import onnx
+    from onnx2keras import onnx_to_keras
+except ImportError:
+    logger.warning("Could not import onnx or onnx2keras. " "Please install onnx and onnx2keras to use this module")
+
 
 CHANNEL_FIRST = "channels_first"
 CHANNEL_LAST = "channels_last"
