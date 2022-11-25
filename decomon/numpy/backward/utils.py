@@ -1,9 +1,8 @@
 import numpy as np
 import tensorflow.keras.backend as K
 
+from decomon.numpy.milp.activation import bound_A, bound_B
 from decomon.utils import Ball, Box, Grid
-
-from ..milp.activation import bound_A, bound_B
 
 
 def get_lower_box(x, w, b):

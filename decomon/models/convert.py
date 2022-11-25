@@ -4,15 +4,14 @@ import tensorflow.python.keras.backend as K
 from tensorflow.keras.layers import Flatten, Input, InputLayer, Lambda, Layer
 from tensorflow.keras.models import Model
 
+from decomon.layers.decomon_layers import to_monotonic
+from decomon.layers.utils import get_lower, get_upper
 from decomon.models.backward_cloning import get_backward_model as convert_backward
 from decomon.models.forward_cloning import convert_forward
+from decomon.models.models import DecomonModel
+from decomon.models.utils import convert_2_mode, get_mode
+from decomon.numpy.models.convert import clone as clone_to_numpy
 from decomon.utils import Ball
-
-from ..layers.decomon_layers import to_monotonic
-from ..layers.utils import get_lower, get_upper
-from ..numpy.models.convert import clone as clone_to_numpy
-from .models import DecomonModel
-from .utils import convert_2_mode, get_mode
 
 
 class FORWARD_FEED:

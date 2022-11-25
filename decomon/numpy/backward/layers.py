@@ -6,11 +6,10 @@ CROWN implementation in numpy (useful for MILP compatibility)
 import numpy as np
 from tensorflow.keras.layers import Activation, Dense, InputLayer
 
+from decomon.numpy.backward.activation import get
+from decomon.numpy.backward.core import BackwardNumpyLayer
+from decomon.numpy.backward.utils import merge_with_previous
 from decomon.utils import F_FORWARD
-
-from .activation import get
-from .core import BackwardNumpyLayer
-from .utils import merge_with_previous
 
 
 class BackwardNumpyActivation(BackwardNumpyLayer):

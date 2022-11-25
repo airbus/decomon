@@ -14,8 +14,8 @@ from tensorflow.keras.layers import (
     Subtract,
 )
 
-from .core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
-from .utils import (
+from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
+from decomon.layers.utils import (
     add,
     broadcast,
     maximum,

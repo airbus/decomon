@@ -1,8 +1,8 @@
 # compute gradient of function based on bounds on its input
 from tensorflow.python.keras import backend as K
 
-from ..layers import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
-from ..layers.utils import get_lower, get_upper
+from decomon.layers import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
+from decomon.layers.utils import get_lower, get_upper
 
 
 def gradient_relu(inputs, dc_decomp=False, mode=F_HYBRID.name, convex_domain=None, **kwargs):

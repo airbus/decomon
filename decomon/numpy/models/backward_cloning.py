@@ -2,9 +2,8 @@ import numpy as np
 import tensorflow.keras.backend as K
 
 from decomon.models.models import DecomonModel
-
-from ..backward.layers import get_backward
-from ..backward.utils import merge_with_previous
+from decomon.numpy.backward.layers import get_backward
+from decomon.numpy.backward.utils import merge_with_previous
 
 
 def crown_(

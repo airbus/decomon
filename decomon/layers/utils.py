@@ -7,9 +7,17 @@ from tensorflow.keras.layers import Flatten
 from tensorflow.math import greater_equal
 from tensorflow.python.keras import backend as K
 
-# from ..utils import get_linear_hull_relu, get_linear_softplus_hull
-from ..utils import *
-from .core import F_FORWARD, F_HYBRID, F_IBP, Ball, Box, Grid, StaticVariables, Vertex
+from decomon.layers.core import (
+    F_FORWARD,
+    F_HYBRID,
+    F_IBP,
+    Ball,
+    Box,
+    Grid,
+    StaticVariables,
+    Vertex,
+)
+from decomon.utils import *
 
 
 # create static variables for varying convex domain

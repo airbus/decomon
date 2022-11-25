@@ -17,11 +17,9 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.python.keras.utils.generic_utils import to_list
 
-from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP
+from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, Box
 from decomon.layers.decomon_layers import to_monotonic
-
-from ..layers.core import Box
-from ..utils import get_lower, get_lower_layer, get_upper, get_upper_layer
+from decomon.utils import get_lower, get_lower_layer, get_upper, get_upper_layer
 
 
 def include_dim_layer_fn(

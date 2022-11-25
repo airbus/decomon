@@ -3,13 +3,17 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dropout, Flatten, Lambda
 from tensorflow.python.keras import backend as K
 
-from decomon.layers import get_lower, get_upper
-from decomon.utils import get_linear_hull_relu, get_linear_softplus_hull
-
-from ..corners.utils import get_bound_grid, get_bound_grid_lagrangian
-from ..layers import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
-from ..layers.core import Grid, Option
-from ..layers.utils import (
+from decomon.corners.utils import get_bound_grid, get_bound_grid_lagrangian
+from decomon.layers import (
+    F_FORWARD,
+    F_HYBRID,
+    F_IBP,
+    StaticVariables,
+    get_lower,
+    get_upper,
+)
+from decomon.layers.core import Grid, Option
+from decomon.layers.utils import (
     add,
     get_lower,
     get_lower_box,
@@ -23,6 +27,7 @@ from ..layers.utils import (
     split,
     substract,
 )
+from decomon.utils import get_linear_hull_relu, get_linear_softplus_hull
 
 
 # create static variables for varying convex domain

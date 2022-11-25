@@ -4,9 +4,8 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.backend import conv2d
 from tensorflow.keras.layers import InputSpec, MaxPooling2D
 
+from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
 from decomon.layers.utils import get_lower, get_upper, max_
-
-from .core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
 
 
 # step 1: compute the maximum

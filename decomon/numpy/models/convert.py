@@ -1,4 +1,4 @@
-from .backward_cloning import NumpyCROWNModel
+from decomon.numpy.models.backward_cloning import NumpyCROWNModel
 
 
 def clone(

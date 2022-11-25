@@ -6,10 +6,10 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Layer
 
-from ..backward_layers.utils import backward_relu_, backward_softplus_
-from ..layers import F_FORWARD, F_HYBRID, F_IBP
-from ..layers.core import StaticVariables
-from ..layers.utils import (
+from decomon.backward_layers.utils import V_slope, backward_relu_, backward_softplus_
+from decomon.layers import F_FORWARD, F_HYBRID, F_IBP
+from decomon.layers.core import StaticVariables
+from decomon.layers.utils import (
     get_linear_hull_s_shape,
     get_linear_softplus_hull,
     get_lower,
@@ -18,8 +18,11 @@ from ..layers.utils import (
     softsign_prime,
     tanh_prime,
 )
-from ..utils import get_linear_hull_relu, get_linear_hull_sigmoid, get_linear_hull_tanh
-from .utils import V_slope
+from decomon.utils import (
+    get_linear_hull_relu,
+    get_linear_hull_sigmoid,
+    get_linear_hull_tanh,
+)
 
 ELU = "elu"
 SELU = "selu"

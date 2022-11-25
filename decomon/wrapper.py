@@ -1,11 +1,10 @@
 import numpy as np
 
+from decomon.layers.core import Ball, Box, Grid
 from decomon.models.convert import clone as convert
+from decomon.models.decomon_sequential import Backward, Forward
 from decomon.models.models import DecomonModel
 from decomon.numpy.models import NumpyModel
-
-from .layers.core import Ball, Box, Grid
-from .models.decomon_sequential import Backward, Forward
 
 
 def _get_dual_ord(p):

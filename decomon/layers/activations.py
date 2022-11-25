@@ -5,10 +5,14 @@ import six
 import tensorflow as tf
 import tensorflow.keras.backend as K
 
-from decomon.layers.core import DecomonLayer
-
-from .core import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
-from .utils import (
+from decomon.layers.core import (
+    F_FORWARD,
+    F_HYBRID,
+    F_IBP,
+    DecomonLayer,
+    StaticVariables,
+)
+from decomon.layers.utils import (
     exp,
     expand_dims,
     frac_pos,
@@ -23,6 +27,13 @@ from .utils import (
     softplus_,
     softsign_prime,
     sum,
+    tanh_prime,
+)
+from decomon.utils import (
+    get_linear_hull_s_shape,
+    relu_prime,
+    sigmoid_prime,
+    softsign_prime,
     tanh_prime,
 )
 
