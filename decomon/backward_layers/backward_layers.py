@@ -196,16 +196,6 @@ class BackwardDense(BackwardLayer):
 
             if len(w_out_u.shape) == 2:
                 w_out_u = tf.linalg.diag(w_out_u)  # (None, n_out, n_back=n_out)
-            else:
-
-                toto = inputs
-                titi = x
-                finetune = self.finetune
-                act = self.activation_name
-                import pdb
-
-                pdb.set_trace()
-
             if len(w_out_l.shape) == 2:
                 w_out_l = tf.linalg.diag(w_out_l)
             weights = K.expand_dims(K.expand_dims(weights, 0), -1)  # (1, n_in, n_out, 1)
@@ -1073,9 +1063,7 @@ def get_backward(
             **kwargs,
         )
     except KeyError:
-        import pdb
-
-        pdb.set_trace()
+        pass
 
 
 def join(layer):

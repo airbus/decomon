@@ -42,9 +42,6 @@ def get_adv_box(
     :return: numpy array, vector with upper bounds for adversarial attacks
     """
     if np.min(x_max - x_min) < 0:
-        import pdb
-
-        pdb.set_trace()
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion
@@ -239,9 +236,6 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
     :return: numpy array, vector with upper bounds for adversarial attacks
     """
     if np.min(x_max - x_min) < 0:
-        import pdb
-
-        pdb.set_trace()
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion

@@ -479,9 +479,6 @@ class DecomonDot(Dot, DecomonLayer):
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
-        import pdb
-
-        pdb.set_trace()
         input_0_0 = permute_dimensions(inputs_0, self.axes[0], mode=self.mode)
         input_1_0 = permute_dimensions(inputs_1, self.axes[1], mode=self.mode)
 

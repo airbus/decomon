@@ -120,7 +120,6 @@ def update_dico(node, dico_nodes, layer_names):
         p_format = get_parents_format_(node)
 
         layer_format = get_data_format(node)
-        print(p_format, layer_format, node.outbound_layer)
         layer_ = clone(node.outbound_layer, layer_format, p_format, node)
         parents = node.parent_nodes
         inputs_ = []
@@ -191,10 +190,6 @@ def get_input_transpose(input_shape):
 
 def get_parents_format_(node_):
     # recursive approach until encountering a layer that has a data_format or has some trainable weights
-    if isinstance(node_, list):
-        import pdb
-
-        pdb.set_trace()
     parents = to_list(node_.parent_nodes)
     parents_format = []
 

@@ -124,7 +124,6 @@ def get_upper_ball(x_0, eps, p, w, b, **kwargs):
     :return: max_(|x - x_0|_p<= eps) w*x + b
     """
 
-    # import pdb; pdb.set_trace()
     if len(w.shape) == len(b.shape):
         return x_0 + eps
     if p == np.inf:

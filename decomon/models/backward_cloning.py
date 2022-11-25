@@ -222,9 +222,7 @@ def crown_(
                 backward_tmp = merge_layers(backward_bounds_ + backward_bounds)
                 backward_bounds_ = backward_tmp
         except ValueError:
-            import pdb
-
-            pdb.set_trace()
+            pass
     if not isinstance(backward_bounds_, list):
         backward_bounds = [e for e in backward_bounds_]
     else:
@@ -330,9 +328,7 @@ def get_input_nodes(
                                 output += to_list(output_crown_)
 
                             except TypeError:
-                                import pdb
-
-                                pdb.set_trace()
+                                pass
                     input_map[id(node)] = output
     return input_map, backward_map, crown_map
 

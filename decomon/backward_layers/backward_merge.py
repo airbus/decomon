@@ -474,10 +474,6 @@ class BackwardDot(BackwardMerge):
         inputs_0_ = broadcast(input_0_0, n_1, -1, mode=self.mode)
         inputs_1_ = broadcast(input_1_0, n_0, 2, mode=self.mode)
 
-        import pdb
-
-        pdb.set_trace()
-
         inputs_ = multiply(
             inputs_0_,
             inputs_1_,

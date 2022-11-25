@@ -124,10 +124,6 @@ def bound_A_ortools(x_min, x_max, m, W_up, b_up, W_low, b_low, mask_A):
                         + b_up[j][k]
                     )
                     A[j, k] = A_jk
-    else:
-        import pdb
-
-        pdb.set_trace()
 
     return A * (1 - mask_A)
 
@@ -197,9 +193,5 @@ def bound_B_ortools(x_min, x_max, m, W_up, b_up, W_low, b_low, mask_B):
                         + b_up[j][k]
                     )
                     A[j, k] = A_jk
-    else:
-        import pdb
-
-        pdb.set_trace()
 
     return A * (1 - mask_B)

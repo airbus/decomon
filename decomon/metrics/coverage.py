@@ -30,9 +30,6 @@ def get_adv_coverage_box(
     :return: numpy array, vector with upper bounds for adversarial attacks
     """
     if np.min(x_max - x_min) < 0:
-        import pdb
-
-        pdb.set_trace()
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion
