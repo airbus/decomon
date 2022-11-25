@@ -28,7 +28,7 @@ class BackwardMaxPooling2D(Layer):
         finetune=False,
         input_dim=-1,
         **kwargs,
-    ):  # __init__(self, layer, slope=V_slope.name,
+    ):
         super().__init__(**kwargs)
         if convex_domain is None:
             convex_domain = {}
@@ -120,7 +120,6 @@ class BackwardMaxPooling2D(Layer):
         n_out = w_out_u.shape[-1]
 
         w_out_u_ = K.concatenate([K.expand_dims(K.expand_dims(0 * (op_flat(y)), 1), -1)] * n_out, -1)
-        # w_out_u_ = K.expand_dims(K.zeros((1, n_in, n_out)), 1) +  K.expand_dims(K.expand_dims(K.zeros_like(op_flat(y)), 1), -1)
         w_out_l_ = w_out_u_
 
         b_out_u_ = K.sum(K.maximum(w_out_u, 0) * b_u_, 2) + K.sum(K.minimum(w_out_u, 0) * b_l_, 2) + b_out_u
@@ -238,9 +237,7 @@ class BackwardMaxPooling2D(Layer):
         input_shape_[axis] = 1
         n_dim = np.prod(input_shape_)
 
-        # import pdb; pdb.set_trace()
         # create diagonal matrix
-
         id_list_ = [
             tf.linalg.diag(K.ones_like(op_flat(elem[0][None]))) for elem in tf.split(y, input_shape[axis], axis)
         ]

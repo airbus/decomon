@@ -32,7 +32,7 @@ def convert_lower_search_2_subset_sum(x, W, b, n):
     x_min = x[:, 0]
     x_max = x[:, 1]
 
-    const = get_lower(x, W, b, convex_domain={})  # convex_domain = {}
+    const = get_lower(x, W, b, convex_domain={})
 
     if len(W.shape) > 3:
         W = K.reshape(W, (-1, W.shape[1], np.prod(W.shape[2:])))
@@ -85,20 +85,6 @@ def get_bound_grid_lagrangian(x, W_u, b_u, W_l, b_l, finetune_grid):
     finetune_u_grid_w = finetune_u_grid_w[None, None]
     finetune_n_grid_b = finetune_n_grid_b[None]
     finetune_n_grid_w = finetune_n_grid_w[None, None]
-
-    """
-    shape_w = len(W_u.shape) - len(finetune_u_grid_w.shape)
-    shape_b = len(b_u.shape) - len(fin)
-    for k in range(shape_w-1):
-
-        finetune_n_grid_w = K.expand_dims(finetune_n_grid_w, -1)
-        finetune_u_grid_w =K.expand_dims(finetune_u_grid_w, -1)
-
-    shape_b = len(b_u.shape) - 1
-    for k in range(shape_b - 1):
-        finetune_n_grid_b = K.expand_dims(finetune_n_grid_b, -1)
-        finetune_u_grid_b = K.expand_dims(finetune_u_grid_b, -1)
-    """
 
     # clip weights !!!
     upper = get_upper_bound_grid_lagrangian(x, W_u, b_u, W_l, b_u, finetune_u_grid_w, finetune_u_grid_b)

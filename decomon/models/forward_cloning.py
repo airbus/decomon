@@ -196,7 +196,6 @@ def convert_forward_functional_model(
                     if len(list_layer_decomon) > 1:
                         output_map[f"{id(node)}_{layer_decomon.name}"] = output
 
-                # output_map['{}_{}'.format(id(node), layer_decomon.name)]
             output_map[id(node)] = output
 
     output = []

@@ -118,7 +118,6 @@ def convert(
 
     if method != CROWN.name:
 
-        # ibp_, forward_ = get_ibp_forward_from_method(method)
         ibp_, forward_ = ibp, forward
 
         results = convert_forward(
@@ -138,7 +137,6 @@ def convert(
         )
         input_tensors, _, layer_map, forward_map = results
 
-        # forward_map = switch_mode_mapping(forward, IBP=ibp, forward=forward, method=method)
     if get_direction(method) == BACKWARD_FEED.name:
         input_tensors, output, layer_map, forward_map = convert_backward(
             model=model,
@@ -227,54 +225,11 @@ def clone(
             **kwargs,
         )
 
-    """
-    if not ibp and not forward:
-        # adapt the mode to the methods
-        if len(convex_domain)==0 or convex_domain['name']!=Ball.name:
-            if method in [CROWN_HYBRID.name, HYBRID.name]:
-                ibp=True; forward=True
-            if method in [IBP.name, CROWN_IBP.name, CROWN.name]:
-                ibp=True
-            if method in [FORWARD.name, CROWN_FORWARD.name]:
-                forward=True
-        else:
-            # ball
-            ibp=True; forward=True
-
-    if not final_ibp and not final_forward:
-        if method in [CROWN_IBP.name, CROWN.name]:
-            final_ibp=ibp
-            final_forward=True
-        else:
-            final_ibp=ibp
-            final_forward=forward
-    """
-
     if finetune:
         finetune_forward = True
         finetune_backward = True
 
     input_dim = np.prod(model.input_shape[1:])
-
-    """
-    # temporary
-    if method == IBP.name:
-        ibp = True
-        forward = False
-    if method == FORWARD.name:
-        ibp = False
-        forward = True
-    if method == CROWN_IBP.name:
-        ibp = True
-        forward = False
-    if method == CROWN_FORWARD.name:
-        ibp = False
-        forward = True
-    if method in [HYBRID.name, CROWN_HYBRID.name]:
-        ibp = True
-        forward = True
-    """
-
     input_shape = None
     input_shape_vec = None
 
@@ -349,12 +304,10 @@ def clone(
             W, b, u_c_tensor, l_c_tensor = get_bounds(z_tensor)
 
     if ibp_ and forward_:
-        # input_tensors = [z_tensor] + [u_c_tensor] * 3 + [l_c_tensor] * 3
         input_tensors = [z_tensor] + [u_c_tensor, W, b] + [l_c_tensor, W, b]
     elif ibp_ and not forward_:
         input_tensors = [u_c_tensor, l_c_tensor]
     elif not ibp_ and forward_:
-        # input_tensors = [z_tensor] + [u_c_tensor] * 2 + [l_c_tensor] * 2
         input_tensors = [z_tensor] + [W, b] + [W, b]
     else:
         raise NotImplementedError("not IBP and not forward not implemented")

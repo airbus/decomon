@@ -48,7 +48,6 @@ def get_adv_box(
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion
-    # input_dim = 0
     if not isinstance(model, DecomonModel):
         model_ = convert(model, ibp=True, forward=True)
     else:
@@ -151,7 +150,6 @@ def get_adv_box(
             else:
                 upper = u_c[:, :, None] - l_c[:, None]
             const = upper.max() - upper.min()
-            # upper = upper*s_tensor_[:,None, :] + (const+0.1)*(1. - s_tensor_[:,None,:])
             discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
 
             upper -= (1 - discard_mask_s) * (const + 0.1)
@@ -193,13 +191,9 @@ def get_adv_box(
                 + b_u_f
             )  # (-1, shape, shape)
             const = upper.max() - upper.min()
-            # upper = upper*s_tensor_[:,None, :] + (const+0.1)*(1. - s_tensor_[:,None,:])
             discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
 
             upper -= (1 - discard_mask_s) * (const + 0.1)
-
-            # upper = upper * s_tensor_[:, :, None] - (const + 0.1) * (1. - s_tensor_[:, None,:])
-            # upper = upper*t_tensor_[:,:,None ] - (const+0.1)*(1. - t_tensor_[:,None,:])
 
             return np.max(np.max(upper, -2), -1)
 
@@ -253,7 +247,6 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion
-    # input_dim = 0
     if not isinstance(model, DecomonModel):
         model_ = convert(model, ibp=True, forward=True)
     else:
@@ -352,13 +345,9 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
                 + b_u_f
             )  # (-1, shape, shape)
             const = upper.max() - upper.min()
-            # upper = upper*s_tensor_[:,None, :] + (const+0.1)*(1. - s_tensor_[:,None,:])
             discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
 
             upper -= (1 - discard_mask_s) * (const + 0.1)
-
-            # upper = upper * s_tensor_[:, :, None] - (const + 0.1) * (1. - s_tensor_[:, None,:])
-            # upper = upper*t_tensor_[:,:,None ] - (const+0.1)*(1. - t_tensor_[:,None,:])
 
             return np.max(np.max(upper, -2), -1)
 
@@ -387,7 +376,6 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
 
     fast = True
     # check that the model is a DecomonModel, else do the conversion
-    # input_dim = 0
     if not (isinstance(model, (DecomonModel, NumpyModel))):
         model_ = convert(model, ibp=True, forward=True)
     else:
@@ -498,7 +486,6 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
 
     fast = True
     # check that the model is a DecomonModel, else do the conversion
-    # input_dim = 0
     if not (isinstance(model, (DecomonModel, NumpyModel))):
         model_ = convert(model, ibp=True, forward=True)
     else:
@@ -608,7 +595,6 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
 
     fast = True
     # check that the model is a DecomonModel, else do the conversion
-    # input_dim = 0
     if not (isinstance(model, (DecomonModel, NumpyModel))):
         model_ = convert(model, ibp=True, forward=True)
     else:
@@ -738,7 +724,6 @@ def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
     convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
 
     # check that the model is a DecomonModel, else do the conversion
-    # input_dim = 0
     if not isinstance(model, DecomonModel):
         model_ = convert(model, method="crown-hybrid", convex_domain=convex_domain, ibp=True, forward=False)
     else:
@@ -1045,7 +1030,6 @@ def refine_box(func, model, x_min, x_max, n_split, source_labels=None, target_la
         raise NotImplementedError()
 
     # check that the model is a DecomonModel, else do the conversion
-    # input_dim = 0
     if not isinstance(model, DecomonModel):
         model_ = convert(model)
     else:
@@ -1164,7 +1148,6 @@ def get_adv_noise(
     convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
 
     # check that the model is a DecomonModel, else do the conversion
-    # input_dim = 0
     if not isinstance(model, DecomonModel):
         model_ = convert(model, convex_domain=convex_domain)
     else:
@@ -1241,7 +1224,6 @@ def get_adv_noise(
             # add penalties on biases
             upper = u_c[:, :, None] - l_c[:, None]
             const = upper.max() - upper.min()
-            # upper = upper*s_tensor_[:,None, :] + (const+0.1)*(1. - s_tensor_[:,None,:])
             discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
 
             upper -= (1 - discard_mask_s) * (const + 0.1)
@@ -1287,12 +1269,8 @@ def get_adv_noise(
             upper = upper_0 + upper_1
 
             const = upper.max() - upper.min()
-            # upper = upper*s_tensor_[:,None, :] + (const+0.1)*(1. - s_tensor_[:,None,:])
             discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
             upper -= (1 - discard_mask_s) * (const + 0.1)
-
-            # upper = upper * s_tensor_[:, :, None] - (const + 0.1) * (1. - s_tensor_[:, None,:])
-            # upper = upper*t_tensor_[:,:,None ] - (const+0.1)*(1. - t_tensor_[:,None,:])
 
             return np.max(np.max(upper, -2), -1)
 

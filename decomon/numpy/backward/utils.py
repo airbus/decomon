@@ -70,9 +70,6 @@ def get_linear_hull_relu_quantized(inputs, convex_domain, params=None, **kwargs)
     index_linear = np.clip(np.sign(lower) + 1, 0.0, 1.0)
     index_zero = np.clip(-np.sign(upper) + 1, 0.0, 1.0)
 
-    # w_u = (relu_u-relu_l)/np.maximum(upper-lower, 1e-6)
-    # b_u = relu_l - w_u*lower
-
     denum = np.maximum(1e-6, upper - lower)
     w_u = upper / denum
     b_u = -upper * lower / denum
@@ -86,39 +83,8 @@ def get_linear_hull_relu_quantized(inputs, convex_domain, params=None, **kwargs)
     A = compute_A(convex_domain["n"], x, w_f_u, b_f_u, w_f_l, b_f_l, stable_coeff)
     B = compute_B(convex_domain["n"], x, w_f_u, b_f_u, w_f_l, b_f_l, stable_coeff)
 
-    """
-    A = np.maximum(A, lower)
-    B = np.minimum(B, upper)
-    A = np.minimum(A, upper)
-    B  = np.maximum(B, lower)
-    """
     A = np.minimum(np.minimum(upper, A), 0.0)
     B = np.maximum(0.0, np.maximum(lower, B))
-
-    # A*=0.
-    # print('change', len(np.where(info<=0)[0]))
-    """
-    if len(params):
-        A = compute_A(convex_domain['n'], x, w_f_u, b_f_u, w_f_l, b_f_l, stable_coeff)
-        B = compute_B(convex_domain['n'], x, w_f_u, b_f_u, w_f_l, b_f_l, stable_coeff)
-        A_ = np.minimum(np.max(A, 0), 0.) # use previous params ?
-        B_ = np.maximum(np.max(B, 0), 0.)
-
-        if params[0] is None:
-            A*=0*A
-            B=0.*B
-        else:
-            #A_ = params[0].numpy()
-            #B_ =params[1].numpy()
-            K.set_value(params[0], A_)
-            K.set_value(params[1], B_)
-
-        if len(params)==3:
-            kwargs['slope']=params[2]
-
-        #if np.max(np.abs(A_))!=0 or np.max(np.abs(B_))!=0:
-        #    import pdb; pdb.set_trace()
-    """
 
     w_l, b_l = get_linear_lower(upper, lower, A, B, **kwargs)
 
@@ -127,35 +93,8 @@ def get_linear_hull_relu_quantized(inputs, convex_domain, params=None, **kwargs)
     w_l = (1 - index_linear) * w_l + index_linear
     b_l = (1 - index_linear) * b_l
 
-    """
-    hard_clip = 1- np.sign(np.maximum(upper-lower, 1e-6)/1e-6 -1)
-    if np.max(hard_clip):
-        print('hello')
-        w_l = (1-hard_clip)*w_l + (hard_clip)*K.maximum(0., K.sign(lower))
-        w_u = (1 - hard_clip) * w_u + (hard_clip) * K.maximum(0., K.sign(lower))
-        b_l = (1 - hard_clip) * b_l
-        b_u = (1 - hard_clip) * b_u
-    """
-
-    """
-    w_l = index_linear + (1-index_linear)*w_l
-    b_l = (1-index_linear)*b_l
-
-    # index_unstate
-    w_l = (1-index_zero)*w_l
-    b_l = (1-index_zero)*b_l
-    """
-
     mask_A = 0 * lower
     mask_B = 0 * upper
-    """
-    for i in range(lower.shape[0]):
-        for j in range(lower.shape[1]):
-            if A[i, j] - lower[i, j] < 1e-5:
-                mask_A[i, j] = 1
-            if upper[i, j] - B[i, j] < 1e-5:
-                mask_B[i, j] = 1
-    """
     mask = mask_A * mask_B
 
     w_l = (1 - mask) * w_l + mask * w_u
@@ -163,15 +102,11 @@ def get_linear_hull_relu_quantized(inputs, convex_domain, params=None, **kwargs)
 
     w_l = np.concatenate([np.diag(w_l[i])[None] for i in range(len(x))])
     w_u = np.concatenate([np.diag(w_u[i])[None] for i in range(len(x))])
-    # import pdb; pdb.set_trace()
 
     return [w_u, b_u, w_l, b_l]
 
 
 def compute_A(n, x, w_u, b_u, w_l, b_l, stable_coeff=1e-6):
-
-    # clip A to 0 if A >=-1e-6/2.
-    # compute mask
 
     lower = get_lower(x, w_l, b_l)
     upper = get_upper(x, w_u, b_u)
@@ -193,11 +128,9 @@ def compute_A(n, x, w_u, b_u, w_l, b_l, stable_coeff=1e-6):
 
 def compute_B(n, x, w_u, b_u, w_l, b_l, stable_coeff=1e-6):
 
-    # mask_B = np.maximum(np.sign(-get_upper(x, w_u, b_u)), 0.)
     mask_B = np.maximum(np.sign(get_lower(x, w_l, b_l)), 0.0) + np.maximum(np.sign(-get_upper(x, w_u, b_u)), 0.0)
     mask_B = np.minimum(mask_B, 1)
     if np.min(mask_B):
-        # print("all linear")
         return 0.0 * b_u
     B = bound_B(x[:, 0], x[:, 1], n, w_u, b_u, w_l, b_l, mask_B) - stable_coeff
     B = np.maximum(B, 0.0)
@@ -206,7 +139,6 @@ def compute_B(n, x, w_u, b_u, w_l, b_l, stable_coeff=1e-6):
 
 
 def get_linear_lower(upper, lower, A, B, **kwargs):
-    # import pdb; pdb.set_trace()
     if "slope" not in kwargs:
         return get_linear_lower_crown(upper, lower, A, B)
     if kwargs["reuse_slope"]:
@@ -237,30 +169,11 @@ def get_linear_lower(upper, lower, A, B, **kwargs):
         return [w_l, b_l]
 
 
-"""
-def get_linear_lower_crown(upper, lower, A, B, w_u, b_u, n, x, eps):
-
-
-    # function 0: (0, 0)
-    x_0 = np.mean(x, 1)
-
-    def func(w, b):
-        return (n+1)*b + n*w*np.sum(np.expand_dims(x_0, -1), 1) - eps*np.sum(w)
-    error_0 = func(w_u, b_u)
-    error_1 = func(w_u-1, b_u)
-    denum = np.maximum(B-A, 1e-6)
-    error_2 = func(w_u-B/denum, b_u-A*B/denum)
-
-    import pdb; pdb.set_trace()
-"""
-
-
 def get_linear_lower_crown(upper, lower, A, B):
 
     e_0 = (upper - B) * (upper + B)
     e_1 = -(A - lower) * (A + lower)
     denum = np.maximum(B - A, 1e-6)
-    # e_2 = (B*(A-lower)*(B-lower) - A*(upper-B)**2)/denum
 
     e_2 = (B * (A - lower) ** 2 - A * (upper - B) ** 2) / denum
     for i in range(len(lower)):
@@ -282,8 +195,6 @@ def get_linear_lower_crown(upper, lower, A, B):
                     print("kikou")
                 index_2[i, j] = 1
 
-    # if np.max(index_2):
-    #    print('youhou')
     w_l = index_1
     w_l += index_2 * B / denum
 
@@ -295,8 +206,6 @@ def get_linear_lower_crown(upper, lower, A, B):
 
 def get_linear_lower_crown_old(upper, lower, A, B):
 
-    # print percentage
-    # remove degenerate cases
     active = np.where(lower[0] * upper[0] < 0)[0]
     N = 1.0 * np.maximum(len(active), 1)
 
@@ -306,7 +215,6 @@ def get_linear_lower_crown_old(upper, lower, A, B):
     rate_AB = len(np.where(rate_AB < 0)[0]) / N
 
     print(rate_A * 100, rate_B * 100, rate_AB * 100)
-    # print((B-A)/(upper-lower))
 
     mask_zero = np.sign(np.maximum(upper, 0.0))  # 1=> u>0
     mask_linear = np.sign(np.maximum(-lower, 0.0))  # 1=> l<0
@@ -345,19 +253,6 @@ def get_linear_lower_crown_old(upper, lower, A, B):
     e_1 = e_1_
     e_2 = e_2_
 
-    """
-    ttt = np.sign(upper**2-lower**2)*np.sign(e_0-e_1)
-    import pdb; pdb.set_trace()
-
-    if np.min(ttt)==-1:
-        import pdb;pdb.set_trace()
-        ttt+=1.
-        ttt = np.minimum(ttt, 1.)
-        print('kikouuuuu')
-        e_0 = ttt*e_0 + (1-ttt)*upper ** 2
-        e_1 = ttt*e_1 + (1-ttt)*lower ** 2
-    """
-    # e_2 = (1-np.sign(-A*B))*e_2
     # consider e_2 when A<0 and B>0
 
     error_ = np.concatenate([e_0[None], e_1[None], e_2[None]])
@@ -372,15 +267,7 @@ def get_linear_lower_crown_old(upper, lower, A, B):
                 index_2[i, j] = 1
             elif score[i, j] == 1:
                 index_1[i, j] = 1
-            """
-            if score[i,j]==1:
-                index_1[i,j]=1
-            elif score[i,j]==2:
-                print('kikou')
-                index_2[i,j]=1
-            """
-    # if np.max(index_2):
-    #    print('youhou')
+
     w_l = index_1
     w_l += index_2 * B / denum
 
@@ -398,8 +285,6 @@ def get_linear_hull_relu_continuous(inputs, convex_domain=None, **kwargs):
     # computer upper and lower bounds
     upper = get_upper(x, w_f_u, b_f_u, convex_domain)
     lower = get_lower(x, w_f_l, b_f_l, convex_domain)
-    # lower (n_batch, n_out)
-    # upper (n_batch, n_out)
 
     w_l = np.zeros_like(lower)
     b_l = np.zeros_like(lower)

@@ -96,10 +96,8 @@ def crown_(
                 joint=joint,
             )
             # deduce the backward bounds at the next stage
-            # print(node.outbound_layer.name, rec, [e.shape for e in crown_forward])
             output = crown_layer.call(crown_forward)
             if crown_layer.store_output(joint, convex_domain, reuse_slope):
-                # print('stroing', node.outbound_layer.name)
                 log_bounds[id(node)] = output
 
         if previous:

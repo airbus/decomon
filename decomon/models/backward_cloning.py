@@ -49,177 +49,6 @@ def get_input(node, input_tensors, forward_map, output_map):
             raise NotImplementedError()
 
 
-"""
-def get_backward_from_forward(model,
-                              input_tensors=None,
-                              back_bounds=[],
-                              output_map,
-                              forward_map,
-                              backward_map,
-                              finetune=False,
-                              joint=True,
-                              layer_fn=None,
-                              ):
-
-    if not callable(layer_fn):
-        raise ValueError("Expected `layer_fn` argument to be a callable.")
-
-        # create input tensors
-
-        # sort nodes from input to output
-    dico_nodes = get_depth_dict(model)
-    keys = [e for e in dico_nodes.keys()]
-    keys.sort(reverse=True)
-
-    output = input_tensors
-    for depth in keys:
-        nodes = dico_nodes[depth]
-        for node in nodes:
-
-            layer = node.outbound_layer
-            # get input
-            parents = node.parent_nodes
-            if len(parents):
-                output = []
-                for parent in parents:
-                    output += output_map[id(parent)]
-
-            # retrieve layers
-            if id(node) in forward_map.keys
-                if id(node) in output_map.keys() and joint:
-                    continue
-
-
-
-
-def get_backward_model(
-    model,
-    input_tensors=None,
-    back_bounds=[],
-    input_dim=-1,
-    convex_domain=None,
-    IBP=True,
-    forward=True,
-    finetune=False,
-    layer_fn = None,
-    backward_map=None,
-    forward_map=None,
-    output_map=None,
-    finetune=False,
-    joint=True,
-    rec=1,
-    input_tensors=None
-    **kwargs,
-):
-
-    if not callable(layer_fn):
-        raise ValueError("Expected `layer_fn` argument to be a callable.")
-
-        # create input tensors
-
-        # sort nodes from input to output
-    dico_nodes = get_depth_dict(model)
-    keys = [e for e in dico_nodes.keys()]
-    keys.sort(reverse=True)
-
-
-    output = input_tensors
-    for depth in keys:
-        nodes = dico_nodes[depth]
-        for node in nodes:
-
-            layer = node.outbound_layer
-            # get input
-            parents = node.parent_nodes
-            if len(parents):
-                output=[]
-                for parent in parents:
-                    output+=output_map[id(parent)]
-
-            # retrieve layers
-            if id(node) in forward_map.keys
-            if id(node) in output_map.keys() and joint:
-                continue
-"""
-
-""""
-def get_fuse(mode):
-
-    def get_fuse_priv(inputs_):
-
-        inputs = inputs_[:-4]
-        backward_bounds = inputs_[-4:]
-        w_out_u, b_out_u, w_out_l, b_out_l = backward_bounds
-
-        if mode == F_FORWARD.name:
-            x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs
-        elif mode == F_HYBRID.name:
-            x_0, u_c, w_f_u, b_f_u, l_c, w_f_l, b_f_l = inputs
-        else:
-            u_c, l_c = inputs
-
-
-        if mode in [F_HYBRID.name, F_IBP.name]:
-            u_c_ = get_upper_box(l_c, u_c, w_out_u, b_out_u)
-            l_c_ = get_lower_box(l_c, u_c, w_out_l, b_out_l)
-
-        if mode in [F_HYBRID.name, F_FORWARD.name]:
-
-            w_u, b_u, w_l, b_l = merge_with_previous([w_f_u, b_f_u, w_f_l, b_f_l]+backward_bounds)
-
-        if mode == F_IBP.name:
-            return [u_c_, l_c_]
-        if mode == F_FORWARD.name:
-            return [x_0, w_u, b_u, w_l, b_l]
-
-        if mode == F_HYBRID.name:
-            return [x_0, u_c_, w_u, b_u, l_c_, w_l, b_l]
-
-    return LambdaLayer(get_fuse_priv())
-
-
-def get_no_fuse(mode, convex_domain):
-
-    def get_fuse_priv(inputs_):
-
-        inputs = inputs_[:-4]
-        backward_bounds = inputs_[-4:]
-        w_out_u, b_out_u, w_out_l, b_out_l = backward_bounds
-
-        if mode == F_FORWARD.name:
-            x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs
-            u_c_ = get_upper(x_0, w_f_u, b_f_u, convex_domain)
-            l_c_ = get_lower(x_0, w_f_l, b_f_l, convex_domain)
-        elif mode == F_HYBRID.name:
-            _, u_c, _, _, l_c, _, _ = inputs
-        else:
-            u_c, l_c = inputs
-
-        x_ = K.concatenate([K.expand_dims(l_c_, 1), K.expand_dims(u_c_, 1)], 1)
-
-
-
-
-        if mode in [F_HYBRID.name, F_IBP.name]:
-            u_c_ = get_upper_box(l_c, u_c, w_out_u, b_out_u)
-            l_c_ = get_lower_box(l_c, u_c, w_out_l, b_out_l)
-
-        if mode in [F_HYBRID.name, F_FORWARD.name]:
-
-            w_u, b_u, w_l, b_l = merge_with_previous([w_f_u, b_f_u, w_f_l, b_f_l]+backward_bounds)
-
-        if mode == F_IBP.name:
-            return [u_c_, l_c_]
-        if mode == F_FORWARD.name:
-            return [x_0, w_u, b_u, w_l, b_l]
-
-        if mode == F_HYBRID.name:
-            return [x_0, u_c_, w_u, b_u, l_c_, w_l, b_l]
-
-    return LambdaLayer(get_fuse_priv())
-"""
-
-
 def get_fuse(mode, dtype=K.floatx()):
     def get_fuse_priv(inputs_):
 
@@ -266,8 +95,6 @@ def convert_backward_2_mode(mode, convex_domain, dtype=K.floatx()):
 
     return Lambda(get_2_mode_priv, dtype=dtype)
 
-    # return convert_2_mode(mode_from=F_FORWARD.name, mode_to=mode, convex_domain=convex_domain)
-
 
 def get_disconnected_input(mode, convex_domain, dtype=K.floatx()):
     def disco_priv(inputs_):
@@ -285,7 +112,6 @@ def get_disconnected_input(mode, convex_domain, dtype=K.floatx()):
             x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
             w_u_ = tf.linalg.diag(K.cast(0.0, x_0.dtype) * u_c + K.cast(1.0, x_0.dtype))
             b_u_ = K.cast(0.0, x_0.dtype) * u_c
-            # w_u_ = tf.linalg.diag(K.cast(0., x_0.dtype)*u_c)
 
             if mode == F_FORWARD.name:
                 return [x_0, w_u_, b_u_, w_u_, b_u_]
@@ -384,30 +210,17 @@ def crown_(
         backward_bounds_ = backward_layer.call_no_previous(inputs)
         # update back_bounds
         try:
-            # backward_layer.previous=False
-            # backward_bounds_ = backward_layer.call_no_previous(inputs)
-
             if id(node) not in output_map.keys():
                 backward_bounds_ = backward_layer.call_no_previous(inputs)
                 output_map[id(node)] = backward_bounds_
             else:
                 backward_bounds_ = output_map[id(node)]
 
-            # backward_bounds_ = backward_layer.call_no_previous(inputs)
-
             if not isinstance(backward_bounds_, list):
                 backward_bounds_ = [e for e in backward_bounds_]
-            # import pdb; pdb.set_trace()
             if len(backward_bounds):
                 backward_tmp = merge_layers(backward_bounds_ + backward_bounds)
                 backward_bounds_ = backward_tmp
-
-            # backward_bounds_ = \
-            #    backward_layer(inputs+backward_bounds)
-            # debugging
-
-            # backward_layer.previous = False
-            # tmp = backward_layer.call_no_previous(inputs)
         except ValueError:
             import pdb
 
@@ -420,23 +233,6 @@ def crown_(
     parents = node.parent_nodes
 
     if len(parents):
-
-        """
-        if isinstance(node.layer, _Merge):
-            crown_bounds=[]
-            for b_bounds, parent in zip(backward_bounds, parents):
-                tmp, backward_map_ = crown_(parent, IBP, forward, input_map, layer_fn, b_bounds, backward_map, joint, fuse)
-                backward_map.update(backward_map_)
-                crown_bounds.append(tmp)
-
-            return crown_bounds[0], backward_map #TODO optimize with minimum !!!
-        else:
-            if len(parents)>1:
-                raise NotImplementedError()
-            crown_bound, backward_map_ = crown_(parents[0], IBP, forward, input_map, layer_fn, backward_bounds, backward_map, joint, fuse)
-            backward_map.update(backward_map_)
-            return crown_bound, backward_map
-        """
         if len(parents) > 1:
             raise NotImplementedError()
         else:
@@ -496,8 +292,6 @@ def get_input_nodes(
         for node in nodes:
             parents = node.parent_nodes
             if not len(parents):
-                # if 'debug' in kwargs.keys():
-                #    import pdb; pdb.set_trace()
                 input_map[id(node)] = input_tensors
             else:
                 if is_purely_linear(node.outbound_layer):
@@ -509,9 +303,6 @@ def get_input_nodes(
                         if id(parent) in output_map.keys():
                             output += output_map[id(parent)]
                         else:
-                            # if 'debug' in kwargs.keys():
-                            #    import pdb;
-                            #    pdb.set_trace()
                             if merge_layers is None:
                                 merge_layers = merge_with_previous
                             output_crown, backward_map_, crown_map_ = crown_(
@@ -528,8 +319,6 @@ def get_input_nodes(
                                 output_map=crown_map,
                                 merge_layers=merge_layers,
                             )
-                            # if 'debug' in kwargs.keys():
-                            #    pdb.set_trace()
                             backward_map.update(backward_map_)
                             crown_map.update(crown_map_)
 
@@ -541,7 +330,6 @@ def get_input_nodes(
                                     )
                                 output_crown_ = set_mode_layer(input_tensors + output_crown)
                                 output += to_list(output_crown_)
-                                # crown_map[id(parent)]=output_crown_
 
                             except TypeError:
                                 import pdb
@@ -573,8 +361,6 @@ def crown_model(
         forward_map = {}
     if not isinstance(model, Model):
         raise ValueError()
-    # import time
-    # zero_time = time.process_time()
     if softmax_to_linear:
         model, has_softmax = softmax_2_linear(model)  # do better because you modify the model eventually
 
@@ -598,7 +384,7 @@ def crown_model(
         has_iter = True
 
     if not has_iter:
-        # layer, slope = V_slope.name, previous = True, mode = F_HYBRID.name, convex_domain = {}, finetune = False, rec = 1, ** kwargs
+
         def func(layer):
             return get_backward_(layer, mode=get_mode(IBP, forward))
 
@@ -632,8 +418,6 @@ def crown_model(
         convex_domain=convex_domain,
         **kwargs,
     )
-    # time_1 = time.process_time()
-    # print('step1', time_1-zero_time)
     # retrieve output nodes
     output = []
     output_nodes = dico_nodes[0]
@@ -656,10 +440,7 @@ def crown_model(
                     convex_domain=convex_domain,
                     output_map=crown_map,
                 )
-                # time_2 = time.process_time()
-                # print('step2', time_2-time_1)
                 if fuse:
-                    # import pdb; pdb.set_trace()
                     output += to_list(
                         convert_backward_2_mode(get_mode(IBP, forward), convex_domain, dtype=input_tensors[0].dtype)(
                             input_tensors + output_crown

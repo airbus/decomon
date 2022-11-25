@@ -67,10 +67,6 @@ class BackwardDense(BackwardLayer):
         self.activation = get(layer.get_config()["activation"])  # ??? not sur
         self.activation_name = layer.get_config()["activation"]
         self.slope = slope
-        # if hasattr(self.layer, 'finetune'):
-        #    self.finetune=self.layer.finetune
-        # else:
-        #    self.finetune = False
         self.finetune = finetune
         self.previous = previous
         if hasattr(self.layer, "mode"):
@@ -334,10 +330,6 @@ class BackwardConv2D(BackwardLayer):
         else:
             self.mode = mode
             self.convex_domain = convex_domain
-        # if hasattr(self.layer, 'finetune'):
-        #    self.finetune = self.layer.finetune
-        # else:
-        #    self.finetune=finetune
         self.finetune = finetune
 
         self.previous = previous
@@ -369,13 +361,6 @@ class BackwardConv2D(BackwardLayer):
         shape_ = list(output_shape_tensor)
         shape_[0] = -1
         n_out = w_out_u.shape[-1]
-
-        """
-        w_out_u = K.reshape(w_out_u, shape_)
-        w_out_u = K.reshape(w_out_l, shape_)
-        b_out_u = K.reshape(b_out_u, shape_)
-        b_out_l = K.reshape(b_out_l, shape_)
-        """
 
         # first permute dimensions
         if len(w_out_u.shape) == 2:
@@ -492,11 +477,6 @@ class BackwardConv2D(BackwardLayer):
                 w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
                     x_output, convex_domain=self.convex_domain, slope=self.slope, mode=self.mode, previous=False
                 )
-
-                # w_out_u = K.reshape(w_out_u, (-1, shape))
-                # b_out_u = K.reshape(b_out_u, (-1, shape))
-                # w_out_l = K.reshape(w_out_l, (-1, shape))
-                # b_out_l = K.reshape(b_out_l, (-1, shape))
 
             return self.get_bounds_linear(w_out_u, b_out_u, w_out_l, b_out_l)
 
@@ -660,8 +640,6 @@ class BackwardActivation(BackwardLayer):
 
         # grid domain
         if self.activation_name[:4] == "relu":
-
-            # import pdb; pdb.set_trace()
             if (
                 len(self.convex_domain)
                 and self.convex_domain["name"] == Grid.name
@@ -687,7 +665,6 @@ class BackwardActivation(BackwardLayer):
 
                 self.grid_finetune = [finetune_grid_neg, finetune_grid_pos]
 
-        # import pdb; pdb.set_trace()
         if (
             len(self.convex_domain)
             and self.convex_domain["name"] == Grid.name
@@ -742,10 +719,6 @@ class BackwardActivation(BackwardLayer):
                     finetune_grid=self.grid_finetune,
                 )
         # reshape
-        # shape = np.prod(x[-1].shape[1:])
-        # op_reshape = Reshape((shape, -1))
-        # w_out_u = op_reshape(w_out_u)
-        # w_out_l = op_reshape(w_out_l)
         if len(w_out_u) == 2:
             w_out_u = tf.linalg.diag(w_out_u)
         if len(w_out_l) == 2:
@@ -881,28 +854,6 @@ class BackwardReshape(BackwardLayer):
         if convex_domain is None:
             convex_domain = {}
         self.previous = previous
-
-    """
-    def call(self, inputs, slope=V_slope.name):
-
-        if self.previous:
-        if self.previous:
-            w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-        else:
-            y_ = inputs[-1]
-            shape = np.prod(y_.shape[1:])
-
-            z_value = K.cast(0.0, self.dtype)
-            o_value = K.cast(1.0, self.dtype)
-            y_flat = K.reshape(y_, [-1, shape])
-
-            w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
-            b_out_u, b_out_l = [z_value * y_flat] * 2
-            w_out_u = tf.linalg.diag(w_out_u)
-            w_out_l = tf.linalg.diag(w_out_l)
-
-        return w_out_u, b_out_u, w_out_l, b_out_l
-    """
 
     def call_no_previous(self, inputs):
 
@@ -1062,9 +1013,6 @@ class BackwardBatchNormalization(BackwardLayer):
         b_ = beta_ - w_ * moving_mean_
 
         # flatten w_, b_
-        # w_ = self.op_flat(w_)
-        # b_ = self.op_flat(b_) - w_ * self.op_flat(moving_mean_)
-
         w_ = K.expand_dims(K.expand_dims(w_, -1), 1)
         b_ = K.expand_dims(K.expand_dims(b_, -1), 1)
 

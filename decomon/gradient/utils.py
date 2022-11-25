@@ -15,13 +15,10 @@ def gradient_relu(inputs, dc_decomp=False, mode=F_HYBRID.name, convex_domain=Non
 
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_HYBRID.name:
-        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensors]
     elif mode == F_IBP.name:
-        # y, x_0, u_c, l_c = x[:4]
         u_c, l_c = x[:nb_tensors]
     elif mode == F_FORWARD.name:
-        # y, x_0, w_u, b_u, w_l, b_l = x[:6]
         x_0, w_u, b_u, w_l, b_l = x[:nb_tensors]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -29,9 +26,6 @@ def gradient_relu(inputs, dc_decomp=False, mode=F_HYBRID.name, convex_domain=Non
     if mode == F_FORWARD.name:
         upper = get_upper(x_0, w_u, b_u, convex_domain)
         lower = get_lower(x_0, w_l, b_l, convex_domain)
-    # if mode == F_HYBRID.name:
-    #    upper = K.minimum(u_c,upper)
-    #    lower = K.maximum(l_c, lower)
     if mode in [F_IBP.name, F_HYBRID.name]:
         upper = u_c
         lower = l_c

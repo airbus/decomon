@@ -36,7 +36,6 @@ def get_adv_coverage_box(
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion
-    # input_dim = 0
     if not isinstance(model, DecomonModel):
         model_ = convert(model)
     else:
@@ -125,31 +124,9 @@ def get_adv_coverage_box(
             # add penalties on biases
             upper = u_c[:, :, None] - l_c[:, None]
             const = upper.max() - upper.min()
-            # upper = upper*s_tensor_[:,None, :] + (const+0.1)*(1. - s_tensor_[:,None,:])
             discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
 
             upper -= (1 - discard_mask_s) * (const + 0.1)
-
-            # upper = upper * s_tensor_[:, :, None] - (const + 0.1) * (1. - s_tensor_[:, None,:])
-            # upper = upper*t_tensor_[:,:,None ] - (const+0.1)*(1. - t_tensor_[:,None,:])
-
-            """
-                        if target_tensor is None:
-                target_tensor = 1 - source_tensor
-
-            shape = np.prod(u_c.shape[1:])
-            u_c_ = np.reshape(u_c, (-1, shape))
-            l_c_ = np.reshape(l_c, (-1, shape))
-
-            t_tensor_ = np.reshape(target_tensor, (-1, shape))
-            s_tensor_ = np.reshape(source_tensor, (-1, shape))
-
-            #score_u = np.min(u_c_ * t_tensor_ + (u_c_.max() + 1e6) * (1 - t_tensor_), -1)
-            score_u = np.max(u_c * t_tensor_ + (u_c_.min() - 0.1) * (1 - t_tensor_), -1)
-            score_l = np.max(l_c * s_tensor_ + (l_c_.min() - 0.1) * (1 - s_tensor_), -1)
-
-            return score_u - score_l
-            """
 
             return np.max(np.max(upper, -2), -1)
 
@@ -179,13 +156,9 @@ def get_adv_coverage_box(
                 + b_u_f
             )  # (-1, shape, shape)
             const = upper.max() - upper.min()
-            # upper = upper*s_tensor_[:,None, :] + (const+0.1)*(1. - s_tensor_[:,None,:])
             discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
 
             upper -= (1 - discard_mask_s) * (const + 0.1)
-
-            # upper = upper * s_tensor_[:, :, None] - (const + 0.1) * (1. - s_tensor_[:, None,:])
-            # upper = upper*t_tensor_[:,:,None ] - (const+0.1)*(1. - t_tensor_[:,None,:])
 
             return np.max(np.max(upper, -2), -1)
 

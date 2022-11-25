@@ -31,40 +31,6 @@ class O_slope:
     name = "one-lb"
 
 
-"""
-def _get_shape_tuple(init_tuple, tensor, start_idx, int_shape=None):
-    ""Finds non-specific dimensions in the static shapes.
-    The static shapes are replaced with the corresponding dynamic shapes of the
-    tensor.
-    Arguments:
-      init_tuple: a tuple, the first part of the output shape
-      tensor: the tensor from which to get the (static and dynamic) shapes
-        as the last part of the output shape
-      start_idx: int, which indicate the first dimension to take from
-        the static shape of the tensor
-      int_shape: an alternative static shape to take as the last part
-        of the output shape
-    Returns:
-      The new int_shape with the first part from init_tuple
-      and the last part from either `int_shape` (if provided)
-      or `tensor.shape`, where every `None` is replaced by
-      the corresponding dimension from `tf.shape(tensor)`.
-
-    sources: official Keras directory
-    ""
-    # replace all None in int_shape by K.shape
-    if int_shape is None:
-        int_shape = K.int_shape(tensor)[start_idx:]
-    if not any(not s for s in int_shape):
-        return init_tuple + tuple(int_shape)
-    shape = K.shape(tensor)
-    int_shape = list(int_shape)
-    for i, s in enumerate(int_shape):
-        if not s:
-            int_shape[i] = shape[start_idx + i]
-    return init_tuple + tuple(int_shape)
-"""
-
 ##############
 # SYMBOLIC UPPER/ LOWER BOUNDS
 # compute symbolically constant upper and lower
@@ -138,7 +104,6 @@ def get_lq_norm(x, p, axis=-1):
     :return: ||w||^p
     """
     if p == 1:
-        # x_p = K.sum(K.abs(x), axis)
         x_q = K.max(K.abs(x), axis)
     elif p == 2:
         x_q = K.sqrt(K.sum(K.pow(x, p), axis))
@@ -348,7 +313,6 @@ def get_upper(x, w, b, convex_domain=None, **kwargs):
         p = convex_domain["p"]
 
         # check for extra options
-        # kwargs.update(convex_domain)
         return get_upper_ball(x, eps, p, w, b, **kwargs)
 
     if convex_domain["name"] == Vertex.name:
@@ -415,15 +379,8 @@ def get_grad(x, constant, W, b):
     :return: Keras Tensor the gradient of the function (None, n_dim, ...)
     """
     # product W*x + b
-    # import pdb; pdb.set_trace()
-    # x_ = K.expand_dims(x, 2)  # (None, n_dim, 1, 1)
-    # z = K.sum(W * x_, 1) + b
-
     x_ = K.expand_dims(x, 2)
     z = K.sum(W * x_, 1) + b
-
-    # grad_ = K.sum(K.expand_dims(K.clip(K.sign(K.maximum(constant, z) - constant), 0., 1.), 1)*W, 2)
-
     grad_ = K.sum(K.expand_dims(-K.sign(constant - K.maximum(constant, z)), 1) * W, 2)  # (None, n_dim, ...)
 
     return grad_
@@ -437,8 +394,6 @@ def compute_L(W):
     """
     # do L2 norm
     return K.sum(K.sqrt(K.sum(W * W, 1)), 1)
-
-    # return K.sum(K.sqrt(K.sum(K.pow(W, 2), 1)), 1)
 
 
 def compute_R(z, convex_domain):
@@ -474,8 +429,6 @@ def get_start_point(z, convex_domain):
     """
 
     if len(convex_domain) == 0:
-        # compute the L2 distance z[:, 0], z[:, 1]
-        # return (z[:, 0] + z[:, 1]) / 2.0
         return z[:, 0]
     elif convex_domain["name"] == Box.name:  # to improve
         return (z[:, 0] + z[:, 1]) / 2.0
@@ -533,7 +486,6 @@ def grad_descent(z, convex_0, convex_1, convex_domain, n_iter=5):
     constant_1, W_1, b_1 = convex_1
 
     # init
-    # import pdb; pdb.set_trace()
     x_k = K.expand_dims(get_start_point(z, convex_domain), -1) + 0 * K.sum(constant_0, 1)[:, None]
     R = compute_R(z, convex_domain)
     n_dim = len(x_k.shape[1:])
@@ -548,11 +500,9 @@ def grad_descent(z, convex_0, convex_1, convex_domain, n_iter=5):
         g_k_1 = get_grad(x_k, constant_1, W_1, b_1)
         g_k = g_k_0 + g_k_1
         alpha_k = get_coeff_grad(R, n_iter + 1, g_k)
-        # x_result = x_k - alpha_k* g_k
         x_result = alpha_k[:, None] * g_k
         return x_result, [x_k]
 
-    # step_grad(x_k, [x_k])
     x_vec = K.rnn(
         step_function=step_grad, inputs=K.concatenate([x_k[:, None]] * n_iter, 1), initial_states=[x_k], unroll=False
     )[1]
@@ -567,7 +517,6 @@ def grad_descent(z, convex_0, convex_1, convex_domain, n_iter=5):
         + K.maximum(constant_1[:, None], K.sum(W_1[:, None] * X_vec, 2) + b_1[:, None]),
         2,
     )
-    # f_vec = K.min(f_vec, 1)
     f_vec = f_vec[0]
     L_0 = compute_L(W_0)
     L_1 = compute_L(W_1)
@@ -580,7 +529,6 @@ class NonPos(Constraint):
     """Constrains the weights to be non-negative."""
 
     def __call__(self, w):
-        # return w * K.cast(K.less_equal(w, 0.0), K.floatx())
         return K.minimum(w, 0.0)
 
 
@@ -588,7 +536,6 @@ class NonNeg(Constraint):
     """Constrains the weights to be non-negative."""
 
     def __call__(self, w):
-        # return w * K.cast(K.less_equal(w, 0.0), K.floatx())
         return K.maximum(w, 0.0)
 
 
@@ -604,8 +551,6 @@ class ClipAlphaGrid(Constraint):
 
     def __call__(self, w):
         w = K.clip(w, 0.0, 1.0)
-
-        # w = K.clip(w, 0., 1.)
         w /= K.maximum(K.sum(w, 0), 1.0)[None]
         return w
 
@@ -676,13 +621,10 @@ def relu_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, slope=V_sl
 
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_HYBRID.name:
-        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensors]
     elif mode == F_IBP.name:
-        # y, x_0, u_c, l_c = x[:4]
         u_c, l_c = x[:nb_tensors]
     elif mode == F_FORWARD.name:
-        # y, x_0, w_u, b_u, w_l, b_l = x[:6]
         x_0, w_u, b_u, w_l, b_l = x[:nb_tensors]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -690,9 +632,6 @@ def relu_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, slope=V_sl
     if mode == F_FORWARD.name:
         upper = get_upper(x_0, w_u, b_u, convex_domain)
         lower = get_lower(x_0, w_l, b_l, convex_domain)
-    # if mode == F_HYBRID.name:
-    #    upper = K.minimum(u_c,upper)
-    #    lower = K.maximum(l_c, lower)
     elif mode in [F_IBP.name, F_HYBRID.name]:
         upper = u_c
         lower = l_c
@@ -750,13 +689,10 @@ def softplus_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, slope=
 
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_HYBRID.name:
-        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensors]
     elif mode == F_IBP.name:
-        # y, x_0, u_c, l_c = x[:4]
         u_c, l_c = x[:nb_tensors]
     elif mode == F_FORWARD.name:
-        # y, x_0, w_u, b_u, w_l, b_l = x[:6]
         x_0, w_u, b_u, w_l, b_l = x[:nb_tensors]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -837,18 +773,12 @@ def add(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.n
         g_ = g_0 + g_1
 
     if mode == F_HYBRID.name:
-        # y_0, x_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0 = inputs_0[:8]
-        # y_1, _, u_c_1, w_u_1, b_u_1, l_c_1, w_l_1, b_l_1 = inputs_1[:8]
         x_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0 = inputs_0[:nb_tensor]
         _, u_c_1, w_u_1, b_u_1, l_c_1, w_l_1, b_l_1 = inputs_1[:nb_tensor]
     elif mode == F_IBP.name:
-        # y_0, x_0, u_c_0, l_c_0 = inputs_0[:4]
-        # y_1, _, u_c_1, l_c_1 = inputs_1[:4]
         u_c_0, l_c_0 = inputs_0[:nb_tensor]
         u_c_1, l_c_1 = inputs_1[:nb_tensor]
     elif mode == F_FORWARD.name:
-        # y_0, x_0, w_u_0, b_u_0, w_l_0, b_l_0 = inputs_0[:6]
-        # y_1, _, w_u_1, b_u_1, w_l_1, b_l_1 = inputs_1[:6]
         x_0, w_u_0, b_u_0, w_l_0, b_l_0 = inputs_0[:nb_tensor]
         _, w_u_1, b_u_1, w_l_1, b_l_1 = inputs_1[:nb_tensor]
     else:
@@ -872,16 +802,11 @@ def add(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.n
         lower_ = get_lower(x_0, w_l_, b_l_, convex_domain)  # we can see an improvement
         l_c_ = K.maximum(lower_, l_c_)
 
-    # y_ = y_0 + y_1
-
     if mode == F_HYBRID.name:
-        # output = [y_, x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
         output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
     elif mode == F_IBP.name:
-        # output = [y_, x_0, u_c_, l_c_]
         output = [u_c_, l_c_]
     elif mode == F_FORWARD.name:
-        # output = [y_, x_0, w_u_, b_u_, w_l_, b_l_]
         output = [x_0, w_u_, b_u_, w_l_, b_l_]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -1041,13 +966,10 @@ def max_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1, fi
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
 
     if mode == F_HYBRID.name:
-        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensor]
     elif mode == F_FORWARD.name:
-        # y, x_0, w_u, b_u, w_l, b_l = x[:6]
         x_0, w_u, b_u, w_l, b_l = x[:nb_tensor]
     elif mode == F_IBP.name:
-        # y, x_0, u_c, l_c = x[:4]
         u_c, l_c = x[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -1066,9 +988,6 @@ def max_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1, fi
     if dc_decomp:
         h_list = tf.split(h, max_dim, axis)
         g_list = tf.split(g, max_dim, axis)
-
-    # y_list = tf.split(y, max_dim, axis)
-    # y_tmp = y_list[0] + 0 * (y_list[0])
 
     if mode in [F_HYBRID.name, F_IBP.name]:
 
@@ -1100,7 +1019,6 @@ def max_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1, fi
 
     output_tmp = []
     if mode == F_HYBRID.name:
-        # output_tmp = [y_tmp,x_0,u_c_tmp,w_u_tmp,b_u_tmp,l_c_tmp,w_l_tmp,b_l_tmp,]
         output_tmp = [
             x_0,
             u_c_tmp,
@@ -1112,7 +1030,6 @@ def max_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1, fi
         ]
 
         for i in range(1, max_dim):
-            # output_i = [y_list[i], x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
             output_i = [x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
             if finetune:
                 output_tmp = maximum(
@@ -1122,19 +1039,16 @@ def max_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1, fi
                 output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
 
     elif mode == F_IBP.name:
-        # output_tmp = [y_tmp,x_0,u_c_tmp,l_c_tmp,]
         output_tmp = [
             u_c_tmp,
             l_c_tmp,
         ]
 
         for i in range(1, max_dim):
-            # output_i = [y_list[i], x_0, u_c_list[i], l_c_list[i]]
             output_i = [u_c_list[i], l_c_list[i]]
             output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune)
 
     elif mode == F_FORWARD.name:
-        # output_tmp = [y_tmp,x_0,w_u_tmp,b_u_tmp,w_l_tmp,b_l_tmp,]
         output_tmp = [
             x_0,
             w_u_tmp,
@@ -1144,7 +1058,6 @@ def max_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1, fi
         ]
 
         for i in range(1, max_dim):
-            # output_i = [y_list[i], x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
             output_i = [x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
             if finetune:
                 output_tmp = maximum(
@@ -1157,13 +1070,10 @@ def max_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1, fi
 
     # reduce the dimension
     if mode == F_IBP.name:
-        # _, _, u_c_, l_c_ = output_tmp[:4]
         u_c_, l_c_ = output_tmp[:nb_tensor]
     elif mode == F_FORWARD.name:
-        # _, _, w_u_, b_u_, w_l_, b_l_ = output_tmp[:6]
         _, w_u_, b_u_, w_l_, b_l_ = output_tmp[:nb_tensor]
     elif mode == F_HYBRID.name:
-        # _, _, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = output_tmp[:8]
         _, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = output_tmp[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -1193,16 +1103,11 @@ def max_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1, fi
         lower_ = get_lower(x_0, w_l_, b_l_, convex_domain)
         l_c_ = K.maximum(lower_, l_c_)
 
-    # y_ = K.max(y, axis=axis)
-
     if mode == F_HYBRID.name:
-        # output = [y_, x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
         output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
     elif mode == F_IBP.name:
-        # output = [y_, x_0, u_c_, l_c_]
         output = [u_c_, l_c_]
     elif mode == F_FORWARD.name:
-        # output = [y_, x_0, w_u_, b_u_, w_l_, b_l_]
         output = [x_0, w_u_, b_u_, w_l_, b_l_]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -1251,21 +1156,16 @@ def minus(inputs, mode=F_HYBRID.name, dc_decomp=False, **kwargs):
     """
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_IBP.name:
-        # y, x, u, l = inputs[:4]
         u, l = inputs[:nb_tensor]
     elif mode == F_FORWARD.name:
-        # y, x, w_u, b_u, w_l, b_l = inputs[:6]
         x, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
     elif mode == F_HYBRID.name:
-        # y, x, u, w_u, b_u, l, w_l, b_l = inputs[:8]
         x, u, w_u, b_u, l, w_l, b_l = inputs[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
     if dc_decomp:
         h, g = inputs[-2:]
-
-    # y_ = -y
 
     if mode in [F_IBP.name, F_HYBRID.name]:
         u_ = -l
@@ -1277,7 +1177,6 @@ def minus(inputs, mode=F_HYBRID.name, dc_decomp=False, **kwargs):
         w_l_ = -w_u
         b_l_ = -b_u
 
-    # output = [y_, x]
     if mode == F_IBP.name:
         output = [u_, l_]
     elif mode == F_FORWARD.name:
@@ -1315,13 +1214,9 @@ def multiply_old(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F
     nb_tensor = StaticVariables(dc_decomp, mode=mode).nb_tensors
 
     if mode == F_IBP.name:
-        # y0, x, u0, l0 = inputs_0[:4]
-        # y1, _, u1, l1 = inputs_1[:4]
         u0, l0 = inputs_0[:nb_tensor]
         u1, l1 = inputs_1[:nb_tensor]
     elif mode == F_FORWARD.name:
-        # y0, x, w_u0, b_u0, w_l0, b_l0 = inputs_0[:6]
-        # y1, _, w_u1, b_u1, w_l1, b_l1 = inputs_1[:6]
         x, w_u0, b_u0, w_l0, b_l0 = inputs_0[:nb_tensor]
         _, w_u1, b_u1, w_l1, b_l1 = inputs_1[:nb_tensor]
         u0 = get_upper(x, w_u0, b_u0, convex_domain=convex_domain)
@@ -1329,8 +1224,6 @@ def multiply_old(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F
         u1 = get_upper(x, w_u1, b_u1, convex_domain=convex_domain)
         l1 = get_lower(x, w_l1, b_l1, convex_domain=convex_domain)
     elif mode == F_HYBRID.name:
-        # y0, x, u0, w_u0, b_u0, l0, w_l0, b_l0 = inputs_0[:8]
-        # y1, _, u1, w_u1, b_u1, l1, w_l1, b_l1 = inputs_1[:8]
         x, u0, w_u0, b_u0, l0, w_l0, b_l0 = inputs_0[:nb_tensor]
         _, u1, w_u1, b_u1, l1, w_l1, b_l1 = inputs_1[:nb_tensor]
     else:
@@ -1382,22 +1275,13 @@ def multiply_old(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F
         b_l_0 = K.relu(l0) * b_l1 - K.relu(-l0) * b_u1 + K.relu(l1) * b_l0 - K.relu(-l1) * b_u0 - l0 * l1
         b_l_1 = K.relu(u1) * b_l0 - K.relu(-u1) * b_u0 + K.relu(u0) * b_l1 - K.relu(-u0) * b_u1 - u1 * u0
 
-    # if mode == F_IBP.name:
-    #    inputs_0_ = [y0*y1, x, upper_0, lower_0]
-    #    inputs_1_ = [y0*y1, x, upper_1, lower_1]
-
     if mode == F_IBP.name:
-        # output = [y0 * y1, x, K.minimum(upper_0, upper_1), K.maximum(lower_0, lower_1)]
         output = [K.minimum(upper_0, upper_1), K.maximum(lower_0, lower_1)]
     elif mode in [F_HYBRID.name, F_FORWARD.name]:
         if mode == F_FORWARD.name:
-            # inputs_0_ = [y0 * y1, x, w_0_u, b_u_0, w_0_l, b_l_0]
-            # inputs_1_ = [y0 * y1, x, w_1_u, b_u_1, w_1_l, b_l_1]
             inputs_0_ = [x, w_0_u, b_u_0, w_0_l, b_l_0]
             inputs_1_ = [x, w_1_u, b_u_1, w_1_l, b_l_1]
         else:
-            # inputs_0_ = [y0 * y1, x, upper_0, w_0_u, b_u_0, lower_0, w_0_l, b_l_0]
-            # inputs_1_ = [y0 * y1, x, upper_1, w_1_u, b_u_1, lower_1, w_1_l, b_l_1]
             inputs_0_ = [x, upper_0, w_0_u, b_u_0, lower_0, w_0_l, b_l_0]
             inputs_1_ = [x, upper_1, w_1_u, b_u_1, lower_1, w_1_l, b_l_1]
 
@@ -1405,22 +1289,12 @@ def multiply_old(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F
         output_lower = maximum(inputs_0_, inputs_1_, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
         if mode == F_FORWARD.name:
-            # _, _, w_u_, b_u_, _, _ = output_upper
-            # _, _, _, _, w_l_, b_l_ = output_upper
-
             _, w_u_, b_u_, _, _ = output_upper
             _, _, _, w_l_, b_l_ = output_lower
-
-            # output = [y0 * y1, x, w_u_, b_u_, w_l_, b_l_]
             output = [x, w_u_, b_u_, w_l_, b_l_]
-
         else:
-            # _, _, u_, w_u_, b_u_, _, _, _ = output_upper
-            # _, _, _, _, _, l_, w_l_, b_l_ = output_upper
             _, u_, w_u_, b_u_, _, _, _ = output_upper
             _, _, _, _, l_, w_l_, b_l_ = output_upper
-
-            # output = [y0 * y1, x, u_, w_u_, b_u_, l_, w_l_, b_l_]
             output = [x, u_, w_u_, b_u_, l_, w_l_, b_l_]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -1449,13 +1323,9 @@ def multiply(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYB
     nb_tensor = StaticVariables(dc_decomp, mode=mode).nb_tensors
 
     if mode == F_IBP.name:
-        # y0, x, u0, l0 = inputs_0[:4]
-        # y1, _, u1, l1 = inputs_1[:4]
         u0, l0 = inputs_0[:nb_tensor]
         u1, l1 = inputs_1[:nb_tensor]
     elif mode == F_FORWARD.name:
-        # y0, x, w_u0, b_u0, w_l0, b_l0 = inputs_0[:6]
-        # y1, _, w_u1, b_u1, w_l1, b_l1 = inputs_1[:6]
         x, w_u0, b_u0, w_l0, b_l0 = inputs_0[:nb_tensor]
         _, w_u1, b_u1, w_l1, b_l1 = inputs_1[:nb_tensor]
         u0 = get_upper(x, w_u0, b_u0, convex_domain=convex_domain)
@@ -1463,8 +1333,6 @@ def multiply(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYB
         u1 = get_upper(x, w_u1, b_u1, convex_domain=convex_domain)
         l1 = get_lower(x, w_l1, b_l1, convex_domain=convex_domain)
     elif mode == F_HYBRID.name:
-        # y0, x, u0, w_u0, b_u0, l0, w_l0, b_l0 = inputs_0[:8]
-        # y1, _, u1, w_u1, b_u1, l1, w_l1, b_l1 = inputs_1[:8]
         x, u0, w_u0, b_u0, l0, w_l0, b_l0 = inputs_0[:nb_tensor]
         _, u1, w_u1, b_u1, l1, w_l1, b_l1 = inputs_1[:nb_tensor]
     else:
@@ -1527,8 +1395,6 @@ def permute_dimensions(x, axis, mode=F_HYBRID.name, axis_perm=1):
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_IBP.name:
         return [
-            # K.permute_dimensions(x[0], index),
-            # x[1],
             K.permute_dimensions(x[2], index),
             K.permute_dimensions(x[3], index),
         ]
@@ -1537,10 +1403,8 @@ def permute_dimensions(x, axis, mode=F_HYBRID.name, axis_perm=1):
         index_w = np.insert(np.delete(index_w, axis), axis_perm + 1, axis)
 
         if mode == F_FORWARD.name:
-            # y, x_0, w_u, b_u, w_l, b_l = x
             x_0, w_u, b_u, w_l, b_l = x[:nb_tensor]
             return [
-                # K.permute_dimensions(y, index),
                 x_0,
                 K.permute_dimensions(w_u, index_w),
                 K.permute_dimensions(b_u, index),
@@ -1549,11 +1413,9 @@ def permute_dimensions(x, axis, mode=F_HYBRID.name, axis_perm=1):
             ]
 
         elif mode == F_HYBRID.name:
-            # y, x_0, u, w_u, b_u, l, w_l, b_l = x
             x_0, u, w_u, b_u, l, w_l, b_l = x
 
             return [
-                # K.permute_dimensions(y, index),
                 x_0,
                 K.permute_dimensions(u, index),
                 K.permute_dimensions(w_u, index_w),
@@ -1579,18 +1441,13 @@ def broadcast(inputs, n, axis, mode):
     """
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_IBP.name:
-        # y, x, u, l = inputs
         u, l = inputs[:nb_tensor]
     elif mode == F_FORWARD.name:
-        # y, x, w_u, b_u, w_l, b_l = inputs
         x, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
     elif mode == F_HYBRID.name:
-        # y, x, u, w_u, b_u, l, w_l, b_l = inputs
         x, u, w_u, b_u, l, w_l, b_l = inputs[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
-    # for _ in range(n):
-    # y = K.expand_dims(y, axis)
 
     if mode in [F_IBP.name, F_HYBRID.name]:
         for _ in range(n):
@@ -1610,13 +1467,10 @@ def broadcast(inputs, n, axis, mode):
             w_l = K.expand_dims(w_l, axis_w)
 
     if mode == F_IBP.name:
-        # output = [y, x, u, l]
         output = [u, l]
     elif mode == F_FORWARD.name:
-        # output = [y, x, w_u, b_u, w_l, b_l]
         output = [x, w_u, b_u, w_l, b_l]
     elif mode == F_HYBRID.name:
-        # output = [y, x, u, w_u, b_u, l, w_l, b_l]
         output = [x, u, w_u, b_u, l, w_l, b_l]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -1635,17 +1489,13 @@ def split(input_, axis=-1, mode=F_HYBRID.name):
 
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_IBP.name:
-        # y_, x_, u_, l_ = input_
         u_, l_ = input_[:nb_tensor]
     elif mode == F_HYBRID.name:
-        # y_, x_, u_, w_u_, b_u_, l_, w_l_, b_l_ = input_
         x_, u_, w_u_, b_u_, l_, w_l_, b_l_ = input_[:nb_tensor]
     elif mode == F_FORWARD.name:
-        # y_, x_, w_u_, b_u_, w_l_, b_l_ = input_
         x_, w_u_, b_u_, w_l_, b_l_ = input_[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
-    # y_list = tf.split(y_, 1, axis=axis)
 
     if mode in [F_IBP.name, F_HYBRID.name]:
         u_list = tf.split(u_, 1, axis=axis)
@@ -1663,13 +1513,10 @@ def split(input_, axis=-1, mode=F_HYBRID.name):
         w_l_list = tf.split(w_l_, 1, axis=axis)
 
     if mode == F_IBP.name:
-        # outputs = [[y_list[i], x_, u_list[i], l_list[i]] for i in range(n)]
         outputs = [[u_list[i], l_list[i]] for i in range(n)]
     elif mode == F_FORWARD.name:
-        # outputs = [[y_list[i], x_, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]] for i in range(n)]
         outputs = [[x_, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]] for i in range(n)]
     elif mode == F_HYBRID.name:
-        # outputs = [[y_list[i], x_, u_list[i], w_u_list[i], b_u_list[i], l_list[i], w_l_list[i], b_l_list[i]] for i in range(n)]
         outputs = [[x_, u_list[i], w_u_list[i], b_u_list[i], l_list[i], w_l_list[i], b_l_list[i]] for i in range(n)]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -1697,13 +1544,10 @@ def sort(input_, axis=-1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.nam
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
 
     if mode == F_IBP.name:
-        # y, x_0, u_c, l_c = input_
         u_c, l_c = input_[:nb_tensor]
     elif mode == F_HYBRID.name:
-        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = input_
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = input_[:nb_tensor]
     elif mode == F_FORWARD.name:
-        # y_, x_0, w_u, b_u, w_l, b_l = input_
         x_0, w_u, b_u, w_l, b_l = input_[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -1714,12 +1558,8 @@ def sort(input_, axis=-1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.nam
     else:
         n = input_.shape[axis]
 
-    # y_ = tf.sort(y, axis=axis)
-
     # what about splitting elements
     op = lambda x: tf.split(x, n, axis=axis)
-    # y_list = op(y)
-
     if mode in [F_IBP.name, F_HYBRID.name]:
         u_c_list = op(u_c)
         l_c_list = op(l_c)
@@ -1732,29 +1572,22 @@ def sort(input_, axis=-1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.nam
 
     def get_input(mode, i):
         if mode == F_IBP.name:
-            # return [y_list[i], x_0, u_c_list[i], l_c_list[i]]
             return [u_c_list[i], l_c_list[i]]
         if mode == F_FORWARD.name:
-            # return [y_list[i], x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
             return [x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
         if mode == F_HYBRID.name:
-            # return [y_list[i], x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
             return [x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
 
     def set_input(input_, mode, i):
         if mode == F_IBP.name:
-            # y_i, _, u_i, l_i = input_
             u_i, l_i = input_
         elif mode == F_FORWARD.name:
-            # y_i, _, w_u_i, b_u_i, w_l_i, b_l_i = input_
             _, w_u_i, b_u_i, w_l_i, b_l_i = input_
         elif mode == F_HYBRID.name:
-            # y_i, _, u_i, w_u_i, b_u_i, l_i, w_l_i, b_l_i = input_
             _, u_i, w_u_i, b_u_i, l_i, w_l_i, b_l_i = input_
         else:
             raise ValueError(f"Unknown mode {mode}")
 
-        # y_list[i] = y_i
         if mode in [F_IBP.name, F_HYBRID.name]:
             u_c_list[i] = u_i
             l_c_list[i] = l_i
@@ -1788,13 +1621,10 @@ def sort(input_, axis=-1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.nam
         b_l_ = op_(b_l_list)
 
     if mode == F_IBP.name:
-        # output = [y_, x_0, u_c_, l_c_]
         output = [u_c_, l_c_]
     elif mode == F_FORWARD.name:
-        # output = [y_, x_0, w_u_, b_u_, w_l_, b_l_]
         output = [x_0, w_u_, b_u_, w_l_, b_l_]
     elif mode == F_HYBRID.name:
-        # output = [y_, x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
         output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -1855,17 +1685,13 @@ def frac_pos_hull(inputs_, dc_decomp=False, convex_domain=None, mode=F_HYBRID.na
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
 
     if mode == F_IBP.name:
-        # y, x_0, u_c, l_c = inputs_
         u_c, l_c = inputs_[:nb_tensor]
     elif mode == F_FORWARD.name:
-        # y, x_0, w_u, b_u, w_l, b_l = inputs_
         x_0, w_u, b_u, w_l, b_l = inputs_[:nb_tensor]
     elif mode == F_HYBRID.name:
-        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs_
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs_[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
-    # y_ = 1 / y
     if mode in [F_FORWARD.name, F_HYBRID.name]:
         u_c_ = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
         l_c_ = get_lower(x_0, w_u, b_u, convex_domain=convex_domain)
@@ -1919,13 +1745,10 @@ def expand_dims(inputs_, dc_decomp=False, mode=F_HYBRID.name, axis=-1, **kwargs)
 
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_IBP.name:
-        # y, x_0, u_c, l_c = inputs_[:4]
         u_c, l_c = inputs_[:nb_tensor]
     elif mode == F_FORWARD.name:
-        # y, x_0, w_u, b_u, w_l, b_l = inputs_[:6]
         x_0, w_u, b_u, w_l, b_l = inputs_[:nb_tensor]
     elif mode == F_HYBRID.name:
-        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs_[:8]
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs_[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -1938,7 +1761,6 @@ def expand_dims(inputs_, dc_decomp=False, mode=F_HYBRID.name, axis=-1, **kwargs)
 
     op = lambda t: K.expand_dims(t, axis)
 
-    # y_ = op(y)
     if mode in [F_IBP.name, F_HYBRID.name]:
         u_c_ = op(u_c)
         l_c_ = op(l_c)
@@ -1951,13 +1773,10 @@ def expand_dims(inputs_, dc_decomp=False, mode=F_HYBRID.name, axis=-1, **kwargs)
         w_l_ = K.expand_dims(w_l, axis_w)
 
     if mode == F_IBP.name:
-        # output = [y_, x_0, u_c_, l_c_]
         output = [u_c_, l_c_]
     elif mode == F_FORWARD.name:
-        # output = [y, x_0, w_u_, b_u_, w_l_, b_l_]
         output = [x_0, w_u_, b_u_, w_l_, b_l_]
     elif mode == F_HYBRID.name:
-        # output = [y, x_0, u_c_, w_u_, l_c_, w_l_, b_l_]
         output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -2099,7 +1918,7 @@ def convert_lower_search_2_subset_sum(x, W, b, n):
         W = K.reshape(W, (-1, W.shape[1], np.prod(W.shape[2:])))
         b = K.reshape(b, (-1, np.prod(b.shape[1:])))
 
-    const = get_lower(x, W, b, convex_domain={})  # convex_domain = {}
+    const = get_lower(x, W, b, convex_domain={})
 
     weights = K.abs(W) * K.expand_dims((x_max - x_min) / n, -1)
     return weights, const

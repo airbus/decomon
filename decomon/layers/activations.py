@@ -135,13 +135,10 @@ def linear_hull_s_shape(
             b_l_ = b_l_0 + w_l_0 * b_l
 
     if mode == F_IBP.name:
-        # output = [func(y), x_0, u_c_, l_c_]
         output = [u_c_, l_c_]
     elif mode == F_HYBRID.name:
-        # output = [func(y), x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
         output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
     elif mode == F_FORWARD.name:
-        # output = [func(y), x_0, w_u_, b_u_, w_l_, b_l_]
         output = [x_0, w_u_, b_u_, w_l_, b_l_]
     else:
         raise ValueError(f"Unknown mode {mode}")

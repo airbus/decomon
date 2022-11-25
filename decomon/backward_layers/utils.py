@@ -89,8 +89,6 @@ def backward_add(inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, con
     l_c_1 = op_flat(l_c_1)
     # we need to flatten !
 
-    # import pdb; pdb.set_trace()
-
     upper_0 = get_upper_box(l_c_0, u_c_0, w_out_u_, b_out_u_)
     upper_1 = get_upper_box(l_c_1, u_c_1, w_out_u_, b_out_u_)
     lower_0 = get_lower_box(l_c_0, u_c_0, w_out_l_, b_out_l_)
@@ -210,11 +208,6 @@ def backward_relu_(
     #############
     w_u_, b_u_, w_l_, b_l_ = get_linear_hull_relu(upper, lower, slope=slope, **kwargs)
 
-    # w_u_ = tf.linalg.diag(w_u_)
-    # w_l_ = tf.linalg.diag(w_l_)
-
-    # w_out_u_, b_out_u_, w_out_l_, b_out_l_ = merge_with_previous([w_u_, b_u_, w_l_, b_l_, w_out_u, b_out_u, w_out_l, b_out_l])
-
     w_u_ = K.expand_dims(w_u_, -1)
     w_l_ = K.expand_dims(w_l_, -1)
     b_u_ = K.expand_dims(b_u_, -1)
@@ -258,17 +251,14 @@ def backward_softplus_(
         convex_domain = {}
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_HYBRID.name:
-        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensors]
         upper = u_c
         lower = l_c
     elif mode == F_IBP.name:
-        # y, x_0, u_c, l_c = x[:4]
         u_c, l_c = x[:nb_tensors]
         upper = u_c
         lower = l_c
     elif mode == F_FORWARD.name:
-        # y, x_0, w_u, b_u, w_l, b_l = x[:6]
         x_0, w_u, b_u, w_l, b_l = x[:nb_tensors]
         upper = get_upper(x_0, w_u, b_u, convex_domain)
         lower = get_lower(x_0, w_l, b_l, convex_domain)
@@ -277,22 +267,6 @@ def backward_softplus_(
 
     shape = np.prod(upper.shape[1:])
     upper = K.reshape(upper, [-1, shape])
-
-    # w_u_, b_u_, w_l_, b_l_ = get_linear_softplus_hull(upper, lower, slope = slope, **kwargs)
-
-    """
-    w_u_ = K.expand_dims(w_u_, -1)
-    w_l_ = K.expand_dims(w_l_, -1)
-    b_u_ = K.expand_dims(b_u_, -1)
-    b_l_ = K.expand_dims(b_l_, -1)
-
-    w_out_u_ = K.maximum(w_out_u, z_value) * w_u_ + K.minimum(w_out_u, z_value) * w_l_
-    w_out_l_ = K.maximum(w_out_l, z_value) * w_l_ + K.minimum(w_out_l, z_value) * w_u_
-    b_out_u_ = K.sum(K.maximum(w_out_u, z_value) * b_u_ + K.minimum(w_out_u, z_value) * b_l_, 2) + b_out_u
-    b_out_l_ = K.sum(K.maximum(w_out_l, z_value) * b_l_ + K.minimum(w_out_l, z_value) * b_u_, 2) + b_out_l
-
-    return w_out_u_, b_out_u_, w_out_l_, b_out_l_
-    """
 
 
 def backward_linear_prod(x_0, bounds_x, back_bounds, convex_domain):
@@ -438,10 +412,6 @@ def backward_max_(
     max_dim = input_shape[axis]
 
     # do some transpose so that the last axis is also at the end
-
-    # y_list = tf.split(y, max_dim, axis)
-    # y_tmp = y_list[0] + K.zeros_like(y_list[0])
-
     if mode in [F_HYBRID.name, F_IBP.name]:
 
         u_c_list = tf.split(u_c, max_dim, axis)
@@ -522,17 +492,11 @@ def backward_max_(
         bounds = bounds[::-1]
 
     if axis < 0:
-        # w_u_ = K.concatenate([K.expand_dims(b[0], axis-1) for b in bounds], axis-1)
-        # w_l_ = K.concatenate([K.expand_dims(b[2], axis-1) for b in bounds], axis-1)
-
         w_u_ = K.concatenate([b[0] for b in bounds], axis - 1)
         w_l_ = K.concatenate([b[2] for b in bounds], axis - 1)
         b_u_ = K.sum(K.concatenate([K.expand_dims(b[1], axis - 1) for b in bounds], axis - 1), axis - 1)
         b_l_ = K.sum(K.concatenate([K.expand_dims(b[3], axis - 1) for b in bounds], axis - 1), axis - 1)
     else:
-        # w_u_ = K.concatenate([K.expand_dims(b[0], axis) for b in bounds], axis)
-        # w_l_ = K.concatenate([K.expand_dims(b[2], axis) for b in bounds], axis)
-
         w_u_ = K.concatenate([b[0] for b in bounds], axis)
         w_l_ = K.concatenate([b[2] for b in bounds], axis)
         b_u_ = K.sum(K.concatenate([K.expand_dims(b[1], axis) for b in bounds], axis), axis)
@@ -683,11 +647,6 @@ def backward_multiply(
     :return:
     """
 
-    # w_out_u = w_out_u[:, 0]
-    # w_out_l = w_out_l[:, 0]
-    # b_out_u = b_out_u[:, 0]
-    # b_out_l = b_out_l[:, 0]
-
     if convex_domain is None:
         convex_domain = {}
     if mode == F_IBP.name:
@@ -724,14 +683,6 @@ def backward_multiply(
     a_l_1 = K.reshape(l_0, n_shape)
     b_l_0 = K.reshape((K.maximum(l_0, z_value) * l_1 + K.minimum(l_0, z_value) * u_1 - l_1 * l_0), n_shape)
     b_l_1 = K.reshape((K.maximum(l_1, z_value) * l_0 + K.minimum(l_1, z_value) * u_0 - l_0 * l_1), n_shape)
-
-    """
-    for _ in range(n_out):
-        b_u_0 = K.expand_dims(b_u_0, -1)
-        b_l_0 = K.expand_dims(b_l_0, -1)
-        b_u_1 = K.expand_dims(b_u_1, -1)
-        b_l_1 = K.expand_dims(b_l_1, -1)
-    """
 
     # upper
     w_out_u_max = K.maximum(w_out_u, z_value)

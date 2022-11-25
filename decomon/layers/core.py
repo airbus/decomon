@@ -188,7 +188,6 @@ class DecomonLayer(ABC, Layer):
 
     def split_kwargs(self, **kwargs):
         # necessary for InputLayer
-        # 'mode', 'dc_decomp', 'convex_domain', 'finetune', 'shared', 'fast'])
         pass
 
     def set_back_bounds(self, has_backward_bounds):

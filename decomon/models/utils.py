@@ -67,29 +67,6 @@ def include_dim_layer_fn(
 
         else:
             return layer_fn
-            """
-            warnings.warn(
-                "Expected {} to have an input dim option. " "Henceworth the to_monotonic function will be used instead"
-            )
-            if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
-                input_dim = (2, input_dim)
-            else:
-                if convex_domain["name"] == Box.name and not isinstance(input_dim, tuple):
-                    input_dim = (2, input_dim)
-
-            def func(x):
-                return to_monotonic(
-                    x,
-                    input_dim=input_dim,
-                    dc_decomp=dc_decomp,
-                    convex_domain=convex_domain,
-                    IBP=IBP,
-                    forward=forward,
-                    finetune=finetune,
-                )
-
-            layer_fn = func
-            """
 
     return layer_fn
 
@@ -198,9 +175,6 @@ def check_input_tensors_sequential(
                 assert len(input_tensors) == 5, "wrong number of inputs, expexted 10 but got {}".format(
                     len(input_tensors)
                 )
-        # assert min(
-        #    [isinstance(input_tensor_i, InputLayer) for input_tensor_i in input_tensors]
-        # ), "expected a list of InputLayer"
 
     return input_tensors
 
