@@ -1,10 +1,4 @@
-try:
-    from deel.lip.activations import GroupSort, GroupSort2
-except:
-    raise Warning(
-        "Could not import GroupSort from deel.lip.activations. Install deel-lip for being compatible with 1 Lipschitz network (see https://github.com/deel-ai/deel-lip)"
-    )
-
+import logging
 
 import numpy as np
 import tensorflow as tf
@@ -23,6 +17,16 @@ from decomon.backward_layers.utils import (
 )
 from decomon.layers.decomon_layers import to_monotonic
 from decomon.layers.utils import F_FORWARD, F_HYBRID, ClipAlpha
+
+logger = logging.getLogger(__name__)
+
+try:
+    from deel.lip.activations import GroupSort, GroupSort2
+except ImportError:
+    logger.warning(
+        "Could not import GroupSort or GroupSort2 from deel.lip.activations. "
+        "Please install deel-lip for being compatible with 1 Lipschitz network (see https://github.com/deel-ai/deel-lip)"
+    )
 
 
 class BackwardDense(Layer):

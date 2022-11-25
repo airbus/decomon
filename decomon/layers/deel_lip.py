@@ -1,7 +1,8 @@
+import logging
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from deel.lip.layers import FrobeniusDense, ScaledL2NormPooling2D
 from tensorflow.keras.backend import bias_add, conv2d
 from tensorflow.keras.constraints import NonNeg
 from tensorflow.keras.layers import (
@@ -48,11 +49,14 @@ from decomon.layers.utils import (
     sort,
 )
 
+logger = logging.getLogger(__name__)
+
 try:
     from deel.lip.activations import GroupSort, GroupSort2
-except:
-    raise Warning(
-        "Could not import GroupSort from deel.lip.activations. Install deel-lip for being compatible with 1 Lipschitz network (see https://github.com/deel-ai/deel-lip)"
+except ImportError:
+    logger.warning(
+        "Could not import GroupSort or GroupSort2 from deel.lip.activations. "
+        "Please install deel-lip for being compatible with 1 Lipschitz network (see https://github.com/deel-ai/deel-lip)"
     )
 
 
