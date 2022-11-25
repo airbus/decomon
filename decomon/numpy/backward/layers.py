@@ -1,3 +1,6 @@
+"""
+CROWN implementation in numpy (useful for MILP compatibility)
+"""
 from __future__ import absolute_import
 
 import numpy as np
@@ -8,10 +11,6 @@ from decomon.utils import F_FORWARD
 from .activation import get
 from .core import BackwardNumpyLayer
 from .utils import merge_with_previous
-
-"""
-CROWN implementation in numpy (useful for MILP compatibility)
-"""
 
 
 class BackwardNumpyActivation(BackwardNumpyLayer):
