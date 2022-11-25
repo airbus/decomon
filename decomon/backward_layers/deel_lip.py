@@ -12,10 +12,8 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.backend import conv2d, conv2d_transpose
 from tensorflow.keras.layers import Activation, Dot, Flatten, Layer, Permute
 
-from ..backward_layers.activations import get
-from ..layers.decomon_layers import to_monotonic
-from ..layers.utils import F_FORWARD, F_HYBRID, ClipAlpha
-from .utils import (
+from decomon.backward_layers.activations import get
+from decomon.backward_layers.utils import (
     V_slope,
     backward_sort,
     get_FORWARD,
@@ -23,6 +21,8 @@ from .utils import (
     get_identity_lirpa,
     get_input_dim,
 )
+from decomon.layers.decomon_layers import to_monotonic
+from decomon.layers.utils import F_FORWARD, F_HYBRID, ClipAlpha
 
 
 class BackwardDense(Layer):

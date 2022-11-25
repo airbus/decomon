@@ -21,18 +21,8 @@ from tensorflow.python.keras.layers.merge import _Merge as Merge
 from tensorflow.python.keras.utils import conv_utils
 
 from decomon.layers import activations
-from decomon.layers.utils import (
-    MultipleConstraint,
-    NonPos,
-    Project_initializer_neg,
-    Project_initializer_pos,
-    get_lower,
-    get_upper,
-    sort,
-)
-
-from .core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
-from .decomon_merge_layers import (
+from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
+from decomon.layers.decomon_merge_layers import (
     DecomonAdd,
     DecomonAverage,
     DecomonConcatenate,
@@ -41,9 +31,22 @@ from .decomon_merge_layers import (
     DecomonSubtract,
     to_monotonic_merge,
 )
-from .decomon_reshape import DecomonReshape
-from .maxpooling import DecomonMaxPooling2D
-from .utils import ClipAlpha, expand_dims, grad_descent, max_, min_, sort
+from decomon.layers.decomon_reshape import DecomonReshape
+from decomon.layers.maxpooling import DecomonMaxPooling2D
+from decomon.layers.utils import (
+    ClipAlpha,
+    MultipleConstraint,
+    NonPos,
+    Project_initializer_neg,
+    Project_initializer_pos,
+    expand_dims,
+    get_lower,
+    get_upper,
+    grad_descent,
+    max_,
+    min_,
+    sort,
+)
 
 try:
     from deel.lip.activations import GroupSort, GroupSort2

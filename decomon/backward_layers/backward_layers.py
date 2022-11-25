@@ -5,6 +5,19 @@ from tensorflow.keras.backend import conv2d, conv2d_transpose
 from tensorflow.keras.layers import Activation, Flatten, Layer, Permute
 from tensorflow.python.ops import array_ops
 
+from decomon.backward_layers.activations import get
+from decomon.backward_layers.backward_maxpooling import BackwardMaxPooling2D
+from decomon.backward_layers.backward_merge import BackwardAdd, BackwardAverage
+from decomon.backward_layers.core import BackwardLayer
+from decomon.backward_layers.utils import (
+    V_slope,
+    backward_sort,
+    get_FORWARD,
+    get_IBP,
+    get_identity_lirpa,
+    get_input_dim,
+)
+from decomon.layers.core import Grid, Option
 from decomon.layers.decomon_layers import (
     DecomonActivation,
     DecomonBatchNormalization,
@@ -14,12 +27,9 @@ from decomon.layers.decomon_layers import (
     DecomonFlatten,
     DecomonPermute,
     DecomonReshape,
+    to_monotonic,
 )
-
-from ..backward_layers.activations import get
-from ..layers.core import Grid, Option
-from ..layers.decomon_layers import to_monotonic
-from ..layers.utils import (
+from decomon.layers.utils import (
     F_FORWARD,
     F_HYBRID,
     F_IBP,
@@ -27,17 +37,6 @@ from ..layers.utils import (
     ClipAlphaGrid,
     NonNeg,
     NonPos,
-)
-from .backward_maxpooling import BackwardMaxPooling2D
-from .backward_merge import BackwardAdd, BackwardAverage
-from .core import BackwardLayer
-from .utils import (
-    V_slope,
-    backward_sort,
-    get_FORWARD,
-    get_IBP,
-    get_identity_lirpa,
-    get_input_dim,
 )
 
 

@@ -3,7 +3,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Input, Layer
 from tensorflow.keras.models import Model
 
-from ..layers.utils import get_upper
+from decomon.layers.utils import get_upper
 
 
 class Adversarial_score(Layer):

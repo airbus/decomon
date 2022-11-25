@@ -5,6 +5,7 @@ from tensorflow.keras.backend import conv2d, conv2d_transpose
 from tensorflow.keras.layers import Activation, Flatten, Layer, Permute
 from tensorflow.python.ops import array_ops
 
+from decomon.backward_layers.activations import get
 from decomon.layers.decomon_layers import (
     DecomonActivation,
     DecomonBatchNormalization,
@@ -14,11 +15,9 @@ from decomon.layers.decomon_layers import (
     DecomonFlatten,
     DecomonPermute,
     DecomonReshape,
+    to_monotonic,
 )
-
-from ..backward_layers.activations import get
-from ..layers.decomon_layers import to_monotonic
-from ..layers.utils import F_FORWARD, F_HYBRID, ClipAlpha
+from decomon.layers.utils import F_FORWARD, F_HYBRID, ClipAlpha
 
 
 class GradientDense(Layer):

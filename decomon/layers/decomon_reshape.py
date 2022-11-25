@@ -1,7 +1,7 @@
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import InputSpec, Permute, Reshape
 
-from .core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
+from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
 
 
 class DecomonReshape(Reshape, DecomonLayer):

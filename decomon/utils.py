@@ -4,8 +4,8 @@ from tensorflow.keras.layers import Flatten, Lambda
 from tensorflow.math import greater_equal
 from tensorflow.python.keras import backend as K
 
-from .corners.slope import get_linear_lower_slope_relu
-from .layers.core import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
+from decomon.corners.slope import get_linear_lower_slope_relu
+from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
 
 
 # create static variables for varying convex domain

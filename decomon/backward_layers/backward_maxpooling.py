@@ -4,11 +4,10 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.backend import conv2d
 from tensorflow.keras.layers import Flatten, Layer, MaxPooling2D
 
+from decomon.backward_layers.utils import V_slope, backward_max_
+from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP
 from decomon.layers.maxpooling import DecomonMaxPool2d, DecomonMaxPooling2D
 from decomon.layers.utils import get_lower, get_upper
-
-from ..layers.core import F_FORWARD, F_HYBRID, F_IBP
-from .utils import V_slope, backward_max_
 
 
 class BackwardMaxPooling2D(Layer):

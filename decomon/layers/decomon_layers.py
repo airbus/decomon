@@ -19,7 +19,7 @@ from tensorflow.keras.layers import (
     Reshape,
 )
 
-from .core import DecomonLayer
+from decomon.layers.core import DecomonLayer
 
 try:
     from keras.layers.merge import _Merge as Merge
@@ -33,20 +33,8 @@ from tensorflow.python.keras.utils import conv_utils
 from tensorflow.python.keras.utils.generic_utils import to_list
 
 from decomon.layers import activations
-from decomon.layers.utils import (
-    ClipAlpha,
-    ClipAlphaAndSumtoOne,
-    MultipleConstraint,
-    NonPos,
-    Project_initializer_neg,
-    Project_initializer_pos,
-    get_lower,
-    get_upper,
-    sort,
-)
-
-from .core import DEEL_LIP, F_FORWARD, F_HYBRID, F_IBP, Ball
-from .decomon_merge_layers import (
+from decomon.layers.core import DEEL_LIP, F_FORWARD, F_HYBRID, F_IBP, Ball
+from decomon.layers.decomon_merge_layers import (
     DecomonAdd,
     DecomonAverage,
     DecomonConcatenate,
@@ -57,12 +45,23 @@ from .decomon_merge_layers import (
     DecomonSubtract,
     to_monotonic_merge,
 )
-from .decomon_reshape import DecomonPermute, DecomonReshape
-from .maxpooling import DecomonMaxPooling2D
-from .utils import grad_descent
+from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
+from decomon.layers.maxpooling import DecomonMaxPooling2D
+from decomon.layers.utils import (
+    ClipAlpha,
+    ClipAlphaAndSumtoOne,
+    MultipleConstraint,
+    NonPos,
+    Project_initializer_neg,
+    Project_initializer_pos,
+    get_lower,
+    get_upper,
+    grad_descent,
+    sort,
+)
 
 try:
-    from .deel_lip import DecomonGroupSort, DecomonGroupSort2
+    from decomon.layers.deel_lip import DecomonGroupSort, DecomonGroupSort2
 except ModuleNotFoundError:
     pass
 

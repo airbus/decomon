@@ -3,7 +3,7 @@ import warnings
 
 import tensorflow as tf
 
-from ..layers.core import Box, StaticVariables
+from decomon.layers.core import Box, StaticVariables
 
 
 # create static variables for varying convex domain

@@ -16,13 +16,12 @@ from tensorflow.keras.layers import Flatten, Input, InputLayer, Lambda, Layer
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
 
+from decomon.backward_layers.backward_layers import get_backward as get_backward_
+from decomon.backward_layers.backward_layers import join
+from decomon.backward_layers.utils import S_slope, V_slope, backward_linear_prod
+from decomon.layers.core import Box, StaticVariables
+from decomon.layers.decomon_layers import to_monotonic
 from decomon.layers.utils import get_lower, get_upper, softmax_to_linear
-
-from ..backward_layers.backward_layers import get_backward as get_backward_
-from ..backward_layers.backward_layers import join
-from ..backward_layers.utils import S_slope, V_slope, backward_linear_prod
-from ..layers.core import Box, StaticVariables
-from ..layers.decomon_layers import to_monotonic
 
 
 # create static variables for varying convex domain

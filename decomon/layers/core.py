@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from tensorflow.keras.layers import Layer
 
-from ..types import Optional
+from decomon.types import Optional
 
 #  the different forward (from input to output) linear based relaxation perturbation analysis
 

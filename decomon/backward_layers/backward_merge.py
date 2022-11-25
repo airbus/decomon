@@ -4,6 +4,18 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Dot, Flatten, Layer, Permute
 from tensorflow.python.keras.utils.generic_utils import to_list
 
+from decomon.backward_layers.activations import get
+from decomon.backward_layers.core import BackwardLayer
+from decomon.backward_layers.utils import (
+    V_slope,
+    backward_add,
+    backward_maximum,
+    backward_minimum,
+    backward_multiply,
+    backward_substract,
+    get_identity_lirpa,
+)
+from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP
 from decomon.layers.decomon_merge_layers import (
     DecomonAdd,
     DecomonAverage,
@@ -14,20 +26,7 @@ from decomon.layers.decomon_merge_layers import (
     DecomonMultiply,
     DecomonSubtract,
 )
-
-from ..backward_layers.activations import get
-from ..layers.core import F_FORWARD, F_HYBRID, F_IBP
-from ..layers.utils import broadcast, multiply, permute_dimensions, split
-from .core import BackwardLayer
-from .utils import (
-    V_slope,
-    backward_add,
-    backward_maximum,
-    backward_minimum,
-    backward_multiply,
-    backward_substract,
-    get_identity_lirpa,
-)
+from decomon.layers.utils import broadcast, multiply, permute_dimensions, split
 
 
 class BackwardMerge(BackwardLayer):

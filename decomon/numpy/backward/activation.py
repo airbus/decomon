@@ -4,9 +4,8 @@ import numpy as np
 import six
 from tensorflow.keras.layers import Layer
 
+from decomon.numpy.backward.utils import get_linear_hull_relu, merge_with_previous
 from decomon.utils import F_FORWARD, V_slope
-
-from .utils import get_linear_hull_relu, merge_with_previous
 
 ELU = "elu"
 SELU = "selu"
