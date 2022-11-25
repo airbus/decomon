@@ -1,7 +1,7 @@
 """
 CROWN implementation in numpy (useful for MILP compatibility)
 """
-from __future__ import absolute_import
+
 
 import numpy as np
 from tensorflow.keras.layers import Activation, Dense, InputLayer

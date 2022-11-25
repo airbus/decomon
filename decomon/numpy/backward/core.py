@@ -1,7 +1,7 @@
 """
 CROWN implementation in numpy (useful for MILP compatibility)
 """
-from __future__ import absolute_import
+
 
 from decomon.utils import F_FORWARD
 

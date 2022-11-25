@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 try:
     from deel.lip.activations import GroupSort, GroupSort2
 except:

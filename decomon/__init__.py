@@ -4,7 +4,7 @@ Decomon
 The goal of Decomon is to provide a simple interface to the latest explanation
 techniques for certified perturbation analysis
 """
-from __future__ import absolute_import
+
 
 import sys
 

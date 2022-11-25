@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import InputSpec, Permute, Reshape
 
