@@ -1,26 +1,3 @@
-import numpy as np
-import pytest
-import tensorflow.python.keras.backend as K
-from numpy.testing import assert_almost_equal
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.models import Sequential
-
-from decomon.models.decomon_sequential import (
-    clone,
-    clone_sequential_model,
-    convert,
-    get_backward,
-)
-
-from . import (
-    assert_output_properties_box_linear,
-    get_standard_values_multid_box,
-    get_standard_values_multid_box_convert,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_1d_box,
-    get_tensor_decomposition_multid_box,
-)
-
 """
 @pytest.mark.parametrize(
     "n, n_subgrad, slope",

@@ -2,7 +2,6 @@ import warnings
 
 import numpy as np
 import six
-import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Layer
 

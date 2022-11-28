@@ -4,16 +4,12 @@
 import numpy as np
 import pytest
 import tensorflow.python.keras.backend as K
-from tensorflow.keras.layers import Activation, Flatten, Input, Reshape
+from tensorflow.keras.layers import Input
 from tensorflow.keras.models import Model
 
 from decomon.backward_layers.backward_layers import get_backward
-from decomon.layers.decomon_layers import (
-    DecomonActivation,
-    DecomonFlatten,
-    DecomonPermute,
-    DecomonReshape,
-)
+from decomon.layers.decomon_layers import DecomonActivation, DecomonFlatten
+from decomon.layers.decomon_reshape import DecomonReshape
 
 from . import (
     assert_output_properties_box_linear,

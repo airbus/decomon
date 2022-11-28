@@ -1,21 +1,11 @@
 import logging
 
-import numpy as np
-import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.backend import conv2d, conv2d_transpose
-from tensorflow.keras.layers import Activation, Dot, Flatten, Layer, Permute
+from tensorflow.keras.layers import Layer
 
 from decomon.backward_layers.activations import get
-from decomon.backward_layers.utils import (
-    V_slope,
-    backward_sort,
-    get_FORWARD,
-    get_IBP,
-    get_identity_lirpa,
-    get_input_dim,
-)
-from decomon.layers.core import F_FORWARD, F_HYBRID
+from decomon.backward_layers.utils import V_slope, get_FORWARD, get_IBP, get_input_dim
+from decomon.layers.core import F_HYBRID
 from decomon.layers.decomon_layers import to_monotonic
 
 logger = logging.getLogger(__name__)

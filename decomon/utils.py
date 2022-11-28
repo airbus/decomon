@@ -1,10 +1,9 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Flatten, Lambda
+from tensorflow.keras.layers import Lambda
 from tensorflow.math import greater_equal
 from tensorflow.python.keras import backend as K
 
-from decomon.corners.slope import get_linear_lower_slope_relu
 from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
 
 

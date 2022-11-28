@@ -1,41 +1,6 @@
 # Test unit for decomon with Dense layers
 
 
-import numpy as np
-import pytest
-import tensorflow.python.keras.backend as K
-from tensorflow.keras.layers import Input
-
-from decomon.backward_layers.backward_merge import (
-    BackwardAdd,
-    BackwardAverage,
-    BackwardDot,
-    BackwardMaximum,
-    BackwardMinimum,
-    BackwardMultiply,
-    BackwardSubtract,
-)
-from decomon.layers.decomon_layers import to_monotonic
-from decomon.layers.decomon_merge_layers import (
-    DecomonAdd,
-    DecomonAverage,
-    DecomonConcatenate,
-    DecomonDot,
-    DecomonMaximum,
-    DecomonMinimum,
-    DecomonMultiply,
-    DecomonSubtract,
-)
-
-from . import (
-    assert_output_properties_box,
-    assert_output_properties_box_linear,
-    get_standard_values_multid_box,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_1d_box,
-    get_tensor_decomposition_multid_box,
-)
-
 """
 @pytest.mark.parametrize("n_0, n_1", [(0, 3), (1, 4), (2, 5)])
 def test_BackwardAdd_1D_box(n_0, n_1):

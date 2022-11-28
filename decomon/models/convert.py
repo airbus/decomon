@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow.python.keras.backend as K
-from tensorflow.keras.layers import Flatten, Input, InputLayer, Lambda, Layer
+from tensorflow.keras.layers import Input, InputLayer, Lambda
 from tensorflow.keras.models import Model
 
 from decomon.layers.decomon_layers import to_monotonic

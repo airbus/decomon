@@ -1,10 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Dot, Flatten, Layer, Permute
-from tensorflow.python.keras.utils.generic_utils import to_list
 
-from decomon.backward_layers.activations import get
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import (
     V_slope,
@@ -15,10 +12,9 @@ from decomon.backward_layers.utils import (
     backward_substract,
     get_identity_lirpa,
 )
-from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP
+from decomon.layers.core import F_FORWARD, F_HYBRID
 from decomon.layers.decomon_merge_layers import (
     DecomonAdd,
-    DecomonAverage,
     DecomonConcatenate,
     DecomonDot,
     DecomonMaximum,

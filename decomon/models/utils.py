@@ -1,5 +1,4 @@
 import inspect
-import warnings
 from copy import deepcopy
 
 import numpy as np
@@ -9,16 +8,13 @@ from tensorflow.keras.layers import (
     Concatenate,
     Flatten,
     Input,
-    InputLayer,
     Lambda,
     Maximum,
     Minimum,
 )
-from tensorflow.keras.models import Model, Sequential
-from tensorflow.python.keras.utils.generic_utils import to_list
+from tensorflow.keras.models import Model
 
 from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, Box
-from decomon.layers.decomon_layers import to_monotonic
 from decomon.utils import get_lower, get_lower_layer, get_upper, get_upper_layer
 
 

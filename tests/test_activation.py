@@ -1,27 +1,15 @@
 # Test unit for decomon with Dense layers
 
 
-import numpy as np
 import pytest
 import tensorflow.python.keras.backend as K
-from numpy.testing import assert_allclose, assert_almost_equal
 
-from decomon.layers.activations import (
-    exponential,
-    sigmoid,
-    softmax,
-    softplus,
-    softsign,
-    tanh,
-)
+from decomon.layers.activations import sigmoid, softmax, softsign, tanh
 
 from . import (
     assert_output_properties_box,
-    assert_output_properties_box_nodc,
-    get_standard_values_multid_box,
     get_standart_values_1d_box,
     get_tensor_decomposition_1d_box,
-    get_tensor_decomposition_multid_box,
 )
 
 

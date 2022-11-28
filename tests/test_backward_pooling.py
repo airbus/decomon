@@ -1,22 +1,6 @@
 # Test unit for decomon with Dense layers
 
 
-import numpy as np
-import pytest
-import tensorflow.python.keras.backend as K
-from tensorflow.keras.layers import Input
-
-from decomon.backward_layers.backward_layers import get_backward
-from decomon.layers.decomon_layers import to_monotonic
-from decomon.layers.maxpooling import DecomonMaxPooling2D
-
-from . import (
-    assert_output_properties_box,
-    assert_output_properties_box_linear,
-    get_standard_values_images_box,
-    get_tensor_decomposition_images_box,
-)
-
 """
 @pytest.mark.parametrize(
     "data_format, odd, m_0, m_1, fast", [("channels_last", 0, 0, 1, True), ("channels_last", 0, 0, 1, False)]

@@ -1,5 +1,4 @@
 from tensorflow.keras.layers import InputLayer, Lambda
-from tensorflow.python.keras.utils.generic_utils import to_list
 
 
 def get_graph_complexity(model):

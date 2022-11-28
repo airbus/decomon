@@ -8,28 +8,20 @@ from tensorflow.keras.layers import (
     Activation,
     Add,
     Average,
-    Concatenate,
     Conv2D,
     Dense,
     Flatten,
     Input,
-    InputLayer,
-    Maximum,
 )
 from tensorflow.keras.models import Model, Sequential
 
-from decomon.backward_layers.backward_layers import get_backward
-from decomon.layers.decomon_layers import DecomonAdd, DecomonDense, to_monotonic
 from decomon.models.forward_cloning import convert_forward
 
 from . import (
     assert_output_properties_box,
-    assert_output_properties_box_linear,
-    get_standard_values_images_box,
     get_standard_values_multid_box,
     get_standart_values_1d_box,
     get_tensor_decomposition_1d_box,
-    get_tensor_decomposition_images_box,
     get_tensor_decomposition_multid_box,
 )
 

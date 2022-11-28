@@ -1,12 +1,10 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.backend import conv2d
-from tensorflow.keras.layers import Flatten, Layer, MaxPooling2D
+from tensorflow.keras.layers import Flatten, Layer
 
 from decomon.backward_layers.utils import backward_max_
 from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP
-from decomon.layers.maxpooling import DecomonMaxPool2d, DecomonMaxPooling2D
 from decomon.utils import V_slope, get_lower, get_upper
 
 

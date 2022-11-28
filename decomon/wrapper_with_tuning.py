@@ -1,10 +1,7 @@
 import numpy as np
 from tensorflow.keras.optimizers import Adam
 
-from decomon.layers.core import Ball, Box
 from decomon.metrics.loss import get_upper_loss
-from decomon.models.convert import clone as convert
-from decomon.models.models import DecomonModel
 from decomon.wrapper import get_lower_box, get_upper_box, refine_boxes
 
 

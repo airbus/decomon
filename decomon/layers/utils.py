@@ -3,20 +3,9 @@ import tensorflow as tf
 import tensorflow.keras as keras
 from tensorflow.keras.constraints import Constraint
 from tensorflow.keras.initializers import Initializer
-from tensorflow.keras.layers import Flatten
-from tensorflow.math import greater_equal
 from tensorflow.python.keras import backend as K
 
-from decomon.layers.core import (
-    F_FORWARD,
-    F_HYBRID,
-    F_IBP,
-    Ball,
-    Box,
-    Grid,
-    StaticVariables,
-    Vertex,
-)
+from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, Ball, Box, StaticVariables
 from decomon.utils import (
     V_slope,
     add,

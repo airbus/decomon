@@ -124,7 +124,6 @@ class DecomonLayer(ABC, Layer):
         :param input_shape:
         :return:
         """
-        pass
 
     @abstractmethod
     def call(self, inputs, **kwargs):
@@ -133,7 +132,6 @@ class DecomonLayer(ABC, Layer):
         :param inputs:
         :return:
         """
-        pass
 
     def set_linear(self, bool_init):
         self.linear_layer = bool_init
@@ -148,7 +146,6 @@ class DecomonLayer(ABC, Layer):
         :param input_shape:
         :return:
         """
-        pass
 
     def reset_layer(self, layer):
         """
@@ -156,7 +153,6 @@ class DecomonLayer(ABC, Layer):
         :param layer:
         :return:
         """
-        pass
 
     def join(self, bounds):
         """

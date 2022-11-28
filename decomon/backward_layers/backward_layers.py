@@ -1,24 +1,21 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.backend import conv2d, conv2d_transpose
-from tensorflow.keras.layers import Activation, Flatten, Layer, Permute
+from tensorflow.keras.backend import conv2d_transpose
+from tensorflow.keras.layers import Flatten
 from tensorflow.python.ops import array_ops
 
 from decomon.backward_layers.activations import get
-from decomon.backward_layers.backward_maxpooling import BackwardMaxPooling2D
-from decomon.backward_layers.backward_merge import BackwardAdd, BackwardAverage
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import (
     V_slope,
-    backward_sort,
     get_FORWARD,
     get_IBP,
     get_identity_lirpa,
     get_input_dim,
 )
 from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, Grid, Option
-from decomon.layers.decomon_layers import (
+from decomon.layers.decomon_layers import (  # add some layers to module namespace `globals()`
     DecomonActivation,
     DecomonBatchNormalization,
     DecomonConv2D,
@@ -29,7 +26,7 @@ from decomon.layers.decomon_layers import (
     DecomonReshape,
     to_monotonic,
 )
-from decomon.layers.utils import ClipAlpha, ClipAlphaGrid, NonNeg, NonPos
+from decomon.layers.utils import ClipAlpha, NonNeg, NonPos
 
 
 class BackwardDense(BackwardLayer):

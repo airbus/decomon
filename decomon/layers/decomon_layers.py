@@ -1,7 +1,6 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras import initializers
 from tensorflow.keras.backend import bias_add, conv2d
 from tensorflow.keras.constraints import NonNeg
 from tensorflow.keras.layers import (
@@ -16,25 +15,13 @@ from tensorflow.keras.layers import (
     InputLayer,
     InputSpec,
     Lambda,
-    Reshape,
 )
-
-from decomon.layers.core import DecomonLayer
-
-try:
-    from keras.layers.merge import _Merge as Merge
-except ModuleNotFoundError:
-    from tensorflow.python.keras.layers.merge import _Merge as Merge
-
-import inspect
-import warnings
-
 from tensorflow.python.keras.utils import conv_utils
 from tensorflow.python.keras.utils.generic_utils import to_list
 
 from decomon.layers import activations
-from decomon.layers.core import DEEL_LIP, F_FORWARD, F_HYBRID, F_IBP, Ball
-from decomon.layers.decomon_merge_layers import (
+from decomon.layers.core import DEEL_LIP, F_FORWARD, F_HYBRID, F_IBP, Ball, DecomonLayer
+from decomon.layers.decomon_merge_layers import (  # add some layers to module namespace `globals()`
     DecomonAdd,
     DecomonAverage,
     DecomonConcatenate,
@@ -45,22 +32,28 @@ from decomon.layers.decomon_merge_layers import (
     DecomonSubtract,
     to_monotonic_merge,
 )
-from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
-from decomon.layers.maxpooling import DecomonMaxPooling2D
+from decomon.layers.decomon_reshape import (  # add some layers to module namespace `globals()`
+    DecomonPermute,
+    DecomonReshape,
+)
 from decomon.layers.utils import (
     ClipAlpha,
     ClipAlphaAndSumtoOne,
-    MultipleConstraint,
     NonPos,
-    Project_initializer_neg,
     Project_initializer_pos,
-    grad_descent,
-    sort,
 )
 from decomon.utils import get_lower, get_upper
 
 try:
+    from keras.layers.merge import _Merge as Merge
+except ModuleNotFoundError:
+    from tensorflow.python.keras.layers.merge import _Merge as Merge
+
+try:
+    # add deel-lip layers to global namespace, if available
     from decomon.layers.deel_lip import DecomonGroupSort, DecomonGroupSort2
+
+    pass
 except ModuleNotFoundError:
     pass
 
