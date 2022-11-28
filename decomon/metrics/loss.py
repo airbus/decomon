@@ -1,11 +1,10 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Flatten, Input, InputLayer, Lambda, Layer
+from tensorflow.keras.layers import Lambda
 
 from decomon.layers.activations import softmax as softmax_
 from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
-from decomon.metrics.utils import categorical_cross_entropy
 from decomon.models import DecomonModel
 from decomon.models.utils import get_mode
 from decomon.utils import get_lower, get_upper, set_mode

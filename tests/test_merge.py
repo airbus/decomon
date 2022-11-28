@@ -4,13 +4,10 @@
 import numpy as np
 import pytest
 import tensorflow.python.keras.backend as K
-from numpy.testing import assert_almost_equal
 from tensorflow.keras.layers import (
     Add,
     Average,
     Concatenate,
-    Dot,
-    Input,
     Maximum,
     Minimum,
     Multiply,
@@ -23,7 +20,6 @@ from decomon.layers.decomon_merge_layers import (
     DecomonAdd,
     DecomonAverage,
     DecomonConcatenate,
-    DecomonDot,
     DecomonMaximum,
     DecomonMinimum,
     DecomonMultiply,

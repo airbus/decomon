@@ -1,31 +1,17 @@
 # creating toy network and assess that the decomposition is correct
 
 
-import numpy as np
 import pytest
 import tensorflow.python.keras.backend as K
-from tensorflow.keras.layers import Add, Average, Dense, Input, Maximum
-from tensorflow.keras.models import Model, Sequential
 
-from decomon.backward_layers.backward_layers import get_backward
-from decomon.layers.decomon_layers import DecomonAdd, DecomonDense, to_monotonic
 from decomon.models import clone
 
 from . import (
     assert_output_properties_box,
-    assert_output_properties_box_linear,
-    get_standard_values_multid_box,
     get_standart_values_1d_box,
     get_tensor_decomposition_1d_box,
-    get_tensor_decomposition_multid_box,
 )
-from .test_clone_forward import (
-    dense_NN_1D,
-    toy_network_tutorial,
-    toy_struct_v0_1D,
-    toy_struct_v1_1D,
-    toy_struct_v2_1D,
-)
+from .test_clone_forward import toy_network_tutorial
 
 """
 @pytest.mark.parametrize("n, archi, activation, sequential, use_bias, mode, method, use_input, floatx", [

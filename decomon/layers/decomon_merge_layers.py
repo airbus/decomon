@@ -1,5 +1,3 @@
-import numpy as np
-import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import (
     Add,
@@ -8,15 +6,12 @@ from tensorflow.keras.layers import (
     Dot,
     Input,
     Lambda,
-    Maximum,
-    Minimum,
     Multiply,
-    Subtract,
 )
 
 from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
 from decomon.layers.utils import broadcast, multiply, permute_dimensions
-from decomon.utils import add, maximum, minus, substract
+from decomon.utils import maximum, minus, substract
 
 ##### Merge Layer ####
 

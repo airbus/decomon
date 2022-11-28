@@ -1,51 +1,9 @@
 import logging
 
-import numpy as np
-import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.keras.backend import bias_add, conv2d
-from tensorflow.keras.constraints import NonNeg
-from tensorflow.keras.layers import (
-    Activation,
-    BatchNormalization,
-    Conv2D,
-    Dense,
-    Dot,
-    Dropout,
-    Flatten,
-    Input,
-    InputSpec,
-    Lambda,
-    Reshape,
-)
-from tensorflow.python.keras.layers.merge import _Merge as Merge
-from tensorflow.python.keras.utils import conv_utils
-
-from decomon.layers import activations
-from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
-from decomon.layers.decomon_merge_layers import (
-    DecomonAdd,
-    DecomonAverage,
-    DecomonConcatenate,
-    DecomonMaximum,
-    DecomonMinimum,
-    DecomonSubtract,
-    to_monotonic_merge,
-)
+from decomon.layers.core import F_FORWARD, F_HYBRID, DecomonLayer
+from decomon.layers.decomon_merge_layers import DecomonConcatenate
 from decomon.layers.decomon_reshape import DecomonReshape
-from decomon.layers.maxpooling import DecomonMaxPooling2D
-from decomon.layers.utils import (
-    ClipAlpha,
-    MultipleConstraint,
-    NonPos,
-    Project_initializer_neg,
-    Project_initializer_pos,
-    expand_dims,
-    grad_descent,
-    max_,
-    min_,
-    sort,
-)
+from decomon.layers.utils import ClipAlpha, expand_dims, max_, min_, sort
 
 logger = logging.getLogger(__name__)
 

@@ -2,9 +2,8 @@ import logging
 
 import numpy as np
 
-from decomon.layers.core import Ball, Box
-from decomon.models import DecomonModel, clone, convert
-from decomon.models.decomon_sequential import Backward, Forward
+from decomon.layers.core import Box
+from decomon.models import DecomonModel, clone
 
 logger = logging.getLogger(__name__)
 

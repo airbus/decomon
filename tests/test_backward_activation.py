@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 import tensorflow.python.keras.backend as K
-from numpy.testing import assert_allclose, assert_almost_equal
 from tensorflow.keras.layers import Input
 
 from decomon.backward_layers.activations import backward_relu, backward_softsign
@@ -10,10 +9,8 @@ from decomon.utils import relu_
 
 from . import (
     assert_output_properties_box_linear,
-    get_standard_values_multid_box,
     get_standart_values_1d_box,
     get_tensor_decomposition_1d_box,
-    get_tensor_decomposition_multid_box,
 )
 
 

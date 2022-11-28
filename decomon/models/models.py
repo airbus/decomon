@@ -1,6 +1,3 @@
-import inspect
-import warnings
-
 import tensorflow as tf
 
 from decomon.layers.core import Box, StaticVariables

@@ -5,38 +5,18 @@ It inherits from keras Sequential class.
 """
 
 
-import inspect
-import warnings
-from copy import deepcopy
-
 import numpy as np
-import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Flatten, Input, InputLayer, Lambda, Layer
-from tensorflow.keras.models import Model, Sequential
-from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
+from tensorflow.keras.models import Model
+from tensorflow.python.keras.utils.generic_utils import to_list
 
-from decomon.backward_layers.backward_layers import get_backward as get_backward_
-from decomon.backward_layers.backward_layers import join
-from decomon.backward_layers.utils import S_slope, V_slope, backward_linear_prod
-from decomon.layers.core import Box, StaticVariables
 from decomon.layers.decomon_layers import to_monotonic
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
-from decomon.models.models import Backward, DecomonModel, DecomonSequential, Forward
 from decomon.models.utils import (
-    check_input_tensors_functionnal,
     check_input_tensors_sequential,
     get_depth_dict,
     get_inner_layers,
-    get_inputs,
-    get_mode,
-    get_node_by_id,
-    get_original_layer_name,
     include_dim_layer_fn,
-    pre_process_inputs,
-    set_name,
 )
-from decomon.utils import M_BACKWARD, M_FORWARD, M_REC_BACKWARD
 
 
 def convert_forward(

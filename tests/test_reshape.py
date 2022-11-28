@@ -8,7 +8,6 @@ from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
 
 from . import (
     assert_output_properties_box,
-    assert_output_properties_box_linear,
     get_standard_values_images_box,
     get_tensor_decomposition_images_box,
 )

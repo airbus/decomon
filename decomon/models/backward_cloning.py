@@ -1,14 +1,11 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Add, Average
-from tensorflow.keras.layers import Conv2D as Conv
-from tensorflow.keras.layers import Dense, Dropout, Lambda, Permute, Reshape
+from tensorflow.keras.layers import Lambda
 from tensorflow.keras.models import Model
-from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
+from tensorflow.python.keras.utils.generic_utils import to_list
 
 from decomon.backward_layers.backward_layers import get_backward as get_backward_
-from decomon.backward_layers.backward_merge import BackwardMerge
 from decomon.backward_layers.utils import merge_with_previous
 from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear

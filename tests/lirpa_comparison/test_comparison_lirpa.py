@@ -1,12 +1,7 @@
 # Goal: compute bounds with lirpa and decomon and assess that they are the same (up to numerical precision)
-import os
 
 import numpy as np
 import onnx
-import onnx2keras
-import tensorflow.keras as keras
-import torch
-import torch.nn as nn
 import torchvision
 from auto_LiRPA import BoundedModule, BoundedTensor
 from auto_LiRPA.perturbations import PerturbationLpNorm
@@ -14,7 +9,6 @@ from numpy.testing import assert_almost_equal
 from onnx2keras import onnx_to_keras
 from onnx2torch import convert
 
-from decomon import get_lower_box, get_upper_box
 from decomon.models.convert import clone as convert
 
 

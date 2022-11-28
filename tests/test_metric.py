@@ -1,18 +1,14 @@
 # Test unit for decomon with Dense layers
 
 
-import numpy as np
 import pytest
 import tensorflow.python.keras.backend as K
-from numpy.testing import assert_allclose, assert_almost_equal
 
 from decomon.metrics.utils import categorical_cross_entropy
 
 from . import (
     assert_output_properties_box,
     get_standard_values_multid_box,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_1d_box,
     get_tensor_decomposition_multid_box,
 )
 

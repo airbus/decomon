@@ -1,17 +1,13 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Dropout, Flatten, Lambda
+from tensorflow.keras.layers import Flatten
 from tensorflow.python.keras import backend as K
 
 from decomon.layers import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
-from decomon.layers.core import Grid, Option
-from decomon.layers.utils import multiply, sort, split
+from decomon.layers.core import Grid
+from decomon.layers.utils import sort
 from decomon.utils import (
-    O_slope,
-    S_slope,
     V_slope,
-    Z_slope,
-    add,
     get_linear_hull_relu,
     get_lower,
     get_lower_box,

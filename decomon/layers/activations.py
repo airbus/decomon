@@ -2,7 +2,6 @@ import warnings
 
 import numpy as np
 import six
-import tensorflow as tf
 import tensorflow.keras.backend as K
 
 from decomon.layers.core import (
@@ -19,7 +18,6 @@ from decomon.utils import (
     get_upper,
     minus,
     relu_,
-    relu_prime,
     sigmoid_prime,
     softsign_prime,
     tanh_prime,
