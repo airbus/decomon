@@ -14,7 +14,16 @@ project = "DecoMon"
 copyright = "2022, Airbus"
 author = "Airbus"
 
+DEV_VERSION_PATTERN = "dev"
+GIT_SYMREF_CMD = ["git", "symbolic-ref", "--short", "HEAD"]
+
 version = decomon.__version__
+if DEV_VERSION_PATTERN in version:
+    # not a release but rather dev doc => we try to use the current branch name instead of version 0.0.0
+    try:
+        version = check_output(GIT_SYMREF_CMD, stderr=DEVNULL, encoding="utf-8").strip()
+    except CalledProcessError:
+        pass
 release = version
 
 master_doc = "index"
@@ -71,4 +80,11 @@ html_static_path = ["_static"]
 html_show_sourcelink = False
 html_theme_options = {
     "style_external_links": True,
+}
+
+html_js_files = ["versions.js"]
+AUTODOC_SHOW_VERSIONS = os.environ.get("AUTODOC_SHOW_VERSIONS", "True").lower() != "false"
+html_context = {
+    "AUTODOC_SHOW_VERSIONS": AUTODOC_SHOW_VERSIONS,
+    "current_version": version,
 }
