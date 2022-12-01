@@ -54,8 +54,10 @@ from .decomon_merge_layers import (
     DecomonAdd,
     DecomonAverage,
     DecomonConcatenate,
+    DecomonDot,
     DecomonMaximum,
     DecomonMinimum,
+    DecomonMultiply,
     DecomonSubtract,
     to_monotonic_merge,
 )
