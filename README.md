@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="docs/assets/banner.jpg" width="55%" alt="Decomon" align="center" />
+    <img src="docs/source/_static/banner.jpg" width="55%" alt="Decomon" align="center" />
 </div>
 <br>
 
