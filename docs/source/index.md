@@ -1,5 +1,9 @@
 # DecoMon: Automatic Certified Perturbation Analysis of Neural Networks
 
+<div align="center">
+    <img src="_static/banner.jpg" width="55%" alt="Decomon" align="center" />
+</div>
+
 `DecoMon` is a library that allows the derivation of upper and lower bounds
 for the predictions of a Tensorflow/Keras neural network with perturbed inputs.
 In the current release, these bounds are represented as affine functions with respect to some variable under perturbation.
