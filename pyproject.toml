@@ -5,6 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "decomon"
 description = "Linear Relaxation for Certified Robustness Bound for Tensorflow Neural Networks"
+readme = "README.md"
 authors = [
     {name = "melanie.ducoffe", email ="melanie.ducoffe@gmail.com"},
 ]
@@ -15,6 +16,10 @@ dependencies =[
     "matplotlib",
 ]
 dynamic = ["version"]
+
+[project.urls]
+documentation = "https://airbus.github.io/decomon"
+repository = "https://github.com/airbus/decomon"
 
 [project.optional-dependencies]
 dev = ["pytest>=6.2.2", "black", "tox>=3.20.1"]
