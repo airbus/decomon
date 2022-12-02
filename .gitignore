@@ -19,6 +19,7 @@ dist/
 docs/build
 docs/source/api/*
 !docs/source/api/modules.md
+docs/source/tutorials.md
 
 # coverage
 .coverage
