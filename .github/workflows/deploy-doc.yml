@@ -1,0 +1,69 @@
+name: Deploy doc
+
+on:
+  workflow_call:
+    inputs:
+      doc-version:
+        description: "Name of the doc version. The doc will be deployed to a subfolder with that name."
+        required: true
+        type: string
+      doc-artifact-name:
+        description: "Name of the artifact containing the built doc"
+        required: false
+        default: "doc"
+        type: string
+      doc-path:
+        description: "Path where to extract the built doc"
+        required: false
+        default: "docs/build/html"
+        type: string
+jobs:
+  deploy-doc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.doc-artifact-name }}
+          path: ${{ inputs.doc-path }}
+      - name: Deploy documentation in a version subfolder on GH pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages # The branch the action should deploy to.
+          folder: ${{ inputs.doc-path }} # The folder the action should deploy.
+          target-folder: /${{ inputs.doc-version }} # The folder the action should deploy to.
+          commit-message: publish documentation for ${{ inputs.doc-version }}
+
+  update-doc-versions:
+    # update doc versions index if the doc has been deployed
+    needs: [deploy-doc]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: gh-pages
+      - uses: actions/setup-python@v4
+      - name: Generate versions.json
+        shell: python3 {0}
+        run: |
+          import json
+          from pathlib import Path
+
+          cwd = Path.cwd()
+          versions = sorted((item.name for item in cwd.iterdir()
+                             if item.is_dir() and not item.name.startswith('.')),
+                            reverse=True)
+          target_dir = Path('gh-pages')
+          target_dir.mkdir(parents=True)
+          target_file = target_dir / 'versions.json'
+          with target_file.open('w') as f:
+              json.dump(versions, f)
+      - name: Commit versions.json
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages # The branch the action should deploy to.
+          folder: gh-pages # The folder the action should deploy.
+          target-folder: / # The folder the action should deploy to.
+          commit-message: update versions.json
+          clean: false  # do not remove other files (including whole doc versions)
