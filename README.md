@@ -1,14 +1,11 @@
 <div align="center">
-    <img src="docs/source/_static/banner.jpg" width="55%" alt="Decomon" align="center" />
+    <img src="https://raw.githubusercontent.com/airbus/decomon/main/docs/source/_static/banner.jpg" width="55%" alt="Decomon" align="center" />
 </div>
 <br>
 
 <div align="center">
     <a href="#">
         <img src="https://img.shields.io/badge/Python-%E2%89%A53.7-efefef">
-    </a>
-    <a href="https://github.com/airbus/decomon/actions/workflows/python-lints.yml">
-        <img alt="PyLint" src="https://github.com/airbus/decomon/actions/workflows/python-lints.yml/badge.svg">
     </a>
     <a href="https://github.com/airbus/decomon/actions/workflows/python-tests.yml">
         <img alt="Tox" src="https://github.com/airbus/decomon/actions/workflows/python-tests.yml/badge.svg">
