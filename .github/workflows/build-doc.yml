@@ -1,0 +1,93 @@
+name: Build doc
+
+on:
+  workflow_call:
+    inputs:
+      doc-artifact-name:
+        description: "Name of the artifact containing the built doc"
+        required: false
+        default: "doc"
+        type: string
+      doc-path:
+        description: "Path where to extract the built doc"
+        required: false
+        default: "docs/build/html"
+        type: string
+    outputs:
+      doc-version:
+        description: "Version name of the generated doc. Correspond to the verrsion name used by Sphinx."
+        value: ${{ jobs.build-doc.outputs.doc_version }}
+
+jobs:
+  build-doc:
+    outputs:
+      doc_version: ${{ steps.sphinx-build.outputs.doc_version }}
+    runs-on: ubuntu-latest
+    env:
+      python-version: "3.9"
+    steps:
+      - name: Set env variables for github links in doc
+        run: |
+          # notebooks source repo and branch depending if it is a commit push or a PR
+          if [[ $GITHUB_REF == refs/pull* ]];
+          then
+              AUTODOC_NOTEBOOKS_REPO_URL="${GITHUB_SERVER_URL}/${{ github.event.pull_request.head.repo.full_name }}"
+              AUTODOC_NOTEBOOKS_BRANCH=${GITHUB_HEAD_REF}
+          elif [[ $GITHUB_REF == refs/heads* ]];
+          then
+              AUTODOC_NOTEBOOKS_REPO_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}
+              AUTODOC_NOTEBOOKS_BRANCH=${GITHUB_REF/refs\/heads\//}
+          elif [[ $GITHUB_REF == refs/tags* ]];
+          then
+              AUTODOC_NOTEBOOKS_REPO_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}
+              AUTODOC_NOTEBOOKS_BRANCH=${GITHUB_REF/refs\/tags\//}
+          fi
+          # export in GITHUB_ENV for next steps
+          echo "AUTODOC_NOTEBOOKS_REPO_URL=${AUTODOC_NOTEBOOKS_REPO_URL}" >> $GITHUB_ENV
+          echo "AUTODOC_NOTEBOOKS_BRANCH=${AUTODOC_NOTEBOOKS_BRANCH}" >> $GITHUB_ENV
+          # check computed variables
+          echo "Notebooks source: ${AUTODOC_NOTEBOOKS_REPO_URL}/tree/${AUTODOC_NOTEBOOKS_BRANCH}"
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.python-version }}
+          cache: "pip"
+          cache-dependency-path: |
+            pyproject.toml
+            docs/requirements.txt
+      - name: Install doc dependencies
+        run: |
+          python -m pip install -U pip setuptools
+          pip install .
+          pip install -r docs/requirements.txt
+      - name: generate documentation
+        id: sphinx-build
+        run: |
+          # move to documentation directory
+          cd docs
+          # generate api doc source files
+          sphinx-apidoc -o source/api -f -T ../src/decomon
+          # generate available notebooks list
+          python generate_nb_index.py
+          # build doc html pages
+          sphinx-build -M html source build
+          # specify it is a nojekyll site
+          touch build/html/.nojekyll
+          # store version name found by sphinx
+          doc_version=$(python -c '
+          import os
+          import sphinx.config
+
+          config = sphinx.config.Config.read(os.path.abspath("source"))
+          config.init_values()
+          print(config.version)
+          ')
+          echo doc_version=${doc_version} >> $GITHUB_OUTPUT
+      - name: upload as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.doc-artifact-name }}
+          path: ${{ inputs.doc-path }}
