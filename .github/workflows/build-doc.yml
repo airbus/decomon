@@ -13,6 +13,20 @@ on:
         required: false
         default: "docs/build/html"
         type: string
+      notebooks-repo-url:
+        description: |
+          Url of the repository containing the notebooks, used to generate github and colab links.
+          By default, the current repository url.
+        required: false
+        default: ""
+        type: string
+      notebooks-branch:
+        description: |
+          Branch containing the notebooks, used to generate github and colab links.
+          By default, the current branch.
+        required: false
+        default: ""
+        type: string
     outputs:
       doc-version:
         description: "Version name of the generated doc. Correspond to the verrsion name used by Sphinx."
@@ -28,19 +42,34 @@ jobs:
     steps:
       - name: Set env variables for github links in doc
         run: |
-          # notebooks source repo and branch depending if it is a commit push or a PR
+          # notebooks source repo and branch. First try to use workflow inputs
+          AUTODOC_NOTEBOOKS_REPO_URL=${{ inputs.notebooks-repo-url }}
+          AUTODOC_NOTEBOOKS_BRANCH=${{ inputs.notebooks-branch }}
+          # use github context if not defined in inputs
           if [[ $GITHUB_REF == refs/pull* ]];
           then
-              AUTODOC_NOTEBOOKS_REPO_URL="${GITHUB_SERVER_URL}/${{ github.event.pull_request.head.repo.full_name }}"
-              AUTODOC_NOTEBOOKS_BRANCH=${GITHUB_HEAD_REF}
+              if [ -z "${AUTODOC_NOTEBOOKS_REPO_URL}" ]; then
+                AUTODOC_NOTEBOOKS_REPO_URL="${GITHUB_SERVER_URL}/${{ github.event.pull_request.head.repo.full_name }}"
+              fi
+              if [ -z "${AUTODOC_NOTEBOOKS_BRANCH}" ]; then
+                AUTODOC_NOTEBOOKS_BRANCH=${GITHUB_HEAD_REF}
+              fi
           elif [[ $GITHUB_REF == refs/heads* ]];
           then
-              AUTODOC_NOTEBOOKS_REPO_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}
-              AUTODOC_NOTEBOOKS_BRANCH=${GITHUB_REF/refs\/heads\//}
+              if [ -z "${AUTODOC_NOTEBOOKS_REPO_URL}" ]; then
+                AUTODOC_NOTEBOOKS_REPO_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}
+              fi
+              if [ -z "${AUTODOC_NOTEBOOKS_BRANCH}" ]; then
+                AUTODOC_NOTEBOOKS_BRANCH=${GITHUB_REF/refs\/heads\//}
+              fi
           elif [[ $GITHUB_REF == refs/tags* ]];
           then
-              AUTODOC_NOTEBOOKS_REPO_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}
-              AUTODOC_NOTEBOOKS_BRANCH=${GITHUB_REF/refs\/tags\//}
+              if [ -z "${AUTODOC_NOTEBOOKS_REPO_URL}" ]; then
+                AUTODOC_NOTEBOOKS_REPO_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}
+              fi
+              if [ -z "${AUTODOC_NOTEBOOKS_BRANCH}" ]; then
+                AUTODOC_NOTEBOOKS_BRANCH=${GITHUB_REF/refs\/tags\//}
+              fi
           fi
           # export in GITHUB_ENV for next steps
           echo "AUTODOC_NOTEBOOKS_REPO_URL=${AUTODOC_NOTEBOOKS_REPO_URL}" >> $GITHUB_ENV
