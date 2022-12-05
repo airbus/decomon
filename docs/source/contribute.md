@@ -228,6 +228,7 @@ If you prefer run pre-commit manually, you can remove the hooks with `pre-commit
 
 We try to give some introductory examples via notebooks available in the corresponding `tutorials/` directory.
 
+#### Title and description extraction
 The list of these notebooks is automatically inserted in the documentation with a title and a description.
 These are actually extracted from the first cell. To enable that, each notebook should
 
@@ -236,7 +237,6 @@ These are actually extracted from the first cell. To enable that, each notebook 
 - the remaining lines being used as the description.
 
 For instance:
-
 ```markdown
 # Great notebook title
 
@@ -246,6 +246,23 @@ Can be on several lines.
 Can include a nice thumbnail.
 ![Notebook_thumbnail](https://upload.wikimedia.org/wikipedia/commons/2/27/MnistExamples.png)
 ```
+
+#### Colab specificities
+In order to make it work on colab, you should also adding a cell that, after testing that the notebook is run on colab,
+install decomon and other necessary dependencies:
+```python
+# On Colab: install the library
+on_colab = "google.colab" in str(get_ipython())
+if on_colab:
+    import sys  # noqa: avoid having this import removed by pycln
+
+    # install dev version for dev doc, or release version for release doc
+    !{sys.executable} -m pip install -U pip
+    !{sys.executable} -m pip install git+https://github.com/airbus/decomon@main#egg=decomon
+```
+When deployed in the release doc, the pip spec for decomon will be automatically updated to "decomon==x.y.z",
+"x.y.z" being the appropriate version.
+
 
 ### Adding unit tests
 
