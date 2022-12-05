@@ -8,6 +8,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    outputs:
+      package_version: ${{ steps.get_package_version.outputs.version }}
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
@@ -20,6 +22,13 @@ jobs:
     - name: Build package
       run: |
         python -m build
+    - name: get package version and save it
+      id: get_package_version
+      run: |
+        wheelfile=$(ls ./dist/decomon*.whl)
+        version=$(python -c "print('$wheelfile'.split('-')[1])")
+        echo "version=$version"
+        echo "version=$version" >> $GITHUB_OUTPUT
     - name: Upload as build artifacts
       uses: actions/upload-artifact@v3
       with:
@@ -41,8 +50,42 @@ jobs:
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
 
+  update-tutorials-for-colab:
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    outputs:
+      tuto-tag-name: ${{ steps.push-tuto-release-tag.outputs.new_tag_name }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: replace decomon version to install in notebooks
+        run: |
+          version=${{ needs.deploy.outputs.package_version }}
+          old_pip_spec_pattern="\(pip.*install.*\)git+https.*egg=decomon"
+          new_pip_spec_pattern="\1decomon==$version"
+          if ${{ github.repository != 'airbus/discrete-optimization' && secrets.TEST_PYPI_API_TOKEN != '' }} == 'true'; then
+            # install from TestPypi if on a fork
+            new_pip_spec_pattern="${new_pip_spec_pattern} --extra-index-url https://test.pypi.org/simple/"
+          fi
+          sed -i -e "s|${old_pip_spec_pattern}|${new_pip_spec_pattern}|" tutorials/*.ipynb
+      - name: push it on a dedicated tag
+        id: push-tuto-release-tag
+        run: |
+          current_tag_name=${GITHUB_REF/refs\/tags\//}  # stripping refs/tags/
+          new_tag_name="tutorials-${current_tag_name}"
+          echo ${new_tag_name}
+          git config user.name "Actions"
+          git config user.email "actions@github.com"
+          git commit tutorials/*.ipynb -m "Install appropriate version of decomon"
+          git tag ${new_tag_name} -m "Release ${current_tag_name} + installation in tutorials updated"
+          git push origin ${new_tag_name}
+          # store new tag name
+          echo "new_tag_name=${new_tag_name}" >> $GITHUB_OUTPUT
+
   build-doc:
     uses: ./.github/workflows/build-doc.yml
+    with:
+      notebooks-branch: ${{ needs.update-tutorials-for-colab.outputs.tuto-tag-name }}
+    needs: ["update-tutorials-for-colab"]
 
   deploy-doc:
     needs: [build-doc, deploy]
