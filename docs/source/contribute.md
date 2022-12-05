@@ -98,7 +98,7 @@ pip install -r docs/requirements.txt
 
 #### Define environment variables for notebook github links
 
-In order to define appropriate github links for notebooks,
+In order to define appropriate github and colab links for notebooks,
 we need several environment variables:
 
 - AUTODOC_NOTEBOOKS_REPO_URL: url of the content repository for the notebooks
