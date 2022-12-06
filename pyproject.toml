@@ -26,7 +26,11 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--ignore=tests/lirpa_comparison --ignore=tests/test_deel_lip.py"
+addopts = [
+    "--import-mode=importlib",
+    "--ignore=tests/lirpa_comparison",
+    "--ignore=tests/test_deel_lip.py",
+]
 
 [tool.black]
 line-length = 120
