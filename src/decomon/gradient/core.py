@@ -6,9 +6,7 @@ from decomon.layers.core import F_HYBRID
 
 
 class GradientLayer(ABC, Layer):
-    """
-    Abstract class that contains the common information of every implemented layers
-    """
+    """Abstract class that contains the common information of every implemented layers"""
 
     def __init__(
         self, convex_domain=None, mode=F_HYBRID.name, input_mode=F_HYBRID.name, finetune=False, shared=False, **kwargs

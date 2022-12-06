@@ -154,17 +154,19 @@ def crown_(
     **kwargs,
 ):
     """
+    Args:
+        node
+        IBP
+        forward
+        input_map
+        layer_fn
+        backward_bounds
+        backward_map
+        joint
+        fuse
 
-    :param node:
-    :param IBP:
-    :param forward:
-    :param input_map:
-    :param layer_fn:
-    :param backward_bounds:
-    :param backward_map:
-    :param joint:
-    :param fuse:
-    :return: list of 4 tensors affine upper and lower bounds
+    Returns:
+        list of 4 tensors affine upper and lower bounds
     """
     if backward_map is None:
         backward_map = {}

@@ -1,6 +1,4 @@
-"""
-CROWN implementation in numpy (useful for MILP compatibility)
-"""
+"""CROWN implementation in numpy (useful for MILP compatibility)"""
 
 
 import numpy as np
@@ -17,12 +15,12 @@ class BackwardNumpyActivation(BackwardNumpyLayer):
         self, keras_layer, previous=False, convex_domain=None, mode=F_FORWARD.name, rec=1, params=None, **kwargs
     ):
         """
-
-        :param convex_domain: type of convex input domain (None or dict)
-        :param dc_decomp: boolean that indicates whether we return a
+        Args:
+            convex_domain: type of convex input domain (None or dict)
+            dc_decomp: boolean that indicates whether we return a
+            mode: type of Forward propagation (IBP, Forward or Hybrid)
+            **kwargs: extra parameters
         difference of convex decomposition of our layer
-        :param mode: type of Forward propagation (IBP, Forward or Hybrid)
-        :param kwargs: extra parameters
         """
         super().__init__(
             keras_layer=keras_layer, convex_domain=convex_domain, mode=mode, rec=rec, params=params, **kwargs
@@ -85,12 +83,12 @@ class BackwardNumpyInputLayer(BackwardNumpyLayer):
         self, keras_layer, previous=False, fusion=True, convex_domain=None, mode=F_FORWARD.name, rec=1, **kwargs
     ):
         """
-
-        :param convex_domain: type of convex input domain (None or dict)
-        :param dc_decomp: boolean that indicates whether we return a
+        Args:
+            convex_domain: type of convex input domain (None or dict)
+            dc_decomp: boolean that indicates whether we return a
+            mode: type of Forward propagation (IBP, Forward or Hybrid)
+            **kwargs: extra parameters
         difference of convex decomposition of our layer
-        :param mode: type of Forward propagation (IBP, Forward or Hybrid)
-        :param kwargs: extra parameters
         """
         super().__init__(keras_layer=keras_layer, convex_domain=convex_domain, mode=mode, rec=rec, **kwargs)
 
@@ -127,12 +125,12 @@ class BackwardNumpyInputLayer(BackwardNumpyLayer):
 class BackwardNumpyDense(BackwardNumpyLayer):
     def __init__(self, keras_layer, previous=False, convex_domain=None, mode=F_FORWARD.name, rec=1, **kwargs):
         """
-
-        :param convex_domain: type of convex input domain (None or dict)
-        :param dc_decomp: boolean that indicates whether we return a
+        Args:
+            convex_domain: type of convex input domain (None or dict)
+            dc_decomp: boolean that indicates whether we return a
+            mode: type of Forward propagation (IBP, Forward or Hybrid)
+            **kwargs: extra parameters
         difference of convex decomposition of our layer
-        :param mode: type of Forward propagation (IBP, Forward or Hybrid)
-        :param kwargs: extra parameters
         """
         super().__init__(keras_layer=keras_layer, convex_domain=convex_domain, mode=mode, rec=rec, **kwargs)
 

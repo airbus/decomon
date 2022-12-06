@@ -7,14 +7,19 @@ from decomon.wrapper import get_lower_box, get_upper_box, refine_boxes
 
 #### FORMAL BOUNDS ######
 def get_upper_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1, n_sub_boxes=1, lr=0.1, epochs=100):
-    """
-    upper bound the maximum of a model in a given box
-    :param model: either a Keras model or a Decomon model
-    :param x_min: numpy array for the extremal lower corner of the boxes
-    :param x_max: numpy array for the extremal upper corner of the boxes
-    :param batch_size: for computational efficiency, one can split the calls to minibatches
-    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
-    :return: numpy array, vector with upper bounds for adversarial attacks
+    """upper bound the maximum of a model in a given box
+
+    Args:
+        model: either a Keras model or a Decomon model
+        x_min: numpy array for the extremal lower corner of the boxes
+        x_max: numpy array for the extremal upper corner of the boxes
+        batch_size: for computational efficiency, one can split the
+            calls to minibatches
+        fast: useful in the forward-backward or in the hybrid-backward
+            mode to optimize the scores
+
+    Returns:
+        numpy array, vector with upper bounds for adversarial attacks
     """
 
     if np.min(x_max - x_min) < 0:
@@ -79,14 +84,19 @@ def get_upper_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
 
 #### FORMAL BOUNDS ######
 def get_lower_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1, n_sub_boxes=1, lr=0.1, epochs=100):
-    """
-    upper bound the maximum of a model in a given box
-    :param model: either a Keras model or a Decomon model
-    :param x_min: numpy array for the extremal lower corner of the boxes
-    :param x_max: numpy array for the extremal upper corner of the boxes
-    :param batch_size: for computational efficiency, one can split the calls to minibatches
-    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
-    :return: numpy array, vector with upper bounds for adversarial attacks
+    """upper bound the maximum of a model in a given box
+
+    Args:
+        model: either a Keras model or a Decomon model
+        x_min: numpy array for the extremal lower corner of the boxes
+        x_max: numpy array for the extremal upper corner of the boxes
+        batch_size: for computational efficiency, one can split the
+            calls to minibatches
+        fast: useful in the forward-backward or in the hybrid-backward
+            mode to optimize the scores
+
+    Returns:
+        numpy array, vector with upper bounds for adversarial attacks
     """
 
     if np.min(x_max - x_min) < 0:

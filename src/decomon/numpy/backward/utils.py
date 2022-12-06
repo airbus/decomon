@@ -7,11 +7,13 @@ from decomon.utils import Box, Grid
 
 def get_lower_box(x, w, b):
     """
+    Args:
+        x: array (n_batch, 2, n_in)
+        w: array(n_batch, n_in, n_out)
+        b: array(n_batch, n_out)
 
-    :param x: array (n_batch, 2, n_in)
-    :param w:  array(n_batch, n_in, n_out)
-    :param b: array(n_batch, n_out)
-    :return: max_x w*x+ b
+    Returns:
+        max_x w*x+ b
     """
 
     return np.sum(np.maximum(0.0, w) * x[:, 0, :, None], 1) + np.sum(np.minimum(0.0, w) * x[:, 1, :, None], 1) + b
@@ -19,11 +21,13 @@ def get_lower_box(x, w, b):
 
 def get_upper_box(x, w, b):
     """
+    Args:
+        x: array (n_batch, 2, n_in)
+        w: array(n_batch, n_in, n_out)
+        b: array(n_batch, n_out)
 
-    :param x: array (n_batch, 2, n_in)
-    :param w:  array(n_batch, n_in, n_out)
-    :param b: array(n_batch, n_out)
-    :return: max_x w*x+ b
+    Returns:
+        max_x w*x+ b
     """
     return np.sum(np.maximum(0.0, w) * x[:, 1, :, None], 1) + np.sum(np.minimum(0.0, w) * x[:, 0, :, None], 1) + b
 

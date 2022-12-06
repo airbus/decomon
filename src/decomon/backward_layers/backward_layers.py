@@ -30,9 +30,7 @@ from decomon.layers.utils import ClipAlpha, NonNeg, NonPos
 
 
 class BackwardDense(BackwardLayer):
-    """
-    Backward  LiRPA of Dense
-    """
+    """Backward  LiRPA of Dense"""
 
     def __init__(
         self,
@@ -218,8 +216,11 @@ class BackwardDense(BackwardLayer):
 
     def build(self, input_shape):
         """
-        :param input_shape: list of input shape
-        :return:
+        Args:
+            input_shape: list of input shape
+
+        Returns:
+
         """
 
         if self.finetune and self.activation_name != "linear":
@@ -274,9 +275,7 @@ class BackwardDense(BackwardLayer):
 
 
 class BackwardConv2D(BackwardLayer):
-    """
-    Backward  LiRPA of Conv2D
-    """
+    """Backward  LiRPA of Conv2D"""
 
     def __init__(
         self,
@@ -473,8 +472,11 @@ class BackwardConv2D(BackwardLayer):
 
     def build(self, input_shape):
         """
-        :param input_shape: list of input shape
-        :return:
+        Args:
+            input_shape: list of input shape
+
+        Returns:
+
         """
 
         if self.finetune and self.activation_name != "linear":
@@ -553,8 +555,11 @@ class BackwardActivation(BackwardLayer):
 
     def build(self, input_shape):
         """
-        :param input_shape: list of input shape
-        :return:
+        Args:
+            input_shape: list of input shape
+
+        Returns:
+
         """
         if self.previous:
             input_dim = np.prod(input_shape[-5][1:])
@@ -777,9 +782,7 @@ class BackwardActivation(BackwardLayer):
 
 
 class BackwardFlatten(BackwardLayer):
-    """
-    Backward  LiRPA of Flatten
-    """
+    """Backward  LiRPA of Flatten"""
 
     def __init__(
         self, layer, slope=V_slope.name, previous=True, mode=F_HYBRID.name, convex_domain=None, finetune=False, **kwargs
@@ -809,9 +812,7 @@ class BackwardFlatten(BackwardLayer):
 
 
 class BackwardReshape(BackwardLayer):
-    """
-    Backward  LiRPA of Reshape
-    """
+    """Backward  LiRPA of Reshape"""
 
     def __init__(
         self, layer, slope=V_slope.name, previous=True, mode=F_HYBRID.name, convex_domain=None, finetune=False, **kwargs
@@ -850,9 +851,7 @@ class BackwardReshape(BackwardLayer):
 
 
 class BackwardPermute(BackwardLayer):
-    """
-    Backward LiRPA of Permute
-    """
+    """Backward LiRPA of Permute"""
 
     def __init__(
         self, layer, slope=V_slope.name, previous=True, mode=F_HYBRID.name, convex_domain=None, finetune=False, **kwargs
@@ -899,9 +898,7 @@ class BackwardPermute(BackwardLayer):
 
 
 class BackwardDropout(BackwardLayer):
-    """
-    Backward  LiRPA of Dropout
-    """
+    """Backward  LiRPA of Dropout"""
 
     def __init__(
         self,
@@ -939,9 +936,7 @@ class BackwardDropout(BackwardLayer):
 
 
 class BackwardBatchNormalization(BackwardLayer):
-    """
-    Backward  LiRPA of Batch Normalization
-    """
+    """Backward  LiRPA of Batch Normalization"""
 
     def __init__(self, layer, slope=V_slope.name, mode=F_HYBRID.name, convex_domain=None, finetune=False, **kwargs):
         super().__init__(**kwargs)

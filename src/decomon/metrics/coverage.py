@@ -17,16 +17,25 @@ def get_adv_coverage_box(
     n_sub_boxes=1,
     fast=True,
 ):
-    """
-    if the output is negative, then it is a formal guarantee that there is no adversarial examples
-    :param model: either a Keras model or a Decomon model
-    :param x_min: numpy array for the extremal lower corner of the boxes
-    :param x_max: numpy array for the extremal upper corner of the boxes
-    :param source_labels: the list of label that should be predicted all the time in the box (either an integer, either an array that can contain multiple source labels for each sample)
-    :param target_labels: the list of label that should never be predicted in the box (either an integer, either an array that can contain multiple target labels for each sample)
-    :param batch_size: for computational efficiency, one can split the calls to minibatches
-    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
-    :return: numpy array, vector with upper bounds for adversarial attacks
+    """if the output is negative, then it is a formal guarantee that there is no adversarial examples
+
+    Args:
+        model: either a Keras model or a Decomon model
+        x_min: numpy array for the extremal lower corner of the boxes
+        x_max: numpy array for the extremal upper corner of the boxes
+        source_labels: the list of label that should be predicted all
+            the time in the box (either an integer, either an array that
+            can contain multiple source labels for each sample)
+        target_labels: the list of label that should never be predicted
+            in the box (either an integer, either an array that can
+            contain multiple target labels for each sample)
+        batch_size: for computational efficiency, one can split the
+            calls to minibatches
+        fast: useful in the forward-backward or in the hybrid-backward
+            mode to optimize the scores
+
+    Returns:
+        numpy array, vector with upper bounds for adversarial attacks
     """
     if np.min(x_max - x_min) < 0:
         raise UserWarning("Inconsistency Error: x_max < x_min")

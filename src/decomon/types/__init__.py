@@ -1,6 +1,4 @@
-"""
-Typing module
-"""
+"""Typing module"""
 
 
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
