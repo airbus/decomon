@@ -58,7 +58,9 @@ jobs:
           key:
             tox-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
       - name: Run tox target env for ${{ matrix.python-version }}
-        run: python -m tox -e py
+        run: |
+          python -m tox -e convert-doc-to-test  # extract code blocks from doc to test them
+          python -m tox -e py
 
   build-doc:
     uses: ./.github/workflows/build-doc.yml
