@@ -7,12 +7,6 @@ from decomon.backward_layers.activations import backward_relu, backward_softsign
 from decomon.layers.activations import softsign
 from decomon.utils import relu_
 
-from . import (
-    assert_output_properties_box_linear,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_1d_box,
-)
-
 
 @pytest.mark.parametrize(
     "n, mode, previous, floatx",
@@ -127,7 +121,7 @@ from . import (
         (5, "ibp", True, 16),
     ],
 )
-def test_activation_relu_backward_1D_box(n, mode, previous, floatx):
+def test_activation_relu_backward_1D_box(n, mode, previous, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -136,8 +130,8 @@ def test_activation_relu_backward_1D_box(n, mode, previous, floatx):
         K.set_epsilon(1e-2)
         decimal = 1
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
 
@@ -178,7 +172,7 @@ def test_activation_relu_backward_1D_box(n, mode, previous, floatx):
     w_l_b = np.sum(np.maximum(w_l_, 0) * W_l_ + np.minimum(w_l_, 0) * W_u_, 1)[:, :, None]
     b_l_b = b_l_ + np.sum(np.maximum(w_l_, 0) * B_l_[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * B_u_[:, :, None], 1)
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x_, None, z_[:, 0], z_[:, 1], None, w_u_b, b_u_b, None, w_l_b, b_l_b, "dense_{}".format(n), decimal=decimal
     )
 
@@ -299,7 +293,7 @@ def test_activation_relu_backward_1D_box(n, mode, previous, floatx):
         (5, "ibp", True, 16),
     ],
 )
-def test_activation_softsign_backward_1D_box(n, mode, previous, floatx):
+def test_activation_softsign_backward_1D_box(n, mode, previous, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -308,8 +302,8 @@ def test_activation_softsign_backward_1D_box(n, mode, previous, floatx):
         K.set_epsilon(1e-2)
         decimal = 1
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
 
@@ -350,7 +344,7 @@ def test_activation_softsign_backward_1D_box(n, mode, previous, floatx):
     w_l_b = np.sum(np.maximum(w_l_, 0) * W_l_ + np.minimum(w_l_, 0) * W_u_, 1)[:, :, None]
     b_l_b = b_l_ + np.sum(np.maximum(w_l_, 0) * B_l_[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * B_u_[:, :, None], 1)
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x_, None, z_[:, 0], z_[:, 1], None, w_u_b, b_u_b, None, w_l_b, b_l_b, "dense_{}".format(n), decimal=decimal
     )
 

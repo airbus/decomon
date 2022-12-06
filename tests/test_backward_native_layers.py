@@ -11,14 +11,6 @@ from decomon.backward_layers.backward_layers import get_backward
 from decomon.layers.decomon_layers import DecomonActivation, DecomonFlatten
 from decomon.layers.decomon_reshape import DecomonReshape
 
-from . import (
-    assert_output_properties_box_linear,
-    get_standard_values_multid_box,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_1d_box,
-    get_tensor_decomposition_multid_box,
-)
-
 
 @pytest.mark.parametrize(
     "n, activation, mode, previous, floatx",
@@ -193,7 +185,7 @@ from . import (
         (6, None, "ibp", True, 32),
     ],
 )
-def test_Backward_NativeActivation_1D_box_model(n, activation, mode, previous, floatx):
+def test_Backward_NativeActivation_1D_box_model(n, activation, mode, previous, floatx, helpers):
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     decimal = 5
@@ -203,8 +195,8 @@ def test_Backward_NativeActivation_1D_box_model(n, activation, mode, previous, f
 
     layer = DecomonActivation(activation, dc_decomp=False, mode=mode, dtype=K.floatx())
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     if mode == "hybrid":
@@ -244,7 +236,7 @@ def test_Backward_NativeActivation_1D_box_model(n, activation, mode, previous, f
         model = Model(inputs[2:], [w_out_u_, b_out_u_, w_out_l_, b_out_l_])
         w_u_, b_u_, w_l_, b_l_ = model.predict(inputs_[2:])
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x,
         None,
         z_[:, 0],
@@ -358,7 +350,7 @@ def test_Backward_NativeActivation_1D_box_model(n, activation, mode, previous, f
         (0, "relu", 16, "ibp", False),
     ],
 )
-def test_Backward_NativeActivation_multiD_box(odd, activation, floatx, mode, previous):
+def test_Backward_NativeActivation_multiD_box(odd, activation, floatx, mode, previous, helpers):
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     decimal = 5
@@ -368,8 +360,8 @@ def test_Backward_NativeActivation_multiD_box(odd, activation, floatx, mode, pre
 
     layer = DecomonActivation(activation, dc_decomp=False, mode=mode, dtype=K.floatx())
 
-    inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     if mode == "hybrid":
@@ -414,7 +406,7 @@ def test_Backward_NativeActivation_multiD_box(odd, activation, floatx, mode, pre
         output_ = f_dense(inputs_)
     w_u_, b_u_, w_l_, b_l_ = output_
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x,
         None,
         z_[:, 0],
@@ -509,7 +501,7 @@ def test_Backward_NativeActivation_multiD_box(odd, activation, floatx, mode, pre
         (1, 16, "ibp", False, "channels_first"),
     ],
 )
-def test_Backward_NativeFlatten_multiD_box(odd, floatx, mode, previous, data_format):
+def test_Backward_NativeFlatten_multiD_box(odd, floatx, mode, previous, data_format, helpers):
     if data_format == "channels_first" and not len(K._get_available_gpus()):
         return
 
@@ -522,8 +514,8 @@ def test_Backward_NativeFlatten_multiD_box(odd, floatx, mode, previous, data_for
 
     layer = DecomonFlatten("channels_last", dc_decomp=False, mode=mode, dtype=K.floatx())
 
-    inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     if mode == "hybrid":
@@ -568,7 +560,7 @@ def test_Backward_NativeFlatten_multiD_box(odd, floatx, mode, previous, data_for
         output_ = f_dense(inputs_)
     w_u_, b_u_, w_l_, b_l_ = output_
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x,
         None,
         z_[:, 0],
@@ -663,7 +655,7 @@ def test_Backward_NativeFlatten_multiD_box(odd, floatx, mode, previous, data_for
         (1, 16, "ibp", False, "channels_first"),
     ],
 )
-def test_Backward_NativeReshape_multiD_box(odd, floatx, mode, previous, data_format):
+def test_Backward_NativeReshape_multiD_box(odd, floatx, mode, previous, data_format, helpers):
     if data_format == "channels_first" and not len(K._get_available_gpus()):
         return
 
@@ -675,8 +667,8 @@ def test_Backward_NativeReshape_multiD_box(odd, floatx, mode, previous, data_for
         decimal = 2
 
     layer = DecomonReshape((-1,), dc_decomp=False, mode=mode)
-    inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     if mode == "hybrid":
@@ -721,7 +713,7 @@ def test_Backward_NativeReshape_multiD_box(odd, floatx, mode, previous, data_for
         output_ = f_dense(inputs_)
     w_u_, b_u_, w_l_, b_l_ = output_
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x,
         None,
         z_[:, 0],

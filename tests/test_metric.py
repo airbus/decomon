@@ -6,12 +6,6 @@ import tensorflow.python.keras.backend as K
 
 from decomon.metrics.utils import categorical_cross_entropy
 
-from . import (
-    assert_output_properties_box,
-    get_standard_values_multid_box,
-    get_tensor_decomposition_multid_box,
-)
-
 
 @pytest.mark.parametrize(
     "odd, mode, floatx",
@@ -24,7 +18,7 @@ from . import (
         (1, "ibp", 32),
     ],
 )
-def test_categorical_cross_entropy(odd, mode, floatx):
+def test_categorical_cross_entropy(odd, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -35,8 +29,8 @@ def test_categorical_cross_entropy(odd, mode, floatx):
     else:
         decimal = 5
 
-    inputs_0 = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
 
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0 = inputs_0
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
@@ -54,7 +48,7 @@ def test_categorical_cross_entropy(odd, mode, floatx):
     y_ = f_ref(inputs_)
     if mode == "hybrid":
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_entropy(inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x,
             y_,
             None,
@@ -72,7 +66,7 @@ def test_categorical_cross_entropy(odd, mode, floatx):
         )
     if mode == "forward":
         z_, w_u_, b_u_, w_l_, b_l_ = f_entropy(inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x,
             y_,
             None,
@@ -90,7 +84,7 @@ def test_categorical_cross_entropy(odd, mode, floatx):
         )
     if mode == "ibp":
         u_c_, l_c_ = f_entropy(inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x,
             y_,
             None,

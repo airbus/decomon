@@ -9,15 +9,6 @@ from tensorflow.keras.layers import Dense
 
 from decomon.layers.decomon_layers import DecomonDense, to_monotonic
 
-from . import (
-    assert_output_properties_box,
-    assert_output_properties_box_linear,
-    get_standard_values_multid_box,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_1d_box,
-    get_tensor_decomposition_multid_box,
-)
-
 
 @pytest.mark.parametrize(
     "n, activation, mode, shared, floatx",
@@ -564,7 +555,7 @@ from . import (
         (9, None, "ibp", True, 16),
     ],
 )
-def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
+def test_DecomonDense_1D_box(n, activation, mode, shared, floatx, helpers):
 
     K.set_floatx(f"float{floatx}")
     eps = K.epsilon()
@@ -579,8 +570,8 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
 
     ref_dense = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
 
-    inputs = get_tensor_decomposition_1d_box()
-    inputs_ = get_standart_values_1d_box(n)
+    inputs = helpers.get_tensor_decomposition_1d_box()
+    inputs_ = helpers.get_standart_values_1d_box(n)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]
@@ -606,7 +597,7 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
     y_ref = f_ref(inputs_)
     if mode == "hybrid":
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -627,7 +618,7 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
         u_c_ = None
         l_c_ = None
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -646,7 +637,7 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
 
     if mode == "ibp":
         u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -668,7 +659,7 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
     y_ref = f_ref(inputs_)
     if mode == "hybrid":
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -689,7 +680,7 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
         u_c_ = None
         l_c_ = None
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -708,7 +699,7 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
 
     if mode == "ibp":
         u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -752,13 +743,13 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx):
         (1, "relu", "ibp"),
     ],
 )
-def test_DecomonDense_multiD_box(odd, activation, mode):
+def test_DecomonDense_multiD_box(odd, activation, mode, helpers):
 
     monotonic_dense = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=True, mode=mode, dtype=K.floatx())
     ref_dense = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
 
-    inputs = get_tensor_decomposition_multid_box(odd)
-    inputs_ = get_standard_values_multid_box(odd)
+    inputs = helpers.get_tensor_decomposition_multid_box(odd)
+    inputs_ = helpers.get_standard_values_multid_box(odd)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]
@@ -779,7 +770,7 @@ def test_DecomonDense_multiD_box(odd, activation, mode):
     y_ref = f_ref(inputs_)
     if mode == "hybrid":
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -798,7 +789,7 @@ def test_DecomonDense_multiD_box(odd, activation, mode):
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
         u_c_ = None
         l_c_ = None
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -815,7 +806,7 @@ def test_DecomonDense_multiD_box(odd, activation, mode):
         )
     if mode == "ibp":
         u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -837,7 +828,7 @@ def test_DecomonDense_multiD_box(odd, activation, mode):
 
     if mode == "hybrid":
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -856,7 +847,7 @@ def test_DecomonDense_multiD_box(odd, activation, mode):
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
         u_c_ = None
         l_c_ = None
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -873,7 +864,7 @@ def test_DecomonDense_multiD_box(odd, activation, mode):
         )
     if mode == "ibp":
         u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -1075,12 +1066,12 @@ def test_DecomonDense_multiD_box(odd, activation, mode):
         (9, None, "ibp", True),
     ],
 )
-def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared):
+def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared, helpers):
 
     dense_ref = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
 
-    inputs = get_tensor_decomposition_1d_box()
-    inputs_ = get_standart_values_1d_box(n)
+    inputs = helpers.get_tensor_decomposition_1d_box()
+    inputs_ = helpers.get_standart_values_1d_box(n)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
     z_ = inputs_[2]
     x_ = inputs_[0]
@@ -1121,7 +1112,7 @@ def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared):
     y_ref = f_ref(inputs_)
     if mode == "hybrid":
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -1140,7 +1131,7 @@ def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared):
 
     if mode == "forward":
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -1159,7 +1150,7 @@ def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared):
 
     if mode == "ibp":
         u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_ref,
             h_,
@@ -1200,12 +1191,12 @@ def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared):
         (1, "relu", "ibp"),
     ],
 )
-def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode):
+def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode, helpers):
 
     dense_ref = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
 
-    inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=True)
-    inputs_ = get_standard_values_multid_box(odd, dc_decomp=True)
+    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=True)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=True)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]
@@ -1256,7 +1247,7 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode):
 
     if mode == "hybrid":
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_,
             h_,
@@ -1275,7 +1266,7 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode):
 
     if mode == "forward":
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_,
             h_,
@@ -1294,7 +1285,7 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode):
 
     if mode == "ibp":
         u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_,
             h_,
@@ -1413,13 +1404,13 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode):
         (9, None, 5),
     ],
 )
-def test_DecomonDense_1D_box_nodc(n, activation, n_subgrad):
+def test_DecomonDense_1D_box_nodc(n, activation, n_subgrad, helpers):
 
     monotonic_dense = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=False)
     ref_dense = Dense(1, use_bias=True, activation=activation)
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     output = monotonic_dense(inputs[2:])
@@ -1435,7 +1426,9 @@ def test_DecomonDense_1D_box_nodc(n, activation, n_subgrad):
 
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
     y_ref = f_ref(inputs_)
-    assert_output_properties_box_linear(x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc")
+    helpers.assert_output_properties_box_linear(
+        x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc"
+    )
 
 
 @pytest.mark.parametrize(
@@ -1461,12 +1454,12 @@ def test_DecomonDense_1D_box_nodc(n, activation, n_subgrad):
         (1, "relu", "ibp"),
     ],
 )
-def test_DecomonDense_multiD_to_monotonic_box_nodc(odd, activation, mode):
+def test_DecomonDense_multiD_to_monotonic_box_nodc(odd, activation, mode, helpers):
 
     dense_ref = Dense(1, use_bias=True, activation=activation)
 
-    inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     output_ref = dense_ref(inputs[1])
@@ -1504,7 +1497,9 @@ def test_DecomonDense_multiD_to_monotonic_box_nodc(odd, activation, mode):
 
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
 
-    assert_output_properties_box_linear(x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc")
+    helpers.assert_output_properties_box_linear(
+        x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc"
+    )
 
 
 @pytest.mark.parametrize(
@@ -1530,13 +1525,13 @@ def test_DecomonDense_multiD_to_monotonic_box_nodc(odd, activation, mode):
         (1, "relu", 5),
     ],
 )
-def test_DecomonDense_multiD_box_dc(odd, activation, n_subgrad):
+def test_DecomonDense_multiD_box_dc(odd, activation, n_subgrad, helpers):
 
     monotonic_dense = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=False)
     ref_dense = Dense(1, use_bias=True, activation=activation)
 
-    inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     output = monotonic_dense(inputs[2:])
@@ -1552,11 +1547,15 @@ def test_DecomonDense_multiD_box_dc(odd, activation, n_subgrad):
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
     y_ref = f_ref(inputs_)
 
-    assert_output_properties_box_linear(x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc")
+    helpers.assert_output_properties_box_linear(
+        x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc"
+    )
 
     monotonic_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
     ref_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
     y_ref = f_ref(inputs_)
 
-    assert_output_properties_box_linear(x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc")
+    helpers.assert_output_properties_box_linear(
+        x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc"
+    )

@@ -17,14 +17,6 @@ from tensorflow.keras.models import Model, Sequential
 
 from decomon.models.forward_cloning import convert_forward
 
-from . import (
-    assert_output_properties_box,
-    get_standard_values_multid_box,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_1d_box,
-    get_tensor_decomposition_multid_box,
-)
-
 
 def dense_NN_1D(input_dim, archi, sequential, activation, use_bias, dtype="float32"):
 
@@ -113,12 +105,12 @@ def toy_struct_cnn(dtype="float32"):
 # @pytest.mark.parametrize(
 #    "n, activation, mode, shared, floatx",
 #
-def test_toy_network_1D(n=0, archi=None, activation="relu", use_bias=True):
+def test_toy_network_1D(helpers, n=0, archi=None, activation="relu", use_bias=True):
 
     if archi is None:
         archi = [4, 1]
-    inputs = get_tensor_decomposition_1d_box()
-    inputs_ = get_standart_values_1d_box(n)
+    inputs = helpers.get_tensor_decomposition_1d_box()
+    inputs_ = helpers.get_standart_values_1d_box(n)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
 
     seq_nn = dense_NN_1D(1, archi, True, activation, use_bias)
@@ -134,12 +126,12 @@ def test_toy_network_1D(n=0, archi=None, activation="relu", use_bias=True):
     np.allclose(y_0, y_1)
 
 
-def test_toy_network_multiD(odd=0, archi=None, activation="relu", use_bias=True):
+def test_toy_network_multiD(helpers, odd=0, archi=None, activation="relu", use_bias=True):
 
     if archi is None:
         archi = [4, 1]
-    inputs = get_tensor_decomposition_multid_box(odd)
-    inputs_ = get_standard_values_multid_box(odd)
+    inputs = helpers.get_tensor_decomposition_multid_box(odd)
+    inputs_ = helpers.get_standard_values_multid_box(odd)
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
 
@@ -154,16 +146,6 @@ def test_toy_network_multiD(odd=0, archi=None, activation="relu", use_bias=True)
     y_1 = model_nn.predict(y)
 
     np.allclose(y_0, y_1)
-
-
-def toy_network_tutorial(dtype="float32"):
-    layers = []
-    layers.append(Dense(100, input_dim=1, dtype=dtype))  # specify the dimension of the input space
-    layers.append(Activation("relu", dtype=dtype))
-    layers.append(Dense(100, dtype=dtype))
-    layers.append(Dense(1, activation="linear", dtype=dtype))
-    model = Sequential(layers)
-    return model
 
 
 """
@@ -1483,7 +1465,7 @@ def test_convert_forward_multiple_inputs(odd, archi, activation, use_input, mode
         (5, [4, 3, 1], None, False, True, "ibp", True, 16),
     ],
 )
-def test_convert_forward_1D(n, archi, activation, sequential, use_bias, mode, use_input, floatx):
+def test_convert_forward_1D(n, archi, activation, sequential, use_bias, mode, use_input, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -1492,13 +1474,13 @@ def test_convert_forward_1D(n, archi, activation, sequential, use_bias, mode, us
         K.set_epsilon(1e-2)
         decimal = 2
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]
 
-    ref_nn = toy_network_tutorial(dtype=K.floatx())
+    ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
     ref_nn(inputs[1])
 
     IBP = True
@@ -1528,7 +1510,7 @@ def test_convert_forward_1D(n, archi, activation, sequential, use_bias, mode, us
     if mode == "forward":
         z_, w_u_, b_u_, w_l_, b_l_ = f_dense(inputs_[2:])
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_,
         y_ref,
         None,

@@ -6,12 +6,6 @@ import tensorflow.python.keras.backend as K
 
 from decomon.layers.activations import sigmoid, softmax, softsign, tanh
 
-from . import (
-    assert_output_properties_box,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_1d_box,
-)
-
 
 @pytest.mark.parametrize(
     "n, mode, floatx",
@@ -108,7 +102,7 @@ from . import (
         (9, "ibp", 16),
     ],
 )
-def test_sigmoid_1D_box(n, mode, floatx):
+def test_sigmoid_1D_box(n, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -117,8 +111,8 @@ def test_sigmoid_1D_box(n, mode, floatx):
         K.set_epsilon(1e-4)
         decimal = 2
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
     (
         x_0,
@@ -152,7 +146,7 @@ def test_sigmoid_1D_box(n, mode, floatx):
         u_c_, l_c_ = f_sigmoid(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_0,
         y_,
         None,
@@ -269,7 +263,7 @@ def test_sigmoid_1D_box(n, mode, floatx):
         (9, "ibp", 16),
     ],
 )
-def test_tanh_1D_box(n, mode, floatx):
+def test_tanh_1D_box(n, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -278,8 +272,8 @@ def test_tanh_1D_box(n, mode, floatx):
         K.set_epsilon(1e-4)
         decimal = 2
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
     (
         x_0,
@@ -313,7 +307,7 @@ def test_tanh_1D_box(n, mode, floatx):
         u_c_, l_c_ = f_tanh(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_0,
         y_,
         None,
@@ -429,7 +423,7 @@ def test_tanh_1D_box(n, mode, floatx):
         (9, "ibp", 16),
     ],
 )
-def test_softsign_1D_box(n, mode, floatx):
+def test_softsign_1D_box(n, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -438,8 +432,8 @@ def test_softsign_1D_box(n, mode, floatx):
         K.set_epsilon(1e-4)
         decimal = 2
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
     (
         x_0,
@@ -474,7 +468,7 @@ def test_softsign_1D_box(n, mode, floatx):
         u_c_, l_c_ = f_softsign(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_0,
         y_,
         None,
@@ -685,7 +679,7 @@ def test_softplus_1D_box(n, mode, floatx):
         # (3, "hybrid", 32),
     ],
 )
-def test_softmax_1D_box(n, mode, floatx):
+def test_softmax_1D_box(n, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -694,8 +688,8 @@ def test_softmax_1D_box(n, mode, floatx):
         K.set_epsilon(1e-4)
         decimal = 2
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
     (
@@ -732,7 +726,7 @@ def test_softmax_1D_box(n, mode, floatx):
         u_c_, l_c_ = f_softmax(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_0,
         y_,
         None,

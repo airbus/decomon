@@ -6,13 +6,6 @@ import tensorflow.python.keras.backend as K
 
 from decomon.models import clone
 
-from . import (
-    assert_output_properties_box,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_1d_box,
-)
-from .test_clone_forward import toy_network_tutorial
-
 """
 @pytest.mark.parametrize("n, archi, activation, sequential, use_bias, mode, method, use_input, floatx", [
     (0, [4, 3, 1], None, True, True, "ibp", "crown", True, 32),
@@ -646,7 +639,7 @@ from .test_clone_forward import toy_network_tutorial
         (5, [4, 3, 1], None, False, True, "forward", "crown-hybrid", True, 32),
     ],
 )
-def test_convert_1D(n, archi, activation, sequential, use_bias, mode, method, use_input, floatx):
+def test_convert_1D(n, archi, activation, sequential, use_bias, mode, method, use_input, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -655,13 +648,13 @@ def test_convert_1D(n, archi, activation, sequential, use_bias, mode, method, us
         K.set_epsilon(1e-2)
         decimal = 2
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]
 
-    ref_nn = toy_network_tutorial(dtype=K.floatx())
+    ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
     ref_nn(inputs[1])
 
     IBP = True
@@ -684,7 +677,7 @@ def test_convert_1D(n, archi, activation, sequential, use_bias, mode, method, us
     if mode == "forward":
         z_, w_u_, b_u_, w_l_, b_l_ = f_dense(z_)
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_,
         y_ref,
         None,

@@ -14,12 +14,6 @@ from decomon.backward_layers.utils import (
 )
 from decomon.utils import relu_, substract
 
-from . import (
-    assert_output_properties_box_linear,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_1d_box,
-)
-
 
 @pytest.mark.parametrize(
     "n, mode, floatx",
@@ -80,7 +74,7 @@ from . import (
         (5, "ibp", 16),
     ],
 )
-def test_relu_backward_1D_box(n, mode, floatx):
+def test_relu_backward_1D_box(n, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -89,8 +83,8 @@ def test_relu_backward_1D_box(n, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
 
@@ -129,7 +123,7 @@ def test_relu_backward_1D_box(n, mode, floatx):
         + np.sum(np.minimum(w_l_[:, 0], 0) * B_u_[:, :, None], 1)
     )
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x_, None, z_[:, 0], z_[:, 1], None, w_u_b, b_u_b, None, w_l_b, b_l_b, "dense_{}".format(n), decimal=decimal
     )
 
@@ -169,7 +163,7 @@ def test_relu_backward_1D_box(n, mode, floatx):
         (2, 5, "ibp", 16),
     ],
 )
-def test_add_backward_1D_box(n_0, n_1, mode, floatx):
+def test_add_backward_1D_box(n_0, n_1, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -178,12 +172,12 @@ def test_add_backward_1D_box(n_0, n_1, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = get_standart_values_1d_box(n_0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_0_ = helpers.get_standart_values_1d_box(n_0, dc_decomp=False)
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0 = inputs_0_
 
-    inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1_ = get_standart_values_1d_box(n_1, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_1_ = helpers.get_standart_values_1d_box(n_1, dc_decomp=False)
     x_1, y_1, z_1, u_c_1, W_u_1, b_u_1, l_c_1, W_l_1, b_l_1 = inputs_1_
 
     w_out = Input((1, 1), dtype=K.floatx())
@@ -230,7 +224,7 @@ def test_add_backward_1D_box(n_0, n_1, mode, floatx):
         + np.sum(np.minimum(w_l_1_, 0) * b_u_1[:, :, None], 1)
     )
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x_0,
         y_0 + y_1,
         z_0[:, 0],
@@ -245,7 +239,7 @@ def test_add_backward_1D_box(n_0, n_1, mode, floatx):
         decimal=decimal,
     )
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x_1,
         y_0 + y_1,
         z_1[:, 0],
@@ -296,7 +290,7 @@ def test_add_backward_1D_box(n_0, n_1, mode, floatx):
         (2, 5, "ibp", 16),
     ],
 )
-def test_substract_backward_1D_box(n_0, n_1, mode, floatx):
+def test_substract_backward_1D_box(n_0, n_1, mode, floatx, helpers):
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     decimal = 5
@@ -304,12 +298,12 @@ def test_substract_backward_1D_box(n_0, n_1, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = get_standart_values_1d_box(n_0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_0_ = helpers.get_standart_values_1d_box(n_0, dc_decomp=False)
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0 = inputs_0_
 
-    inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1_ = get_standart_values_1d_box(n_1, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_1_ = helpers.get_standart_values_1d_box(n_1, dc_decomp=False)
     x_1, y_1, z_1, u_c_1, W_u_1, b_u_1, l_c_1, W_l_1, b_l_1 = inputs_1_
 
     if mode == "hybrid":
@@ -361,7 +355,7 @@ def test_substract_backward_1D_box(n_0, n_1, mode, floatx):
         + np.sum(np.minimum(w_l_1_, 0) * b_u_1[:, :, None], 1)
     )
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x_0,
         y_0 - y_1,
         z_0[:, 0],
@@ -376,7 +370,7 @@ def test_substract_backward_1D_box(n_0, n_1, mode, floatx):
         decimal=decimal,
     )
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x_1,
         y_0 - y_1,
         z_1[:, 0],
@@ -427,7 +421,7 @@ def test_substract_backward_1D_box(n_0, n_1, mode, floatx):
         (2, 5, "ibp", 16),
     ],
 )
-def test_maximum_backward_1D_box(n_0, n_1, mode, floatx):
+def test_maximum_backward_1D_box(n_0, n_1, mode, floatx, helpers):
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     decimal = 5
@@ -435,12 +429,12 @@ def test_maximum_backward_1D_box(n_0, n_1, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = get_standart_values_1d_box(n_0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_0_ = helpers.get_standart_values_1d_box(n_0, dc_decomp=False)
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0 = inputs_0_
 
-    inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1_ = get_standart_values_1d_box(n_1, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_1_ = helpers.get_standart_values_1d_box(n_1, dc_decomp=False)
     x_1, y_1, z_1, u_c_1, W_u_1, b_u_1, l_c_1, W_l_1, b_l_1 = inputs_1_
 
     if mode == "hybrid":
@@ -488,7 +482,7 @@ def test_maximum_backward_1D_box(n_0, n_1, mode, floatx):
         + np.sum(np.minimum(w_l_1_, 0) * b_u_1[:, :, None], 1)
     )
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x_0,
         np.maximum(y_0, y_1),
         z_0[:, 0],
@@ -503,7 +497,7 @@ def test_maximum_backward_1D_box(n_0, n_1, mode, floatx):
         decimal=decimal,
     )
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x_1,
         np.maximum(y_0, y_1),
         z_1[:, 0],

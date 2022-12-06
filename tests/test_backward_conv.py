@@ -9,12 +9,6 @@ from tensorflow.keras.layers import Input
 from decomon.backward_layers.backward_layers import get_backward
 from decomon.layers.decomon_layers import DecomonConv2D
 
-from . import (
-    assert_output_properties_box_linear,
-    get_standard_values_images_box,
-    get_tensor_decomposition_images_box,
-)
-
 
 @pytest.mark.parametrize(
     "data_format, odd, m_0, m_1, activation, padding, use_bias, mode, floatx, previous",
@@ -453,7 +447,7 @@ from . import (
         ("channels_first", 0, 0, 1, "relu", "valid", False, "ibp", 16, False),
     ],
 )
-def test_Decomon_conv_box(data_format, odd, m_0, m_1, activation, padding, use_bias, mode, floatx, previous):
+def test_Decomon_conv_box(data_format, odd, m_0, m_1, activation, padding, use_bias, mode, floatx, previous, helpers):
 
     if data_format == "channels_first" and not len(K._get_available_gpus()):
         return
@@ -476,8 +470,8 @@ def test_Decomon_conv_box(data_format, odd, m_0, m_1, activation, padding, use_b
         dtype=K.floatx(),
     )
 
-    inputs = get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)
-    inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     if mode == "hybrid":
@@ -550,7 +544,9 @@ def test_Decomon_conv_box(data_format, odd, m_0, m_1, activation, padding, use_b
         + b_l_
     )
 
-    assert_output_properties_box_linear(x, None, z_[:, 0], z_[:, 1], None, w_r_u, b_r_u, None, w_r_l, b_r_l, "nodc")
+    helpers.assert_output_properties_box_linear(
+        x, None, z_[:, 0], z_[:, 1], None, w_r_u, b_r_u, None, w_r_l, b_r_l, "nodc"
+    )
 
     K.set_floatx("float32")
     K.set_epsilon(eps)
