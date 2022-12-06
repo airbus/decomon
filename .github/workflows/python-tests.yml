@@ -39,6 +39,9 @@ jobs:
         python-version: ["3.7", "3.9"]
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -57,10 +60,26 @@ jobs:
           path: .tox
           key:
             tox-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
-      - name: Run tox target env for ${{ matrix.python-version }}
+      - name: Pick proper tox env
+        shell: python
+        run: |
+          import os; import platform; import sys; from pathlib import Path
+          platform_mapping = {
+              "Linux": "linux",
+              "Darwin": "macos",
+              "Windows": "win",
+          }
+          pythonversion = f'py{"" if platform.python_implementation() == "CPython" else "py"}3{sys.version_info.minor}'
+          platformversion=platform_mapping[platform.system()]
+          toxenv = f"{pythonversion}-{platformversion}"
+          set_toxenv_cmd = f"TOXENV={toxenv}"
+          print(f"Picked: {toxenv}")
+          with Path(os.environ["GITHUB_ENV"]).open("ta") as file_handler:
+               file_handler.write(set_toxenv_cmd)
+      - name: Run tox target env for ${{ env.TOXENV }}
         run: |
           python -m tox -e convert-doc-to-test  # extract code blocks from doc to test them
-          python -m tox -e py
+          python -m tox  # launch environment set by TOXENV at previous step
 
   build-doc:
     uses: ./.github/workflows/build-doc.yml
