@@ -59,8 +59,7 @@ except ModuleNotFoundError:
 
 
 class DecomonConv2D(Conv2D, DecomonLayer):
-    """
-    Forward LiRPA implementation of Conv2d layers.
+    """Forward LiRPA implementation of Conv2d layers.
     See Keras official documentation for further details on the Conv2d operator
 
     """
@@ -113,9 +112,11 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
     def build(self, input_shape):
         """
+        Args:
+            input_shape
 
-        :param input_shape:
-        :return:
+        Returns:
+
         """
 
         assert len(input_shape) == self.nb_tensors
@@ -240,11 +241,14 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             self.linear_layer = bool_init
 
     def call_linear(self, inputs, **kwargs):
-        """
-        computing the perturbation analysis of the operator without the activation function
-        :param inputs: list of input tensors
-        :param kwargs:
-        :return: List of updated tensors
+        """computing the perturbation analysis of the operator without the activation function
+
+        Args:
+            inputs: list of input tensors
+            **kwargs
+
+        Returns:
+            List of updated tensors
         """
         z_value = K.cast(0.0, self.dtype)
         o_value = K.cast(1.0, self.dtype)
@@ -479,9 +483,10 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
     def call(self, inputs, **kwargs):
         """
+        Args:
+            inputs
 
-        :param inputs:
-        :return:
+        Returns:
 
         """
         output = self.call_linear(inputs, **kwargs)
@@ -494,9 +499,10 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
     def compute_output_shape(self, input_shape):
         """
+        Args:
+            input_shape
 
-        :param input_shape:
-        :return:
+        Returns:
 
         """
         assert len(input_shape) == self.nb_tensors
@@ -555,9 +561,10 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
     def reset_layer(self, layer):
         """
+        Args:
+            layer
 
-        :param layer:
-        :return:
+        Returns:
 
         """
         # assert than we have the same configuration
@@ -612,8 +619,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
 
 class DecomonDense(Dense, DecomonLayer):
-    """
-    Forward LiRPA implementation of Dense layers.
+    """Forward LiRPA implementation of Dense layers.
     See Keras official documentation for further details on the Dense operator
     """
 
@@ -646,8 +652,11 @@ class DecomonDense(Dense, DecomonLayer):
 
     def build(self, input_shape):
         """
-        :param input_shape: list of input shape
-        :return:
+        Args:
+            input_shape: list of input shape
+
+        Returns:
+
         """
 
         assert len(input_shape) >= self.nb_tensors
@@ -779,9 +788,11 @@ class DecomonDense(Dense, DecomonLayer):
 
     def call_linear(self, inputs):
         """
+        Args:
+            inputs
 
-        :param inputs:
-        :return:
+        Returns:
+
         """
         z_value = K.cast(0.0, self.dtype)
 
@@ -946,8 +957,11 @@ class DecomonDense(Dense, DecomonLayer):
 
     def call(self, inputs):
         """
-        :param inputs: list of tensors
-        :return:
+        Args:
+            inputs: list of tensors
+
+        Returns:
+
         """
         output = self.call_linear(inputs)
 
@@ -983,8 +997,11 @@ class DecomonDense(Dense, DecomonLayer):
 
     def compute_output_shape(self, input_shape):
         """
-        :param input_shape:
-        :return:
+        Args:
+            input_shape
+
+        Returns:
+
         """
 
         assert len(input_shape) == self.nb_tensors
@@ -998,8 +1015,11 @@ class DecomonDense(Dense, DecomonLayer):
 
     def reset_layer(self, dense):
         """
-        :param dense:
-        :return:
+        Args:
+            dense
+
+        Returns:
+
         """
         # assert than we have the same configuration
         assert isinstance(dense, Dense), "wrong type of layers..."
@@ -1073,8 +1093,7 @@ class DecomonDense(Dense, DecomonLayer):
 
 
 class DecomonActivation(Activation, DecomonLayer):
-    """
-    Forward LiRPA implementation of Activation layers.
+    """Forward LiRPA implementation of Activation layers.
     See Keras official documentation for further details on the Activation operator
     """
 
@@ -1160,17 +1179,15 @@ class DecomonActivation(Activation, DecomonLayer):
 
 
 class DecomonFlatten(Flatten, DecomonLayer):
-    """
-    Forward LiRPA implementation of Flatten layers.
+    """Forward LiRPA implementation of Flatten layers.
     See Keras official documentation for further details on the Flatten operator
     """
 
     def __init__(self, data_format=None, mode=F_HYBRID.name, **kwargs):
         """
-
-        :param data_format:
-        :param kwargs:
-
+        Args:
+            data_format
+            **kwargs
         """
         super().__init__(data_format=data_format, mode=mode, **kwargs)
 
@@ -1202,10 +1219,12 @@ class DecomonFlatten(Flatten, DecomonLayer):
 
     def build(self, input_shape):
         """
+        Args:
+            self
+            input_shape
 
-        :param self:
-        :param input_shape:
-        :return:
+        Returns:
+
         """
         return None
 
@@ -1256,8 +1275,7 @@ class DecomonFlatten(Flatten, DecomonLayer):
 
 
 class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
-    """
-    Forward LiRPA implementation of Batch Normalization layers.
+    """Forward LiRPA implementation of Batch Normalization layers.
     See Keras official documentation for further details on the BatchNormalization operator
     """
 
@@ -1394,9 +1412,10 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
 
     def reset_layer(self, layer):
         """
+        Args:
+            layer
 
-        :param layer:
-        :return:
+        Returns:
 
         """
         assert isinstance(layer, BatchNormalization), "wrong type of layers..."
@@ -1405,8 +1424,7 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
 
 
 class DecomonDropout(Dropout, DecomonLayer):
-    """
-    Forward LiRPA implementation of Dropout layers.
+    """Forward LiRPA implementation of Dropout layers.
     See Keras official documentation for further details on the Dropout operator
     """
 
@@ -1433,8 +1451,7 @@ class DecomonDropout(Dropout, DecomonLayer):
 
 
 class DecomonInputLayer(DecomonLayer, InputLayer):
-    """
-    Forward LiRPA implementation of Dropout layers.
+    """Forward LiRPA implementation of Dropout layers.
     See Keras official documentation for further details on the Dropout operator
     """
 
@@ -1507,14 +1524,19 @@ def to_monotonic(
     Type of layer is tested to know how to transform it into a MonotonicLayer of the good type.
     If type is not treated yet, raises an TypeError
 
-    :param layer: a Keras Layer
-    :param input_dim: either an integer or a tuple that represents the dim of the input convex domain
-    :param dc_decomp: boolean that indicates whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex domain
-    :param IBP: boolean that indicates whether we propagate constant bounds
-    :param forward: boolean that indicates whether we propagate affine bounds
-    :return: the associated DecomonLayer
-    :raises: TypeError
+    Args:
+        layer: a Keras Layer
+        input_dim: either an integer or a tuple that represents the dim
+            of the input convex domain
+        dc_decomp: boolean that indicates whether we return a difference
+            of convex decomposition of our layer
+        convex_domain: the type of convex domain
+        IBP: boolean that indicates whether we propagate constant bounds
+        forward: boolean that indicates whether we propagate affine
+            bounds
+
+    Returns:
+        the associated DecomonLayer
     """
 
     # get class name

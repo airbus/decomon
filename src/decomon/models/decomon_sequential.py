@@ -42,14 +42,17 @@ def include_dim_layer_fn(
     forward=True,
     finetune=True,
 ):
-    """
-    include external parameters inside the translation of a layer to its decomon counterpart
-    :param layer_fn:
-    :param input_dim:
-    :param dc_decomp:
-    :param convex_domain:
-    :param finetune:
-    :return:
+    """include external parameters inside the translation of a layer to its decomon counterpart
+
+    Args:
+        layer_fn
+        input_dim
+        dc_decomp
+        convex_domain
+        finetune
+
+    Returns:
+
     """
     if convex_domain is None:
         convex_domain = {}
@@ -110,15 +113,22 @@ def clone(
     finetune=False,
 ):
     """
-    :param model: Keras model
-    :param input_tensors: List of input tensors to be used as inputs of our model or None
-    :param layer_fn: cloning function to translate a layer into its decomon decomposition
-    :param input_dim: the input dimension use to propagate our linear relaxation
-    :param dc_decomp: boolean that indicates whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex domain
-    :param mode: forward of backward
-    :param finetune: ???
-    :return: a decomon model
+    Args:
+        model: Keras model
+        input_tensors: List of input tensors to be used as inputs of our
+            model or None
+        layer_fn: cloning function to translate a layer into its decomon
+            decomposition
+        input_dim: the input dimension use to propagate our linear
+            relaxation
+        dc_decomp: boolean that indicates whether we return a difference
+            of convex decomposition of our layer
+        convex_domain: the type of convex domain
+        mode: forward of backward
+        finetune: ???
+
+    Returns:
+        a decomon model
     """
 
     if convex_domain is None:
@@ -173,19 +183,26 @@ def clone_sequential_model(
     except that it creates new layers (and thus new weights) instead
     of sharing the weights of the existing layers.
 
-    :param model: Instance of `Sequential`.
-    :param input_tensors: optional list of input tensors to build the model upon. If not provided, placeholder will
+    Args:
+        model: Instance of `Sequential`.
+        input_tensors: optional list of input tensors to build the model
+            upon. If not provided, placeholder will
+        layer_fn: callable to be applied on non-input layers in the
+            model. By default it clones the layer.
+        input_dim: the input dimension use to propagate our linear
+            relaxation
+        dc_decomp: boolean that indicates whether we return a difference
+            of convex decomposition of our layer
+        convex_domain: the type of convex domain
+        finetune: ???
     be created.
-    :param layer_fn: callable to be applied on non-input layers in the model. By default it clones the layer.
     Another example is to preserve the layer  to share the weights. This is required when we create a per-replica
     copy of the model with distribution strategy; we want the weights to be shared but still feed inputs
     separately so we create new input layers.
-    :param input_dim: the input dimension use to propagate our linear relaxation
-    :param dc_decomp: boolean that indicates whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex domain
-    :param finetune: ???
-    :return: An instance of `Sequential` reproducing the behavior of the original model with decomon layers.
-    :raises: ValueError: in case of invalid `model` argument value or `layer_fn` argument value.
+
+    Returns:
+        An instance of `Sequential` reproducing the behavior of the
+        original model with decomon layers.
     """
     if convex_domain is None:
         convex_domain = {}
@@ -377,16 +394,22 @@ def clone_functional_model(
     finetune=False,
 ):
     """
-
-    :param model:
-    :param input_tensors: optional list of input tensors to build the model upon. If not provided, placeholder will
+    Args:
+        model
+        input_tensors: optional list of input tensors to build the model
+            upon. If not provided, placeholder will
+        layer_fn: callable to be applied on non-input layers in the
+            model. By default it clones the layer.
+        input_dim: the input dimension use to propagate our linear
+            relaxation
+        dc_decomp: boolean that indicates whether we return a difference
+            of convex decomposition of our layer
+        convex_domain: the type of convex domain
+        finetune: ???
     be created.
-    :param layer_fn: callable to be applied on non-input layers in the model. By default it clones the layer.
-    :param input_dim: the input dimension use to propagate our linear relaxation
-    :param dc_decomp: boolean that indicates whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex domain
-    :param finetune: ???
-    :return:
+
+    Returns:
+
     """
 
     if convex_domain is None:
@@ -706,15 +729,19 @@ def convert(
     options=None,
 ):
     """
-
-    :param model: Keras model
-    :param input_tensors: input_tensors: List of input tensors to be used as inputs of our model or None
-    :param layer_fn: layer_fn: cloning function to translate a layer into its decomon decomposition
-    :param dc_decomp: dc_decomp: boolean that indicates whether we return a
+    Args:
+        model: Keras model
+        input_tensors: input_tensors: List of input tensors to be used
+            as inputs of our model or None
+        layer_fn: layer_fn: cloning function to translate a layer into
+            its decomon decomposition
+        dc_decomp: dc_decomp: boolean that indicates whether we return a
+        convex_domain: convex_domain: the type of convex domain
+        n_subgrad: integer for optimizing linear bounds
     difference of convex decomposition of our layer
-    :param convex_domain: convex_domain: the type of convex domain
-    :param n_subgrad: integer for optimizing linear bounds
-    :return: a decomon model
+
+    Returns:
+        a decomon model
     """
 
     if convex_domain is None:
@@ -962,9 +989,11 @@ class DecomonSequential(tf.keras.Sequential):
 # BACKWARD MODE
 def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, options=None):
     """
+    Args:
+        model
 
-    :param model:
-    :return:
+    Returns:
+
     """
     # create inputs for back_bounds
     # the convert mode for an easy use has been activated
@@ -1010,10 +1039,12 @@ def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, opti
 
 def get_backward_model_(model, back_bounds, input_model, slope=V_slope.name):
     """
+    Args:
+        model
+        back_bounds
 
-    :param model:
-    :param back_bounds:
-    :return:
+    Returns:
+
     """
     # retrieve all layers inside
     if hasattr(model, "dc_decomp") and model.dc_decomp:

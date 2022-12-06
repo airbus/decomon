@@ -34,17 +34,20 @@ def backward_relu(
     params=None,
     **kwargs,
 ):
-    """
-    Backward  LiRPA of relu
-    :param x:
-    :param dc_decomp:
-    :param convex_domain:
-    :param alpha:
-    :param max_value:
-    :param threshold:
-    :param slope:
-    :param mode:
-    :return:
+    """Backward  LiRPA of relu
+
+    Args:
+        x
+        dc_decomp
+        convex_domain
+        alpha
+        max_value
+        threshold
+        slope
+        mode
+
+    Returns:
+
     """
 
     if params is None:
@@ -79,14 +82,17 @@ def backward_sigmoid(
     params=None,
     **kwargs,
 ):
-    """
-    Backward  LiRPA of sigmoid
-    :param inputs:
-    :param dc_decomp:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :return:
+    """Backward  LiRPA of sigmoid
+
+    Args:
+        inputs
+        dc_decomp
+        convex_domain
+        slope
+        mode
+
+    Returns:
+
     """
     if convex_domain is None:
         convex_domain = {}
@@ -105,14 +111,17 @@ def backward_tanh(
     params=None,
     **kwargs,
 ):
-    """
-    Backward  LiRPA of tanh
-    :param inputs:
-    :param dc_decomp:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :return:
+    """Backward  LiRPA of tanh
+
+    Args:
+        inputs
+        dc_decomp
+        convex_domain
+        slope
+        mode
+
+    Returns:
+
     """
     if convex_domain is None:
         convex_domain = {}
@@ -131,14 +140,17 @@ def backward_hard_sigmoid(
     params=None,
     **kwargs,
 ):
-    """
-    Backward  LiRPA of hard sigmoid
-    :param x:
-    :param dc_decomp:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :return:
+    """Backward  LiRPA of hard sigmoid
+
+    Args:
+        x
+        dc_decomp
+        convex_domain
+        slope
+        mode
+
+    Returns:
+
     """
 
     if convex_domain is None:
@@ -161,14 +173,17 @@ def backward_elu(
     params=None,
     **kwargs,
 ):
-    """
-    Backward  LiRPA of Exponential Linear Unit
-    :param x:
-    :param dc_decomp:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :return:
+    """Backward  LiRPA of Exponential Linear Unit
+
+    Args:
+        x
+        dc_decomp
+        convex_domain
+        slope
+        mode
+
+    Returns:
+
     """
 
     if convex_domain is None:
@@ -191,14 +206,17 @@ def backward_selu(
     params=None,
     **kwargs,
 ):
-    """
-    Backward LiRPA of Scaled Exponential Linear Unit (SELU)
-    :param x:
-    :param dc_decomp:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :return:
+    """Backward LiRPA of Scaled Exponential Linear Unit (SELU)
+
+    Args:
+        x
+        dc_decomp
+        convex_domain
+        slope
+        mode
+
+    Returns:
+
     """
 
     if convex_domain is None:
@@ -221,14 +239,17 @@ def backward_linear(
     params=None,
     **kwargs,
 ):
-    """
-    Backward LiRPA of linear
-    :param x:
-    :param dc_decomp:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :return:
+    """Backward LiRPA of linear
+
+    Args:
+        x
+        dc_decomp
+        convex_domain
+        slope
+        mode
+
+    Returns:
+
     """
     if convex_domain is None:
         convex_domain = {}
@@ -255,14 +276,17 @@ def backward_exponential(
     params=None,
     **kwargs,
 ):
-    """
-    Backward LiRPAof exponential
-    :param x:
-    :param dc_decomp:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :return:
+    """Backward LiRPAof exponential
+
+    Args:
+        x
+        dc_decomp
+        convex_domain
+        slope
+        mode
+
+    Returns:
+
     """
     if convex_domain is None:
         convex_domain = {}
@@ -284,14 +308,17 @@ def backward_softplus(
     params=None,
     **kwargs,
 ):
-    """
-    Backward LiRPA of softplus
-    :param x:
-    :param dc_decomp:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :return:
+    """Backward LiRPA of softplus
+
+    Args:
+        x
+        dc_decomp
+        convex_domain
+        slope
+        mode
+
+    Returns:
+
     """
 
     if convex_domain is None:
@@ -314,17 +341,20 @@ def backward_softsign(
     params=None,
     **kwargs,
 ):
-    """
-    Backward LiRPA of softsign
-    :param x:
-    :param w_out_u:
-    :param b_out_u:
-    :param w_out_l:
-    :param b_out_l:
-    :param convex_domain:
-    :param slope: backward slope
-    :param mode:
-    :return:
+    """Backward LiRPA of softsign
+
+    Args:
+        x
+        w_out_u
+        b_out_u
+        w_out_l
+        b_out_l
+        convex_domain
+        slope: backward slope
+        mode
+
+    Returns:
+
     """
     if convex_domain is None:
         convex_domain = {}
@@ -347,16 +377,18 @@ def backward_softmax(
     params=None,
     **kwargs,
 ):
-    """
-    Backward LiRPA of softmax
+    """Backward LiRPA of softmax
 
-    :param x:
-    :param dc_decomp:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :param axis:
-    :return:
+    Args:
+        x
+        dc_decomp
+        convex_domain
+        slope
+        mode
+        axis
+
+    Returns:
+
     """
 
     if convex_domain is None:
@@ -372,9 +404,11 @@ def backward_softmax(
 def deserialize(name):
     """Get the activation from name.
 
-    :param name: name of the method.
+    Args:
+        name: name of the method.
     among the implemented Keras activation function.
-    :return:
+
+    Returns:
 
     """
     name = name.lower()
@@ -405,9 +439,11 @@ def deserialize(name):
 def get(identifier):
     """Get the `identifier` activation function.
 
-    :param identifier: None or str, name of the function.
-    :return: The activation function, `linear` if `identifier` is None.
-    :raises: ValueError if unknown identifier
+    Args:
+        identifier: None or str, name of the function.
+
+    Returns:
+        The activation function, `linear` if `identifier` is None.
 
     """
     if identifier is None:

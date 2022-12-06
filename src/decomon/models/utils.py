@@ -21,14 +21,17 @@ from decomon.utils import get_lower, get_lower_layer, get_upper, get_upper_layer
 def include_dim_layer_fn(
     layer_fn, input_dim, dc_decomp=False, convex_domain=None, IBP=True, forward=True, finetune=False, shared=True
 ):
-    """
-    include external parameters inside the translation of a layer to its decomon counterpart
-    :param layer_fn:
-    :param input_dim:
-    :param dc_decomp:
-    :param convex_domain:
-    :param finetune:
-    :return:
+    """include external parameters inside the translation of a layer to its decomon counterpart
+
+    Args:
+        layer_fn
+        input_dim
+        dc_decomp
+        convex_domain
+        finetune
+
+    Returns:
+
     """
     if convex_domain is None:
         convex_domain = {}

@@ -49,16 +49,15 @@ class Option:
 
 
 class StaticVariables:
-    """
-    Storing static values on the number of input tensors for our layers
-    """
+    """Storing static values on the number of input tensors for our layers"""
 
     def __init__(self, dc_decomp: Optional[bool] = False, mode: Optional[str] = F_HYBRID.name):
         """
-
-        :param dc_decomp: boolean that indicates whether we return a difference of convex decomposition of our layer
+        Args:
+            dc_decomp: boolean that indicates whether we return a
+                difference of convex decomposition of our layer
+            mode: type of Forward propagation (IBP, Forward or Hybrid)
         gradient
-        :param mode: type of Forward propagation (IBP, Forward or Hybrid)
         """
 
         self.mode = mode
@@ -79,9 +78,7 @@ class StaticVariables:
 
 
 class DecomonLayer(ABC, Layer):
-    """
-    Abstract class that contains the common information of every implemented layers for Forward LiRPA
-    """
+    """Abstract class that contains the common information of every implemented layers for Forward LiRPA"""
 
     def __init__(
         self,
@@ -94,12 +91,12 @@ class DecomonLayer(ABC, Layer):
         **kwargs,
     ):
         """
-
-        :param convex_domain: type of convex input domain (None or dict)
-        :param dc_decomp: boolean that indicates whether we return a
+        Args:
+            convex_domain: type of convex input domain (None or dict)
+            dc_decomp: boolean that indicates whether we return a
+            mode: type of Forward propagation (IBP, Forward or Hybrid)
+            **kwargs: extra parameters
         difference of convex decomposition of our layer
-        :param mode: type of Forward propagation (IBP, Forward or Hybrid)
-        :param kwargs: extra parameters
         """
         super().__init__(**kwargs)
 
@@ -120,17 +117,21 @@ class DecomonLayer(ABC, Layer):
 
     def build(self, input_shape):
         """
+        Args:
+            input_shape
 
-        :param input_shape:
-        :return:
+        Returns:
+
         """
 
     @abstractmethod
     def call(self, inputs, **kwargs):
         """
+        Args:
+            inputs
 
-        :param inputs:
-        :return:
+        Returns:
+
         """
 
     def set_linear(self, bool_init):
@@ -142,23 +143,29 @@ class DecomonLayer(ABC, Layer):
     @abstractmethod
     def compute_output_shape(self, input_shape):
         """
+        Args:
+            input_shape
 
-        :param input_shape:
-        :return:
+        Returns:
+
         """
 
     def reset_layer(self, layer):
         """
+        Args:
+            layer
 
-        :param layer:
-        :return:
+        Returns:
+
         """
 
     def join(self, bounds):
         """
+        Args:
+            bounds
 
-        :param bounds:
-        :return:
+        Returns:
+
         """
         raise NotImplementedError()
 

@@ -4,9 +4,7 @@ from decomon.layers.core import F_HYBRID
 
 
 class GradientDense(Layer):
-    """
-    Gradient LiRPA of Dense Layer
-    """
+    """Gradient LiRPA of Dense Layer"""
 
     def __init__(
         self,

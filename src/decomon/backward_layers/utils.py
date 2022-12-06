@@ -21,17 +21,20 @@ from decomon.utils import (
 
 
 def backward_add(inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain=None, mode=F_HYBRID.name):
-    """
-    Backward  LiRPA of inputs_0+inputs_1
-    :param inputs_0:
-    :param inputs_1:
-    :param w_out_u_:
-    :param b_out_u_:
-    :param w_out_l_:
-    :param b_out_l_:
-    :param convex_domain:
-    :param mode:
-    :return:
+    """Backward  LiRPA of inputs_0+inputs_1
+
+    Args:
+        inputs_0
+        inputs_1
+        w_out_u_
+        b_out_u_
+        w_out_l_
+        b_out_l_
+        convex_domain
+        mode
+
+    Returns:
+
     """
     if convex_domain is None:
         convex_domain = {}
@@ -137,18 +140,21 @@ def backward_relu_(
     fast=True,
     **kwargs,
 ):
-    """
-    Backward  LiRPA of relu
-    :param x:
-    :param w_out_u:
-    :param b_out_u:
-    :param w_out_l:
-    :param b_out_l:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :param fast:
-    :return:
+    """Backward  LiRPA of relu
+
+    Args:
+        x
+        w_out_u
+        b_out_u
+        w_out_l
+        b_out_l
+        convex_domain
+        slope
+        mode
+        fast
+
+    Returns:
+
     """
 
     if convex_domain is None:
@@ -210,18 +216,21 @@ def backward_softplus_(
     fast=True,
     **kwargs,
 ):
-    """
-    Backward  LiRPA of relu
-    :param x:
-    :param w_out_u:
-    :param b_out_u:
-    :param w_out_l:
-    :param b_out_l:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :param fast:
-    :return:
+    """Backward  LiRPA of relu
+
+    Args:
+        x
+        w_out_u
+        b_out_u
+        w_out_l
+        b_out_l
+        convex_domain
+        slope
+        mode
+        fast
+
+    Returns:
+
     """
 
     if convex_domain is None:
@@ -247,11 +256,14 @@ def backward_softplus_(
 
 
 def backward_linear_prod(x_0, bounds_x, back_bounds, convex_domain):
-    """
-    Backward  LiRPA of a subroutine prod
-    :param bounds_x:
-    :param back_bounds:
-    :return:
+    """Backward  LiRPA of a subroutine prod
+
+    Args:
+        bounds_x
+        back_bounds
+
+    Returns:
+
     """
 
     z_value = K.cast(0.0, x_0.dtype)
@@ -315,18 +327,21 @@ def backward_maximum(
     mode=F_HYBRID.name,
     **kwargs,
 ):
-    """
-    Backward  LiRPA of maximum(inputs_0, inputs_1)
-    :param inputs_0:
-    :param inputs_1:
-    :param w_out_u:
-    :param b_out_u:
-    :param w_out_l:
-    :param b_out_l:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :return:
+    """Backward  LiRPA of maximum(inputs_0, inputs_1)
+
+    Args:
+        inputs_0
+        inputs_1
+        w_out_u
+        b_out_u
+        w_out_l
+        b_out_l
+        convex_domain
+        slope
+        mode
+
+    Returns:
+
     """
 
     if convex_domain is None:
@@ -353,16 +368,19 @@ def backward_maximum(
 def backward_max_(
     x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, axis=-1, **kwargs
 ):
-    """
-    Backward  LiRPA of max
-    :param x: list of tensors
-    :param dc_decomp: boolean that indicates
+    """Backward  LiRPA of max
+
+    Args:
+        x: list of tensors
+        dc_decomp: boolean that indicates
+        grad_bounds: boolean that indicates whether
+        convex_domain: the type of convex domain
+        axis: axis to perform the maximum
     whether we return a difference of convex decomposition of our layer
-    :param grad_bounds: boolean that indicates whether
     we propagate upper and lower bounds on the values of the gradient
-    :param convex_domain: the type of convex domain
-    :param axis: axis to perform the maximum
-    :return: max operation  along an axis
+
+    Returns:
+        max operation  along an axis
     """
     if convex_domain is None:
         convex_domain = {}
@@ -492,18 +510,21 @@ def backward_minimum(
     mode=F_HYBRID.name,
     **kwargs,
 ):
-    """
-    Backward  LiRPA of minimum(inputs_0, inputs_1)
-    :param inputs_0:
-    :param inputs_1:
-    :param w_out_u:
-    :param b_out_u:
-    :param w_out_l:
-    :param b_out_l:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :return:
+    """Backward  LiRPA of minimum(inputs_0, inputs_1)
+
+    Args:
+        inputs_0
+        inputs_1
+        w_out_u
+        b_out_u
+        w_out_l
+        b_out_l
+        convex_domain
+        slope
+        mode
+
+    Returns:
+
     """
 
     if convex_domain is None:
@@ -538,16 +559,19 @@ def backward_minimum(
 
 
 def backward_minus(w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name):
-    """
-    Backward  LiRPA of -x
-    :param w_out_u:
-    :param b_out_u:
-    :param w_out_l:
-    :param b_out_l:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :return:
+    """Backward  LiRPA of -x
+
+    Args:
+        w_out_u
+        b_out_u
+        w_out_l
+        b_out_l
+        convex_domain
+        slope
+        mode
+
+    Returns:
+
     """
 
     if convex_domain is None:
@@ -560,14 +584,17 @@ def backward_minus(w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, slope
 
 
 def backward_scale(scale_factor, w_out_u, b_out_u, w_out_l, b_out_l):
-    """
-    Backward  LiRPA of scale_factor*x
-    :param scale_factor:
-    :param w_out_u:
-    :param b_out_u:
-    :param w_out_l:
-    :param b_out_l:
-    :return:
+    """Backward  LiRPA of scale_factor*x
+
+    Args:
+        scale_factor
+        w_out_u
+        b_out_u
+        w_out_l
+        b_out_l
+
+    Returns:
+
     """
 
     if scale_factor >= 0:
@@ -581,17 +608,20 @@ def backward_scale(scale_factor, w_out_u, b_out_u, w_out_l, b_out_l):
 def backward_substract(
     inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain=None, mode=F_HYBRID.name
 ):
-    """
-    Backward  LiRPA of inputs_0 - inputs_1
-    :param inputs_0:
-    :param inputs_1:
-    :param w_out_u_:
-    :param b_out_u_:
-    :param w_out_l_:
-    :param b_out_l_:
-    :param convex_domain:
-    :param mode:
-    :return:
+    """Backward  LiRPA of inputs_0 - inputs_1
+
+    Args:
+        inputs_0
+        inputs_1
+        w_out_u_
+        b_out_u_
+        w_out_l_
+        b_out_l_
+        convex_domain
+        mode
+
+    Returns:
+
     """
 
     if convex_domain is None:
@@ -608,18 +638,21 @@ def backward_substract(
 def backward_multiply(
     inputs_0, inputs_1, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name
 ):
-    """
-    Backward  LiRPA of element-wise multiply inputs_0*inputs_1
-    :param inputs_0:
-    :param inputs_1:
-    :param w_out_u:
-    :param b_out_u:
-    :param w_out_l:
-    :param b_out_l:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :return:
+    """Backward  LiRPA of element-wise multiply inputs_0*inputs_1
+
+    Args:
+        inputs_0
+        inputs_1
+        w_out_u
+        b_out_u
+        w_out_l
+        b_out_l
+        convex_domain
+        slope
+        mode
+
+    Returns:
+
     """
 
     if convex_domain is None:
@@ -697,18 +730,21 @@ def backward_sort(
     mode=F_HYBRID.name,
     **kwargs,
 ):
-    """
-    Backward  LiRPA of sort
-    :param inputs_:
-    :param w_out_u:
-    :param b_out_u:
-    :param w_out_l:
-    :param b_out_l:
-    :param axis:
-    :param convex_domain:
-    :param slope:
-    :param mode:
-    :return:
+    """Backward  LiRPA of sort
+
+    Args:
+        inputs_
+        w_out_u
+        b_out_u
+        w_out_l
+        b_out_l
+        axis
+        convex_domain
+        slope
+        mode
+
+    Returns:
+
     """
     if convex_domain is None:
         convex_domain = {}

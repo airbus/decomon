@@ -31,9 +31,7 @@ class BackwardMerge(BackwardLayer):
 
 
 class BackwardAdd(BackwardMerge):
-    """
-    Backward  LiRPA of Add
-    """
+    """Backward  LiRPA of Add"""
 
     def __init__(
         self,
@@ -112,9 +110,7 @@ class BackwardAdd(BackwardMerge):
 
 
 class BackwardAverage(BackwardMerge):
-    """
-    Backward  LiRPA of Average
-    """
+    """Backward  LiRPA of Average"""
 
     def __init__(
         self,
@@ -212,9 +208,7 @@ class BackwardAverage(BackwardMerge):
 
 
 class BackwardSubtract(BackwardMerge):
-    """
-    Backward  LiRPA of Subtract
-    """
+    """Backward  LiRPA of Subtract"""
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
         super().__init__(**kwargs)
@@ -254,9 +248,7 @@ class BackwardSubtract(BackwardMerge):
 
 
 class BackwardMaximum(BackwardMerge):
-    """
-    Backward  LiRPA of Maximum
-    """
+    """Backward  LiRPA of Maximum"""
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
         super().__init__(**kwargs)
@@ -296,9 +288,7 @@ class BackwardMaximum(BackwardMerge):
 
 
 class BackwardMinimum(BackwardMerge):
-    """
-    Backward  LiRPA of Minimum
-    """
+    """Backward  LiRPA of Minimum"""
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
         super().__init__(**kwargs)
@@ -338,9 +328,7 @@ class BackwardMinimum(BackwardMerge):
 
 
 class BackwardConcatenate(BackwardMerge):
-    """
-    Backward  LiRPA of Concatenate
-    """
+    """Backward  LiRPA of Concatenate"""
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
         super().__init__(**kwargs)
@@ -378,9 +366,7 @@ class BackwardConcatenate(BackwardMerge):
 
 
 class BackwardMultiply(BackwardMerge):
-    """
-    Backward  LiRPA of Multiply
-    """
+    """Backward  LiRPA of Multiply"""
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
         super().__init__(**kwargs)
@@ -420,9 +406,7 @@ class BackwardMultiply(BackwardMerge):
 
 
 class BackwardDot(BackwardMerge):
-    """
-    Backward  LiRPA of Dot
-    """
+    """Backward  LiRPA of Dot"""
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
         super().__init__(**kwargs)

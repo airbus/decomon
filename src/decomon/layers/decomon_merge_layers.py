@@ -17,8 +17,7 @@ from decomon.utils import maximum, minus, substract
 
 
 class DecomonAdd(Add, DecomonLayer):
-    """
-    LiRPA implementation of Add layers.
+    """LiRPA implementation of Add layers.
     See Keras official documentation for further details on the Add operator
 
     """
@@ -120,8 +119,7 @@ class DecomonAdd(Add, DecomonLayer):
 
 
 class DecomonAverage(Average, DecomonLayer):
-    """
-    LiRPA implementation of Average layers.
+    """LiRPA implementation of Average layers.
     See Keras official documentation for further details on the Average operator
 
     """
@@ -190,8 +188,7 @@ class DecomonAverage(Average, DecomonLayer):
 
 
 class DecomonSubtract(DecomonLayer):
-    """
-    LiRPA implementation of Subtract layers.
+    """LiRPA implementation of Subtract layers.
     See Keras official documentation for further details on the Subtract operator
 
     """
@@ -219,8 +216,7 @@ class DecomonSubtract(DecomonLayer):
 
 
 class DecomonMinimum(DecomonLayer):
-    """
-    LiRPA implementation of Minimum layers.
+    """LiRPA implementation of Minimum layers.
     See Keras official documentation for further details on the Minimum operator
 
     """
@@ -260,8 +256,7 @@ class DecomonMinimum(DecomonLayer):
 
 
 class DecomonMaximum(DecomonLayer):
-    """
-    LiRPA implementation of Maximum layers.
+    """LiRPA implementation of Maximum layers.
     See Keras official documentation for further details on the Maximum operator
 
     """
@@ -297,8 +292,7 @@ class DecomonMaximum(DecomonLayer):
 
 
 class DecomonConcatenate(Concatenate, DecomonLayer):
-    """
-    LiRPA implementation of Concatenate layers.
+    """LiRPA implementation of Concatenate layers.
     See Keras official documentation for further details on the Concatenate operator
 
     """
@@ -378,8 +372,7 @@ class DecomonConcatenate(Concatenate, DecomonLayer):
 
 
 class DecomonMultiply(Multiply, DecomonLayer):
-    """
-    LiRPA implementation of Multiply layers.
+    """LiRPA implementation of Multiply layers.
     See Keras official documentation for further details on the Multiply operator
 
     """
@@ -422,8 +415,7 @@ class DecomonMultiply(Multiply, DecomonLayer):
 
 
 class DecomonDot(Dot, DecomonLayer):
-    """
-    LiRPA implementation of Dot layers.
+    """LiRPA implementation of Dot layers.
     See Keras official documentation for further details on the Dot operator
 
     """
@@ -520,14 +512,19 @@ def to_monotonic_merge(
     Type of layer is tested to know how to transform it into a MonotonicLayer of the good type.
     If type is not treated yet, raises an TypeError
 
-    :param layer: a Keras Layer
-    :param input_dim: either an integer or a tuple that represents the dim of the input convex domain
-    :param dc_decomp: boolean that indicates whether we return a difference of convex decomposition of our layer
-    :param convex_domain: the type of convex domain
-    :param IBP: boolean that indicates whether we propagate constant bounds
-    :param forward: boolean that indicates whether we propagate affine bounds
-    :return: the associated DecomonLayer
-    :raises: TypeError
+    Args:
+        layer: a Keras Layer
+        input_dim: either an integer or a tuple that represents the dim
+            of the input convex domain
+        dc_decomp: boolean that indicates whether we return a difference
+            of convex decomposition of our layer
+        convex_domain: the type of convex domain
+        IBP: boolean that indicates whether we propagate constant bounds
+        forward: boolean that indicates whether we propagate affine
+            bounds
+
+    Returns:
+        the associated DecomonLayer
     """
 
     # get class name

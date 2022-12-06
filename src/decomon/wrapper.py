@@ -28,16 +28,25 @@ def get_adv_box(
     n_sub_boxes=1,
     fast=True,
 ):
-    """
-    if the output is negative, then it is a formal guarantee that there is no adversarial examples
-    :param model: either a Keras model or a Decomon model
-    :param x_min: numpy array for the extremal lower corner of the boxes
-    :param x_max: numpy array for the extremal upper corner of the boxes
-    :param source_labels: the list of label that should be predicted all the time in the box (either an integer, either an array that can contain multiple source labels for each sample)
-    :param target_labels: the list of label that should never be predicted in the box (either an integer, either an array that can contain multiple target labels for each sample)
-    :param batch_size: for computational efficiency, one can split the calls to minibatches
-    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
-    :return: numpy array, vector with upper bounds for adversarial attacks
+    """if the output is negative, then it is a formal guarantee that there is no adversarial examples
+
+    Args:
+        model: either a Keras model or a Decomon model
+        x_min: numpy array for the extremal lower corner of the boxes
+        x_max: numpy array for the extremal upper corner of the boxes
+        source_labels: the list of label that should be predicted all
+            the time in the box (either an integer, either an array that
+            can contain multiple source labels for each sample)
+        target_labels: the list of label that should never be predicted
+            in the box (either an integer, either an array that can
+            contain multiple target labels for each sample)
+        batch_size: for computational efficiency, one can split the
+            calls to minibatches
+        fast: useful in the forward-backward or in the hybrid-backward
+            mode to optimize the scores
+
+    Returns:
+        numpy array, vector with upper bounds for adversarial attacks
     """
     if np.min(x_max - x_min) < 0:
         raise UserWarning("Inconsistency Error: x_max < x_min")
@@ -222,16 +231,25 @@ def get_adv_box(
 
 
 def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_size=-1, fast=True):
-    """
-    if the output is negative, then it is a formal guarantee that there is no adversarial examples
-    :param model: either a Keras model or a Decomon model
-    :param x_min: numpy array for the extremal lower corner of the boxes
-    :param x_max: numpy array for the extremal upper corner of the boxes
-    :param source_labels: the list of label that should be predicted all the time in the box (either an integer, either an array that can contain multiple source labels for each sample)
-    :param target_labels: the list of label that should never be predicted in the box (either an integer, either an array that can contain multiple target labels for each sample)
-    :param batch_size: for computational efficiency, one can split the calls to minibatches
-    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
-    :return: numpy array, vector with upper bounds for adversarial attacks
+    """if the output is negative, then it is a formal guarantee that there is no adversarial examples
+
+    Args:
+        model: either a Keras model or a Decomon model
+        x_min: numpy array for the extremal lower corner of the boxes
+        x_max: numpy array for the extremal upper corner of the boxes
+        source_labels: the list of label that should be predicted all
+            the time in the box (either an integer, either an array that
+            can contain multiple source labels for each sample)
+        target_labels: the list of label that should never be predicted
+            in the box (either an integer, either an array that can
+            contain multiple target labels for each sample)
+        batch_size: for computational efficiency, one can split the
+            calls to minibatches
+        fast: useful in the forward-backward or in the hybrid-backward
+            mode to optimize the scores
+
+    Returns:
+        numpy array, vector with upper bounds for adversarial attacks
     """
     if np.min(x_max - x_min) < 0:
         raise UserWarning("Inconsistency Error: x_max < x_min")
@@ -351,14 +369,19 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
 
 #### FORMAL BOUNDS ######
 def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
-    """
-    upper bound the maximum of a model in a given box
-    :param model: either a Keras model or a Decomon model
-    :param x_min: numpy array for the extremal lower corner of the boxes
-    :param x_max: numpy array for the extremal upper corner of the boxes
-    :param batch_size: for computational efficiency, one can split the calls to minibatches
-    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
-    :return: numpy array, vector with upper bounds for adversarial attacks
+    """upper bound the maximum of a model in a given box
+
+    Args:
+        model: either a Keras model or a Decomon model
+        x_min: numpy array for the extremal lower corner of the boxes
+        x_max: numpy array for the extremal upper corner of the boxes
+        batch_size: for computational efficiency, one can split the
+            calls to minibatches
+        fast: useful in the forward-backward or in the hybrid-backward
+            mode to optimize the scores
+
+    Returns:
+        numpy array, vector with upper bounds for adversarial attacks
     """
 
     if np.min(x_max - x_min) < 0:
@@ -461,14 +484,19 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
 
 
 def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
-    """
-    lower bound the minimum of a model in a given box
-    :param model: either a Keras model or a Decomon model
-    :param x_min: numpy array for the extremal lower corner of the boxes
-    :param x_max: numpy array for the extremal upper corner of the boxes
-    :param batch_size: for computational efficiency, one can split the calls to minibatches
-    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
-    :return: numpy array, vector with lower bounds for adversarial attacks
+    """lower bound the minimum of a model in a given box
+
+    Args:
+        model: either a Keras model or a Decomon model
+        x_min: numpy array for the extremal lower corner of the boxes
+        x_max: numpy array for the extremal upper corner of the boxes
+        batch_size: for computational efficiency, one can split the
+            calls to minibatches
+        fast: useful in the forward-backward or in the hybrid-backward
+            mode to optimize the scores
+
+    Returns:
+        numpy array, vector with lower bounds for adversarial attacks
     """
 
     if np.min(x_max - x_min) < 0:
@@ -570,15 +598,21 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
 
 
 def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
-    """
-    bounding the outputs of a model in a given box
+    """bounding the outputs of a model in a given box
     if the constant is negative, then it is a formal guarantee that there is no adversarial examples
-    :param model: either a Keras model or a Decomon model
-    :param x_min: numpy array for the extremal lower corner of the boxes
-    :param x_max: numpy array for the extremal upper corner of the boxes
-    :param batch_size: for computational efficiency, one can split the calls to minibatches
-    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
-    :return: 2 numpy array, vector with upper bounds and vector with lower bounds
+
+    Args:
+        model: either a Keras model or a Decomon model
+        x_min: numpy array for the extremal lower corner of the boxes
+        x_max: numpy array for the extremal upper corner of the boxes
+        batch_size: for computational efficiency, one can split the
+            calls to minibatches
+        fast: useful in the forward-backward or in the hybrid-backward
+            mode to optimize the scores
+
+    Returns:
+        2 numpy array, vector with upper bounds and vector with lower
+        bounds
     """
     if np.min(x_max - x_min) < 0:
         raise UserWarning("Inconsistency Error: x_max < x_min")
@@ -698,17 +732,22 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
 
 # get upper bound of a sample with bounded noise
 def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
-    """
-    upper bound the maximum of a model in an Lp Ball
-    :param model: either a Keras model or a Decomon model
-    :param x: numpy array, the example around
+    """upper bound the maximum of a model in an Lp Ball
+
+    Args:
+        model: either a Keras model or a Decomon model
+        x: numpy array, the example around
+        eps: the radius of the ball
+        p: the type of Lp norm (p=2, 1, np.inf)
+        batch_size: for computational efficiency, one can split the
+            calls to minibatches
+        fast: useful in the forward-backward or in the hybrid-backward
+            mode to optimize the scores
     which the impact of noise is assessed
-    :param eps: the radius of the ball
-    :param p: the type of Lp norm (p=2, 1, np.inf)
-    :param batch_size: for computational efficiency, one can split the calls to minibatches
-    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
-    :return: numpy array, vector with upper bounds
-     of the range of values taken by the model inside the ball
+
+    Returns:
+        numpy array, vector with upper bounds of the range of values
+        taken by the model inside the ball
     """
     # check that the model is a DecomonModel, else do the conversion
     convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
@@ -784,17 +823,22 @@ def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
 
 # get upper bound of a sample with bounded noise
 def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
-    """
-    lower bound the minimum of a model in an Lp Ball
-    :param model: either a Keras model or a Decomon model
-    :param x: numpy array, the example around
+    """lower bound the minimum of a model in an Lp Ball
+
+    Args:
+        model: either a Keras model or a Decomon model
+        x: numpy array, the example around
+        eps: the radius of the ball
+        p: the type of Lp norm (p=2, 1, np.inf)
+        batch_size: for computational efficiency, one can split the
+            calls to minibatches
+        fast: useful in the forward-backward or in the hybrid-backward
+            mode to optimize the scores
     which the impact of noise is assessed
-    :param eps: the radius of the ball
-    :param p: the type of Lp norm (p=2, 1, np.inf)
-    :param batch_size: for computational efficiency, one can split the calls to minibatches
-    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
-    :return: numpy array, vector with lower bounds
-     of the range of values taken by the model inside the ball
+
+    Returns:
+        numpy array, vector with lower bounds of the range of values
+        taken by the model inside the ball
     """
     # check that the model is a DecomonModel, else do the conversion
     convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
@@ -868,16 +912,21 @@ def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
 
 # get upper bound of a sample with bounded noise
 def get_range_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
-    """
-    Bounds the output of a model in an Lp Ball
-    :param model: either a Keras model or a Decomon model
-    :param x: numpy array, the example around
+    """Bounds the output of a model in an Lp Ball
+
+    Args:
+        model: either a Keras model or a Decomon model
+        x: numpy array, the example around
+        eps: the radius of the ball
+        p: the type of Lp norm (p=2, 1, np.inf)
+        batch_size: for computational efficiency, one can split the
+            calls to minibatches
+        fast: useful in the forward-backward or in the hybrid-backward
+            mode to optimize the scores
     which the impact of noise is assessed
-    :param eps: the radius of the ball
-    :param p: the type of Lp norm (p=2, 1, np.inf)
-    :param batch_size: for computational efficiency, one can split the calls to minibatches
-    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
-    :return: 2 numpy arrays, vector with upper andlower bounds
+
+    Returns:
+        2 numpy arrays, vector with upper andlower bounds
     of the range of values taken by the model inside the ball
     """
 
@@ -1123,16 +1172,25 @@ def get_adv_noise(
     batch_size=-1,
     fast=True,
 ):
-    """
-    if the output is negative, then it is a formal guarantee that there is no adversarial examples
-    :param model: either a Keras model or a Decomon model
-    :param x_min: numpy array for the extremal lower corner of the boxes
-    :param x_max: numpy array for the extremal upper corner of the boxes
-    :param source_labels: the list of label that should be predicted all the time in the box (either an integer, either an array that can contain multiple source labels for each sample)
-    :param target_labels: the list of label that should never be predicted in the box (either an integer, either an array that can contain multiple target labels for each sample)
-    :param batch_size: for computational efficiency, one can split the calls to minibatches
-    :param fast: useful in the forward-backward or in the hybrid-backward mode to optimize the scores
-    :return: numpy array, vector with upper bounds for adversarial attacks
+    """if the output is negative, then it is a formal guarantee that there is no adversarial examples
+
+    Args:
+        model: either a Keras model or a Decomon model
+        x_min: numpy array for the extremal lower corner of the boxes
+        x_max: numpy array for the extremal upper corner of the boxes
+        source_labels: the list of label that should be predicted all
+            the time in the box (either an integer, either an array that
+            can contain multiple source labels for each sample)
+        target_labels: the list of label that should never be predicted
+            in the box (either an integer, either an array that can
+            contain multiple target labels for each sample)
+        batch_size: for computational efficiency, one can split the
+            calls to minibatches
+        fast: useful in the forward-backward or in the hybrid-backward
+            mode to optimize the scores
+
+    Returns:
+        numpy array, vector with upper bounds for adversarial attacks
     """
 
     convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}

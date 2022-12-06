@@ -5,17 +5,15 @@ from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
 
 
 class DecomonReshape(Reshape, DecomonLayer):
-    """
-    Forward LiRPA implementation of Reshape layers.
+    """Forward LiRPA implementation of Reshape layers.
     See Keras official documentation for further details on the Reshape operator
     """
 
     def __init__(self, target_shape, mode=F_HYBRID.name, **kwargs):
         """
-
-        :param data_format:
-        :param kwargs:
-
+        Args:
+            data_format
+            **kwargs
         """
         super().__init__(target_shape=target_shape, mode=mode, **kwargs)
 
@@ -48,10 +46,12 @@ class DecomonReshape(Reshape, DecomonLayer):
 
     def build(self, input_shape):
         """
+        Args:
+            self
+            input_shape
 
-        :param self:
-        :param input_shape:
-        :return:
+        Returns:
+
         """
 
         y_input_shape = input_shape[0]
@@ -112,17 +112,15 @@ class DecomonReshape(Reshape, DecomonLayer):
 
 
 class DecomonPermute(Permute, DecomonLayer):
-    """
-    Forward LiRPA implementation of Reshape layers.
+    """Forward LiRPA implementation of Reshape layers.
     See Keras official documentation for further details on the Reshape operator
     """
 
     def __init__(self, dims, mode=F_HYBRID.name, **kwargs):
         """
-
-        :param data_format:
-        :param kwargs:
-
+        Args:
+            data_format
+            **kwargs
         """
         super().__init__(dims=dims, mode=mode, **kwargs)
 
@@ -155,10 +153,12 @@ class DecomonPermute(Permute, DecomonLayer):
 
     def build(self, input_shape):
         """
+        Args:
+            self
+            input_shape
 
-        :param self:
-        :param input_shape:
-        :return:
+        Returns:
+
         """
 
         y_input_shape = input_shape[-1]
