@@ -25,6 +25,7 @@ where = ["src"]
 [tool.setuptools_scm]
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 addopts = "--ignore=tests/lirpa_comparison --ignore=tests/test_deel_lip.py"
 
 [tool.black]
