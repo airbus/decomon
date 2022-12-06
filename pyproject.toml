@@ -20,8 +20,7 @@ dynamic = ["version"]
 dev = ["pytest>=6.2.2", "black", "tox>=3.20.1"]
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["decomon*"]
+where = ["src"]
 
 [tool.setuptools_scm]
 
