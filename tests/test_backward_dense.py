@@ -10,14 +10,6 @@ from tensorflow.keras.models import Model
 from decomon.backward_layers.backward_layers import get_backward
 from decomon.layers.decomon_layers import DecomonDense, to_monotonic
 
-from . import (
-    assert_output_properties_box_linear,
-    get_standard_values_multid_box,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_1d_box,
-    get_tensor_decomposition_multid_box,
-)
-
 ###### native
 
 
@@ -310,7 +302,7 @@ from . import (
         (4, "relu", False, "volume-slope", True, "hybrid", 16),
     ],
 )
-def test_Backward_Dense_1D_box(n, activation, use_bias, slope, previous, mode, floatx):
+def test_Backward_Dense_1D_box(n, activation, use_bias, slope, previous, mode, floatx, helpers):
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     decimal = 5
@@ -318,8 +310,8 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, slope, previous, mode, f
         K.set_epsilon(1e-2)
         decimal = 2
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     layer_ = Dense(1, use_bias=use_bias, activation=activation, dtype=K.floatx())
@@ -376,7 +368,7 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, slope, previous, mode, f
         W_ = layer.get_weights()[0]
         bias = 0.0 * W_[0]
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x,
         None,
         z_[:, 0],
@@ -398,7 +390,7 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, slope, previous, mode, f
     else:
         layer.set_weights([2 * np.ones_like(W_)])
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x,
         None,
         z_[:, 0],
@@ -420,7 +412,7 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, slope, previous, mode, f
     else:
         layer.set_weights([-2 * np.ones_like(W_)])
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x,
         None,
         z_[:, 0],
@@ -555,7 +547,7 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, slope, previous, mode, f
         (1, "relu", 16, "ibp", False),
     ],
 )
-def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, previous):
+def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, previous, helpers):
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     decimal = 5
@@ -563,8 +555,8 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, previou
         K.set_epsilon(1e-2)
         decimal = 2
 
-    inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     input_dim = x.shape[-1]
     layer_ = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
@@ -623,7 +615,7 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, previou
         output_ = f_dense(inputs_)
     w_u_, b_u_, w_l_, b_l_ = output_
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x,
         None,
         z_[:, 0],
@@ -645,11 +637,11 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, previou
     "n, activation",
     [(0, "relu")],
 )
-def test_Backward_DecomonDense_1D_box_model(n, activation):
+def test_Backward_DecomonDense_1D_box_model(n, activation, helpers):
     layer = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=False)
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     output = layer(inputs[2:])

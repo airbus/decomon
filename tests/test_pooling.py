@@ -7,12 +7,6 @@ from tensorflow.keras.layers import MaxPooling2D
 
 from decomon.layers.maxpooling import DecomonMaxPooling2D
 
-from . import (
-    assert_output_properties_box,
-    get_standard_values_images_box,
-    get_tensor_decomposition_images_box,
-)
-
 
 @pytest.mark.parametrize(
     "data_format, odd, m_0, m_1, fast, mode, floatx",
@@ -28,7 +22,7 @@ from . import (
         ("channels_last", 0, 0, 1, False, "ibp", 64),
     ],
 )
-def test_MaxPooling2D_box(data_format, odd, m_0, m_1, fast, mode, floatx):
+def test_MaxPooling2D_box(data_format, odd, m_0, m_1, fast, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -37,8 +31,8 @@ def test_MaxPooling2D_box(data_format, odd, m_0, m_1, fast, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    inputs = get_tensor_decomposition_images_box(data_format, odd)
-    inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1)
+    inputs = helpers.get_tensor_decomposition_images_box(data_format, odd)
+    inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1)
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
     output_ref = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid", dtype=K.floatx())(inputs[1])
@@ -67,7 +61,7 @@ def test_MaxPooling2D_box(data_format, odd, m_0, m_1, fast, mode, floatx):
     if mode == "ibp":
         u_c_, l_c_, h_, g_ = f_pooling(inputs_)
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x,
         y_,
         h_,

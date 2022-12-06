@@ -9,25 +9,17 @@ from numpy.testing import assert_allclose, assert_almost_equal
 from decomon.layers.utils import add, get_lower, get_upper, max_, maximum, minus, relu_
 from decomon.utils import substract
 
-from . import (
-    assert_output_properties_box,
-    get_standard_values_multid_box,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_1d_box,
-    get_tensor_decomposition_multid_box,
-)
-
 
 @pytest.mark.parametrize("odd, floatx", [(0, 32), (0, 64), (0, 16)])
-def test_get_upper_multi_box(odd, floatx):
+def test_get_upper_multi_box(odd, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     if floatx == 16:
         K.set_epsilon(1e-4)
 
-    inputs = get_tensor_decomposition_multid_box(odd)
-    inputs_ = get_standard_values_multid_box(odd)
+    inputs = helpers.get_tensor_decomposition_multid_box(odd)
+    inputs_ = helpers.get_standard_values_multid_box(odd)
 
     x, y, x_0, u_c, W_u, b_u, _, _, _, _, _ = inputs
     x_, y_, x_0_, u_c_, W_u_, b_u_, _, _, _, _, _ = inputs_
@@ -83,13 +75,13 @@ def test_get_upper_multi_box(odd, floatx):
         (9, 16),
     ],
 )
-def test_get_upper_box_numpy(n, floatx):
+def test_get_upper_box_numpy(n, floatx, helpers):
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     if floatx == 16:
         K.set_epsilon(1e-4)
-    inputs = get_tensor_decomposition_1d_box()
-    inputs_ = get_standart_values_1d_box(n)
+    inputs = helpers.get_tensor_decomposition_1d_box()
+    inputs_ = helpers.get_standart_values_1d_box(n)
 
     x, y, x_0, u_c, W_u, b_u, _, _, _, _, _ = inputs
     x_, y_, x_0_, u_c_, W_u_, b_u_, _, _, _, _, _ = inputs_
@@ -147,14 +139,14 @@ def test_get_upper_box_numpy(n, floatx):
         (9, 16),
     ],
 )
-def test_get_upper_box(n, floatx):
+def test_get_upper_box(n, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     if floatx == 16:
         K.set_epsilon(1e-4)
-    inputs = get_tensor_decomposition_1d_box()
-    inputs_ = get_standart_values_1d_box(n)
+    inputs = helpers.get_tensor_decomposition_1d_box()
+    inputs_ = helpers.get_standart_values_1d_box(n)
 
     x, y, x_0, u_c, W_u, b_u, _, _, _, _, _ = inputs
     _, _, x_0_, u_c_, W_u_, b_u_, _, _, _, _, _ = inputs_
@@ -222,14 +214,14 @@ def test_get_upper_box(n, floatx):
         (9, 16),
     ],
 )
-def test_get_lower_box(n, floatx):
+def test_get_lower_box(n, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     if floatx == 16:
         K.set_epsilon(1e-4)
-    inputs = get_tensor_decomposition_1d_box()
-    inputs_ = get_standart_values_1d_box(n)
+    inputs = helpers.get_tensor_decomposition_1d_box()
+    inputs_ = helpers.get_standart_values_1d_box(n)
     x, y, x_0, _, _, _, l_c, W_l, b_l, _, _ = inputs
 
     lower = get_lower(x_0, W_l, b_l, {})
@@ -293,14 +285,14 @@ def test_get_lower_box(n, floatx):
         (9, 16),
     ],
 )
-def test_get_lower_upper_box(n, floatx):
+def test_get_lower_upper_box(n, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     if floatx == 16:
         K.set_epsilon(1e-4)
-    inputs = get_tensor_decomposition_1d_box()
-    inputs_ = get_standart_values_1d_box(n)
+    inputs = helpers.get_tensor_decomposition_1d_box()
+    inputs_ = helpers.get_standart_values_1d_box(n)
     x, y, x_0, _, W_u, b_u, _, W_l, b_l, _, _ = inputs
 
     lower = get_lower(x_0, W_l, b_l, {})
@@ -408,7 +400,7 @@ def test_get_lower_upper_box(n, floatx):
         (9, "forward", 16),
     ],
 )
-def test_relu_1D_box(n, mode, floatx):
+def test_relu_1D_box(n, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -419,8 +411,8 @@ def test_relu_1D_box(n, mode, floatx):
         decimal = 2
     else:
         decimal = 5
-    inputs = get_tensor_decomposition_1d_box()
-    inputs_ = get_standart_values_1d_box(n)
+    inputs = helpers.get_tensor_decomposition_1d_box()
+    inputs_ = helpers.get_standart_values_1d_box(n)
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs  # tensors
     (
@@ -560,7 +552,7 @@ def test_relu_1D_box(n, mode, floatx):
         assert_almost_equal(z_0[:, 1], z_[:, 1], decimal=decimal, err_msg="the upper bound should be unchanged")
 
     if mode == "hybrid":
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_0,
             y_,
             h_,
@@ -578,7 +570,7 @@ def test_relu_1D_box(n, mode, floatx):
         )
 
     if mode == "forward":
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_0,
             y_,
             h_,
@@ -596,7 +588,7 @@ def test_relu_1D_box(n, mode, floatx):
         )
 
     if mode == "ibp":
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_0,
             y_,
             h_,
@@ -640,7 +632,7 @@ def test_relu_1D_box(n, mode, floatx):
         (1, "ibp", 16),
     ],
 )
-def test_add(odd, mode, floatx):
+def test_add(odd, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(32))
     eps = K.epsilon()
@@ -651,10 +643,10 @@ def test_add(odd, mode, floatx):
     else:
         decimal = 5
 
-    inputs_0 = get_tensor_decomposition_multid_box(odd)
-    inputs_1 = get_tensor_decomposition_multid_box(odd)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(odd)
 
-    inputs_ = get_standard_values_multid_box(odd)
+    inputs_ = helpers.get_standard_values_multid_box(odd)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_0
 
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0, h_0, g_0 = inputs_0
@@ -682,7 +674,7 @@ def test_add(odd, mode, floatx):
     y_ = f_ref(inputs_ + inputs_)
     if mode == "hybrid":
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_add(inputs_ + inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             inputs_[0],
             y_,
             h_,
@@ -701,7 +693,7 @@ def test_add(odd, mode, floatx):
 
     if mode == "forward":
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_add(inputs_ + inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             inputs_[0],
             y_,
             h_,
@@ -719,7 +711,7 @@ def test_add(odd, mode, floatx):
         )
     if mode == "ibp":
         u_c_, l_c_, h_, g_ = f_add(inputs_ + inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             inputs_[0],
             y_,
             h_,
@@ -763,7 +755,7 @@ def test_add(odd, mode, floatx):
         (1, "ibp", 16),
     ],
 )
-def test_minus(odd, mode, floatx):
+def test_minus(odd, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -774,8 +766,8 @@ def test_minus(odd, mode, floatx):
     else:
         decimal = 5
 
-    inputs_0 = get_tensor_decomposition_multid_box(odd)
-    inputs_ = get_standard_values_multid_box(odd)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd)
+    inputs_ = helpers.get_standard_values_multid_box(odd)
 
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0, h_0, g_0 = inputs_0
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
@@ -792,7 +784,7 @@ def test_minus(odd, mode, floatx):
     y_ = f_ref(inputs_)
     if mode == "hybrid":
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_minus(inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x,
             y_,
             h_,
@@ -810,7 +802,7 @@ def test_minus(odd, mode, floatx):
         )
     if mode == "forward":
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_minus(inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x,
             y_,
             h_,
@@ -828,7 +820,7 @@ def test_minus(odd, mode, floatx):
         )
     if mode == "ibp":
         u_c_, l_c_, h_, g_ = f_minus(inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x,
             y_,
             h_,
@@ -872,7 +864,7 @@ def test_minus(odd, mode, floatx):
         (1, "ibp", 16),
     ],
 )
-def test_substract(odd, mode, floatx):
+def test_substract(odd, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -882,10 +874,10 @@ def test_substract(odd, mode, floatx):
         decimal = 2
     else:
         decimal = 5
-    inputs_0 = get_tensor_decomposition_multid_box(odd)
-    inputs_1 = get_tensor_decomposition_multid_box(odd)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(odd)
 
-    inputs_ = get_standard_values_multid_box(odd)
+    inputs_ = helpers.get_standard_values_multid_box(odd)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_0
 
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0, h_0, g_0 = inputs_0
@@ -913,7 +905,7 @@ def test_substract(odd, mode, floatx):
     y_ = f_ref(inputs_ + inputs_)
     if mode == "hybrid":
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_sub(inputs_ + inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             inputs_[0],
             y_,
             h_,
@@ -932,7 +924,7 @@ def test_substract(odd, mode, floatx):
 
     if mode == "forward":
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_sub(inputs_ + inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             inputs_[0],
             y_,
             h_,
@@ -950,7 +942,7 @@ def test_substract(odd, mode, floatx):
         )
     if mode == "ibp":
         u_c_, l_c_, h_, g_ = f_sub(inputs_ + inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             inputs_[0],
             y_,
             h_,
@@ -994,7 +986,7 @@ def test_substract(odd, mode, floatx):
         (1, "ibp", 16),
     ],
 )
-def test_maximum(odd, mode, floatx):
+def test_maximum(odd, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -1004,13 +996,13 @@ def test_maximum(odd, mode, floatx):
         decimal = 2
     else:
         decimal = 5
-    inputs_0 = get_tensor_decomposition_multid_box(odd)
-    inputs_1 = get_tensor_decomposition_multid_box(odd)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(odd)
 
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0, h_0, g_0 = inputs_0
     x_1, y_1, z_1, u_c_1, W_u_1, b_u_1, l_c_1, W_l_1, b_l_1, h_1, g_1 = inputs_1
 
-    inputs_ = get_standard_values_multid_box(odd)
+    inputs_ = helpers.get_standard_values_multid_box(odd)
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
 
@@ -1032,7 +1024,7 @@ def test_maximum(odd, mode, floatx):
 
     if mode == "hybrid":
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_maximum(inputs_ + inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x,
             y_,
             h_,
@@ -1051,7 +1043,7 @@ def test_maximum(odd, mode, floatx):
     if mode == "forward":
         output_ = f_maximum(inputs_ + inputs_)
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = output_
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x,
             y_,
             h_,
@@ -1071,7 +1063,7 @@ def test_maximum(odd, mode, floatx):
         output_ = f_maximum(inputs_ + inputs_)
         u_c_, l_c_, h_, g_ = output_
         z_ = inputs_[2]
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x,
             y_,
             h_,
@@ -1115,7 +1107,7 @@ def test_maximum(odd, mode, floatx):
         (1, "ibp", 16),
     ],
 )
-def test_max_(odd, mode, floatx):
+def test_max_(odd, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -1126,8 +1118,8 @@ def test_max_(odd, mode, floatx):
     else:
         decimal = 5
 
-    inputs = get_tensor_decomposition_multid_box(odd)
-    inputs_ = get_standard_values_multid_box(odd)
+    inputs = helpers.get_tensor_decomposition_multid_box(odd)
+    inputs_ = helpers.get_standard_values_multid_box(odd)
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
     # x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
@@ -1149,7 +1141,7 @@ def test_max_(odd, mode, floatx):
 
     if mode == "hybrid":
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_max(inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_,
             h_,
@@ -1168,7 +1160,7 @@ def test_max_(odd, mode, floatx):
 
     if mode == "forward":
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_max(inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_,
             h_,
@@ -1187,7 +1179,7 @@ def test_max_(odd, mode, floatx):
 
     if mode == "ibp":
         u_c_, l_c_, h_, g_ = f_max(inputs_)
-        assert_output_properties_box(
+        helpers.assert_output_properties_box(
             x_,
             y_,
             h_,
@@ -1211,10 +1203,10 @@ def test_max_(odd, mode, floatx):
 
 
 @pytest.mark.parametrize("odd", [0, 1])
-def test_max_nodc(odd):
+def test_max_nodc(odd, helpers):
 
-    inputs = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
 
     output = max_(inputs[2:], dc_decomp=False)
     f_max = K.function(inputs, output)
@@ -1222,12 +1214,12 @@ def test_max_nodc(odd):
 
 
 @pytest.mark.parametrize("odd", [0, 1])
-def test_maximum_nodc(odd):
+def test_maximum_nodc(odd, helpers):
 
-    inputs_0 = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
 
-    inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     output = maximum(inputs_0[2:], inputs_1[2:], dc_decomp=False)
 
     f_ref = K.function(inputs_0 + inputs_1, K.maximum(inputs_0[1], inputs_1[1]))
@@ -1238,11 +1230,11 @@ def test_maximum_nodc(odd):
 
 
 @pytest.mark.parametrize("odd", [0, 1])
-def test_minus_nodc(odd):
+def test_minus_nodc(odd, helpers):
 
-    inputs_0 = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
 
-    inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     output = minus(inputs_0[2:], dc_decomp=False)
 
     f_ref = K.function(inputs_0, -inputs_0[1])
@@ -1253,11 +1245,11 @@ def test_minus_nodc(odd):
 
 
 @pytest.mark.parametrize("odd", [0, 1])
-def test_add_nodc(odd):
+def test_add_nodc(odd, helpers):
 
-    inputs_0 = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = get_standard_values_multid_box(odd, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     output = add(inputs_0[2:], inputs_1[2:], dc_decomp=False)
     f_ref = K.function(inputs_0 + inputs_1, inputs_0[1] + inputs_1[1])
     f_add = K.function(inputs_0 + inputs_1, output)
@@ -1266,10 +1258,10 @@ def test_add_nodc(odd):
 
 
 @pytest.mark.parametrize("n", [1, 2, 3, 4, 5, 6, 7, 8, 9])
-def test_relu_1D_box_nodc(n):
+def test_relu_1D_box_nodc(n, helpers):
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
 
     output = relu_(inputs[2:], dc_decomp=False)
@@ -1306,8 +1298,8 @@ def test_log_1D_box(n, mode, floatx):
         K.set_epsilon(1e-4)
         decimal = 2
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
 
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
@@ -1345,7 +1337,7 @@ def test_log_1D_box(n, mode, floatx):
         u_c_, l_c_ = f_log(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_0,
         y_,
         None,
@@ -1420,8 +1412,8 @@ def test_exp_1D_box(n, mode, floatx):
         K.set_epsilon(1e-4)
         decimal = 2
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
 
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
@@ -1460,7 +1452,7 @@ def test_exp_1D_box(n, mode, floatx):
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
 
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_0,
         y_,
         None,
@@ -1506,8 +1498,8 @@ def test_log_exp_1D_box(n, mode, floatx):
         K.set_epsilon(1e-4)
         decimal = 2
 
-    inputs = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
 
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
@@ -1548,7 +1540,7 @@ def test_log_exp_1D_box(n, mode, floatx):
     if n==2 and mode=='forward':
         import pdb; pdb.set_trace()
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_0,
         y_,
         None,

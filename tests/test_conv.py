@@ -8,13 +8,6 @@ from tensorflow.keras.layers import Conv2D
 
 from decomon.layers.decomon_layers import DecomonConv2D, to_monotonic
 
-from . import (
-    assert_output_properties_box,
-    assert_output_properties_box_linear,
-    get_standard_values_images_box,
-    get_tensor_decomposition_images_box,
-)
-
 
 @pytest.mark.parametrize(
     "data_format, odd, m_0, m_1, mode, floatx",
@@ -39,7 +32,7 @@ from . import (
         ("channels_first", 0, 0, 1, "ibp", 16),
     ],
 )
-def test_Decomon_conv_box(data_format, odd, m_0, m_1, mode, floatx):
+def test_Decomon_conv_box(data_format, odd, m_0, m_1, mode, floatx, helpers):
 
     if data_format == "channels_first" and not len(K._get_available_gpus()):
         return
@@ -55,8 +48,8 @@ def test_Decomon_conv_box(data_format, odd, m_0, m_1, mode, floatx):
         10, kernel_size=(3, 3), activation="relu", dc_decomp=True, mode=mode, data_format=data_format, dtype=K.floatx()
     )
 
-    inputs = get_tensor_decomposition_images_box(data_format, odd)
-    inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1)
+    inputs = helpers.get_tensor_decomposition_images_box(data_format, odd)
+    inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]
@@ -81,7 +74,7 @@ def test_Decomon_conv_box(data_format, odd, m_0, m_1, mode, floatx):
         u_c_, l_c_, h_, g_ = f_conv(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_,
         None,
         h_,
@@ -109,7 +102,7 @@ def test_Decomon_conv_box(data_format, odd, m_0, m_1, mode, floatx):
         u_c_, l_c_, h_, g_ = f_conv(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_,
         None,
         h_,
@@ -141,7 +134,7 @@ def test_Decomon_conv_box(data_format, odd, m_0, m_1, mode, floatx):
         ("channels_first", 0, 0, 1, 16),
     ],
 )
-def test_Decomon_conv_box_nodc(data_format, odd, m_0, m_1, floatx):
+def test_Decomon_conv_box_nodc(data_format, odd, m_0, m_1, floatx, helpers):
 
     if data_format == "channels_first" and not len(K._get_available_gpus()):
         return
@@ -155,8 +148,8 @@ def test_Decomon_conv_box_nodc(data_format, odd, m_0, m_1, floatx):
 
     monotonic_layer = DecomonConv2D(10, kernel_size=(3, 3), activation="relu", dc_decomp=False, dtype=K.floatx())
 
-    inputs = get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)
-    inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     output = monotonic_layer(inputs[2:])
@@ -166,12 +159,12 @@ def test_Decomon_conv_box_nodc(data_format, odd, m_0, m_1, floatx):
     f_conv = K.function(inputs[2:], output)
 
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_conv(inputs_[2:])
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc", decimal=decimal
     )
     monotonic_layer.set_weights([np.minimum(0.0, W_), bias])
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_conv(inputs_[2:])
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         x, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc", decimal=decimal
     )
 
@@ -190,7 +183,7 @@ def test_Decomon_conv_box_nodc(data_format, odd, m_0, m_1, floatx):
         ("channels_last", 0, 0, 1, True, 16),
     ],
 )
-def test_Decomon_conv_to_monotonic_box(data_format, odd, m_0, m_1, shared, floatx):
+def test_Decomon_conv_to_monotonic_box(data_format, odd, m_0, m_1, shared, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -200,8 +193,8 @@ def test_Decomon_conv_to_monotonic_box(data_format, odd, m_0, m_1, shared, float
         decimal = 1
 
     conv_ref = Conv2D(10, kernel_size=(3, 3), activation="relu", dtype=K.floatx())
-    inputs = get_tensor_decomposition_images_box(data_format, odd)
-    inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1)
+    inputs = helpers.get_tensor_decomposition_images_box(data_format, odd)
+    inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
 
     output_ref = conv_ref(inputs[1])
@@ -220,7 +213,7 @@ def test_Decomon_conv_to_monotonic_box(data_format, odd, m_0, m_1, shared, float
 
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_conv(inputs_[2:])
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x,
         y_ref,
         h_,
@@ -242,11 +235,11 @@ def test_Decomon_conv_to_monotonic_box(data_format, odd, m_0, m_1, shared, float
 
 
 @pytest.mark.parametrize("data_format, odd, m_0, m_1", [("channels_last", 0, 0, 1)])
-def test_Decomon_conv_to_monotonic_box_nodc(data_format, odd, m_0, m_1):
+def test_Decomon_conv_to_monotonic_box_nodc(data_format, odd, m_0, m_1, helpers):
 
     conv_ref = Conv2D(10, kernel_size=(3, 3), activation="relu")
-    inputs = get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)
-    inputs_ = get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     output_ref = conv_ref(inputs[1])
@@ -265,4 +258,6 @@ def test_Decomon_conv_to_monotonic_box_nodc(data_format, odd, m_0, m_1):
 
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_conv(inputs_[2:])
 
-    assert_output_properties_box_linear(x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc")
+    helpers.assert_output_properties_box_linear(
+        x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc"
+    )

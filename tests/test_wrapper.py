@@ -6,8 +6,6 @@ from decomon import get_lower_box, get_range_box, get_upper_box
 from decomon.backward_layers.utils import get_FORWARD, get_IBP
 from decomon.models import clone as convert
 
-from . import get_standard_values_multid_box_convert, get_standart_values_1d_box
-
 
 @pytest.mark.parametrize(
     "n, method, mode, fast",
@@ -92,9 +90,9 @@ from . import get_standard_values_multid_box_convert, get_standart_values_1d_box
         (5, "crown", "forward", False),
     ],
 )
-def test_get_upper_1d_box(n, method, mode, fast):
+def test_get_upper_1d_box(n, method, mode, fast, helpers):
 
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     # build a simple sequential model from keras
     # start with 1D
@@ -199,9 +197,9 @@ def test_get_upper_1d_box(n, method, mode, fast):
         (5, "crown", "forward", False),
     ],
 )
-def test_get_lower_1d_box(n, method, mode, fast):
+def test_get_lower_1d_box(n, method, mode, fast, helpers):
 
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     # build a simple sequential model from keras
     # start with 1D
@@ -306,9 +304,9 @@ def test_get_lower_1d_box(n, method, mode, fast):
         (5, "crown", "forward", False),
     ],
 )
-def test_get_range_1d_box(n, method, mode, fast):
+def test_get_range_1d_box(n, method, mode, fast, helpers):
 
-    inputs_ = get_standart_values_1d_box(n, dc_decomp=False)
+    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     # build a simple sequential model from keras
     # start with 1D
@@ -360,9 +358,9 @@ def test_get_range_1d_box(n, method, mode, fast):
         (1, 0, "crown", "forward", False),
     ],
 )
-def test_get_upper_multid_box(odd, n_subgrad, method, mode, fast):
+def test_get_upper_multid_box(odd, n_subgrad, method, mode, fast, helpers):
 
-    inputs_ = get_standard_values_multid_box_convert(odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box_convert(odd, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     # build a simple sequential model from keras
     # start with 1D
@@ -408,9 +406,9 @@ def test_get_upper_multid_box(odd, n_subgrad, method, mode, fast):
         (1, 0, "crown", "forward", False),
     ],
 )
-def test_get_lower_multid_box(odd, n_subgrad, method, mode, fast):
+def test_get_lower_multid_box(odd, n_subgrad, method, mode, fast, helpers):
 
-    inputs_ = get_standard_values_multid_box_convert(odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box_convert(odd, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     # build a simple sequential model from keras
     # start with 1D
@@ -456,9 +454,9 @@ def test_get_lower_multid_box(odd, n_subgrad, method, mode, fast):
         (1, 0, "crown", "forward", False),
     ],
 )
-def test_get_range_multid_box(odd, n_subgrad, method, mode, fast):
+def test_get_range_multid_box(odd, n_subgrad, method, mode, fast, helpers):
 
-    inputs_ = get_standard_values_multid_box_convert(odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box_convert(odd, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     # build a simple sequential model from keras
     # start with 1D

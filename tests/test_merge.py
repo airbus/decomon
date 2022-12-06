@@ -26,15 +26,6 @@ from decomon.layers.decomon_merge_layers import (
     DecomonSubtract,
 )
 
-from . import (
-    assert_output_properties_box,
-    assert_output_properties_box_linear,
-    get_standard_values_multid_box,
-    get_standart_values_1d_box,
-    get_tensor_decomposition_1d_box,
-    get_tensor_decomposition_multid_box,
-)
-
 """"
 @pytest.mark.parametrize(
     "n0, mode, floatx",
@@ -926,7 +917,7 @@ def test_DecomonConcatenate_1D_box(n0, mode, floatx):
         (1, "ibp", 16),
     ],
 )
-def test_DecomonAdd_multiD_box(n0, mode, floatx):
+def test_DecomonAdd_multiD_box(n0, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -936,10 +927,10 @@ def test_DecomonAdd_multiD_box(n0, mode, floatx):
         decimal = 2
 
     decomon_op = DecomonAdd(dc_decomp=False, mode=mode, dtype=K.floatx())
-    inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
-    inputs_1_ = get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1
@@ -967,7 +958,7 @@ def test_DecomonAdd_multiD_box(n0, mode, floatx):
     if mode == "ibp":
         u_, l_ = output_
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add", decimal=decimal
     )
 
@@ -998,7 +989,7 @@ def test_DecomonAdd_multiD_box(n0, mode, floatx):
         (1, "ibp", 16),
     ],
 )
-def test_DecomonSubstract_multiD_box(n0, mode, floatx):
+def test_DecomonSubstract_multiD_box(n0, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -1009,10 +1000,10 @@ def test_DecomonSubstract_multiD_box(n0, mode, floatx):
 
     decomon_op = DecomonSubtract(dc_decomp=False, mode=mode, dtype=K.floatx())
 
-    inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
-    inputs_1_ = get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1
@@ -1040,7 +1031,7 @@ def test_DecomonSubstract_multiD_box(n0, mode, floatx):
     if mode == "ibp":
         u_, l_ = output_
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add", decimal=decimal
     )
     K.set_floatx("float32")
@@ -1070,7 +1061,7 @@ def test_DecomonSubstract_multiD_box(n0, mode, floatx):
         (1, "ibp", 16),
     ],
 )
-def test_DecomonAverage_multiD_box(n0, mode, floatx):
+def test_DecomonAverage_multiD_box(n0, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -1081,10 +1072,10 @@ def test_DecomonAverage_multiD_box(n0, mode, floatx):
 
     decomon_op = DecomonAverage(dc_decomp=False, mode=mode, dtype=K.floatx())
 
-    inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
-    inputs_1_ = get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1
@@ -1112,7 +1103,7 @@ def test_DecomonAverage_multiD_box(n0, mode, floatx):
     if mode == "ibp":
         u_, l_ = output_
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add", decimal=decimal
     )
     K.set_epsilon(eps)
@@ -1142,7 +1133,7 @@ def test_DecomonAverage_multiD_box(n0, mode, floatx):
         (1, "ibp", 16),
     ],
 )
-def test_DecomonMaximum_multiD_box(n0, mode, floatx):
+def test_DecomonMaximum_multiD_box(n0, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -1153,10 +1144,10 @@ def test_DecomonMaximum_multiD_box(n0, mode, floatx):
 
     decomon_op = DecomonMaximum(dc_decomp=False, mode=mode, dtype=K.floatx())
 
-    inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
-    inputs_1_ = get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1
@@ -1184,7 +1175,7 @@ def test_DecomonMaximum_multiD_box(n0, mode, floatx):
     if mode == "ibp":
         u_, l_ = output_
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add", decimal=decimal
     )
     K.set_epsilon(eps)
@@ -1214,7 +1205,7 @@ def test_DecomonMaximum_multiD_box(n0, mode, floatx):
         (1, "ibp", 16),
     ],
 )
-def test_DecomonMinimum_multiD_box(n0, mode, floatx):
+def test_DecomonMinimum_multiD_box(n0, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -1225,10 +1216,10 @@ def test_DecomonMinimum_multiD_box(n0, mode, floatx):
 
     decomon_op = DecomonMinimum(dc_decomp=False, mode=mode, dtype=K.floatx())
 
-    inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
-    inputs_1_ = get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1
@@ -1256,7 +1247,7 @@ def test_DecomonMinimum_multiD_box(n0, mode, floatx):
     if mode == "ibp":
         u_, l_ = output_
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add", decimal=decimal
     )
     K.set_floatx("float32")
@@ -1286,7 +1277,7 @@ def test_DecomonMinimum_multiD_box(n0, mode, floatx):
         (1, "ibp", 16),
     ],
 )
-def test_DecomonConcatenate_multiD_box(n0, mode, floatx):
+def test_DecomonConcatenate_multiD_box(n0, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -1297,10 +1288,10 @@ def test_DecomonConcatenate_multiD_box(n0, mode, floatx):
 
     decomon_op = DecomonConcatenate(dc_decomp=False, mode=mode, axis=-1, dtype=K.floatx())
 
-    inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
-    inputs_1_ = get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1
@@ -1328,7 +1319,7 @@ def test_DecomonConcatenate_multiD_box(n0, mode, floatx):
     if mode == "ibp":
         u_, l_ = output_
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add", decimal=decimal
     )
     K.set_epsilon(eps)
@@ -1339,14 +1330,14 @@ def test_DecomonConcatenate_multiD_box(n0, mode, floatx):
 
 
 @pytest.mark.parametrize("n0", [0, 1, 2, 3, 4, 5, 6, 7])
-def test_DecomonAdd_1D_box_to_monotonic(n0):
+def test_DecomonAdd_1D_box_to_monotonic(n0, helpers):
 
     ref_op = Add()
 
-    inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = get_standart_values_1d_box(n0, dc_decomp=False)
-    inputs_1_ = get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_0_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
 
     ref_op([inputs_0[0], inputs_1[0]])
 
@@ -1364,20 +1355,20 @@ def test_DecomonAdd_1D_box_to_monotonic(n0):
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = inputs_0_[1] + inputs_1_[1]
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add"
     )
 
 
 @pytest.mark.parametrize("n0", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-def test_DecomonAverage_1D_box_to_monotonic(n0):
+def test_DecomonAverage_1D_box_to_monotonic(n0, helpers):
 
     ref_op = Average()
 
-    inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = get_standart_values_1d_box(n0, dc_decomp=False)
-    inputs_1_ = get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_0_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
 
     ref_op([inputs_0[0], inputs_1[0]])
     decomon_op = to_monotonic(ref_op, input_dim=(2, 1), dc_decomp=False)[0]
@@ -1396,20 +1387,20 @@ def test_DecomonAverage_1D_box_to_monotonic(n0):
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = (inputs_0_[1] + inputs_1_[1]) / 2.0
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="average"
     )
 
 
 @pytest.mark.parametrize("n0", [0, 1, 2, 3, 4, 5, 6, 7])
-def test_DecomonSubtract_1D_box_to_monotonic(n0):
+def test_DecomonSubtract_1D_box_to_monotonic(n0, helpers):
 
     ref_op = Subtract()
 
-    inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = get_standart_values_1d_box(n0, dc_decomp=False)
-    inputs_1_ = get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_0_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
 
     ref_op([inputs_0[0], inputs_1[0]])
     decomon_op = to_monotonic(ref_op, input_dim=(2, 1), dc_decomp=False)[0]
@@ -1428,20 +1419,20 @@ def test_DecomonSubtract_1D_box_to_monotonic(n0):
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = inputs_0_[1] - inputs_1_[1]
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="substract"
     )
 
 
 @pytest.mark.parametrize("n0", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-def test_DecomonMaximum_1D_box_to_monotonic(n0):
+def test_DecomonMaximum_1D_box_to_monotonic(n0, helpers):
 
     ref_op = Maximum()
 
-    inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = get_standart_values_1d_box(n0, dc_decomp=False)
-    inputs_1_ = get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_0_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0_
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1_
@@ -1460,20 +1451,20 @@ def test_DecomonMaximum_1D_box_to_monotonic(n0):
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = np.maximum(inputs_0_[1], inputs_1_[1])
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="maximum"
     )
 
 
 @pytest.mark.parametrize("n0", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-def test_DecomonMinimum_1D_box_to_monotonic(n0):
+def test_DecomonMinimum_1D_box_to_monotonic(n0, helpers):
 
     ref_op = Minimum()
 
-    inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = get_standart_values_1d_box(n0, dc_decomp=False)
-    inputs_1_ = get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_0_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0_
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1_
@@ -1492,20 +1483,20 @@ def test_DecomonMinimum_1D_box_to_monotonic(n0):
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = np.minimum(inputs_0_[1], inputs_1_[1])
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="maximum"
     )
 
 
 @pytest.mark.parametrize("n0", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-def test_DecomonConcatenate_1D_box_to_monotonic(n0):
+def test_DecomonConcatenate_1D_box_to_monotonic(n0, helpers):
 
     ref_op = Concatenate(axis=-1)
 
-    inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = get_standart_values_1d_box(n0, dc_decomp=False)
-    inputs_1_ = get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_0_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0_
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1_
@@ -1524,7 +1515,7 @@ def test_DecomonConcatenate_1D_box_to_monotonic(n0):
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = np.concatenate([inputs_0_[1], inputs_1_[1]], -1)
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="maximum"
     )
 
@@ -1533,14 +1524,14 @@ def test_DecomonConcatenate_1D_box_to_monotonic(n0):
 
 
 @pytest.mark.parametrize("n0", [0, 1])
-def test_DecomonAdd_multiD_box_to_monotonic(n0):
+def test_DecomonAdd_multiD_box_to_monotonic(n0, helpers):
 
     ref_op = Add()
 
-    inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
-    inputs_1_ = get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0_
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1_
@@ -1556,20 +1547,20 @@ def test_DecomonAdd_multiD_box_to_monotonic(n0):
     # output_ = K.function(inputs_0[1:]+inputs_1[1:], output_decomon)(inputs_0_[1:]+inputs_1_[1:])
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = y0 + y1
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add"
     )
 
 
 @pytest.mark.parametrize("n0", [0, 1])
-def test_DecomonSubstract_multiD_box_to_monotonic(n0):
+def test_DecomonSubstract_multiD_box_to_monotonic(n0, helpers):
 
     ref_op = Subtract()
 
-    inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
-    inputs_1_ = get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0_
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1_
@@ -1588,20 +1579,20 @@ def test_DecomonSubstract_multiD_box_to_monotonic(n0):
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = y0 - y1
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="substract"
     )
 
 
 @pytest.mark.parametrize("n0", [0, 1])
-def test_DecomonAverage_multiD_box_to_monotonic(n0):
+def test_DecomonAverage_multiD_box_to_monotonic(n0, helpers):
 
     ref_op = Average(dtype=K.floatx())
 
-    inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
-    inputs_1_ = get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0_
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1_
@@ -1620,20 +1611,20 @@ def test_DecomonAverage_multiD_box_to_monotonic(n0):
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = (y0 + y1) / 2.0
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="average"
     )
 
 
 @pytest.mark.parametrize("n0", [0, 1])
-def test_DecomonMaximum_multiD_box_to_monotonic(n0):
+def test_DecomonMaximum_multiD_box_to_monotonic(n0, helpers):
 
     ref_op = Maximum(dtype=K.floatx())
 
-    inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
-    inputs_1_ = get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0_
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1_
@@ -1652,20 +1643,20 @@ def test_DecomonMaximum_multiD_box_to_monotonic(n0):
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = np.maximum(y0, y1)
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="maximum"
     )
 
 
 @pytest.mark.parametrize("n0", [0, 1])
-def test_DecomonMinimum_multiD_box_to_monotonic(n0):
+def test_DecomonMinimum_multiD_box_to_monotonic(n0, helpers):
 
     ref_op = Minimum(dtype=K.floatx())
 
-    inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
-    inputs_1_ = get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0_
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1_
@@ -1684,20 +1675,20 @@ def test_DecomonMinimum_multiD_box_to_monotonic(n0):
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = np.minimum(y0, y1)
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="minimum"
     )
 
 
 @pytest.mark.parametrize("n0", [0, 1])
-def test_DecomonConcatenate_multiD_box_to_monotonic(n0):
+def test_DecomonConcatenate_multiD_box_to_monotonic(n0, helpers):
 
     ref_op = Concatenate(axis=-1, dtype=K.floatx())
 
-    inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
-    inputs_1_ = get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0_
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1_
@@ -1716,7 +1707,7 @@ def test_DecomonConcatenate_multiD_box_to_monotonic(n0):
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = np.concatenate([y0, y1], -1)
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="concatenate"
     )
 
@@ -1819,7 +1810,7 @@ def test_DecomonConcatenate_multiD_box_to_monotonic(n0):
         (9, "ibp", 16),
     ],
 )
-def test_DecomonMultiply_1D_box(n0, mode, floatx):
+def test_DecomonMultiply_1D_box(n0, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -1830,10 +1821,10 @@ def test_DecomonMultiply_1D_box(n0, mode, floatx):
 
     decomon_op = DecomonMultiply(dc_decomp=False, mode=mode, dtype=K.floatx())
 
-    inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = get_standart_values_1d_box(n0, dc_decomp=False)
-    inputs_1_ = get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_0_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1
@@ -1861,7 +1852,7 @@ def test_DecomonMultiply_1D_box(n0, mode, floatx):
     if mode == "ibp":
         u_, l_ = output_
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add", decimal=decimal
     )
     K.set_floatx("float32")
@@ -1869,14 +1860,14 @@ def test_DecomonMultiply_1D_box(n0, mode, floatx):
 
 
 @pytest.mark.parametrize("n0", [0, 1, 2, 3, 4, 5, 6, 7])
-def test_DecomonMultiply_1D_box_to_monotonic(n0):
+def test_DecomonMultiply_1D_box_to_monotonic(n0, helpers):
 
     ref_op = Multiply(dtype=K.floatx())
 
-    inputs_0 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = get_standart_values_1d_box(n0, dc_decomp=False)
-    inputs_1_ = get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_0_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standart_values_1d_box(n0, dc_decomp=False)
 
     ref_op([inputs_0[0], inputs_1[0]])
     decomon_op = to_monotonic(ref_op, input_dim=(2, 1), dc_decomp=False)[0]
@@ -1893,7 +1884,7 @@ def test_DecomonMultiply_1D_box_to_monotonic(n0):
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = y0 * y1
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add"
     )
 
@@ -1921,7 +1912,7 @@ def test_DecomonMultiply_1D_box_to_monotonic(n0):
         (1, "ibp", 16),
     ],
 )
-def test_DecomonMultiply_multiD_box(n0, mode, floatx):
+def test_DecomonMultiply_multiD_box(n0, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -1931,10 +1922,10 @@ def test_DecomonMultiply_multiD_box(n0, mode, floatx):
         decimal = 2
 
     decomon_op = DecomonMultiply(dc_decomp=False, mode=mode, dtype=K.floatx())
-    inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
-    inputs_1_ = get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1
@@ -1962,7 +1953,7 @@ def test_DecomonMultiply_multiD_box(n0, mode, floatx):
     if mode == "ibp":
         u_, l_ = output_
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add", decimal=decimal
     )
     K.set_floatx("float32")
@@ -1970,14 +1961,14 @@ def test_DecomonMultiply_multiD_box(n0, mode, floatx):
 
 
 @pytest.mark.parametrize("n0", [0, 1])
-def test_DecomonMultiply_multiD_box_to_monotonic(n0):
+def test_DecomonMultiply_multiD_box_to_monotonic(n0, helpers):
 
     ref_op = Multiply(dtype=K.floatx())
 
-    inputs_0 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_1 = get_tensor_decomposition_multid_box(n0, dc_decomp=False)
-    inputs_0_ = get_standard_values_multid_box(n0, dc_decomp=False)
-    inputs_1_ = get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(n0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_multid_box(n0, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0_
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1_
@@ -1994,7 +1985,7 @@ def test_DecomonMultiply_multiD_box_to_monotonic(n0):
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = y0 * y1
 
-    assert_output_properties_box_linear(
+    helpers.assert_output_properties_box_linear(
         inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add"
     )
 

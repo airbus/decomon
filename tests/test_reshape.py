@@ -6,12 +6,6 @@ from tensorflow.keras.layers import Permute, Reshape
 from decomon.layers.decomon_layers import to_monotonic
 from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
 
-from . import (
-    assert_output_properties_box,
-    get_standard_values_images_box,
-    get_tensor_decomposition_images_box,
-)
-
 
 @pytest.mark.parametrize(
     "odd, m_0, m_1, mode, floatx",
@@ -27,7 +21,7 @@ from . import (
         (0, 0, 1, "ibp", 16),
     ],
 )
-def test_Decomon_reshape_box(odd, m_0, m_1, mode, floatx):
+def test_Decomon_reshape_box(odd, m_0, m_1, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -39,8 +33,8 @@ def test_Decomon_reshape_box(odd, m_0, m_1, mode, floatx):
     # monotonic_layer = DecomonConv2D(10, kernel_size=(3, 3), activation="relu", dc_decomp=True, mode=mode,
     #                                data_format=data_format)
 
-    inputs = get_tensor_decomposition_images_box("channels_last", odd)
-    inputs_ = get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
+    inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd)
+    inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]
@@ -66,7 +60,7 @@ def test_Decomon_reshape_box(odd, m_0, m_1, mode, floatx):
     if mode == "ibp":
         u_c_, l_c_, h_, g_ = f_reshape(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_,
         y_,
         h_,
@@ -101,7 +95,7 @@ def test_Decomon_reshape_box(odd, m_0, m_1, mode, floatx):
         (0, 0, 1, "ibp", 16),
     ],
 )
-def test_Decomon_reshape_box_nodc(odd, m_0, m_1, mode, floatx):
+def test_Decomon_reshape_box_nodc(odd, m_0, m_1, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -113,8 +107,8 @@ def test_Decomon_reshape_box_nodc(odd, m_0, m_1, mode, floatx):
     # monotonic_layer = DecomonConv2D(10, kernel_size=(3, 3), activation="relu", dc_decomp=True, mode=mode,
     #                                data_format=data_format)
 
-    inputs = get_tensor_decomposition_images_box("channels_last", odd, dc_decomp=False)
-    inputs_ = get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]
@@ -141,7 +135,7 @@ def test_Decomon_reshape_box_nodc(odd, m_0, m_1, mode, floatx):
         u_c_, l_c_ = f_reshape(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_,
         y_,
         None,
@@ -173,7 +167,7 @@ def test_Decomon_reshape_box_nodc(odd, m_0, m_1, mode, floatx):
         (0, 0, 1, True, 16),
     ],
 )
-def test_Decomon_reshape_to_monotonic_box(odd, m_0, m_1, shared, floatx):
+def test_Decomon_reshape_to_monotonic_box(odd, m_0, m_1, shared, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -182,8 +176,8 @@ def test_Decomon_reshape_to_monotonic_box(odd, m_0, m_1, shared, floatx):
         K.set_epsilon(1e-2)
         decimal = 1
 
-    inputs = get_tensor_decomposition_images_box("channels_last", odd)
-    inputs_ = get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
+    inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd)
+    inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]
@@ -206,7 +200,7 @@ def test_Decomon_reshape_to_monotonic_box(odd, m_0, m_1, shared, floatx):
 
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_reshape(inputs_[2:])
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_,
         y_ref,
         h_,
@@ -244,7 +238,7 @@ def test_Decomon_reshape_to_monotonic_box(odd, m_0, m_1, shared, floatx):
         (0, 0, 1, "ibp", 16),
     ],
 )
-def test_Decomon_permute_box(odd, m_0, m_1, mode, floatx):
+def test_Decomon_permute_box(odd, m_0, m_1, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -253,8 +247,8 @@ def test_Decomon_permute_box(odd, m_0, m_1, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 1
 
-    inputs = get_tensor_decomposition_images_box("channels_last", odd)
-    inputs_ = get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
+    inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd)
+    inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]
@@ -284,7 +278,7 @@ def test_Decomon_permute_box(odd, m_0, m_1, mode, floatx):
         u_c_, l_c_, h_, g_ = f_permute(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_,
         y_,
         h_,
@@ -319,7 +313,7 @@ def test_Decomon_permute_box(odd, m_0, m_1, mode, floatx):
         (0, 0, 1, "ibp", 16),
     ],
 )
-def test_Decomon_permute_box_nodc(odd, m_0, m_1, mode, floatx):
+def test_Decomon_permute_box_nodc(odd, m_0, m_1, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -328,8 +322,8 @@ def test_Decomon_permute_box_nodc(odd, m_0, m_1, mode, floatx):
         K.set_epsilon(1e-2)
         decimal = 1
 
-    inputs = get_tensor_decomposition_images_box("channels_last", odd, dc_decomp=False)
-    inputs_ = get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]
@@ -359,7 +353,7 @@ def test_Decomon_permute_box_nodc(odd, m_0, m_1, mode, floatx):
         u_c_, l_c_ = f_permute(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_,
         y_,
         None,
@@ -391,7 +385,7 @@ def test_Decomon_permute_box_nodc(odd, m_0, m_1, mode, floatx):
         (0, 0, 1, True, 16),
     ],
 )
-def test_Decomon_permute_to_monotonic_box(odd, m_0, m_1, shared, floatx):
+def test_Decomon_permute_to_monotonic_box(odd, m_0, m_1, shared, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -400,8 +394,8 @@ def test_Decomon_permute_to_monotonic_box(odd, m_0, m_1, shared, floatx):
         K.set_epsilon(1e-2)
         decimal = 1
 
-    inputs = get_tensor_decomposition_images_box("channels_last", odd)
-    inputs_ = get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
+    inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd)
+    inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]
@@ -425,7 +419,7 @@ def test_Decomon_permute_to_monotonic_box(odd, m_0, m_1, shared, floatx):
 
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_permute(inputs_[2:])
 
-    assert_output_properties_box(
+    helpers.assert_output_properties_box(
         x_,
         y_ref,
         h_,
