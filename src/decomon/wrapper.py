@@ -3,7 +3,6 @@ import numpy as np
 from decomon.layers.core import Ball, Box, Grid
 from decomon.models.convert import clone as convert
 from decomon.models.models import DecomonModel
-from decomon.numpy.models import NumpyModel
 
 
 def _get_dual_ord(p):
@@ -389,7 +388,7 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
 
     fast = True
     # check that the model is a DecomonModel, else do the conversion
-    if not (isinstance(model, (DecomonModel, NumpyModel))):
+    if not (isinstance(model, DecomonModel)):
         model_ = convert(model, ibp=True, forward=True)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
@@ -407,17 +406,12 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         x_max = np.reshape(x_max, [-1] + shape)
 
     # reshape x_mmin, x_max
-    if not isinstance(model_, NumpyModel):
-        input_shape = list(model_.input_shape[2:])
-        input_dim = np.prod(input_shape)
-        x_ = x_min + 0 * x_min
-        x_ = x_.reshape([-1] + input_shape)
-        x_min = x_min.reshape((-1, 1, input_dim))
-        x_max = x_max.reshape((-1, 1, input_dim))
-    else:
-        x_min = x_min.reshape((n_batch, 1, -1))
-        x_max = x_max.reshape((n_batch, 1, -1))
-        input_dim = x_min.shape[-1]
+    input_shape = list(model_.input_shape[2:])
+    input_dim = np.prod(input_shape)
+    x_ = x_min + 0 * x_min
+    x_ = x_.reshape([-1] + input_shape)
+    x_min = x_min.reshape((-1, 1, input_dim))
+    x_max = x_max.reshape((-1, 1, input_dim))
 
     z = np.concatenate([x_min, x_max], 1)
 
@@ -504,7 +498,7 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
 
     fast = True
     # check that the model is a DecomonModel, else do the conversion
-    if not (isinstance(model, (DecomonModel, NumpyModel))):
+    if not (isinstance(model, DecomonModel)):
         model_ = convert(model, ibp=True, forward=True)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
@@ -522,17 +516,12 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         x_max = np.reshape(x_max, [-1] + shape)
 
     # reshape x_mmin, x_max
-    if not isinstance(model_, NumpyModel):
-        input_shape = list(model_.input_shape[2:])
-        input_dim = np.prod(input_shape)
-        x_ = x_min + 0 * x_min
-        x_ = x_.reshape([-1] + input_shape)
-        x_min = x_min.reshape((-1, 1, input_dim))
-        x_max = x_max.reshape((-1, 1, input_dim))
-    else:
-        x_min = x_min.reshape((n_batch, 1, -1))
-        x_max = x_max.reshape((n_batch, 1, -1))
-        input_dim = x_min.shape[-1]
+    input_shape = list(model_.input_shape[2:])
+    input_dim = np.prod(input_shape)
+    x_ = x_min + 0 * x_min
+    x_ = x_.reshape([-1] + input_shape)
+    x_min = x_min.reshape((-1, 1, input_dim))
+    x_max = x_max.reshape((-1, 1, input_dim))
 
     z = np.concatenate([x_min, x_max], 1)
 
@@ -619,7 +608,7 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
 
     fast = True
     # check that the model is a DecomonModel, else do the conversion
-    if not (isinstance(model, (DecomonModel, NumpyModel))):
+    if not (isinstance(model, DecomonModel)):
         model_ = convert(model, ibp=True, forward=True)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
@@ -637,17 +626,12 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         x_max = np.reshape(x_max, [-1] + shape)
 
     # reshape x_mmin, x_max
-    if not isinstance(model_, NumpyModel):
-        input_shape = list(model_.input_shape[2:])
-        input_dim = np.prod(input_shape)
-        x_ = x_min + 0 * x_min
-        x_ = x_.reshape([-1] + input_shape)
-        x_min = x_min.reshape((-1, 1, input_dim))
-        x_max = x_max.reshape((-1, 1, input_dim))
-    else:
-        x_min = x_min.reshape((n_batch, 1, -1))
-        x_max = x_max.reshape((n_batch, 1, -1))
-        input_dim = x_min.shape[-1]
+    input_shape = list(model_.input_shape[2:])
+    input_dim = np.prod(input_shape)
+    x_ = x_min + 0 * x_min
+    x_ = x_.reshape([-1] + input_shape)
+    x_min = x_min.reshape((-1, 1, input_dim))
+    x_max = x_max.reshape((-1, 1, input_dim))
 
     z = np.concatenate([x_min, x_max], 1)
 

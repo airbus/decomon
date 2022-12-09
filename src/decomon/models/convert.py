@@ -9,7 +9,6 @@ from decomon.models.backward_cloning import get_backward_model as convert_backwa
 from decomon.models.forward_cloning import convert_forward
 from decomon.models.models import DecomonModel
 from decomon.models.utils import convert_2_mode, get_mode
-from decomon.numpy.models.convert import clone as clone_to_numpy
 from decomon.utils import Ball, get_lower, get_upper
 
 
@@ -206,20 +205,7 @@ def clone(
     ]
 
     if not to_keras:
-        # only available option: to_numpy (in the future do get and deserialize function
-        return clone_to_numpy(
-            model,
-            ibp=ibp_,
-            forward=forward_,
-            method=method,
-            final_ibp=final_ibp,
-            final_forward=final_forward,
-            convex_domain=convex_domain,
-            shared=shared,
-            back_bounds=back_bounds,
-            dico_grid=dico_grid,
-            **kwargs,
-        )
+        raise NotImplementedError("Only convert to Keras for now.")
 
     if finetune:
         finetune_forward = True
