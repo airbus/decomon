@@ -82,6 +82,24 @@ jobs:
         run: |
           python -m tox -e convert-doc-to-test  # extract code blocks from doc to test them
           python -m tox  # launch environment set by TOXENV at previous step
+      - name: Check if coverage report exists
+        id: check-coverage-report
+        run: |
+          if [ -f coverage.xml ]; then
+            coverage_exists=true
+          else
+            coverage_exists=false
+          fi
+          echo ${coverage_exists}
+          echo "coverage_exists=${coverage_exists}" >> $GITHUB_OUTPUT
+      - name: Export coverage report (if existing)
+        if: steps.check-coverage-report.outputs.coverage_exists == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: |
+            coverage.xml
+            coverage_html
 
   build-doc:
     uses: ./.github/workflows/build-doc.yml
