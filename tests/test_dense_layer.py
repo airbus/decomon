@@ -1303,12 +1303,6 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode, helpers):
         )
 
 
-"""
-
-# DC DECOMP = FALSE
-"""
-
-
 @pytest.mark.parametrize(
     "n, activation, n_subgrad",
     [
