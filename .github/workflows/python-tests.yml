@@ -59,7 +59,9 @@ jobs:
         with:
           path: .tox
           key:
-            tox-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
+            tox-${{ matrix.python-version }}-${{ matrix.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys:
+            tox-${{ matrix.python-version }}-${{ matrix.os }}
       - name: Pick proper tox env
         shell: python
         run: |
