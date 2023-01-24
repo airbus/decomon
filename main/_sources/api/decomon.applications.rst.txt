@@ -1,0 +1,18 @@
+decomon.applications package
+============================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   decomon.applications.cv
+
+Module contents
+---------------
+
+.. automodule:: decomon.applications
+   :members:
+   :undoc-members:
+   :show-inheritance:

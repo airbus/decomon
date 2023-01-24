@@ -1,0 +1,21 @@
+decomon.loading package
+=======================
+
+Submodules
+----------
+
+decomon.loading.load\_onnx module
+---------------------------------
+
+.. automodule:: decomon.loading.load_onnx
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: decomon.loading
+   :members:
+   :undoc-members:
+   :show-inheritance:

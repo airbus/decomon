@@ -1,0 +1,21 @@
+decomon.applications.cv package
+===============================
+
+Submodules
+----------
+
+decomon.applications.cv.wrapper module
+--------------------------------------
+
+.. automodule:: decomon.applications.cv.wrapper
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: decomon.applications.cv
+   :members:
+   :undoc-members:
+   :show-inheritance:

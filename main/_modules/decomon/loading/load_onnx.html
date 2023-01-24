@@ -1,0 +1,457 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>decomon.loading.load_onnx &mdash; DecoMon main documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script src="../../../_static/versions.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> DecoMon
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                main
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">DecoMon</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>decomon.loading.load_onnx</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for decomon.loading.load_onnx</h1><div class="highlight"><pre>
+<span></span><span class="c1"># load a keras network from an onnx file</span>
+<span class="c1"># Python code for automatic conversion in channel last from an onnx file</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">tensorflow.keras.layers</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">tensorflow.keras.models</span> <span class="kn">import</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">tensorflow.python.keras.utils.generic_utils</span> <span class="kn">import</span> <span class="n">to_list</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">onnx</span>
+    <span class="kn">from</span> <span class="nn">onnx2keras</span> <span class="kn">import</span> <span class="n">onnx_to_keras</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Could not import onnx or onnx2keras. &quot;</span> <span class="s2">&quot;Please install onnx and onnx2keras to use this module&quot;</span><span class="p">)</span>
+
+
+<span class="n">CHANNEL_FIRST</span> <span class="o">=</span> <span class="s2">&quot;channels_first&quot;</span>
+<span class="n">CHANNEL_LAST</span> <span class="o">=</span> <span class="s2">&quot;channels_last&quot;</span>
+
+
+<div class="viewcode-block" id="get_all_input_names"><a class="viewcode-back" href="../../../api/decomon.loading.html#decomon.loading.load_onnx.get_all_input_names">[docs]</a><span class="k">def</span> <span class="nf">get_all_input_names</span><span class="p">(</span><span class="n">onnx_model</span><span class="p">):</span>
+    <span class="n">inputs_</span> <span class="o">=</span> <span class="n">onnx_model</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">input</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">input_</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">input_</span> <span class="ow">in</span> <span class="n">inputs_</span><span class="p">]</span></div>
+
+
+<span class="c1"># check for issue with data_format</span>
+<div class="viewcode-block" id="check_compatibility_data_format"><a class="viewcode-back" href="../../../api/decomon.loading.html#decomon.loading.load_onnx.check_compatibility_data_format">[docs]</a><span class="k">def</span> <span class="nf">check_compatibility_data_format</span><span class="p">(</span><span class="n">k_model</span><span class="p">,</span> <span class="n">allowed_format</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">allowed_format</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">allowed_format</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;channels_last&quot;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">k_model</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;data_format&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">layer</span><span class="o">.</span><span class="n">data_format</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">allowed_format</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="get_data_format"><a class="viewcode-back" href="../../../api/decomon.loading.html#decomon.loading.load_onnx.get_data_format">[docs]</a><span class="k">def</span> <span class="nf">get_data_format</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+    <span class="n">layer_</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">outbound_layer</span>
+
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer_</span><span class="p">,</span> <span class="s2">&quot;data_format&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">layer_</span><span class="o">.</span><span class="n">data_format</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">layer_</span><span class="p">,</span> <span class="s2">&quot;get_weights&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">layer_</span><span class="o">.</span><span class="n">get_weights</span><span class="p">()):</span>
+        <span class="k">return</span> <span class="n">CHANNEL_LAST</span>
+    <span class="k">return</span> <span class="s2">&quot;None&quot;</span></div>
+
+
+<div class="viewcode-block" id="get_tensor_input"><a class="viewcode-back" href="../../../api/decomon.loading.html#decomon.loading.load_onnx.get_tensor_input">[docs]</a><span class="k">def</span> <span class="nf">get_tensor_input</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+    <span class="n">parents</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parent_nodes</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parents</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="n">parent</span> <span class="o">=</span> <span class="n">parents</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parent</span><span class="o">.</span><span class="n">outbound_layer</span><span class="o">.</span><span class="n">get_input_shape_at</span><span class="p">(</span><span class="mi">0</span><span class="p">)[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">parent</span><span class="o">.</span><span class="n">outbound_layer</span><span class="o">.</span><span class="n">get_input_shape_at</span><span class="p">(</span><span class="mi">0</span><span class="p">)[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">get_tensor_input</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="clone"><a class="viewcode-back" href="../../../api/decomon.loading.html#decomon.loading.load_onnx.clone">[docs]</a><span class="k">def</span> <span class="nf">clone</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">data_format</span><span class="o">=</span><span class="n">CHANNEL_LAST</span><span class="p">,</span> <span class="n">prev_format</span><span class="o">=</span><span class="n">CHANNEL_LAST</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">layer_</span> <span class="o">=</span> <span class="n">layer</span>
+    <span class="k">if</span> <span class="n">data_format</span> <span class="o">==</span> <span class="n">CHANNEL_FIRST</span><span class="p">:</span>
+        <span class="c1"># change config</span>
+        <span class="n">class_name</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;built&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">layer</span><span class="o">.</span><span class="n">built</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;the layer </span><span class="si">{</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has not been built yet&quot;</span><span class="p">)</span>
+
+        <span class="n">config_layer</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">get_config</span><span class="p">()</span>
+        <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_last&quot;</span>
+        <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;data_format&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">CHANNEL_LAST</span>
+
+        <span class="n">layer_</span> <span class="o">=</span> <span class="nb">globals</span><span class="p">()[</span><span class="n">class_name</span><span class="p">]</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">config_layer</span><span class="p">)</span>
+
+        <span class="n">input_shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">get_input_shape_at</span><span class="p">(</span><span class="mi">0</span><span class="p">)[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="n">input_shape_</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">input_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="p">[</span><span class="n">input_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">layer_</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">input_shape_</span><span class="p">))</span>
+        <span class="n">layer_</span><span class="o">.</span><span class="n">set_weights</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">get_weights</span><span class="p">())</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">Dense</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">CHANNEL_FIRST</span> <span class="ow">in</span> <span class="n">prev_format</span><span class="p">:</span>
+                <span class="c1"># do some pre-processing</span>
+                <span class="n">W</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">get_weights</span><span class="p">()</span>
+                <span class="c1"># retrive input_shape before Flatten</span>
+                <span class="n">input_shape</span> <span class="o">=</span> <span class="n">get_tensor_input</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+                <span class="n">transpose_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">get_input_transpose</span><span class="p">(</span><span class="n">input_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;int&quot;</span><span class="p">)</span>
+                <span class="n">W</span> <span class="o">=</span> <span class="n">W</span><span class="p">[</span><span class="n">transpose_indices</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="n">layer_</span><span class="o">.</span><span class="n">set_weights</span><span class="p">([</span><span class="n">W</span><span class="p">,</span> <span class="n">b</span><span class="p">])</span>
+
+            <span class="c1"># retrive input_shape to guess the permutation...</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">InputLayer</span><span class="p">):</span>
+            <span class="c1"># do permutation</span>
+            <span class="n">input_shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">input_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">:])</span>
+            <span class="n">layer_</span> <span class="o">=</span> <span class="n">InputLayer</span><span class="p">(</span><span class="n">input_shape</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">Lambda</span><span class="p">):</span>
+                <span class="n">class_name</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+                <span class="n">config_layer</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">get_config</span><span class="p">()</span>
+                <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_last&quot;</span>
+                <span class="n">layer_</span> <span class="o">=</span> <span class="nb">globals</span><span class="p">()[</span><span class="n">class_name</span><span class="p">]</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">config_layer</span><span class="p">)</span>
+                <span class="n">input_shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">get_input_shape_at</span><span class="p">(</span><span class="mi">0</span><span class="p">)[</span><span class="mi">1</span><span class="p">:])</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">input_shape_</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">input_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="p">[</span><span class="n">input_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                    <span class="n">_</span> <span class="o">=</span> <span class="n">layer_</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">input_shape_</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">layer_</span></div>
+
+
+<div class="viewcode-block" id="update_dico"><a class="viewcode-back" href="../../../api/decomon.loading.html#decomon.loading.load_onnx.update_dico">[docs]</a><span class="k">def</span> <span class="nf">update_dico</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">dico_nodes</span><span class="p">,</span> <span class="n">layer_names</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">id</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="ow">in</span> <span class="n">dico_nodes</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">layer</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">outbound_layer</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">InputLayer</span><span class="p">):</span>
+
+        <span class="n">input_shape_</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">get_input_shape_at</span><span class="p">(</span><span class="mi">0</span><span class="p">)[</span><span class="mi">1</span><span class="p">:])</span>
+
+        <span class="n">var_</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">input_shape_</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="p">[</span><span class="n">input_shape_</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+        <span class="n">dico_nodes</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">node</span><span class="p">)]</span> <span class="o">=</span> <span class="n">to_list</span><span class="p">(</span><span class="n">var_</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+
+        <span class="n">p_format</span> <span class="o">=</span> <span class="n">get_parents_format_</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="n">layer_format</span> <span class="o">=</span> <span class="n">get_data_format</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+        <span class="n">layer_</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">outbound_layer</span><span class="p">,</span> <span class="n">layer_format</span><span class="p">,</span> <span class="n">p_format</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+        <span class="n">parents</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parent_nodes</span>
+        <span class="n">inputs_</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">p_node</span> <span class="ow">in</span> <span class="n">parents</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">inputs_</span> <span class="o">+=</span> <span class="n">dico_nodes</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">p_node</span><span class="p">)]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="n">update_dico</span><span class="p">(</span><span class="n">p_node</span><span class="p">,</span> <span class="n">dico_nodes</span><span class="p">,</span> <span class="n">layer_names</span><span class="p">)</span>
+                <span class="n">inputs_</span> <span class="o">+=</span> <span class="n">dico_nodes</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">p_node</span><span class="p">)]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">layer_</span><span class="p">(</span><span class="n">inputs_</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">layer_</span><span class="p">(</span><span class="n">inputs_</span><span class="p">)</span>
+
+        <span class="n">dico_nodes</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">node</span><span class="p">)]</span> <span class="o">=</span> <span class="n">to_list</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="clone_first_2_last"><a class="viewcode-back" href="../../../api/decomon.loading.html#decomon.loading.load_onnx.clone_first_2_last">[docs]</a><span class="k">def</span> <span class="nf">clone_first_2_last</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+    <span class="n">dico_nodes</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">layer_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">l</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">check_compatibility_data_format</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">model</span>
+
+    <span class="n">depth_keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_nodes_by_depth</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">depth_keys</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+
+    <span class="n">input_models</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># because of an inconsistency of depth with onnx</span>
+    <span class="c1"># it is better to build the information for the input first</span>
+
+    <span class="k">for</span> <span class="n">depth</span> <span class="ow">in</span> <span class="n">depth_keys</span><span class="p">:</span>
+        <span class="n">nodes</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">_nodes_by_depth</span><span class="p">[</span><span class="n">depth</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+
+            <span class="n">update_dico</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">dico_nodes</span><span class="p">,</span> <span class="n">layer_names</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">outbound_layer</span><span class="p">,</span> <span class="n">InputLayer</span><span class="p">):</span>
+                <span class="n">input_models</span> <span class="o">+=</span> <span class="n">dico_nodes</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">node</span><span class="p">)]</span>
+
+    <span class="c1"># find input models</span>
+
+    <span class="n">outputs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">output_nodes</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">_nodes_by_depth</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">output_nodes</span><span class="p">:</span>
+        <span class="n">outputs</span> <span class="o">+=</span> <span class="n">dico_nodes</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">node</span><span class="p">)]</span>
+    <span class="c1"># find output</span>
+    <span class="k">return</span> <span class="n">Model</span><span class="p">(</span><span class="n">input_models</span><span class="p">,</span> <span class="n">outputs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_input_transpose"><a class="viewcode-back" href="../../../api/decomon.loading.html#decomon.loading.load_onnx.get_input_transpose">[docs]</a><span class="k">def</span> <span class="nf">get_input_transpose</span><span class="p">(</span><span class="n">input_shape</span><span class="p">):</span>
+    <span class="n">n_c</span><span class="p">,</span> <span class="n">n_j</span><span class="p">,</span> <span class="n">n_k</span> <span class="o">=</span> <span class="n">input_shape</span>
+
+    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">toto</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_c</span><span class="p">,</span> <span class="n">n_j</span><span class="p">,</span> <span class="n">n_k</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_c</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_j</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_k</span><span class="p">):</span>
+                <span class="n">toto</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">count</span>
+                <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="c1"># permute dimensions</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">toto</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="get_parents_format_"><a class="viewcode-back" href="../../../api/decomon.loading.html#decomon.loading.load_onnx.get_parents_format_">[docs]</a><span class="k">def</span> <span class="nf">get_parents_format_</span><span class="p">(</span><span class="n">node_</span><span class="p">):</span>
+    <span class="c1"># recursive approach until encountering a layer that has a data_format or has some trainable weights</span>
+    <span class="n">parents</span> <span class="o">=</span> <span class="n">to_list</span><span class="p">(</span><span class="n">node_</span><span class="o">.</span><span class="n">parent_nodes</span><span class="p">)</span>
+    <span class="n">parents_format</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">node_p</span> <span class="ow">in</span> <span class="n">parents</span><span class="p">:</span>
+        <span class="n">layer_</span> <span class="o">=</span> <span class="n">node_p</span><span class="o">.</span><span class="n">outbound_layer</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer_</span><span class="p">,</span> <span class="s2">&quot;data_format&quot;</span><span class="p">):</span>
+            <span class="n">parents_format</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer_</span><span class="o">.</span><span class="n">data_format</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">layer_</span><span class="p">,</span> <span class="s2">&quot;get_weights&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">layer_</span><span class="o">.</span><span class="n">get_weights</span><span class="p">()):</span>
+                <span class="n">parents_format</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CHANNEL_LAST</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">parent_rec</span> <span class="o">=</span> <span class="n">to_list</span><span class="p">(</span><span class="n">node_p</span><span class="o">.</span><span class="n">parent_nodes</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parent_rec</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">parents_format</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;None&quot;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">p_rec</span> <span class="ow">in</span> <span class="n">parent_rec</span><span class="p">:</span>
+                    <span class="n">toto</span> <span class="o">=</span> <span class="n">get_data_format</span><span class="p">(</span><span class="n">p_rec</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">toto</span> <span class="o">==</span> <span class="s2">&quot;None&quot;</span><span class="p">:</span>
+                        <span class="n">toto</span> <span class="o">=</span> <span class="n">get_parents_format_</span><span class="p">(</span><span class="n">p_rec</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">toto</span><span class="p">):</span>
+                        <span class="n">parents_format</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">get_data_format</span><span class="p">(</span><span class="n">p_rec</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">toto</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                            <span class="n">toto</span> <span class="o">=</span> <span class="n">toto</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">parents_format</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">toto</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">parents_format</span></div>
+
+
+<div class="viewcode-block" id="load_onnx_2_keras"><a class="viewcode-back" href="../../../api/decomon.loading.html#decomon.loading.load_onnx.load_onnx_2_keras">[docs]</a><span class="k">def</span> <span class="nf">load_onnx_2_keras</span><span class="p">(</span><span class="n">onnx_filename</span><span class="p">):</span>
+    <span class="n">onnx_model</span> <span class="o">=</span> <span class="n">onnx</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">onnx_filename</span><span class="p">)</span>
+    <span class="n">onnx</span><span class="o">.</span><span class="n">checker</span><span class="o">.</span><span class="n">check_model</span><span class="p">(</span><span class="n">onnx_model</span><span class="p">)</span>
+
+    <span class="n">k_model</span> <span class="o">=</span> <span class="n">onnx_to_keras</span><span class="p">(</span><span class="n">onnx_model</span><span class="p">,</span> <span class="n">get_all_input_names</span><span class="p">(</span><span class="n">onnx_model</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">clone_first_2_last</span><span class="p">(</span><span class="n">k_model</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2022, Airbus.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

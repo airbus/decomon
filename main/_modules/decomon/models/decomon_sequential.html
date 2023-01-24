@@ -1,0 +1,1438 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>decomon.models.decomon_sequential &mdash; DecoMon main documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script src="../../../_static/versions.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> DecoMon
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                main
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">DecoMon</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>decomon.models.decomon_sequential</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for decomon.models.decomon_sequential</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Module for MonotonicSequential.</span>
+
+<span class="sd">It inherits from keras Sequential class.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">tensorflow.keras.backend</span> <span class="k">as</span> <span class="nn">K</span>
+<span class="kn">from</span> <span class="nn">tensorflow.keras.layers</span> <span class="kn">import</span> <span class="n">Flatten</span><span class="p">,</span> <span class="n">Input</span><span class="p">,</span> <span class="n">InputLayer</span><span class="p">,</span> <span class="n">Lambda</span><span class="p">,</span> <span class="n">Layer</span>
+<span class="kn">from</span> <span class="nn">tensorflow.keras.models</span> <span class="kn">import</span> <span class="n">Model</span><span class="p">,</span> <span class="n">Sequential</span>
+<span class="kn">from</span> <span class="nn">tensorflow.python.keras.utils.generic_utils</span> <span class="kn">import</span> <span class="n">has_arg</span><span class="p">,</span> <span class="n">to_list</span>
+
+<span class="kn">from</span> <span class="nn">decomon.backward_layers.backward_layers</span> <span class="kn">import</span> <span class="n">get_backward</span> <span class="k">as</span> <span class="n">get_backward_</span>
+<span class="kn">from</span> <span class="nn">decomon.backward_layers.backward_layers</span> <span class="kn">import</span> <span class="n">join</span>
+<span class="kn">from</span> <span class="nn">decomon.layers.core</span> <span class="kn">import</span> <span class="n">Box</span><span class="p">,</span> <span class="n">StaticVariables</span>
+<span class="kn">from</span> <span class="nn">decomon.layers.decomon_layers</span> <span class="kn">import</span> <span class="n">to_monotonic</span>
+<span class="kn">from</span> <span class="nn">decomon.layers.utils</span> <span class="kn">import</span> <span class="n">softmax_to_linear</span>
+<span class="kn">from</span> <span class="nn">decomon.utils</span> <span class="kn">import</span> <span class="n">V_slope</span><span class="p">,</span> <span class="n">get_lower</span><span class="p">,</span> <span class="n">get_upper</span>
+
+
+<span class="c1"># create static variables for varying convex domain</span>
+<div class="viewcode-block" id="Backward"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.Backward">[docs]</a><span class="k">class</span> <span class="nc">Backward</span><span class="p">:</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;backward&quot;</span></div>
+
+
+<div class="viewcode-block" id="Forward"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.Forward">[docs]</a><span class="k">class</span> <span class="nc">Forward</span><span class="p">:</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;forward&quot;</span></div>
+
+
+<div class="viewcode-block" id="include_dim_layer_fn"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.include_dim_layer_fn">[docs]</a><span class="k">def</span> <span class="nf">include_dim_layer_fn</span><span class="p">(</span>
+    <span class="n">layer_fn</span><span class="p">,</span>
+    <span class="n">input_dim</span><span class="p">,</span>
+    <span class="n">dc_decomp</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">convex_domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">IBP</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">forward</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">finetune</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;include external parameters inside the translation of a layer to its decomon counterpart</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        layer_fn</span>
+<span class="sd">        input_dim</span>
+<span class="sd">        dc_decomp</span>
+<span class="sd">        convex_domain</span>
+<span class="sd">        finetune</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">convex_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">convex_domain</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">input_dim</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">layer_fn</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">&quot;input_dim&quot;</span> <span class="ow">in</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">layer_fn</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
+            <span class="n">layer_fn_copy</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">layer_fn</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">convex_domain</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="n">input_dim</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">convex_domain</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">Box</span><span class="o">.</span><span class="n">name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                    <span class="n">input_dim</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">)</span>
+
+            <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">layer_fn_copy</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">IBP</span><span class="o">=</span><span class="n">IBP</span><span class="p">,</span> <span class="n">forward</span><span class="o">=</span><span class="n">forward</span><span class="p">,</span> <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">)</span>
+
+            <span class="n">layer_fn</span> <span class="o">=</span> <span class="n">func</span>
+
+        <span class="k">else</span><span class="p">:</span>
+
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;Expected </span><span class="si">{}</span><span class="s2"> to have an input dim option. &quot;</span> <span class="s2">&quot;Henceworth the to_monotonic function will be used instead&quot;</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">convex_domain</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="n">input_dim</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">convex_domain</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">Box</span><span class="o">.</span><span class="n">name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                    <span class="n">input_dim</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">)</span>
+
+            <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">to_monotonic</span><span class="p">(</span>
+                    <span class="n">x</span><span class="p">,</span>
+                    <span class="n">input_dim</span><span class="o">=</span><span class="n">input_dim</span><span class="p">,</span>
+                    <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+                    <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">,</span>
+                    <span class="n">IBP</span><span class="o">=</span><span class="n">IBP</span><span class="p">,</span>
+                    <span class="n">forward</span><span class="o">=</span><span class="n">forward</span><span class="p">,</span>
+                    <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="n">layer_fn</span> <span class="o">=</span> <span class="n">func</span>
+
+    <span class="k">return</span> <span class="n">layer_fn</span></div>
+
+
+<div class="viewcode-block" id="clone"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.clone">[docs]</a><span class="k">def</span> <span class="nf">clone</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span>
+    <span class="n">input_tensors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">layer_fn</span><span class="o">=</span><span class="n">to_monotonic</span><span class="p">,</span>
+    <span class="n">input_dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">dc_decomp</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">convex_domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;backward&quot;</span><span class="p">,</span>
+    <span class="n">slope_backward</span><span class="o">=</span><span class="n">V_slope</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+    <span class="n">IBP</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">forward</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">finetune</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Args:</span>
+<span class="sd">        model: Keras model</span>
+<span class="sd">        input_tensors: List of input tensors to be used as inputs of our</span>
+<span class="sd">            model or None</span>
+<span class="sd">        layer_fn: cloning function to translate a layer into its decomon</span>
+<span class="sd">            decomposition</span>
+<span class="sd">        input_dim: the input dimension use to propagate our linear</span>
+<span class="sd">            relaxation</span>
+<span class="sd">        dc_decomp: boolean that indicates whether we return a difference</span>
+<span class="sd">            of convex decomposition of our layer</span>
+<span class="sd">        convex_domain: the type of convex domain</span>
+<span class="sd">        mode: forward of backward</span>
+<span class="sd">        finetune: ???</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        a decomon model</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">convex_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">convex_domain</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">mode</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">Forward</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">Backward</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">Sequential</span><span class="p">):</span>
+        <span class="n">decomon_model</span> <span class="o">=</span> <span class="n">clone_sequential_model</span><span class="p">(</span>
+            <span class="n">model</span><span class="p">,</span>
+            <span class="n">input_tensors</span><span class="p">,</span>
+            <span class="n">layer_fn</span><span class="p">,</span>
+            <span class="n">input_dim</span><span class="o">=</span><span class="n">input_dim</span><span class="p">,</span>
+            <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+            <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">,</span>
+            <span class="n">IBP</span><span class="o">=</span><span class="n">IBP</span><span class="p">,</span>
+            <span class="n">forward</span><span class="o">=</span><span class="n">forward</span><span class="p">,</span>
+            <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">decomon_model</span> <span class="o">=</span> <span class="n">clone_functional_model</span><span class="p">(</span>
+            <span class="n">model</span><span class="p">,</span>
+            <span class="n">input_tensors</span><span class="p">,</span>
+            <span class="n">layer_fn</span><span class="p">,</span>
+            <span class="n">input_dim</span><span class="o">=</span><span class="n">input_dim</span><span class="p">,</span>
+            <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+            <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">,</span>
+            <span class="n">IBP</span><span class="o">=</span><span class="n">IBP</span><span class="p">,</span>
+            <span class="n">forward</span><span class="o">=</span><span class="n">forward</span><span class="p">,</span>
+            <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">mode</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">Backward</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+        <span class="n">decomon_model</span> <span class="o">=</span> <span class="n">get_backward</span><span class="p">(</span><span class="n">decomon_model</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">slope_backward</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">decomon_model</span></div>
+
+
+<div class="viewcode-block" id="clone_sequential_model"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.clone_sequential_model">[docs]</a><span class="k">def</span> <span class="nf">clone_sequential_model</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span>
+    <span class="n">input_tensors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">layer_fn</span><span class="o">=</span><span class="n">to_monotonic</span><span class="p">,</span>
+    <span class="n">input_dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">dc_decomp</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">convex_domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">IBP</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">forward</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">finetune</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Clone a `Sequential` model instance.</span>
+<span class="sd">    Model cloning is similar to calling a model on new inputs,</span>
+<span class="sd">    except that it creates new layers (and thus new weights) instead</span>
+<span class="sd">    of sharing the weights of the existing layers.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model: Instance of `Sequential`.</span>
+<span class="sd">        input_tensors: optional list of input tensors to build the model</span>
+<span class="sd">            upon. If not provided, placeholder will</span>
+<span class="sd">        layer_fn: callable to be applied on non-input layers in the</span>
+<span class="sd">            model. By default it clones the layer.</span>
+<span class="sd">        input_dim: the input dimension use to propagate our linear</span>
+<span class="sd">            relaxation</span>
+<span class="sd">        dc_decomp: boolean that indicates whether we return a difference</span>
+<span class="sd">            of convex decomposition of our layer</span>
+<span class="sd">        convex_domain: the type of convex domain</span>
+<span class="sd">        finetune: ???</span>
+<span class="sd">    be created.</span>
+<span class="sd">    Another example is to preserve the layer  to share the weights. This is required when we create a per-replica</span>
+<span class="sd">    copy of the model with distribution strategy; we want the weights to be shared but still feed inputs</span>
+<span class="sd">    separately so we create new input layers.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        An instance of `Sequential` reproducing the behavior of the</span>
+<span class="sd">        original model with decomon layers.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">convex_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">convex_domain</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">input_dim</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">input_dim_init</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">input_dim</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">input_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">input_dim_init</span> <span class="o">=</span> <span class="n">input_dim</span>
+
+    <span class="n">layer_fn</span> <span class="o">=</span> <span class="n">include_dim_layer_fn</span><span class="p">(</span>
+        <span class="n">layer_fn</span><span class="p">,</span>
+        <span class="n">input_dim</span><span class="o">=</span><span class="n">input_dim</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+        <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">,</span>
+        <span class="n">IBP</span><span class="o">=</span><span class="n">IBP</span><span class="p">,</span>
+        <span class="n">forward</span><span class="o">=</span><span class="n">forward</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">model</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">softmax_to_linear</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">Sequential</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Expected `model` argument &quot;</span> <span class="s2">&quot;to be a `Sequential` model instance, &quot;</span> <span class="s2">&quot;but got:&quot;</span><span class="p">,</span>
+            <span class="n">model</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">layer_fn</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Expected `layer_fn` argument to be a callable.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Use model._layers to ensure that all layers are cloned. The model&#39;s layers</span>
+    <span class="c1"># property will exclude the initial InputLayer (if it exists) in the model,</span>
+    <span class="c1"># resulting in a different Sequential model structure.</span>
+    <span class="k">def</span> <span class="nf">_get_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">InputLayer</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">Model</span><span class="p">):</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">Sequential</span><span class="p">):</span>
+                <span class="n">list_layer</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">layer_</span> <span class="ow">in</span> <span class="n">layer</span><span class="o">.</span><span class="n">_layers</span><span class="p">:</span>
+                    <span class="n">list_layer</span> <span class="o">+=</span> <span class="n">_get_layer</span><span class="p">(</span><span class="n">layer_</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">list_layer</span>
+            <span class="k">return</span> <span class="p">[</span>
+                <span class="n">clone</span><span class="p">(</span>
+                    <span class="n">layer</span><span class="p">,</span>
+                    <span class="n">layer_fn</span><span class="o">=</span><span class="n">layer_fn</span><span class="p">,</span>
+                    <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+                    <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">,</span>
+                    <span class="n">IBP</span><span class="o">=</span><span class="n">IBP</span><span class="p">,</span>
+                    <span class="n">forward</span><span class="o">=</span><span class="n">forward</span><span class="p">,</span>
+                    <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">Layer</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">layer_fn</span><span class="p">(</span><span class="n">layer</span><span class="o">=</span><span class="n">layer</span><span class="p">,</span> <span class="n">input_dim</span><span class="o">=</span><span class="n">input_dim</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span>
+
+    <span class="n">monotonic_layers</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+        <span class="n">monotonic_layers</span> <span class="o">+=</span> <span class="n">_get_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">input_tensors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+
+        <span class="n">input_shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">int_shape</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">input</span><span class="p">)[</span><span class="mi">1</span><span class="p">:])</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">convex_domain</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">input_dim_</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">)</span>
+            <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">input_dim_</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">convex_domain</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">Box</span><span class="o">.</span><span class="n">name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">input_dim_</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">)</span>
+            <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">input_dim_</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">input_dim</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">((</span><span class="n">input_dim</span><span class="p">,))</span>
+
+        <span class="n">h_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">))</span>
+        <span class="n">g_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">))</span>
+        <span class="n">b_u_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">))</span>
+        <span class="n">b_l_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">input_dim_init</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">w_u_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">([</span><span class="n">input_dim</span><span class="p">]</span> <span class="o">+</span> <span class="n">input_shape</span><span class="p">))</span>
+            <span class="n">w_l_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">([</span><span class="n">input_dim</span><span class="p">]</span> <span class="o">+</span> <span class="n">input_shape</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">w_u_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">))</span>
+            <span class="n">w_l_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">))</span>
+
+        <span class="n">u_c_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">))</span>
+        <span class="n">l_c_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">IBP</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">forward</span><span class="p">:</span>  <span class="c1"># hybrid mode</span>
+                <span class="n">input_tensors</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">z_tensor</span><span class="p">,</span>
+                    <span class="n">u_c_tensor</span><span class="p">,</span>
+                    <span class="n">w_u_tensor</span><span class="p">,</span>
+                    <span class="n">b_u_tensor</span><span class="p">,</span>
+                    <span class="n">l_c_tensor</span><span class="p">,</span>
+                    <span class="n">w_l_tensor</span><span class="p">,</span>
+                    <span class="n">b_l_tensor</span><span class="p">,</span>
+                <span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># only IBP</span>
+                <span class="n">input_tensors</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">z_tensor</span><span class="p">,</span>
+                    <span class="n">u_c_tensor</span><span class="p">,</span>
+                    <span class="n">l_c_tensor</span><span class="p">,</span>
+                <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># forward mode</span>
+            <span class="n">input_tensors</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">z_tensor</span><span class="p">,</span>
+                <span class="n">w_u_tensor</span><span class="p">,</span>
+                <span class="n">b_u_tensor</span><span class="p">,</span>
+                <span class="n">w_l_tensor</span><span class="p">,</span>
+                <span class="n">b_l_tensor</span><span class="p">,</span>
+            <span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="n">input_tensors</span> <span class="o">+=</span> <span class="p">[</span><span class="n">h_tensor</span><span class="p">,</span> <span class="n">g_tensor</span><span class="p">]</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># assert that input_tensors is a List of 6 InputLayer objects</span>
+        <span class="c1"># If input tensors are provided, the original model&#39;s InputLayer is</span>
+        <span class="c1"># overwritten with a different InputLayer.</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">,</span> <span class="nb">list</span><span class="p">),</span> <span class="s2">&quot;expected input_tensors to be a List or None, but got dtype=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">input_tensors</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">10</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 10 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">6</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 6 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">8</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 8 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">8</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 10 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 10 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">6</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 10 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">min</span><span class="p">(</span>
+            <span class="p">[</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">input_tensor_i</span><span class="p">,</span> <span class="n">InputLayer</span><span class="p">)</span> <span class="k">for</span> <span class="n">input_tensor_i</span> <span class="ow">in</span> <span class="n">input_tensors</span><span class="p">]</span>
+        <span class="p">),</span> <span class="s2">&quot;expected a list of InputLayer&quot;</span>
+
+    <span class="c1"># apply the list of monotonic layers:</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">input_tensors</span>
+    <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">monotonic_layers</span><span class="p">:</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">DecomonModel</span><span class="p">(</span>
+        <span class="n">input_tensors</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+        <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">,</span>
+        <span class="n">IBP</span><span class="o">=</span><span class="n">IBP</span><span class="p">,</span>
+        <span class="n">forward</span><span class="o">=</span><span class="n">forward</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="clone_functional_model"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.clone_functional_model">[docs]</a><span class="k">def</span> <span class="nf">clone_functional_model</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span>
+    <span class="n">input_tensors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">layer_fn</span><span class="o">=</span><span class="n">to_monotonic</span><span class="p">,</span>
+    <span class="n">input_dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">dc_decomp</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">convex_domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">IBP</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">forward</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">finetune</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Args:</span>
+<span class="sd">        model</span>
+<span class="sd">        input_tensors: optional list of input tensors to build the model</span>
+<span class="sd">            upon. If not provided, placeholder will</span>
+<span class="sd">        layer_fn: callable to be applied on non-input layers in the</span>
+<span class="sd">            model. By default it clones the layer.</span>
+<span class="sd">        input_dim: the input dimension use to propagate our linear</span>
+<span class="sd">            relaxation</span>
+<span class="sd">        dc_decomp: boolean that indicates whether we return a difference</span>
+<span class="sd">            of convex decomposition of our layer</span>
+<span class="sd">        convex_domain: the type of convex domain</span>
+<span class="sd">        finetune: ???</span>
+<span class="sd">    be created.</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">convex_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">convex_domain</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">Model</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Expected `model` argument &quot;</span> <span class="s2">&quot;to be a `Model` instance, got &quot;</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">Sequential</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Expected `model` argument &quot;</span> <span class="s2">&quot;to be a functional `Model` instance, &quot;</span> <span class="s2">&quot;got a `Sequential` instance instead:&quot;</span><span class="p">,</span>
+            <span class="n">model</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">input_dim</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">input_dim</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">input_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+
+    <span class="n">layer_fn</span> <span class="o">=</span> <span class="n">include_dim_layer_fn</span><span class="p">(</span>
+        <span class="n">layer_fn</span><span class="p">,</span>
+        <span class="n">input_dim</span><span class="o">=</span><span class="n">input_dim</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+        <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">,</span>
+        <span class="n">IBP</span><span class="o">=</span><span class="n">IBP</span><span class="p">,</span>
+        <span class="n">forward</span><span class="o">=</span><span class="n">forward</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">softmax_to_linear</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>  <span class="c1"># do not modify the previous model or send an alert message</span>
+
+    <span class="c1"># we only handle one input</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_input_layers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;error: Expected one input only but got </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_input_layers</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="n">layer_map</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># Cache for created layers.</span>
+    <span class="n">tensor_map</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># Map {reference_tensor: (corresponding_tensor, mask)}</span>
+
+    <span class="k">if</span> <span class="n">input_tensors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">_input_layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">input_shape_vec</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">input_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">input_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">input_shape_vec</span><span class="p">)[</span><span class="mi">1</span><span class="p">:])</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">input_dim_</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">input_dim</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">input_dim_</span> <span class="o">=</span> <span class="n">input_dim</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">convex_domain</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">input_shape_x</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">input_dim_</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="n">input_shape_x</span> <span class="o">=</span> <span class="n">input_dim</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">input_shape_x</span> <span class="o">=</span> <span class="p">(</span><span class="n">input_dim_</span><span class="p">,)</span>
+
+        <span class="n">input_shape_w</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span><span class="n">input_dim_</span><span class="p">]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">input_shape_vec</span><span class="p">)[</span><span class="mi">1</span><span class="p">:])</span>
+
+        <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">input_shape_x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;z_&quot;</span> <span class="o">+</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">y_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">input_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;y_&quot;</span> <span class="o">+</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="n">b_u_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">input_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;b_u_&quot;</span> <span class="o">+</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">b_l_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">input_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;b_l_&quot;</span> <span class="o">+</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">u_c_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">input_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;u_c_&quot;</span> <span class="o">+</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">l_c_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">input_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;l_c_&quot;</span> <span class="o">+</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">input_dim_</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">w_u_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">input_shape_w</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;w_u_&quot;</span> <span class="o">+</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">w_l_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">input_shape_w</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;w_l_&quot;</span> <span class="o">+</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">w_u_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">input_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;w_u_&quot;</span> <span class="o">+</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">w_l_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">input_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;w_l_&quot;</span> <span class="o">+</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">IBP</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">forward</span><span class="p">:</span>  <span class="c1"># hybrid</span>
+                <span class="n">input_tensors</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">y_tensor</span><span class="p">,</span>
+                    <span class="n">z_tensor</span><span class="p">,</span>
+                    <span class="n">u_c_tensor</span><span class="p">,</span>
+                    <span class="n">w_u_tensor</span><span class="p">,</span>
+                    <span class="n">b_u_tensor</span><span class="p">,</span>
+                    <span class="n">l_c_tensor</span><span class="p">,</span>
+                    <span class="n">w_l_tensor</span><span class="p">,</span>
+                    <span class="n">b_l_tensor</span><span class="p">,</span>
+                <span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># IBP only</span>
+                <span class="n">input_tensors</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">y_tensor</span><span class="p">,</span>
+                    <span class="n">z_tensor</span><span class="p">,</span>
+                    <span class="n">u_c_tensor</span><span class="p">,</span>
+                    <span class="n">l_c_tensor</span><span class="p">,</span>
+                <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># forward only</span>
+            <span class="n">input_tensors</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">y_tensor</span><span class="p">,</span>
+                <span class="n">z_tensor</span><span class="p">,</span>
+                <span class="n">w_u_tensor</span><span class="p">,</span>
+                <span class="n">b_u_tensor</span><span class="p">,</span>
+                <span class="n">w_l_tensor</span><span class="p">,</span>
+                <span class="n">b_l_tensor</span><span class="p">,</span>
+            <span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="n">h_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">input_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;h_&quot;</span> <span class="o">+</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">g_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">input_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;g_&quot;</span> <span class="o">+</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">input_tensors</span> <span class="o">+=</span> <span class="p">[</span><span class="n">h_tensor</span><span class="p">,</span> <span class="n">g_tensor</span><span class="p">]</span>
+
+        <span class="c1"># Cache newly created input layer.</span>
+        <span class="n">newly_created_input_layers</span> <span class="o">=</span> <span class="p">[</span><span class="n">input_tensor</span><span class="o">.</span><span class="n">_keras_history</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">input_tensor</span> <span class="ow">in</span> <span class="n">input_tensors</span><span class="p">]</span>
+        <span class="n">layer_map</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span> <span class="o">=</span> <span class="n">newly_created_input_layers</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Make sure that all input tensors come from a Keras layer.</span>
+        <span class="c1"># If tensor comes from an input layer: cache the input layer.</span>
+        <span class="n">input_tensors</span> <span class="o">=</span> <span class="n">to_list</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+        <span class="n">_input_tensors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">IBP</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="n">names_i</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="s2">&quot;u_c&quot;</span><span class="p">,</span> <span class="s2">&quot;w_u&quot;</span><span class="p">,</span> <span class="s2">&quot;b_u&quot;</span><span class="p">,</span> <span class="s2">&quot;l_c&quot;</span><span class="p">,</span> <span class="s2">&quot;w_l&quot;</span><span class="p">,</span> <span class="s2">&quot;b_l&quot;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">names_i</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="s2">&quot;u_c&quot;</span><span class="p">,</span> <span class="s2">&quot;l_c&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">names_i</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="s2">&quot;w_u&quot;</span><span class="p">,</span> <span class="s2">&quot;b_u&quot;</span><span class="p">,</span> <span class="s2">&quot;w_l&quot;</span><span class="p">,</span> <span class="s2">&quot;b_l&quot;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="n">names_i</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;h&quot;</span><span class="p">,</span> <span class="s2">&quot;g&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">10</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 10 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">6</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 6 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">8</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 8 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">8</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 10 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 10 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">6</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 10 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">):</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">K</span><span class="o">.</span><span class="n">is_keras_tensor</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">_input_layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+                <span class="n">input_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">tensor</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;_</span><span class="si">{</span><span class="n">names_i</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">_input_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">input_tensor</span><span class="p">)</span>
+                <span class="c1"># Cache newly created input layer.</span>
+                <span class="n">original_input_layer</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">_keras_history</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">newly_created_input_layer</span> <span class="o">=</span> <span class="n">input_tensor</span><span class="o">.</span><span class="n">_keras_history</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">original_input_layer</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">layer_map</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">layer_map</span><span class="p">[</span><span class="n">original_input_layer</span><span class="p">]</span> <span class="o">=</span> <span class="n">newly_created_input_layer</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer_map</span><span class="p">[</span><span class="n">original_input_layer</span><span class="p">],</span> <span class="nb">list</span><span class="p">):</span>
+                        <span class="n">layer_map</span><span class="p">[</span><span class="n">original_input_layer</span><span class="p">]</span> <span class="o">+=</span> <span class="p">[</span><span class="n">newly_created_input_layer</span><span class="p">]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">layer_map</span><span class="p">[</span><span class="n">original_input_layer</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">layer_map</span><span class="p">[</span><span class="n">original_input_layer</span><span class="p">]]</span>
+                        <span class="n">layer_map</span><span class="p">[</span><span class="n">original_input_layer</span><span class="p">]</span> <span class="o">+=</span> <span class="p">[</span><span class="n">newly_created_input_layer</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">_input_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">input_tensors</span> <span class="o">=</span> <span class="n">_input_tensors</span>
+
+    <span class="n">tensor_map</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span> <span class="o">=</span> <span class="p">(</span><span class="n">input_tensors</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="c1"># Iterated over every node in the reference model, in depth order.</span>
+    <span class="n">depth_keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_nodes_by_depth</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">depth_keys</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">depth</span> <span class="ow">in</span> <span class="n">depth_keys</span><span class="p">:</span>
+        <span class="n">nodes</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">_nodes_by_depth</span><span class="p">[</span><span class="n">depth</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+            <span class="c1"># Recover the corresponding layer.</span>
+            <span class="n">layer_</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">outbound_layer</span>
+            <span class="c1"># Get or create layer.</span>
+            <span class="k">if</span> <span class="n">layer_</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">layer_map</span><span class="p">:</span>
+                <span class="c1"># Clone layer.</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer_</span><span class="p">,</span> <span class="n">Model</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer_</span><span class="p">,</span> <span class="n">Sequential</span><span class="p">):</span>
+                        <span class="n">new_layer</span> <span class="o">=</span> <span class="n">clone_sequential_model</span><span class="p">(</span>
+                            <span class="n">layer_</span><span class="p">,</span>
+                            <span class="n">layer_fn</span><span class="o">=</span><span class="n">layer_fn</span><span class="p">,</span>
+                            <span class="n">input_dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+                            <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+                            <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">,</span>
+                            <span class="n">IBP</span><span class="o">=</span><span class="n">IBP</span><span class="p">,</span>
+                            <span class="n">forward</span><span class="o">=</span><span class="n">forward</span><span class="p">,</span>
+                            <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+                        <span class="p">)</span>
+
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">new_layer</span> <span class="o">=</span> <span class="n">clone_functional_model</span><span class="p">(</span>
+                            <span class="n">layer_</span><span class="p">,</span>
+                            <span class="n">layer_fn</span><span class="o">=</span><span class="n">layer_fn</span><span class="p">,</span>
+                            <span class="n">input_dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+                            <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+                            <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">,</span>
+                            <span class="n">IBP</span><span class="o">=</span><span class="n">IBP</span><span class="p">,</span>
+                            <span class="n">forward</span><span class="o">=</span><span class="n">forward</span><span class="p">,</span>
+                            <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+                        <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># beware, this could be a list</span>
+                    <span class="n">new_layer</span> <span class="o">=</span> <span class="n">layer_fn</span><span class="p">(</span><span class="n">layer_</span><span class="p">)</span>
+
+                <span class="n">layer_map</span><span class="p">[</span><span class="n">layer_</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_layer</span>
+                <span class="n">layer</span> <span class="o">=</span> <span class="n">new_layer</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Reuse previously cloned layer.</span>
+                <span class="n">layer</span> <span class="o">=</span> <span class="n">layer_map</span><span class="p">[</span><span class="n">layer_</span><span class="p">]</span>
+                <span class="c1"># Don&#39;t call InputLayer multiple times.</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer_</span><span class="p">,</span> <span class="n">InputLayer</span><span class="p">):</span>
+                    <span class="k">continue</span>
+
+            <span class="c1"># Gather inputs to call the new layer.</span>
+            <span class="n">reference_input_tensors</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">input_tensors</span>
+            <span class="n">reference_output_tensors</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">output_tensors</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reference_input_tensors</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">reference_input_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">reference_input_tensors</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reference_output_tensors</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">reference_output_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">reference_output_tensors</span><span class="p">]</span>
+
+            <span class="c1"># If all previous input tensors are available in tensor_map,</span>
+            <span class="c1"># then call node.inbound_layer on them.</span>
+            <span class="n">computed_data</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># List of tuples (input, mask).</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">reference_input_tensors</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">id</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="ow">in</span> <span class="n">tensor_map</span><span class="p">:</span>
+                    <span class="n">computed_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tensor_map</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">x</span><span class="p">)])</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">computed_data</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">reference_input_tensors</span><span class="p">):</span>
+
+                <span class="c1"># Call layer.</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s2">&quot;arguments&quot;</span><span class="p">):</span>
+                    <span class="n">kwargs</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">arguments</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">computed_data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">computed_tensor</span><span class="p">,</span> <span class="n">computed_mask</span> <span class="o">=</span> <span class="n">computed_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># (list of) tensors, None</span>
+
+                    <span class="k">if</span> <span class="n">has_arg</span><span class="p">(</span><span class="n">layer_</span><span class="o">.</span><span class="n">call</span><span class="p">,</span> <span class="s2">&quot;mask&quot;</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="s2">&quot;mask&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+                            <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;mask&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">computed_mask</span>
+
+                    <span class="n">output_tensors</span> <span class="o">=</span> <span class="n">to_list</span><span class="p">(</span><span class="n">layer</span><span class="p">(</span><span class="n">computed_tensor</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+
+                    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">output_tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">list</span><span class="p">)):</span>
+                        <span class="n">output_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">output_tensors</span><span class="p">]</span>
+
+                    <span class="k">if</span> <span class="n">layer_</span><span class="o">.</span><span class="n">supports_masking</span><span class="p">:</span>
+                        <span class="n">output_masks</span> <span class="o">=</span> <span class="p">[</span><span class="n">layer</span><span class="o">.</span><span class="n">compute_mask</span><span class="p">(</span><span class="n">computed_tensor</span><span class="p">,</span> <span class="n">computed_mask</span><span class="p">)]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">output_masks</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">output_tensors</span><span class="p">)</span>
+
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">computed_tensors</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">computed_data</span><span class="p">:</span>
+                        <span class="n">computed_tensors</span> <span class="o">+=</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">computed_masks</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">computed_data</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">has_arg</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">call</span><span class="p">,</span> <span class="s2">&quot;mask&quot;</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="s2">&quot;mask&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+                            <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;mask&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">computed_masks</span>
+                    <span class="n">output_tensors</span> <span class="o">=</span> <span class="n">to_list</span><span class="p">(</span><span class="n">layer</span><span class="p">(</span><span class="n">computed_tensors</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">output_tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">list</span><span class="p">)):</span>
+                        <span class="n">output_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">output_tensors</span><span class="p">]</span>
+
+                    <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">supports_masking</span><span class="p">:</span>
+                        <span class="n">output_masks</span> <span class="o">=</span> <span class="n">to_list</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">compute_mask</span><span class="p">(</span><span class="n">computed_tensors</span><span class="p">,</span> <span class="n">computed_masks</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">output_masks</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">output_tensors</span><span class="p">)</span>
+
+                <span class="c1"># Update tensor_map.</span>
+                <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">mask</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">reference_output_tensors</span><span class="p">,</span> <span class="n">output_tensors</span><span class="p">,</span> <span class="n">output_masks</span><span class="p">):</span>
+                    <span class="n">tensor_map</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">x</span><span class="p">)]</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span>
+
+    <span class="c1"># Check that we did compute the model outputs,</span>
+    <span class="c1"># then instantiate a new model from inputs and outputs.</span>
+
+    <span class="n">output_tensors</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">outputs</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="nb">id</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="ow">in</span> <span class="n">tensor_map</span><span class="p">,</span> <span class="s2">&quot;Could not compute output &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">tensor</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">tensor_map</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">x</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">tensor</span><span class="p">:</span>
+                <span class="n">output_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">output_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">DecomonModel</span><span class="p">(</span>
+        <span class="n">input_tensors</span><span class="p">,</span>
+        <span class="n">output_tensors</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+        <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">,</span>
+        <span class="n">IBP</span><span class="o">=</span><span class="n">IBP</span><span class="p">,</span>
+        <span class="n">forward</span><span class="o">=</span><span class="n">forward</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="convert"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.convert">[docs]</a><span class="k">def</span> <span class="nf">convert</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span>
+    <span class="n">input_tensors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">layer_fn</span><span class="o">=</span><span class="n">to_monotonic</span><span class="p">,</span>
+    <span class="n">dc_decomp</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">convex_domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;backward&quot;</span><span class="p">,</span>
+    <span class="n">slope_backward</span><span class="o">=</span><span class="n">V_slope</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+    <span class="n">IBP</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">forward</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">linearize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">finetune</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">options</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Args:</span>
+<span class="sd">        model: Keras model</span>
+<span class="sd">        input_tensors: input_tensors: List of input tensors to be used</span>
+<span class="sd">            as inputs of our model or None</span>
+<span class="sd">        layer_fn: layer_fn: cloning function to translate a layer into</span>
+<span class="sd">            its decomon decomposition</span>
+<span class="sd">        dc_decomp: dc_decomp: boolean that indicates whether we return a</span>
+<span class="sd">        convex_domain: convex_domain: the type of convex domain</span>
+<span class="sd">        n_subgrad: integer for optimizing linear bounds</span>
+<span class="sd">    difference of convex decomposition of our layer</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        a decomon model</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">convex_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">convex_domain</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">options</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">options</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mode</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="n">Forward</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">Backward</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="n">input_shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">input_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+    <span class="n">input_dim</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">input_shape</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">linearize</span><span class="p">:</span>
+        <span class="n">input_dim_clone</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">input_dim_clone</span> <span class="o">=</span> <span class="n">input_dim</span>
+
+    <span class="n">model_monotonic</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span>
+        <span class="n">model</span><span class="p">,</span>
+        <span class="n">input_tensors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">layer_fn</span><span class="o">=</span><span class="n">layer_fn</span><span class="p">,</span>
+        <span class="n">input_dim</span><span class="o">=</span><span class="n">input_dim_clone</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+        <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">,</span>
+        <span class="n">IBP</span><span class="o">=</span><span class="n">IBP</span><span class="p">,</span>
+        <span class="n">forward</span><span class="o">=</span><span class="n">forward</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;forward&quot;</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">mode</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">Backward</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+        <span class="n">model_monotonic</span> <span class="o">=</span> <span class="n">get_backward</span><span class="p">(</span><span class="n">model_monotonic</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">slope_backward</span><span class="p">,</span> <span class="n">input_dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_input</span><span class="p">(</span><span class="n">input_</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="n">y_tensor</span><span class="p">,</span> <span class="n">z_tensor</span><span class="p">,</span> <span class="n">h_tensor</span><span class="p">,</span> <span class="n">g_tensor</span> <span class="o">=</span> <span class="n">input_</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">y_tensor</span><span class="p">,</span> <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">input_</span>
+
+        <span class="c1"># create b_u, b_l, u_c, l_c from the previous tensors (with a lambda layer)</span>
+        <span class="n">b_tensor</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">*</span> <span class="n">y_tensor</span>
+        <span class="n">w_tensor</span> <span class="o">=</span> <span class="n">b_tensor</span>
+
+        <span class="c1"># compute upper and lower bound</span>
+        <span class="n">l_c_tensor</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">get_lower</span><span class="p">(</span><span class="n">z_tensor</span><span class="p">,</span> <span class="n">w_tensor</span><span class="p">,</span> <span class="n">b_tensor</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">),</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">input_shape</span><span class="p">)</span>
+        <span class="n">u_c_tensor</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">get_upper</span><span class="p">(</span><span class="n">z_tensor</span><span class="p">,</span> <span class="n">w_tensor</span><span class="p">,</span> <span class="n">b_tensor</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">),</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">input_shape</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">linearize</span><span class="p">:</span>
+                <span class="n">w_tensor</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mi">0</span> <span class="o">*</span> <span class="p">(</span><span class="n">Flatten</span><span class="p">()(</span><span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">y_tensor</span><span class="p">,</span> <span class="mi">1</span><span class="p">))))</span>
+
+            <span class="n">output</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">y_tensor</span><span class="p">,</span>
+                <span class="n">z_tensor</span><span class="p">,</span>
+                <span class="n">u_c_tensor</span><span class="p">,</span>
+                <span class="n">w_tensor</span><span class="p">,</span>
+                <span class="n">b_tensor</span><span class="p">,</span>
+                <span class="n">l_c_tensor</span><span class="p">,</span>
+                <span class="n">w_tensor</span><span class="p">,</span>
+                <span class="n">b_tensor</span><span class="p">,</span>
+            <span class="p">]</span>
+        <span class="k">elif</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">forward</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">y_tensor</span><span class="p">,</span>
+                <span class="n">z_tensor</span><span class="p">,</span>
+                <span class="n">u_c_tensor</span><span class="p">,</span>
+                <span class="n">l_c_tensor</span><span class="p">,</span>
+            <span class="p">]</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">linearize</span><span class="p">:</span>
+                <span class="n">w_tensor</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mi">0</span> <span class="o">*</span> <span class="p">(</span><span class="n">Flatten</span><span class="p">()(</span><span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">y_tensor</span><span class="p">,</span> <span class="mi">1</span><span class="p">))))</span>
+
+            <span class="n">output</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">y_tensor</span><span class="p">,</span>
+                <span class="n">z_tensor</span><span class="p">,</span>
+                <span class="n">w_tensor</span><span class="p">,</span>
+                <span class="n">b_tensor</span><span class="p">,</span>
+                <span class="n">w_tensor</span><span class="p">,</span>
+                <span class="n">b_tensor</span><span class="p">,</span>
+            <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;not IBP and not forward not implemented&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">+=</span> <span class="p">[</span><span class="n">h_tensor</span><span class="p">,</span> <span class="n">g_tensor</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="n">lambda_layer</span> <span class="o">=</span> <span class="n">Lambda</span><span class="p">(</span><span class="n">get_input</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">input_tensors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># retrieve the inputs of the previous model</span>
+
+        <span class="n">y_tensor</span><span class="p">,</span> <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">model_monotonic</span><span class="o">.</span><span class="n">inputs</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">inputs_</span> <span class="o">=</span> <span class="p">[</span><span class="n">y_tensor</span><span class="p">,</span> <span class="n">z_tensor</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="n">inputs_</span> <span class="o">+=</span> <span class="n">model_monotonic</span><span class="o">.</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
+
+        <span class="n">input_tensors</span> <span class="o">=</span> <span class="n">inputs_</span>
+    <span class="n">input_tensors_</span> <span class="o">=</span> <span class="n">lambda_layer</span><span class="p">(</span><span class="n">inputs_</span><span class="p">)</span>
+
+    <span class="c1"># create the model</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">model_monotonic</span><span class="p">(</span><span class="n">input_tensors_</span><span class="p">)</span>
+
+    <span class="n">decomon_model</span> <span class="o">=</span> <span class="n">DecomonModel</span><span class="p">(</span>
+        <span class="n">input_tensors</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">,</span> <span class="n">IBP</span><span class="o">=</span><span class="n">IBP</span><span class="p">,</span> <span class="n">forward</span><span class="o">=</span><span class="n">forward</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">model_monotonic</span><span class="o">.</span><span class="n">mode</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">decomon_model</span></div>
+
+
+<div class="viewcode-block" id="set_domain_priv"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.set_domain_priv">[docs]</a><span class="k">def</span> <span class="nf">set_domain_priv</span><span class="p">(</span><span class="n">convex_domain_prev</span><span class="p">,</span> <span class="n">convex_domain</span><span class="p">):</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;we can only change the parameters of the convex domain, not its nature&quot;</span>
+
+    <span class="n">convex_domain_</span> <span class="o">=</span> <span class="n">convex_domain</span>
+    <span class="k">if</span> <span class="n">convex_domain</span> <span class="o">==</span> <span class="p">{}:</span>
+        <span class="n">convex_domain</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">Box</span><span class="o">.</span><span class="n">name</span><span class="p">}</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">convex_domain_prev</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">convex_domain_prev</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">Box</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+        <span class="c1"># Box</span>
+        <span class="k">if</span> <span class="n">convex_domain</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">Box</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">convex_domain_prev</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">convex_domain</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">convex_domain_</span></div>
+
+
+<div class="viewcode-block" id="DecomonModel"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.DecomonModel">[docs]</a><span class="k">class</span> <span class="nc">DecomonModel</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="nb">input</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">,</span>
+        <span class="n">convex_domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="n">Forward</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">optimize</span><span class="o">=</span><span class="s2">&quot;True&quot;</span><span class="p">,</span>
+        <span class="n">IBP</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">forward</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">convex_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">convex_domain</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span> <span class="o">=</span> <span class="n">convex_domain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimize</span> <span class="o">=</span> <span class="n">optimize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span> <span class="o">=</span> <span class="n">StaticVariables</span><span class="p">(</span><span class="n">dc_decomp</span><span class="p">)</span><span class="o">.</span><span class="n">nb_tensors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span> <span class="o">=</span> <span class="n">dc_decomp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">IBP</span> <span class="o">=</span> <span class="n">IBP</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">forward</span> <span class="o">=</span> <span class="n">forward</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finetune</span> <span class="o">=</span> <span class="n">finetune</span>
+
+<div class="viewcode-block" id="DecomonModel.set_domain"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.DecomonModel.set_domain">[docs]</a>    <span class="k">def</span> <span class="nf">set_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">convex_domain</span><span class="p">):</span>
+        <span class="n">convex_domain</span> <span class="o">=</span> <span class="n">set_domain_priv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span><span class="p">,</span> <span class="n">convex_domain</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span> <span class="o">=</span> <span class="n">convex_domain</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;convex_domain&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">convex_domain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span></div>
+
+<div class="viewcode-block" id="DecomonModel.freeze_weights"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.DecomonModel.freeze_weights">[docs]</a>    <span class="k">def</span> <span class="nf">freeze_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;freeze_weights&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">freeze_weights</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DecomonModel.unfreeze_weights"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.DecomonModel.unfreeze_weights">[docs]</a>    <span class="k">def</span> <span class="nf">unfreeze_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;unfreeze_weights&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">unfreeze_weights</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DecomonModel.freeze_alpha"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.DecomonModel.freeze_alpha">[docs]</a>    <span class="k">def</span> <span class="nf">freeze_alpha</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;freeze_alpha&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">freeze_alpha</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DecomonModel.unfreeze_alpha"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.DecomonModel.unfreeze_alpha">[docs]</a>    <span class="k">def</span> <span class="nf">unfreeze_alpha</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;unfreeze_alpha&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">unfreeze_alpha</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DecomonModel.reset_finetuning"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.DecomonModel.reset_finetuning">[docs]</a>    <span class="k">def</span> <span class="nf">reset_finetuning</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;reset_finetuning&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">reset_finetuning</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="DecomonSequential"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.DecomonSequential">[docs]</a><span class="k">class</span> <span class="nc">DecomonSequential</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">Sequential</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">layers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">convex_domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="n">Forward</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">optimize</span><span class="o">=</span><span class="s2">&quot;False&quot;</span><span class="p">,</span>
+        <span class="n">IBP</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">forward</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">layers</span><span class="o">=</span><span class="n">layers</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">convex_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">convex_domain</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span> <span class="o">=</span> <span class="n">convex_domain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimize</span> <span class="o">=</span> <span class="n">optimize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span> <span class="o">=</span> <span class="n">StaticVariables</span><span class="p">(</span><span class="n">dc_decomp</span><span class="p">)</span><span class="o">.</span><span class="n">nb_tensors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span> <span class="o">=</span> <span class="n">dc_decomp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">IBP</span> <span class="o">=</span> <span class="n">IBP</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">forward</span> <span class="o">=</span> <span class="n">forward</span>
+
+<div class="viewcode-block" id="DecomonSequential.set_domain"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.DecomonSequential.set_domain">[docs]</a>    <span class="k">def</span> <span class="nf">set_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">convex_domain</span><span class="p">):</span>
+        <span class="n">convex_domain</span> <span class="o">=</span> <span class="n">set_domain_priv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span><span class="p">,</span> <span class="n">convex_domain</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span> <span class="o">=</span> <span class="n">convex_domain</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;convex_domain&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">convex_domain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span></div>
+
+<div class="viewcode-block" id="DecomonSequential.freeze_weights"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.DecomonSequential.freeze_weights">[docs]</a>    <span class="k">def</span> <span class="nf">freeze_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;freeze_weights&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">freeze_weights</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DecomonSequential.unfreeze_weights"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.DecomonSequential.unfreeze_weights">[docs]</a>    <span class="k">def</span> <span class="nf">unfreeze_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;unfreeze_weights&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">unfreeze_weights</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DecomonSequential.freeze_alpha"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.DecomonSequential.freeze_alpha">[docs]</a>    <span class="k">def</span> <span class="nf">freeze_alpha</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;freeze_alpha&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">freeze_alpha</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DecomonSequential.unfreeze_alpha"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.DecomonSequential.unfreeze_alpha">[docs]</a>    <span class="k">def</span> <span class="nf">unfreeze_alpha</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;unfreeze_alpha&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">unfreeze_alpha</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DecomonSequential.reset_finetuning"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.DecomonSequential.reset_finetuning">[docs]</a>    <span class="k">def</span> <span class="nf">reset_finetuning</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;reset_finetuning&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">unfreeze_alpha</span><span class="p">()</span></div></div>
+
+
+<span class="c1"># BACKWARD MODE</span>
+<div class="viewcode-block" id="get_backward"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.get_backward">[docs]</a><span class="k">def</span> <span class="nf">get_backward</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">back_bounds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">V_slope</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">input_dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Args:</span>
+<span class="sd">        model</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># create inputs for back_bounds</span>
+    <span class="c1"># the convert mode for an easy use has been activated</span>
+    <span class="c1"># it implies that the bounds are on the input of the network directly</span>
+    <span class="k">if</span> <span class="n">options</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">options</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">input_backward</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">to_list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">input</span><span class="p">):</span>
+        <span class="n">input_backward</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Input</span><span class="p">(</span><span class="n">elem</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+    <span class="n">output_forward</span> <span class="o">=</span> <span class="n">to_list</span><span class="p">(</span><span class="n">model</span><span class="p">(</span><span class="n">input_backward</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">back_bounds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="n">output_forward</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">n_dim</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">y_pred</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+
+        <span class="k">def</span> <span class="nf">get_init_backward</span><span class="p">(</span><span class="n">y_pred</span><span class="p">):</span>
+            <span class="c1"># create identity matrix to init the backward pass</span>
+            <span class="n">w_out_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mi">0</span> <span class="o">*</span> <span class="p">(</span><span class="n">Flatten</span><span class="p">()(</span><span class="n">y_pred</span><span class="p">))),</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_dim</span><span class="p">,</span> <span class="n">n_dim</span><span class="p">))</span>
+            <span class="n">b_out_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="mi">0</span> <span class="o">*</span> <span class="n">y_pred</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_dim</span><span class="p">))</span>
+
+            <span class="k">return</span> <span class="p">[</span><span class="n">w_out_</span><span class="p">,</span> <span class="n">b_out_</span><span class="p">,</span> <span class="n">w_out_</span><span class="p">,</span> <span class="n">b_out_</span><span class="p">]</span>
+
+        <span class="n">lambda_backward</span> <span class="o">=</span> <span class="n">Lambda</span><span class="p">(</span><span class="n">get_init_backward</span><span class="p">)</span>
+        <span class="n">back_bounds</span> <span class="o">=</span> <span class="n">lambda_backward</span><span class="p">(</span><span class="n">y_pred</span><span class="p">)</span>
+
+    <span class="n">back_bounds</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">get_backward_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">back_bounds</span><span class="p">,</span> <span class="n">input_backward</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">slope</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">input_dim</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">DecomonModel</span><span class="p">(</span>
+            <span class="n">input_backward</span><span class="p">,</span>
+            <span class="n">output_forward</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">back_bounds</span><span class="p">),</span>
+            <span class="n">dc_decomp</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span>
+            <span class="n">convex_domain</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">convex_domain</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">Backward</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">IBP</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">IBP</span><span class="p">,</span>
+            <span class="n">forward</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">forward</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="get_backward_model_"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.get_backward_model_">[docs]</a><span class="k">def</span> <span class="nf">get_backward_model_</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">back_bounds</span><span class="p">,</span> <span class="n">input_model</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">V_slope</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Args:</span>
+<span class="sd">        model</span>
+<span class="sd">        back_bounds</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># retrieve all layers inside</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;dc_decomp&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">model</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="c1"># store the input-output relationships between layers</span>
+    <span class="n">input_neighbors</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">l</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">n_</span> <span class="ow">in</span> <span class="n">layer</span><span class="o">.</span><span class="n">_outbound_nodes</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">n_</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">names</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_</span><span class="o">.</span><span class="n">layer</span><span class="p">,</span> <span class="p">(</span><span class="n">InputLayer</span><span class="p">,</span> <span class="n">Lambda</span><span class="p">)):</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">n_</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">input_neighbors</span><span class="p">:</span>
+                <span class="n">input_neighbors</span><span class="p">[</span><span class="n">n_</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">+=</span> <span class="p">[</span><span class="n">layer</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">input_neighbors</span><span class="p">[</span><span class="n">n_</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">layer</span><span class="p">]</span>
+
+    <span class="c1"># remove redundant layers</span>
+    <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">input_neighbors</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;nb_tensors&quot;</span><span class="p">):</span>
+            <span class="n">input_neighbors</span><span class="p">[</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">input_neighbors</span><span class="p">[</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">][::</span> <span class="n">layer</span><span class="o">.</span><span class="n">nb_tensors</span><span class="p">]</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">input_model</span>
+    <span class="n">dict_layers</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">layers</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span>
+    <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">layers</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">input_neighbors</span><span class="p">:</span>
+            <span class="n">dict_layers</span><span class="p">[</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="c1"># get output layers</span>
+    <span class="n">layers_output</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span><span class="o">.</span><span class="n">layer</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">_nodes_by_depth</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+
+    <span class="c1"># so far backward mode is only for Sequential-like models</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers_output</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="n">output_bounds</span> <span class="o">=</span> <span class="n">get_backward_layer</span><span class="p">(</span>
+        <span class="n">layer</span><span class="o">=</span><span class="n">layers_output</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">back_bounds</span><span class="o">=</span><span class="n">back_bounds</span><span class="p">,</span> <span class="n">edges</span><span class="o">=</span><span class="n">input_neighbors</span><span class="p">,</span> <span class="n">input_layers</span><span class="o">=</span><span class="n">dict_layers</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">slope</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">output_bounds</span></div>
+
+
+<div class="viewcode-block" id="get_backward_model"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.get_backward_model">[docs]</a><span class="k">def</span> <span class="nf">get_backward_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">back_bounds</span><span class="p">,</span> <span class="n">input_model</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">V_slope</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="c1"># retrieve all layers inside</span>
+    <span class="k">if</span> <span class="n">options</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">options</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;dc_decomp&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">model</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="n">name</span> <span class="o">=</span> <span class="p">[</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">]</span>
+
+    <span class="n">dico</span> <span class="o">=</span> <span class="p">{</span><span class="n">l</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+        <span class="n">output_nodes</span> <span class="o">=</span> <span class="n">l</span><span class="o">.</span><span class="n">outbound_nodes</span>
+        <span class="k">for</span> <span class="n">output_node</span> <span class="ow">in</span> <span class="n">output_nodes</span><span class="p">:</span>
+            <span class="n">output_layer</span> <span class="o">=</span> <span class="n">output_node</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span>
+            <span class="k">if</span> <span class="n">output_layer</span> <span class="ow">in</span> <span class="n">name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">l</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="n">k</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">dico</span><span class="p">[</span><span class="n">output_layer</span><span class="p">]]:</span>
+                <span class="n">dico</span><span class="p">[</span><span class="n">output_layer</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+
+    <span class="n">depth_input</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_nodes_by_depth</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">input_model</span>
+    <span class="n">dico_output</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">dico_input</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">depth</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">depth_input</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="c1"># get layers by depth</span>
+        <span class="n">layers_depth</span> <span class="o">=</span> <span class="p">[</span><span class="n">node_</span><span class="o">.</span><span class="n">outbound_layer</span> <span class="k">for</span> <span class="n">node_</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">_nodes_by_depth</span><span class="p">[</span><span class="n">depth</span><span class="p">]]</span>
+        <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">layer_</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">layers_depth</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dico</span><span class="p">[</span><span class="n">layer_</span><span class="o">.</span><span class="n">name</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># input node</span>
+                <span class="n">dico_output</span><span class="p">[</span><span class="n">layer_</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer_</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+                <span class="n">dico_input</span><span class="p">[</span><span class="n">layer_</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># retrieve the output of the layers used before</span>
+                <span class="n">list_inputs</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">in_layers</span> <span class="o">=</span> <span class="n">dico</span><span class="p">[</span><span class="n">layer_</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">in_layer</span> <span class="ow">in</span> <span class="n">in_layers</span><span class="p">:</span>
+                    <span class="n">input_</span> <span class="o">=</span> <span class="n">dico_output</span><span class="p">[</span><span class="n">in_layer</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                        <span class="n">list_inputs</span> <span class="o">+=</span> <span class="n">input_</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">list_inputs</span> <span class="o">+=</span> <span class="p">[</span><span class="n">input_</span><span class="p">]</span>
+
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">in_layers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer_</span><span class="o">.</span><span class="n">input</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                    <span class="n">dico_output</span><span class="p">[</span><span class="n">layer_</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer_</span><span class="p">(</span><span class="n">list_inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">dico_input</span><span class="p">[</span><span class="n">layer_</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">list_inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer_</span><span class="p">,</span> <span class="n">Model</span><span class="p">):</span>
+                        <span class="k">pass</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">dico_output</span><span class="p">[</span><span class="n">layer_</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer_</span><span class="p">(</span><span class="n">list_inputs</span><span class="p">)</span>
+                        <span class="n">dico_input</span><span class="p">[</span><span class="n">layer_</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">list_inputs</span>
+
+    <span class="n">layers_output</span> <span class="o">=</span> <span class="p">[</span><span class="n">node_</span><span class="o">.</span><span class="n">layer</span> <span class="k">for</span> <span class="n">node_</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">_nodes_by_depth</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+    <span class="k">if</span> <span class="n">back_bounds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">back_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">back_bounds</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers_output</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of initial linear bounds should be 1 or the number of output neurons&quot;</span><span class="p">)</span>
+
+    <span class="n">output_bounds</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">layers_output</span><span class="p">)):</span>
+        <span class="n">output_bounds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">get_backward_layer</span><span class="p">(</span>
+                <span class="n">layer</span><span class="o">=</span><span class="n">layers_output</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                <span class="n">back_bounds</span><span class="o">=</span><span class="n">back_bounds</span><span class="p">,</span>
+                <span class="n">input_layers</span><span class="o">=</span><span class="n">dico</span><span class="p">,</span>
+                <span class="n">input_tensors</span><span class="o">=</span><span class="n">dico_input</span><span class="p">,</span>
+                <span class="n">slope</span><span class="o">=</span><span class="n">slope</span><span class="p">,</span>
+                <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers_output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">output_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">output_bounds</span></div>
+
+
+<div class="viewcode-block" id="get_backward_layer"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.decomon_sequential.get_backward_layer">[docs]</a><span class="k">def</span> <span class="nf">get_backward_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">back_bounds</span><span class="p">,</span> <span class="n">input_layers</span><span class="p">,</span> <span class="n">input_tensors</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">V_slope</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="n">options</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">options</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="nb">input</span> <span class="o">=</span> <span class="n">input_tensors</span><span class="p">[</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">Model</span><span class="p">):</span>
+
+        <span class="n">back_bounds</span> <span class="o">=</span> <span class="n">get_backward_model</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">back_bounds</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">V_slope</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="c1"># recursive approach</span>
+
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">Layer</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Decomon&quot;</span><span class="p">:</span>
+            <span class="n">backward_layer</span> <span class="o">=</span> <span class="n">get_backward_</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">slope</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">back_bounds</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="n">back_bounds</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">back_bounds</span><span class="p">)</span>
+            <span class="n">back_bounds</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">backward_layer</span><span class="p">(</span><span class="nb">input</span> <span class="o">+</span> <span class="n">back_bounds</span><span class="p">))</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">back_bounds</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="c1"># recursive calls</span>
+    <span class="n">layers_</span> <span class="o">=</span> <span class="n">input_layers</span><span class="p">[</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">back_bounds</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">get_backward_layer</span><span class="p">(</span><span class="n">layers_</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">back_bounds</span><span class="p">,</span> <span class="n">input_layers</span><span class="p">,</span> <span class="n">input_tensors</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">slope</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">back_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">l</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">layers_</span> <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="p">(</span><span class="n">InputLayer</span><span class="p">,</span> <span class="n">Lambda</span><span class="p">)))]</span>
+        <span class="p">):</span>
+            <span class="k">return</span> <span class="n">back_bounds</span>
+            <span class="c1"># check that we reach an input layer</span>
+
+        <span class="n">back_bounds_</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">get_backward_layer</span><span class="p">(</span><span class="n">layers_</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">back_bounds</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">input_layers</span><span class="p">,</span> <span class="n">input_tensors</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">slope</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">layers_</span><span class="p">))</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="s2">&quot;join&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="p">:</span>
+            <span class="n">back_bounds</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s2">&quot;join&quot;</span><span class="p">](</span><span class="n">layer</span><span class="p">,</span> <span class="n">back_bounds</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">back_bounds</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">back_bounds</span><span class="p">)</span>  <span class="c1"># to define</span>
+
+    <span class="k">return</span> <span class="n">back_bounds</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2022, Airbus.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

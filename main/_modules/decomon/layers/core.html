@@ -1,0 +1,421 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>decomon.layers.core &mdash; DecoMon main documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script src="../../../_static/versions.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> DecoMon
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                main
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">DecoMon</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>decomon.layers.core</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for decomon.layers.core</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
+<span class="kn">from</span> <span class="nn">tensorflow.keras.layers</span> <span class="kn">import</span> <span class="n">Layer</span>
+
+<span class="kn">from</span> <span class="nn">decomon.types</span> <span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="c1">#  the different forward (from input to output) linear based relaxation perturbation analysis</span>
+
+<span class="c1"># propgation of constant bounds from input to output</span>
+<div class="viewcode-block" id="F_IBP"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.F_IBP">[docs]</a><span class="k">class</span> <span class="nc">F_IBP</span><span class="p">:</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;ibp&quot;</span></div>
+
+
+<span class="c1"># propagation of affine bounds from input to output</span>
+<div class="viewcode-block" id="F_FORWARD"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.F_FORWARD">[docs]</a><span class="k">class</span> <span class="nc">F_FORWARD</span><span class="p">:</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;forward&quot;</span></div>
+
+
+<span class="c1"># propagation of constant and affines bounds from input to output</span>
+<div class="viewcode-block" id="F_HYBRID"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.F_HYBRID">[docs]</a><span class="k">class</span> <span class="nc">F_HYBRID</span><span class="p">:</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;hybrid&quot;</span></div>
+
+
+<span class="c1"># create static variables for varying convex domain</span>
+<div class="viewcode-block" id="Ball"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.Ball">[docs]</a><span class="k">class</span> <span class="nc">Ball</span><span class="p">:</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;ball&quot;</span>  <span class="c1"># Lp Ball around an example</span></div>
+
+
+<div class="viewcode-block" id="Box"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.Box">[docs]</a><span class="k">class</span> <span class="nc">Box</span><span class="p">:</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;box&quot;</span>  <span class="c1"># Hypercube</span></div>
+
+
+<div class="viewcode-block" id="Grid"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.Grid">[docs]</a><span class="k">class</span> <span class="nc">Grid</span><span class="p">:</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;grid&quot;</span></div>
+
+
+<div class="viewcode-block" id="Vertex"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.Vertex">[docs]</a><span class="k">class</span> <span class="nc">Vertex</span><span class="p">:</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;vertex&quot;</span>  <span class="c1"># convex set represented by its vertices</span></div>
+    <span class="c1"># (no verification is proceeded to assess that the set is convex)</span>
+
+
+<div class="viewcode-block" id="DEEL_LIP"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DEEL_LIP">[docs]</a><span class="k">class</span> <span class="nc">DEEL_LIP</span><span class="p">:</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;deel-lip&gt;&quot;</span></div>
+
+
+<div class="viewcode-block" id="Option"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.Option">[docs]</a><span class="k">class</span> <span class="nc">Option</span><span class="p">:</span>
+    <span class="n">lagrangian</span> <span class="o">=</span> <span class="s2">&quot;lagrangian&quot;</span>
+    <span class="n">milp</span> <span class="o">=</span> <span class="s2">&quot;milp&quot;</span></div>
+
+
+<div class="viewcode-block" id="StaticVariables"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.StaticVariables">[docs]</a><span class="k">class</span> <span class="nc">StaticVariables</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Storing static values on the number of input tensors for our layers&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            dc_decomp: boolean that indicates whether we return a</span>
+<span class="sd">                difference of convex decomposition of our layer</span>
+<span class="sd">            mode: type of Forward propagation (IBP, Forward or Hybrid)</span>
+<span class="sd">        gradient</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">nb_tensors</span> <span class="o">=</span> <span class="mi">7</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">nb_tensors</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">nb_tensors</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unknown forward mode </span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="n">nb_tensors</span> <span class="o">+=</span> <span class="mi">2</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span> <span class="o">=</span> <span class="n">nb_tensors</span></div>
+
+
+<div class="viewcode-block" id="DecomonLayer"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer">[docs]</a><span class="k">class</span> <span class="nc">DecomonLayer</span><span class="p">(</span><span class="n">ABC</span><span class="p">,</span> <span class="n">Layer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Abstract class that contains the common information of every implemented layers for Forward LiRPA&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">convex_domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">shared</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">fast</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            convex_domain: type of convex input domain (None or dict)</span>
+<span class="sd">            dc_decomp: boolean that indicates whether we return a</span>
+<span class="sd">            mode: type of Forward propagation (IBP, Forward or Hybrid)</span>
+<span class="sd">            **kwargs: extra parameters</span>
+<span class="sd">        difference of convex decomposition of our layer</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">convex_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">convex_domain</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span> <span class="o">=</span> <span class="n">StaticVariables</span><span class="p">(</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">mode</span><span class="p">)</span><span class="o">.</span><span class="n">nb_tensors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span> <span class="o">=</span> <span class="n">dc_decomp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span> <span class="o">=</span> <span class="n">convex_domain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finetune</span> <span class="o">=</span> <span class="n">finetune</span>  <span class="c1"># extra optimization with hyperparameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frozen_weights</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frozen_alpha</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared</span> <span class="o">=</span> <span class="n">shared</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fast</span> <span class="o">=</span> <span class="n">fast</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_layer</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linear_layer</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_backward_bounds</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># optimizing Forward LiRPA for adversarial perturbation</span>
+
+<div class="viewcode-block" id="DecomonLayer.build"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            input_shape</span>
+
+<span class="sd">        Returns:</span>
+
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+<div class="viewcode-block" id="DecomonLayer.call"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.call">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            inputs</span>
+
+<span class="sd">        Returns:</span>
+
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+<div class="viewcode-block" id="DecomonLayer.set_linear"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.set_linear">[docs]</a>    <span class="k">def</span> <span class="nf">set_linear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bool_init</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linear_layer</span> <span class="o">=</span> <span class="n">bool_init</span></div>
+
+<div class="viewcode-block" id="DecomonLayer.get_linear"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.get_linear">[docs]</a>    <span class="k">def</span> <span class="nf">get_linear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="DecomonLayer.compute_output_shape"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.compute_output_shape">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">compute_output_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            input_shape</span>
+
+<span class="sd">        Returns:</span>
+
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+<div class="viewcode-block" id="DecomonLayer.reset_layer"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.reset_layer">[docs]</a>    <span class="k">def</span> <span class="nf">reset_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            layer</span>
+
+<span class="sd">        Returns:</span>
+
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+<div class="viewcode-block" id="DecomonLayer.join"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.join">[docs]</a>    <span class="k">def</span> <span class="nf">join</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bounds</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            bounds</span>
+
+<span class="sd">        Returns:</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DecomonLayer.freeze_weights"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.freeze_weights">[docs]</a>    <span class="k">def</span> <span class="nf">freeze_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="DecomonLayer.unfreeze_weights"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.unfreeze_weights">[docs]</a>    <span class="k">def</span> <span class="nf">unfreeze_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="DecomonLayer.freeze_alpha"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.freeze_alpha">[docs]</a>    <span class="k">def</span> <span class="nf">freeze_alpha</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="DecomonLayer.unfreeze_alpha"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.unfreeze_alpha">[docs]</a>    <span class="k">def</span> <span class="nf">unfreeze_alpha</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="DecomonLayer.reset_finetuning"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.reset_finetuning">[docs]</a>    <span class="k">def</span> <span class="nf">reset_finetuning</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="DecomonLayer.shared_weights"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.shared_weights">[docs]</a>    <span class="k">def</span> <span class="nf">shared_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="DecomonLayer.split_kwargs"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.split_kwargs">[docs]</a>    <span class="k">def</span> <span class="nf">split_kwargs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># necessary for InputLayer</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="DecomonLayer.set_back_bounds"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.core.DecomonLayer.set_back_bounds">[docs]</a>    <span class="k">def</span> <span class="nf">set_back_bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">has_backward_bounds</span><span class="p">):</span>
+        <span class="k">pass</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2022, Airbus.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

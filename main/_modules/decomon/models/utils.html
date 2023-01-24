@@ -1,0 +1,771 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>decomon.models.utils &mdash; DecoMon main documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script src="../../../_static/versions.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> DecoMon
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                main
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">DecoMon</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>decomon.models.utils</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for decomon.models.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">tensorflow.python.keras.backend</span> <span class="k">as</span> <span class="nn">K</span>
+<span class="kn">from</span> <span class="nn">tensorflow.keras.layers</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Concatenate</span><span class="p">,</span>
+    <span class="n">Flatten</span><span class="p">,</span>
+    <span class="n">Input</span><span class="p">,</span>
+    <span class="n">Lambda</span><span class="p">,</span>
+    <span class="n">Maximum</span><span class="p">,</span>
+    <span class="n">Minimum</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">tensorflow.keras.models</span> <span class="kn">import</span> <span class="n">Model</span>
+
+<span class="kn">from</span> <span class="nn">decomon.layers.core</span> <span class="kn">import</span> <span class="n">F_FORWARD</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="p">,</span> <span class="n">F_IBP</span><span class="p">,</span> <span class="n">Box</span>
+<span class="kn">from</span> <span class="nn">decomon.utils</span> <span class="kn">import</span> <span class="n">get_lower</span><span class="p">,</span> <span class="n">get_lower_layer</span><span class="p">,</span> <span class="n">get_upper</span><span class="p">,</span> <span class="n">get_upper_layer</span>
+
+
+<div class="viewcode-block" id="include_dim_layer_fn"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.include_dim_layer_fn">[docs]</a><span class="k">def</span> <span class="nf">include_dim_layer_fn</span><span class="p">(</span>
+    <span class="n">layer_fn</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">IBP</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">forward</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">finetune</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">shared</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;include external parameters inside the translation of a layer to its decomon counterpart</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        layer_fn</span>
+<span class="sd">        input_dim</span>
+<span class="sd">        dc_decomp</span>
+<span class="sd">        convex_domain</span>
+<span class="sd">        finetune</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">convex_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">convex_domain</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">input_dim</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">&quot;input_dim&quot;</span> <span class="ow">in</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">layer_fn</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
+            <span class="n">layer_fn_copy</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">layer_fn</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">convex_domain</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="n">input_dim</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">convex_domain</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">Box</span><span class="o">.</span><span class="n">name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                    <span class="n">input_dim</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">)</span>
+
+            <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">layer_fn_copy</span><span class="p">(</span>
+                    <span class="n">x</span><span class="p">,</span>
+                    <span class="n">input_dim</span><span class="p">,</span>
+                    <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">,</span>
+                    <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+                    <span class="n">IBP</span><span class="o">=</span><span class="n">IBP</span><span class="p">,</span>
+                    <span class="n">forward</span><span class="o">=</span><span class="n">forward</span><span class="p">,</span>
+                    <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+                    <span class="n">shared</span><span class="o">=</span><span class="n">shared</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="n">layer_fn</span> <span class="o">=</span> <span class="n">func</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">layer_fn</span>
+
+    <span class="k">return</span> <span class="n">layer_fn</span></div>
+
+
+<div class="viewcode-block" id="check_input_tensors_sequential"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.check_input_tensors_sequential">[docs]</a><span class="k">def</span> <span class="nf">check_input_tensors_sequential</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span> <span class="n">input_tensors</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">,</span> <span class="n">input_dim_init</span><span class="p">,</span> <span class="n">IBP</span><span class="p">,</span> <span class="n">forward</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="p">,</span> <span class="n">convex_domain</span>
+<span class="p">):</span>
+
+    <span class="k">if</span> <span class="n">convex_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">convex_domain</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">input_tensors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># no predefined input tensors</span>
+
+        <span class="n">input_shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">int_shape</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">input</span><span class="p">)[</span><span class="mi">1</span><span class="p">:])</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">convex_domain</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">input_dim_</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">)</span>
+            <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">input_dim_</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">convex_domain</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">Box</span><span class="o">.</span><span class="n">name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">input_dim_</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">)</span>
+            <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">input_dim_</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">((</span><span class="n">input_dim</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="n">h_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">g_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">forward</span><span class="p">:</span>
+            <span class="n">b_u_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">b_l_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">input_dim_init</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">w_u_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">([</span><span class="n">input_dim</span><span class="p">]</span> <span class="o">+</span> <span class="n">input_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                <span class="n">w_l_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">([</span><span class="n">input_dim</span><span class="p">]</span> <span class="o">+</span> <span class="n">input_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">w_u_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                <span class="n">w_l_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">IBP</span><span class="p">:</span>
+            <span class="n">u_c_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">l_c_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">forward</span><span class="p">:</span>  <span class="c1"># hybrid mode</span>
+                <span class="n">input_tensors</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">z_tensor</span><span class="p">,</span>
+                    <span class="n">u_c_tensor</span><span class="p">,</span>
+                    <span class="n">w_u_tensor</span><span class="p">,</span>
+                    <span class="n">b_u_tensor</span><span class="p">,</span>
+                    <span class="n">l_c_tensor</span><span class="p">,</span>
+                    <span class="n">w_l_tensor</span><span class="p">,</span>
+                    <span class="n">b_l_tensor</span><span class="p">,</span>
+                <span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># only IBP</span>
+                <span class="n">input_tensors</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">u_c_tensor</span><span class="p">,</span>
+                    <span class="n">l_c_tensor</span><span class="p">,</span>
+                <span class="p">]</span>
+        <span class="k">elif</span> <span class="n">forward</span><span class="p">:</span>
+            <span class="c1"># forward mode</span>
+            <span class="n">input_tensors</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">z_tensor</span><span class="p">,</span>
+                <span class="n">w_u_tensor</span><span class="p">,</span>
+                <span class="n">b_u_tensor</span><span class="p">,</span>
+                <span class="n">w_l_tensor</span><span class="p">,</span>
+                <span class="n">b_l_tensor</span><span class="p">,</span>
+            <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;not IBP and not forward not implemented&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="n">input_tensors</span> <span class="o">+=</span> <span class="p">[</span><span class="n">h_tensor</span><span class="p">,</span> <span class="n">g_tensor</span><span class="p">]</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># assert that input_tensors is a List of 6 InputLayer objects</span>
+        <span class="c1"># If input tensors are provided, the original model&#39;s InputLayer is</span>
+        <span class="c1"># overwritten with a different InputLayer.</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">,</span> <span class="nb">list</span><span class="p">),</span> <span class="s2">&quot;expected input_tensors to be a List or None, but got dtype=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">input_tensors</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">9</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 10 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 6 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">5</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 8 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">7</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 10 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 10 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">5</span><span class="p">,</span> <span class="s2">&quot;wrong number of inputs, expexted 10 but got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+                <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">input_tensors</span></div>
+
+
+<div class="viewcode-block" id="get_input_tensor_x"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.get_input_tensor_x">[docs]</a><span class="k">def</span> <span class="nf">get_input_tensor_x</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">input_tensors</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">,</span> <span class="n">input_dim_init</span><span class="p">,</span> <span class="n">convex_domain</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">convex_domain</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="n">input_dim_</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">)</span>
+        <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">input_dim_</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">convex_domain</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">Box</span><span class="o">.</span><span class="n">name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="n">input_dim_</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">)</span>
+        <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">input_dim_</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">Input</span><span class="p">((</span><span class="n">input_dim</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">z_tensor</span></div>
+
+
+<div class="viewcode-block" id="check_input_tensors_functionnal"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.check_input_tensors_functionnal">[docs]</a><span class="k">def</span> <span class="nf">check_input_tensors_functionnal</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span> <span class="n">input_tensors</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">,</span> <span class="n">input_dim_init</span><span class="p">,</span> <span class="n">IBP</span><span class="p">,</span> <span class="n">forward</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="p">,</span> <span class="n">convex_domain</span>
+<span class="p">):</span>
+
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="get_mode"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.get_mode">[docs]</a><span class="k">def</span> <span class="nf">get_mode</span><span class="p">(</span><span class="n">IBP</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">forward</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="n">IBP</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">forward</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span></div>
+
+
+<div class="viewcode-block" id="get_IBP"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.get_IBP">[docs]</a><span class="k">def</span> <span class="nf">get_IBP</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="get_FORWARD"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.get_FORWARD">[docs]</a><span class="k">def</span> <span class="nf">get_FORWARD</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="get_node_by_id_"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.get_node_by_id_">[docs]</a><span class="k">def</span> <span class="nf">get_node_by_id_</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;NODE_</span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">flat_output_ids</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">flat_input_ids</span><span class="si">}</span><span class="s2">&quot;</span></div>
+
+
+<div class="viewcode-block" id="get_node_by_id"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.get_node_by_id">[docs]</a><span class="k">def</span> <span class="nf">get_node_by_id</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">outbound</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">layer_</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">outbound_layer</span>
+    <span class="n">input_names</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="n">node</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">outbound</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">layer_</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_NODE_</span><span class="si">{</span><span class="n">input_names</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;NODE_</span><span class="si">{</span><span class="n">input_names</span><span class="si">}</span><span class="s2">&quot;</span></div>
+
+
+<div class="viewcode-block" id="set_name"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.set_name">[docs]</a><span class="k">def</span> <span class="nf">set_name</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">extra_id</span><span class="p">):</span>
+
+    <span class="n">layer</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">extra_id</span><span class="si">}</span><span class="s2">&quot;</span></div>
+
+
+<div class="viewcode-block" id="get_inputs"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.get_inputs">[docs]</a><span class="k">def</span> <span class="nf">get_inputs</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">tensor_map</span><span class="p">):</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1"># get parents nodes</span>
+    <span class="n">node_prev</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parent_nodes</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node_prev</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">()</span>
+    <span class="n">key_prev_id</span> <span class="o">=</span> <span class="p">[</span><span class="n">get_node_by_id</span><span class="p">(</span><span class="n">node_p_i</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">node_p_i</span> <span class="ow">in</span> <span class="n">node_prev</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">key_p_i</span> <span class="ow">in</span> <span class="n">key_prev_id</span><span class="p">:</span>
+        <span class="n">output</span> <span class="o">+=</span> <span class="n">tensor_map</span><span class="p">[</span><span class="n">key_p_i</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">output</span></div>
+
+
+<div class="viewcode-block" id="convert_to_backward_bounds"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.convert_to_backward_bounds">[docs]</a><span class="k">def</span> <span class="nf">convert_to_backward_bounds</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span> <span class="o">=</span> <span class="n">inputs</span>
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span> <span class="o">=</span> <span class="n">inputs</span>
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+        <span class="n">u_c</span><span class="p">,</span> <span class="n">l_c</span> <span class="o">=</span> <span class="n">inputs</span>
+        <span class="n">z_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">u_c</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">n_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">u_c</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="n">b_u</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">u_c</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_out</span><span class="p">))</span>
+        <span class="n">b_l</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">l_c</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_out</span><span class="p">))</span>
+        <span class="n">w_u</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">+</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">b_u</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">w_l</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">+</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">b_l</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span></div>
+
+
+<div class="viewcode-block" id="get_input_dim"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.get_input_dim">[docs]</a><span class="k">def</span> <span class="nf">get_input_dim</span><span class="p">(</span><span class="n">x_tensor</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">x_tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="get_original_layer_name"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.get_original_layer_name">[docs]</a><span class="k">def</span> <span class="nf">get_original_layer_name</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">pattern</span><span class="o">=</span><span class="s2">&quot;_monotonic&quot;</span><span class="p">):</span>
+
+    <span class="n">pattern_layer</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pattern_layer</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pattern_layer</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])]</span></div>
+
+
+<div class="viewcode-block" id="get_key"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.get_key">[docs]</a><span class="k">def</span> <span class="nf">get_key</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">id_node</span><span class="p">,</span> <span class="n">forward_map</span><span class="p">):</span>
+    <span class="n">layer_name</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">n_word</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">layer_name</span><span class="p">)</span>
+
+    <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">forward_map</span> <span class="k">if</span> <span class="n">key</span><span class="p">[:</span><span class="n">n_word</span><span class="p">]</span> <span class="o">==</span> <span class="n">layer_name</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="get_back_bounds_model"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.get_back_bounds_model">[docs]</a><span class="k">def</span> <span class="nf">get_back_bounds_model</span><span class="p">(</span><span class="n">back_bounds</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+
+    <span class="n">depth</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># start from the beginning</span>
+    <span class="n">nodes</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">_nodes_by_depth</span><span class="p">[</span><span class="n">depth</span><span class="p">]</span>
+    <span class="n">back_bounds_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">back_bounds</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)):</span>
+        <span class="n">back_bounds_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">back_bounds</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="n">n</span> <span class="p">:</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">n</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">back_bounds_list</span></div>
+
+
+<div class="viewcode-block" id="fuse_forward_backward"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.fuse_forward_backward">[docs]</a><span class="k">def</span> <span class="nf">fuse_forward_backward</span><span class="p">(</span>
+    <span class="n">mode</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">back_bounds</span><span class="p">,</span> <span class="n">upper_layer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lower_layer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">x_tensor</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
+
+    <span class="k">if</span> <span class="n">convex_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">convex_domain</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+
+        <span class="k">if</span> <span class="n">upper_layer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">upper_layer</span> <span class="o">=</span> <span class="n">get_upper_layer</span><span class="p">(</span><span class="n">convex_domain</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">lower_layer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">lower_layer</span> <span class="o">=</span> <span class="n">get_lower_layer</span><span class="p">(</span><span class="n">convex_domain</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+        <span class="n">w_out_u</span><span class="p">,</span> <span class="n">b_out_u</span><span class="p">,</span> <span class="n">w_out_l</span><span class="p">,</span> <span class="n">b_out_l</span> <span class="o">=</span> <span class="n">back_bounds</span>
+
+        <span class="k">if</span> <span class="n">x_tensor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span>  <span class="c1"># we need some information on the domain</span>
+        <span class="n">u_out_c</span> <span class="o">=</span> <span class="n">upper_layer</span><span class="p">([</span><span class="n">x_tensor</span><span class="p">,</span> <span class="n">w_out_u</span><span class="p">,</span> <span class="n">b_out_u</span><span class="p">])</span>
+        <span class="n">l_out_c</span> <span class="o">=</span> <span class="n">lower_layer</span><span class="p">([</span><span class="n">x_tensor</span><span class="p">,</span> <span class="n">w_out_l</span><span class="p">,</span> <span class="n">b_out_l</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">u_out_c</span><span class="p">,</span> <span class="n">l_out_c</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">mode</span> <span class="ow">in</span> <span class="p">{</span><span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">}:</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span> <span class="o">=</span> <span class="n">inputs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span> <span class="o">=</span> <span class="n">inputs</span>
+
+        <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">variables</span><span class="p">):</span>
+            <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">,</span> <span class="n">w_out_u</span><span class="p">,</span> <span class="n">b_out_u</span><span class="p">,</span> <span class="n">w_out_l</span><span class="p">,</span> <span class="n">b_out_l</span> <span class="o">=</span> <span class="n">variables</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">w_u</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">w_out_u</span><span class="p">,</span> <span class="n">b_out_u</span><span class="p">,</span> <span class="n">w_out_l</span><span class="p">,</span> <span class="n">b_out_l</span>
+            <span class="n">z_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">w_u</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">w_u_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">w_u</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">w_u</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">w_u</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:])])</span>
+            <span class="n">w_l_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">w_l</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">w_l</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">w_l</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:])])</span>
+            <span class="n">b_u_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">b_u</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">b_u</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])])</span>
+            <span class="n">b_l_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">b_l</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">b_l</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])])</span>
+
+            <span class="n">w_u_pos</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">w_out_u</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>
+            <span class="n">w_u_neg</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">w_out_u</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>
+            <span class="n">w_l_pos</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">w_out_l</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>
+            <span class="n">w_l_neg</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">w_out_l</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>
+
+            <span class="n">w_out_u_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">w_u_pos</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">w_u_</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">w_u_neg</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">w_l_</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="mi">2</span>
+            <span class="p">)</span>
+            <span class="n">w_out_l_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">w_l_pos</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">w_l_</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">w_l_neg</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">w_u_</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="mi">2</span>
+            <span class="p">)</span>
+
+            <span class="n">b_out_u_</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w_u_pos</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">b_u_</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w_u_neg</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">b_l_</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">b_out_u</span>
+            <span class="p">)</span>
+            <span class="n">b_out_l_</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w_l_pos</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">b_l_</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w_l_neg</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">b_u_</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">b_out_l</span>
+            <span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">w_out_u_</span><span class="p">,</span> <span class="n">b_out_u_</span><span class="p">,</span> <span class="n">w_out_l_</span><span class="p">,</span> <span class="n">b_out_l_</span>
+
+        <span class="n">lambda_</span> <span class="o">=</span> <span class="n">Lambda</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">w_u</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="n">w_out_u_</span><span class="p">,</span> <span class="n">b_out_u_</span><span class="p">,</span> <span class="n">w_out_l_</span><span class="p">,</span> <span class="n">b_out_l_</span> <span class="o">=</span> <span class="n">lambda_</span><span class="p">([</span><span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">]</span> <span class="o">+</span> <span class="n">back_bounds</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">w_out_u_</span><span class="p">,</span> <span class="n">b_out_u_</span><span class="p">,</span> <span class="n">w_out_l_</span><span class="p">,</span> <span class="n">b_out_l_</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">u_out_c</span> <span class="o">=</span> <span class="n">upper_layer</span><span class="p">([</span><span class="n">x_tensor</span><span class="p">,</span> <span class="n">w_out_u_</span><span class="p">,</span> <span class="n">b_out_u_</span><span class="p">])</span>
+            <span class="n">l_out_c</span> <span class="o">=</span> <span class="n">lower_layer</span><span class="p">([</span><span class="n">x_tensor</span><span class="p">,</span> <span class="n">w_out_l_</span><span class="p">,</span> <span class="n">b_out_l_</span><span class="p">])</span>
+
+            <span class="k">return</span> <span class="p">[</span><span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">u_out_c</span><span class="p">,</span> <span class="n">w_out_u_</span><span class="p">,</span> <span class="n">b_out_u_</span><span class="p">,</span> <span class="n">l_out_c</span><span class="p">,</span> <span class="n">w_out_l_</span><span class="p">,</span> <span class="n">b_out_l_</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="pre_process_inputs"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.pre_process_inputs">[docs]</a><span class="k">def</span> <span class="nf">pre_process_inputs</span><span class="p">(</span><span class="n">input_layer_</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">input_layer_</span>
+    <span class="c1"># convert input_layer_ according</span>
+    <span class="k">elif</span> <span class="n">mode</span> <span class="ow">in</span> <span class="p">{</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">}:</span>
+        <span class="k">if</span> <span class="s2">&quot;upper_layer&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="n">upper_layer</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;upper_layer&quot;</span><span class="p">]</span>
+            <span class="n">lower_layer</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;lower_layer&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;convex_domain&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+                <span class="n">convex_domain</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;convex_domain&quot;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">convex_domain</span> <span class="o">=</span> <span class="p">{}</span>
+
+            <span class="n">upper_layer</span> <span class="o">=</span> <span class="n">get_upper_layer</span><span class="p">(</span><span class="n">convex_domain</span><span class="p">)</span>
+            <span class="n">lower_layer</span> <span class="o">=</span> <span class="n">get_lower_layer</span><span class="p">(</span><span class="n">convex_domain</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span> <span class="o">=</span> <span class="n">input_layer_</span>
+            <span class="n">u_c_out</span><span class="p">,</span> <span class="n">l_c_out</span> <span class="o">=</span> <span class="p">[</span><span class="n">upper_layer</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">]),</span> <span class="n">lower_layer</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">])]</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">l_c</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span> <span class="o">=</span> <span class="n">input_layer_</span>
+            <span class="n">u_c_out</span><span class="p">,</span> <span class="n">l_c_out</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">Minimum</span><span class="p">()([</span><span class="n">u_c</span><span class="p">,</span> <span class="n">upper_layer</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">])]),</span>
+                <span class="n">Maximum</span><span class="p">()([</span><span class="n">l_c</span><span class="p">,</span> <span class="n">lower_layer</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">])]),</span>
+            <span class="p">]</span>
+
+        <span class="k">if</span> <span class="s2">&quot;flatten&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="n">op_flatten</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;flatten&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">op_flatten</span> <span class="o">=</span> <span class="n">Flatten</span><span class="p">()</span>
+
+        <span class="n">u_c_out_flatten</span> <span class="o">=</span> <span class="n">op_flatten</span><span class="p">(</span><span class="n">u_c_out</span><span class="p">)</span>
+        <span class="n">l_c_out_flatten</span> <span class="o">=</span> <span class="n">op_flatten</span><span class="p">(</span><span class="n">l_c_out</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">&quot;concatenate&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="n">op_concat</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;concatenate&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">op_concat</span> <span class="o">=</span> <span class="n">Concatenate</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">x_</span> <span class="o">=</span> <span class="n">op_concat</span><span class="p">([</span><span class="n">l_c_out_flatten</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">u_c_out_flatten</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]])</span>
+        <span class="n">z_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">u_c_out</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">func_create_weights</span><span class="p">(</span><span class="n">z</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">z_value</span> <span class="o">*</span> <span class="n">z</span><span class="p">)</span>
+
+        <span class="n">init_weights</span> <span class="o">=</span> <span class="n">Lambda</span><span class="p">(</span><span class="n">func_create_weights</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">u_c_out</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">input_model</span> <span class="o">=</span> <span class="p">[</span><span class="n">x_</span><span class="p">,</span> <span class="n">init_weights</span><span class="p">(</span><span class="n">u_c_out</span><span class="p">),</span> <span class="n">u_c_out</span><span class="p">,</span> <span class="n">init_weights</span><span class="p">(</span><span class="n">l_c_out</span><span class="p">),</span> <span class="n">l_c_out</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">input_model</span> <span class="o">=</span> <span class="p">[</span><span class="n">x_</span><span class="p">,</span> <span class="n">u_c_out</span><span class="p">,</span> <span class="n">init_weights</span><span class="p">(</span><span class="n">u_c_out</span><span class="p">),</span> <span class="n">u_c_out</span><span class="p">,</span> <span class="n">l_c_out</span><span class="p">,</span> <span class="n">init_weights</span><span class="p">(</span><span class="n">l_c_out</span><span class="p">),</span> <span class="n">l_c_out</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">input_model</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_depth_dict"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.get_depth_dict">[docs]</a><span class="k">def</span> <span class="nf">get_depth_dict</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+
+    <span class="n">depth_keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_nodes_by_depth</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">depth_keys</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">nodes_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">dico_depth</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">dico_nodes</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">fill_dico</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">dico_depth</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">dico_depth</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dico_depth</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">parents</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parent_nodes</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parents</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">parent</span> <span class="ow">in</span> <span class="n">parents</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">id</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dico_depth</span><span class="p">:</span>
+                    <span class="n">dico_depth</span> <span class="o">=</span> <span class="n">fill_dico</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">dico_depth</span><span class="p">)</span>
+
+                <span class="n">depth</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="n">dico_depth</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">parent</span><span class="p">)]</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">parent</span> <span class="ow">in</span> <span class="n">parents</span><span class="p">])</span>
+                <span class="k">if</span> <span class="nb">id</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="ow">in</span> <span class="n">dico_depth</span><span class="p">:</span>
+                    <span class="n">dico_depth</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">node</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">depth</span><span class="p">,</span> <span class="n">dico_depth</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">node</span><span class="p">)])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">dico_depth</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">node</span><span class="p">)]</span> <span class="o">=</span> <span class="n">depth</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dico_depth</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">node</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">depth_keys</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">dico_depth</span>
+
+    <span class="k">for</span> <span class="n">depth</span> <span class="ow">in</span> <span class="n">depth_keys</span><span class="p">:</span>
+        <span class="c1"># check for nodes that do not have parents and set depth to maximum depth value</span>
+        <span class="n">nodes</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">_nodes_by_depth</span><span class="p">[</span><span class="n">depth</span><span class="p">]</span>
+        <span class="n">nodes_list</span> <span class="o">+=</span> <span class="n">nodes</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+            <span class="n">dico_depth</span> <span class="o">=</span> <span class="n">fill_dico</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">dico_depth</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes_list</span><span class="p">:</span>
+        <span class="n">depth</span> <span class="o">=</span> <span class="n">dico_depth</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">node</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="n">depth</span> <span class="ow">in</span> <span class="n">dico_nodes</span><span class="p">:</span>
+            <span class="n">dico_nodes</span><span class="p">[</span><span class="n">depth</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dico_nodes</span><span class="p">[</span><span class="n">depth</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">dico_nodes</span></div>
+
+
+<div class="viewcode-block" id="get_inner_layers"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.get_inner_layers">[docs]</a><span class="k">def</span> <span class="nf">get_inner_layers</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+
+    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">Model</span><span class="p">):</span>
+            <span class="n">count</span> <span class="o">+=</span> <span class="n">get_inner_layers</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">count</span></div>
+
+
+<div class="viewcode-block" id="convert_2_mode"><a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.utils.convert_2_mode">[docs]</a><span class="k">def</span> <span class="nf">convert_2_mode</span><span class="p">(</span><span class="n">mode_from</span><span class="p">,</span> <span class="n">mode_to</span><span class="p">,</span> <span class="n">convex_domain</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">K</span><span class="o">.</span><span class="n">floatx</span><span class="p">()):</span>
+    <span class="k">def</span> <span class="nf">get_2_mode_priv</span><span class="p">(</span><span class="n">inputs_</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">mode_from</span> <span class="o">==</span> <span class="n">mode_to</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">inputs_</span>
+
+        <span class="k">if</span> <span class="n">mode_from</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+            <span class="n">x_0</span> <span class="o">=</span> <span class="n">inputs_</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">mode_from</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">u_c</span><span class="p">,</span> <span class="n">l_c</span> <span class="o">=</span> <span class="n">inputs_</span>
+            <span class="k">if</span> <span class="n">mode_to</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+                <span class="n">x_0</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">l_c</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">u_c</span><span class="p">,</span> <span class="mi">1</span><span class="p">)],</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">z_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">u_c</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                <span class="n">o_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">u_c</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                <span class="n">w</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">z_value</span> <span class="o">*</span> <span class="n">l_c</span><span class="p">)</span>
+                <span class="n">b</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">l_c</span> <span class="o">+</span> <span class="n">o_value</span>
+                <span class="n">w_u</span> <span class="o">=</span> <span class="n">w</span>
+                <span class="n">b_u</span> <span class="o">=</span> <span class="n">b</span>
+                <span class="n">w_l</span> <span class="o">=</span> <span class="n">w</span>
+                <span class="n">b_l</span> <span class="o">=</span> <span class="n">b</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="n">mode_to</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="n">mode_from</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">mode_from</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span> <span class="o">=</span> <span class="n">inputs_</span>
+            <span class="k">if</span> <span class="n">mode_to</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+                <span class="n">u_c</span> <span class="o">=</span> <span class="n">get_upper</span><span class="p">(</span><span class="n">x_0</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">)</span>
+                <span class="n">l_c</span> <span class="o">=</span> <span class="n">get_lower</span><span class="p">(</span><span class="n">x_0</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="n">convex_domain</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">mode_from</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">u_c</span><span class="p">,</span> <span class="n">l_c</span> <span class="o">=</span> <span class="n">inputs_</span>
+        <span class="k">elif</span> <span class="n">mode_from</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">l_c</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span> <span class="o">=</span> <span class="n">inputs_</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="n">mode_from</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">mode_to</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">u_c</span><span class="p">,</span> <span class="n">l_c</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">mode_to</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">x_0</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">mode_to</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">x_0</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">l_c</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">]</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="n">mode_to</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Lambda</span><span class="p">(</span><span class="n">get_2_mode_priv</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2022, Airbus.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

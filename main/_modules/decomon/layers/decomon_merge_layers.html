@@ -1,0 +1,817 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>decomon.layers.decomon_merge_layers &mdash; DecoMon main documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script src="../../../_static/versions.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> DecoMon
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                main
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">DecoMon</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>decomon.layers.decomon_merge_layers</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for decomon.layers.decomon_merge_layers</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">tensorflow.keras.backend</span> <span class="k">as</span> <span class="nn">K</span>
+<span class="kn">from</span> <span class="nn">tensorflow.keras.layers</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Add</span><span class="p">,</span>
+    <span class="n">Average</span><span class="p">,</span>
+    <span class="n">Concatenate</span><span class="p">,</span>
+    <span class="n">Dot</span><span class="p">,</span>
+    <span class="n">Input</span><span class="p">,</span>
+    <span class="n">Lambda</span><span class="p">,</span>
+    <span class="n">Multiply</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">decomon.layers.core</span> <span class="kn">import</span> <span class="n">F_FORWARD</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="p">,</span> <span class="n">F_IBP</span><span class="p">,</span> <span class="n">DecomonLayer</span>
+<span class="kn">from</span> <span class="nn">decomon.layers.utils</span> <span class="kn">import</span> <span class="n">broadcast</span><span class="p">,</span> <span class="n">multiply</span><span class="p">,</span> <span class="n">permute_dimensions</span>
+<span class="kn">from</span> <span class="nn">decomon.utils</span> <span class="kn">import</span> <span class="n">maximum</span><span class="p">,</span> <span class="n">minus</span><span class="p">,</span> <span class="n">substract</span>
+
+<span class="c1">##### Merge Layer ####</span>
+
+
+<div class="viewcode-block" id="DecomonAdd"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonAdd">[docs]</a><span class="k">class</span> <span class="nc">DecomonAdd</span><span class="p">(</span><span class="n">Add</span><span class="p">,</span> <span class="n">DecomonLayer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Add layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Add operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DecomonAdd.build"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonAdd.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+        <span class="n">input_shape_y</span> <span class="o">=</span> <span class="n">input_shape</span><span class="p">[::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">input_shape_y</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DecomonAdd.compute_output_shape"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonAdd.compute_output_shape">[docs]</a>    <span class="k">def</span> <span class="nf">compute_output_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">input_shape</span></div>
+
+<div class="viewcode-block" id="DecomonAdd.call"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonAdd.call">[docs]</a>    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+
+        <span class="c1"># splits the inputs</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+            <span class="n">inputs_x</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">output_x</span> <span class="o">=</span> <span class="n">inputs_x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">inputs_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">inputs_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_w_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_b_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">3</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">4</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_w_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">5</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_b_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">6</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">inputs_w_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_b_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_w_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">3</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_b_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">4</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+            <span class="n">output_u</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">inputs_u</span><span class="p">)</span>
+            <span class="n">output_l</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">inputs_l</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+            <span class="n">output_b_u</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">inputs_b_u</span><span class="p">)</span>
+            <span class="n">output_b_l</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">inputs_b_l</span><span class="p">)</span>
+
+            <span class="n">output_w_u</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">inputs_w_u</span><span class="p">)</span>
+            <span class="n">output_w_l</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">inputs_w_l</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">output_u</span><span class="p">,</span> <span class="n">output_l</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">output_x</span><span class="p">,</span> <span class="n">output_w_u</span><span class="p">,</span> <span class="n">output_b_u</span><span class="p">,</span> <span class="n">output_w_l</span><span class="p">,</span> <span class="n">output_b_l</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">output_x</span><span class="p">,</span> <span class="n">output_u</span><span class="p">,</span> <span class="n">output_w_u</span><span class="p">,</span> <span class="n">output_b_u</span><span class="p">,</span> <span class="n">output_l</span><span class="p">,</span> <span class="n">output_w_l</span><span class="p">,</span> <span class="n">output_b_l</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span></div>
+
+<div class="viewcode-block" id="DecomonAdd.call_dumb"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonAdd.call_dumb">[docs]</a>    <span class="k">def</span> <span class="nf">call_dumb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+            <span class="n">input_x</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">inputs_</span> <span class="o">=</span> <span class="p">[</span><span class="n">inputs</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="n">n_comp</span> <span class="p">:</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">n_comp</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_comp</span><span class="p">))]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">inputs_u</span> <span class="o">=</span> <span class="p">[</span><span class="n">inputs_</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs_</span><span class="p">))]</span>
+            <span class="n">inputs_l</span> <span class="o">=</span> <span class="p">[</span><span class="n">inputs_</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs_</span><span class="p">))]</span>
+
+            <span class="n">inputs_wu</span> <span class="o">=</span> <span class="p">[</span><span class="n">inputs_</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs_</span><span class="p">))]</span>
+            <span class="n">inputs_bu</span> <span class="o">=</span> <span class="p">[</span><span class="n">inputs_</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs_</span><span class="p">))]</span>
+
+            <span class="n">inputs_wl</span> <span class="o">=</span> <span class="p">[</span><span class="n">inputs_</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">5</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs_</span><span class="p">))]</span>
+            <span class="n">inputs_bl</span> <span class="o">=</span> <span class="p">[</span><span class="n">inputs_</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">6</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs_</span><span class="p">))]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">input_x</span><span class="p">,</span>
+            <span class="n">inputs_u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">inputs_u</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">inputs_wu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">inputs_wu</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">inputs_bu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">inputs_bu</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">inputs_l</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">inputs_l</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">inputs_wl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">inputs_wl</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">inputs_bl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">inputs_bl</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="p">]</span></div></div>
+
+
+<div class="viewcode-block" id="DecomonAverage"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonAverage">[docs]</a><span class="k">class</span> <span class="nc">DecomonAverage</span><span class="p">(</span><span class="n">Average</span><span class="p">,</span> <span class="n">DecomonLayer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Average layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Average operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">=</span> <span class="n">Lambda</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+
+<div class="viewcode-block" id="DecomonAverage.compute_output_shape"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonAverage.compute_output_shape">[docs]</a>    <span class="k">def</span> <span class="nf">compute_output_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+
+        <span class="k">return</span> <span class="n">input_shape</span></div>
+
+<div class="viewcode-block" id="DecomonAverage.build"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonAverage.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+        <span class="n">input_shape_y</span> <span class="o">=</span> <span class="n">input_shape</span><span class="p">[::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">input_shape_y</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DecomonAverage.call"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonAverage.call">[docs]</a>    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+
+        <span class="c1"># splits the inputs</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+            <span class="n">output_x</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">inputs_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">inputs_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_w_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_b_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">3</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">4</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_w_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">5</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_b_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">6</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">inputs_w_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_b_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_w_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">3</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_b_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">4</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+            <span class="n">output_u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_u</span><span class="p">)</span>
+            <span class="n">output_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_l</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+            <span class="n">output_b_u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_b_u</span><span class="p">)</span>
+            <span class="n">output_b_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_b_l</span><span class="p">)</span>
+
+            <span class="n">output_w_u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_w_u</span><span class="p">)</span>
+            <span class="n">output_w_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_w_l</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">output_u</span><span class="p">,</span> <span class="n">output_l</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">output_x</span><span class="p">,</span> <span class="n">output_w_u</span><span class="p">,</span> <span class="n">output_b_u</span><span class="p">,</span> <span class="n">output_w_l</span><span class="p">,</span> <span class="n">output_b_l</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">output_x</span><span class="p">,</span> <span class="n">output_u</span><span class="p">,</span> <span class="n">output_w_u</span><span class="p">,</span> <span class="n">output_b_u</span><span class="p">,</span> <span class="n">output_l</span><span class="p">,</span> <span class="n">output_w_l</span><span class="p">,</span> <span class="n">output_b_l</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span></div></div>
+
+
+<div class="viewcode-block" id="DecomonSubtract"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonSubtract">[docs]</a><span class="k">class</span> <span class="nc">DecomonSubtract</span><span class="p">(</span><span class="n">DecomonLayer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Subtract layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Subtract operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DecomonSubtract.compute_output_shape"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonSubtract.compute_output_shape">[docs]</a>    <span class="k">def</span> <span class="nf">compute_output_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+
+        <span class="k">return</span> <span class="n">input_shape</span></div>
+
+<div class="viewcode-block" id="DecomonSubtract.call"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonSubtract.call">[docs]</a>    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="c1"># splits the inputs</span>
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+        <span class="n">inputs_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">inputs</span><span class="p">[</span><span class="n">n_comp</span> <span class="o">*</span> <span class="n">i</span> <span class="p">:</span> <span class="n">n_comp</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">//</span> <span class="n">n_comp</span><span class="p">)]</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="n">substract</span><span class="p">(</span>
+            <span class="n">inputs_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">inputs_list</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">output</span></div></div>
+
+
+<div class="viewcode-block" id="DecomonMinimum"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMinimum">[docs]</a><span class="k">class</span> <span class="nc">DecomonMinimum</span><span class="p">(</span><span class="n">DecomonLayer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Minimum layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Minimum operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DecomonMinimum.compute_output_shape"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMinimum.compute_output_shape">[docs]</a>    <span class="k">def</span> <span class="nf">compute_output_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+
+        <span class="k">return</span> <span class="n">input_shape</span></div>
+
+<div class="viewcode-block" id="DecomonMinimum.call"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMinimum.call">[docs]</a>    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+
+        <span class="c1"># check there is more than one input</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_comp</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">inputs</span>
+
+        <span class="c1"># splits the inputs</span>
+        <span class="n">inputs_list</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">minus</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="n">n_comp</span> <span class="o">*</span> <span class="n">i</span> <span class="p">:</span> <span class="n">n_comp</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)],</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">//</span> <span class="n">n_comp</span><span class="p">)</span>
+        <span class="p">]</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="n">maximum</span><span class="p">(</span>
+            <span class="n">inputs_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">inputs_list</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">//</span> <span class="n">n_comp</span><span class="p">):</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">maximum</span><span class="p">(</span>
+                <span class="n">output</span><span class="p">,</span> <span class="n">inputs_list</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">minus</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="DecomonMaximum"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMaximum">[docs]</a><span class="k">class</span> <span class="nc">DecomonMaximum</span><span class="p">(</span><span class="n">DecomonLayer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Maximum layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Maximum operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DecomonMaximum.compute_output_shape"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMaximum.compute_output_shape">[docs]</a>    <span class="k">def</span> <span class="nf">compute_output_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">input_shape</span></div>
+
+<div class="viewcode-block" id="DecomonMaximum.call"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMaximum.call">[docs]</a>    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+
+        <span class="c1"># check there is more than one input</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_comp</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">inputs</span>
+        <span class="c1"># splits the inputs</span>
+        <span class="n">inputs_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">inputs</span><span class="p">[</span><span class="n">n_comp</span> <span class="o">*</span> <span class="n">i</span> <span class="p">:</span> <span class="n">n_comp</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">//</span> <span class="n">n_comp</span><span class="p">)]</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="n">maximum</span><span class="p">(</span>
+            <span class="n">inputs_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">inputs_list</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">//</span> <span class="n">n_comp</span><span class="p">):</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">maximum</span><span class="p">(</span>
+                <span class="n">output</span><span class="p">,</span> <span class="n">inputs_list</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span></div></div>
+
+
+<div class="viewcode-block" id="DecomonConcatenate"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonConcatenate">[docs]</a><span class="k">class</span> <span class="nc">DecomonConcatenate</span><span class="p">(</span><span class="n">Concatenate</span><span class="p">,</span> <span class="n">DecomonLayer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Concatenate layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Concatenate operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">call</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">op_w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">op_w</span> <span class="o">=</span> <span class="n">Concatenate</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DecomonConcatenate.compute_output_shape"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonConcatenate.compute_output_shape">[docs]</a>    <span class="k">def</span> <span class="nf">compute_output_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+
+        <span class="k">return</span> <span class="n">input_shape</span></div>
+
+<div class="viewcode-block" id="DecomonConcatenate.build"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonConcatenate.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">input_shape_y</span> <span class="o">=</span> <span class="n">input_shape</span><span class="p">[::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">input_shape_y</span> <span class="o">=</span> <span class="n">input_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">input_shape_y</span> <span class="o">=</span> <span class="n">input_shape</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">input_shape_y</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DecomonConcatenate.call"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonConcatenate.call">[docs]</a>    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+
+        <span class="c1"># splits the inputs</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+            <span class="n">inputs_x</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">output_x</span> <span class="o">=</span> <span class="n">inputs_x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">inputs_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">inputs_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_w_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_b_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">3</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">4</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_w_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">5</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_b_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">6</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">inputs_w_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_b_u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_w_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">3</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+            <span class="n">inputs_b_l</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">4</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+            <span class="n">output_u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_u</span><span class="p">)</span>
+            <span class="n">output_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_l</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+            <span class="n">output_b_u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_b_u</span><span class="p">)</span>
+            <span class="n">output_b_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_b_l</span><span class="p">)</span>
+
+            <span class="n">output_w_u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op_w</span><span class="p">(</span><span class="n">inputs_w_u</span><span class="p">)</span>
+            <span class="n">output_w_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op_w</span><span class="p">(</span><span class="n">inputs_w_l</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">output_u</span><span class="p">,</span> <span class="n">output_l</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">output_x</span><span class="p">,</span> <span class="n">output_w_u</span><span class="p">,</span> <span class="n">output_b_u</span><span class="p">,</span> <span class="n">output_w_l</span><span class="p">,</span> <span class="n">output_b_l</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">output_x</span><span class="p">,</span> <span class="n">output_u</span><span class="p">,</span> <span class="n">output_w_u</span><span class="p">,</span> <span class="n">output_b_u</span><span class="p">,</span> <span class="n">output_l</span><span class="p">,</span> <span class="n">output_w_l</span><span class="p">,</span> <span class="n">output_b_l</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">output</span></div></div>
+
+
+<div class="viewcode-block" id="DecomonMultiply"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMultiply">[docs]</a><span class="k">class</span> <span class="nc">DecomonMultiply</span><span class="p">(</span><span class="n">Multiply</span><span class="p">,</span> <span class="n">DecomonLayer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Multiply layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Multiply operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DecomonMultiply.build"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMultiply.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">input_shape_</span> <span class="o">=</span> <span class="n">input_shape</span><span class="p">[::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">input_shape_</span> <span class="o">=</span> <span class="n">input_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">input_shape_</span> <span class="o">=</span> <span class="n">input_shape</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">input_shape_</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DecomonMultiply.call"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMultiply.call">[docs]</a>    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+
+        <span class="c1"># splits the inputs</span>
+        <span class="n">inputs_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">inputs</span><span class="p">[</span><span class="n">n_comp</span> <span class="o">*</span> <span class="n">i</span> <span class="p">:</span> <span class="n">n_comp</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">//</span> <span class="n">n_comp</span><span class="p">)]</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="n">multiply</span><span class="p">(</span>
+            <span class="n">inputs_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">inputs_list</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">//</span> <span class="n">n_comp</span><span class="p">):</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">multiply</span><span class="p">(</span>
+                <span class="n">output</span><span class="p">,</span> <span class="n">inputs_list</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span></div></div>
+
+
+<div class="viewcode-block" id="DecomonDot"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonDot">[docs]</a><span class="k">class</span> <span class="nc">DecomonDot</span><span class="p">(</span><span class="n">Dot</span><span class="p">,</span> <span class="n">DecomonLayer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Dot layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Dot operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="n">axes</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axes</span> <span class="o">=</span> <span class="n">axes</span>
+
+<div class="viewcode-block" id="DecomonDot.build"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonDot.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">input_shape_</span> <span class="o">=</span> <span class="n">input_shape</span><span class="p">[::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">input_shape_</span> <span class="o">=</span> <span class="n">input_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">input_shape_</span> <span class="o">=</span> <span class="n">input_shape</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">input_shape_</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DecomonDot.call"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonDot.call">[docs]</a>    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+
+        <span class="c1"># permute dimensions and reshape</span>
+        <span class="n">inputs_0</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[:</span><span class="n">n_comp</span><span class="p">]</span>
+        <span class="n">inputs_1</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="n">n_comp</span><span class="p">:]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">n_0</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs_0</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span>
+            <span class="n">n_1</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs_1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+            <span class="n">n_0</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs_0</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span>
+            <span class="n">n_1</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs_1</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">input_0_0</span> <span class="o">=</span> <span class="n">permute_dimensions</span><span class="p">(</span><span class="n">inputs_0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span>
+        <span class="n">input_1_0</span> <span class="o">=</span> <span class="n">permute_dimensions</span><span class="p">(</span><span class="n">inputs_1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span>
+
+        <span class="n">inputs_0_</span> <span class="o">=</span> <span class="n">broadcast</span><span class="p">(</span><span class="n">input_0_0</span><span class="p">,</span> <span class="n">n_1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span>
+        <span class="n">inputs_1_</span> <span class="o">=</span> <span class="n">broadcast</span><span class="p">(</span><span class="n">input_1_0</span><span class="p">,</span> <span class="n">n_0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span>
+
+        <span class="n">inputs_</span> <span class="o">=</span> <span class="n">multiply</span><span class="p">(</span>
+            <span class="n">inputs_0_</span><span class="p">,</span> <span class="n">inputs_1_</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">convex_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convex_domain</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">u</span><span class="p">,</span> <span class="n">l</span> <span class="o">=</span> <span class="n">inputs_</span><span class="p">[:</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span> <span class="o">=</span> <span class="n">inputs_</span><span class="p">[:</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span> <span class="o">=</span> <span class="n">inputs_</span><span class="p">[:</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+            <span class="n">u_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">l_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">]:</span>
+            <span class="n">w_u_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w_u</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">b_u_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">b_u</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">w_l_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w_l</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">b_l_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">b_l</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">u_</span><span class="p">,</span> <span class="n">l_</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">w_u_</span><span class="p">,</span> <span class="n">b_u_</span><span class="p">,</span> <span class="n">w_l_</span><span class="p">,</span> <span class="n">b_l_</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">u_</span><span class="p">,</span> <span class="n">w_u_</span><span class="p">,</span> <span class="n">b_u_</span><span class="p">,</span> <span class="n">l_</span><span class="p">,</span> <span class="n">w_l_</span><span class="p">,</span> <span class="n">b_l_</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">outputs</span></div></div>
+
+
+<div class="viewcode-block" id="to_monotonic_merge"><a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.to_monotonic_merge">[docs]</a><span class="k">def</span> <span class="nf">to_monotonic_merge</span><span class="p">(</span>
+    <span class="n">layer</span><span class="p">,</span>
+    <span class="n">input_dim</span><span class="p">,</span>
+    <span class="n">dc_decomp</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">convex_domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">finetune</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">IBP</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">forward</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Transform a standard Merge layer into a Decomon layer.</span>
+
+<span class="sd">    Type of layer is tested to know how to transform it into a MonotonicLayer of the good type.</span>
+<span class="sd">    If type is not treated yet, raises an TypeError</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        layer: a Keras Layer</span>
+<span class="sd">        input_dim: either an integer or a tuple that represents the dim</span>
+<span class="sd">            of the input convex domain</span>
+<span class="sd">        dc_decomp: boolean that indicates whether we return a difference</span>
+<span class="sd">            of convex decomposition of our layer</span>
+<span class="sd">        convex_domain: the type of convex domain</span>
+<span class="sd">        IBP: boolean that indicates whether we propagate constant bounds</span>
+<span class="sd">        forward: boolean that indicates whether we propagate affine</span>
+<span class="sd">            bounds</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        the associated DecomonLayer</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># get class name</span>
+    <span class="k">if</span> <span class="n">convex_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">convex_domain</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">class_name</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+    <span class="c1"># check if layer has a built argument that built is set to True</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;built&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">layer</span><span class="o">.</span><span class="n">built</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;the layer </span><span class="si">{</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has not been built yet&quot;</span><span class="p">)</span>
+
+    <span class="n">monotonic_class_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Decomon</span><span class="si">{</span><span class="n">class_name</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">config_layer</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">get_config</span><span class="p">()</span>
+    <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_monotonic&quot;</span>
+    <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;dc_decomp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dc_decomp</span>
+    <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;convex_domain&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">convex_domain</span>
+
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">if</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">forward</span><span class="p">:</span>
+        <span class="n">mode</span> <span class="o">=</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">IBP</span> <span class="ow">and</span> <span class="n">forward</span><span class="p">:</span>
+        <span class="n">mode</span> <span class="o">=</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;mode&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mode</span>
+    <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;finetune&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">finetune</span>
+
+    <span class="n">layer_monotonic</span> <span class="o">=</span> <span class="nb">globals</span><span class="p">()[</span><span class="n">monotonic_class_name</span><span class="p">]</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">config_layer</span><span class="p">)</span>
+
+    <span class="n">input_shape_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">input_shape</span> <span class="ow">in</span> <span class="n">layer</span><span class="o">.</span><span class="n">input_shape</span><span class="p">:</span>
+        <span class="n">input_shape_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">input_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+    <span class="n">input_shape</span> <span class="o">=</span> <span class="n">input_shape_list</span>
+
+    <span class="n">n_input</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_shape_list</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="n">x_shape</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">input_dim</span><span class="p">)</span>
+        <span class="n">input_dim</span> <span class="o">=</span> <span class="n">input_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">x_shape</span> <span class="o">=</span> <span class="n">Input</span><span class="p">((</span><span class="n">input_dim</span><span class="p">,))</span>
+
+    <span class="n">w_shape</span> <span class="o">=</span> <span class="p">[</span><span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">([</span><span class="n">input_dim</span><span class="p">]</span> <span class="o">+</span> <span class="n">input_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">)]</span>
+    <span class="n">y_shape</span> <span class="o">=</span> <span class="p">[</span><span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">)]</span>
+
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">F_HYBRID</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+        <span class="n">input_</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">[</span><span class="n">x_shape</span><span class="p">,</span> <span class="n">y_shape</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">w_shape</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_shape</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_shape</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">w_shape</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">)</span>
+        <span class="p">]</span>
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">F_IBP</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+        <span class="n">input_</span> <span class="o">=</span> <span class="p">[[</span><span class="n">y_shape</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">)]</span>
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">F_FORWARD</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+        <span class="n">input_</span> <span class="o">=</span> <span class="p">[[</span><span class="n">x_shape</span><span class="p">,</span> <span class="n">w_shape</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_shape</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">w_shape</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">)]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">dc_decomp</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="n">input_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">):</span>
+        <span class="n">input_list</span> <span class="o">+=</span> <span class="n">input_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="n">layer_monotonic</span><span class="p">(</span><span class="n">input_list</span><span class="p">)</span>
+    <span class="n">layer_monotonic</span><span class="o">.</span><span class="n">reset_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="n">layer_monotonic</span><span class="p">]</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2022, Airbus.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,978 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>decomon.models package &mdash; DecoMon main documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+        <script src="../_static/versions.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="decomon.types package" href="decomon.types.html" />
+    <link rel="prev" title="decomon.metrics package" href="decomon.metrics.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> DecoMon
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                main
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="decomon.html">decomon package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="decomon.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="decomon.applications.html">decomon.applications package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decomon.backward_layers.html">decomon.backward_layers package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decomon.corners.html">decomon.corners package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decomon.layers.html">decomon.layers package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decomon.loading.html">decomon.loading package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decomon.metrics.html">decomon.metrics package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">decomon.models package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decomon.types.html">decomon.types package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="decomon.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decomon.html#module-decomon.utils">decomon.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decomon.html#module-decomon.wrapper">decomon.wrapper module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decomon.html#module-decomon.wrapper_with_tuning">decomon.wrapper_with_tuning module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decomon.html#module-decomon">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">DecoMon</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="modules.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="decomon.html">decomon package</a> &raquo;</li>
+        
+      <li>decomon.models package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="decomon-models-package">
+<h1>decomon.models package<a class="headerlink" href="#decomon-models-package" title="Permalink to this heading">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading">¶</a></h2>
+</section>
+<section id="module-decomon.models.backward_cloning">
+<span id="decomon-models-backward-cloning-module"></span><h2>decomon.models.backward_cloning module<a class="headerlink" href="#module-decomon.models.backward_cloning" title="Permalink to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.backward_cloning.convert_backward_2_mode">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.backward_cloning.</span></span><span class="sig-name descname"><span class="pre">convert_backward_2_mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'float32'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/backward_cloning.html#convert_backward_2_mode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.backward_cloning.convert_backward_2_mode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.backward_cloning.convert_backward_model">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.backward_cloning.</span></span><span class="sig-name descname"><span class="pre">convert_backward_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">back_bounds=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim=-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward_map=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">softmax_to_linear=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_fn=&lt;function</span> <span class="pre">get_backward&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">final_ibp=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">final_forward=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#decomon.models.backward_cloning.convert_backward_model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.backward_cloning.crown_">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.backward_cloning.</span></span><span class="sig-name descname"><span class="pre">crown_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_map</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backward_bounds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backward_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fuse</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">merge_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/backward_cloning.html#crown_"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.backward_cloning.crown_" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>node</strong> – </p></li>
+<li><p><strong>IBP</strong> – </p></li>
+<li><p><strong>forward</strong> – </p></li>
+<li><p><strong>input_map</strong> – </p></li>
+<li><p><strong>layer_fn</strong> – </p></li>
+<li><p><strong>backward_bounds</strong> – </p></li>
+<li><p><strong>backward_map</strong> – </p></li>
+<li><p><strong>joint</strong> – </p></li>
+<li><p><strong>fuse</strong> – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of 4 tensors affine upper and lower bounds</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.backward_cloning.crown_model">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.backward_cloning.</span></span><span class="sig-name descname"><span class="pre">crown_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">back_bounds=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim=-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward_map=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">softmax_to_linear=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_fn=&lt;function</span> <span class="pre">get_backward&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fuse=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/backward_cloning.html#crown_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.backward_cloning.crown_model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.backward_cloning.get_backward_model">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.backward_cloning.</span></span><span class="sig-name descname"><span class="pre">get_backward_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">back_bounds=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim=-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward_map=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">softmax_to_linear=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_fn=&lt;function</span> <span class="pre">get_backward&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">final_ibp=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">final_forward=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/backward_cloning.html#get_backward_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.backward_cloning.get_backward_model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.backward_cloning.get_disconnected_input">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.backward_cloning.</span></span><span class="sig-name descname"><span class="pre">get_disconnected_input</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'float32'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/backward_cloning.html#get_disconnected_input"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.backward_cloning.get_disconnected_input" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.backward_cloning.get_fuse">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.backward_cloning.</span></span><span class="sig-name descname"><span class="pre">get_fuse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'float32'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/backward_cloning.html#get_fuse"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.backward_cloning.get_fuse" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.backward_cloning.get_input">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.backward_cloning.</span></span><span class="sig-name descname"><span class="pre">get_input</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward_map</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_map</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/backward_cloning.html#get_input"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.backward_cloning.get_input" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.backward_cloning.get_input_nodes">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.backward_cloning.</span></span><span class="sig-name descname"><span class="pre">get_input_nodes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dico_nodes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_map</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">merge_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/backward_cloning.html#get_input_nodes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.backward_cloning.get_input_nodes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.backward_cloning.is_purely_linear">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.backward_cloning.</span></span><span class="sig-name descname"><span class="pre">is_purely_linear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layer</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/backward_cloning.html#is_purely_linear"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.backward_cloning.is_purely_linear" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.backward_cloning.retrieve_layer">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.backward_cloning.</span></span><span class="sig-name descname"><span class="pre">retrieve_layer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">previous</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backward_map</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/backward_cloning.html#retrieve_layer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.backward_cloning.retrieve_layer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-decomon.models.convert">
+<span id="decomon-models-convert-module"></span><h2>decomon.models.convert module<a class="headerlink" href="#module-decomon.models.convert" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.convert.BACKWARD_FEED">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.convert.</span></span><span class="sig-name descname"><span class="pre">BACKWARD_FEED</span></span><a class="reference internal" href="../_modules/decomon/models/convert.html#BACKWARD_FEED"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.convert.BACKWARD_FEED" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="decomon.models.convert.BACKWARD_FEED.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'feed_backward'</span></em><a class="headerlink" href="#decomon.models.convert.BACKWARD_FEED.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.convert.CROWN">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.convert.</span></span><span class="sig-name descname"><span class="pre">CROWN</span></span><a class="reference internal" href="../_modules/decomon/models/convert.html#CROWN"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.convert.CROWN" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="decomon.models.convert.CROWN.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'crown'</span></em><a class="headerlink" href="#decomon.models.convert.CROWN.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.convert.CROWN_FORWARD">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.convert.</span></span><span class="sig-name descname"><span class="pre">CROWN_FORWARD</span></span><a class="reference internal" href="../_modules/decomon/models/convert.html#CROWN_FORWARD"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.convert.CROWN_FORWARD" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="decomon.models.convert.CROWN_FORWARD.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'crown-forward'</span></em><a class="headerlink" href="#decomon.models.convert.CROWN_FORWARD.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.convert.CROWN_HYBRID">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.convert.</span></span><span class="sig-name descname"><span class="pre">CROWN_HYBRID</span></span><a class="reference internal" href="../_modules/decomon/models/convert.html#CROWN_HYBRID"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.convert.CROWN_HYBRID" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="decomon.models.convert.CROWN_HYBRID.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'crown-hybrid'</span></em><a class="headerlink" href="#decomon.models.convert.CROWN_HYBRID.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.convert.CROWN_IBP">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.convert.</span></span><span class="sig-name descname"><span class="pre">CROWN_IBP</span></span><a class="reference internal" href="../_modules/decomon/models/convert.html#CROWN_IBP"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.convert.CROWN_IBP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="decomon.models.convert.CROWN_IBP.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'crown-ibp'</span></em><a class="headerlink" href="#decomon.models.convert.CROWN_IBP.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.convert.FORWARD">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.convert.</span></span><span class="sig-name descname"><span class="pre">FORWARD</span></span><a class="reference internal" href="../_modules/decomon/models/convert.html#FORWARD"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.convert.FORWARD" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="decomon.models.convert.FORWARD.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'forward'</span></em><a class="headerlink" href="#decomon.models.convert.FORWARD.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.convert.FORWARD_FEED">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.convert.</span></span><span class="sig-name descname"><span class="pre">FORWARD_FEED</span></span><a class="reference internal" href="../_modules/decomon/models/convert.html#FORWARD_FEED"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.convert.FORWARD_FEED" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="decomon.models.convert.FORWARD_FEED.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'feed_forward'</span></em><a class="headerlink" href="#decomon.models.convert.FORWARD_FEED.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.convert.HYBRID">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.convert.</span></span><span class="sig-name descname"><span class="pre">HYBRID</span></span><a class="reference internal" href="../_modules/decomon/models/convert.html#HYBRID"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.convert.HYBRID" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="decomon.models.convert.HYBRID.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'hybrid'</span></em><a class="headerlink" href="#decomon.models.convert.HYBRID.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.convert.IBP">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.convert.</span></span><span class="sig-name descname"><span class="pre">IBP</span></span><a class="reference internal" href="../_modules/decomon/models/convert.html#IBP"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.convert.IBP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="decomon.models.convert.IBP.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ibp'</span></em><a class="headerlink" href="#decomon.models.convert.IBP.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.convert.clone">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.convert.</span></span><span class="sig-name descname"><span class="pre">clone</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_fn=&lt;function</span> <span class="pre">to_monotonic&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dc_decomp=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ibp=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method='crown'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">back_bounds=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shared=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune_forward=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune_backward=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_inputs=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_keras=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dico_grid=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/convert.html#clone"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.convert.clone" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.convert.convert">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.convert.</span></span><span class="sig-name descname"><span class="pre">convert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method='crown'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ibp=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">back_bounds=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_fn=&lt;function</span> <span class="pre">to_monotonic&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim=-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shared=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">softmax_to_linear=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_map=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward_map=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune_forward=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune_backward=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">final_ibp=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">final_forward=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/convert.html#convert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.convert.convert" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.convert.get_direction">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.convert.</span></span><span class="sig-name descname"><span class="pre">get_direction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/convert.html#get_direction"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.convert.get_direction" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.convert.get_ibp_forward_from_method">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.convert.</span></span><span class="sig-name descname"><span class="pre">get_ibp_forward_from_method</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/convert.html#get_ibp_forward_from_method"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.convert.get_ibp_forward_from_method" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.convert.switch_mode_mapping">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.convert.</span></span><span class="sig-name descname"><span class="pre">switch_mode_mapping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">forward_map</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/convert.html#switch_mode_mapping"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.convert.switch_mode_mapping" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-decomon.models.decomon_sequential">
+<span id="decomon-models-decomon-sequential-module"></span><h2>decomon.models.decomon_sequential module<a class="headerlink" href="#module-decomon.models.decomon_sequential" title="Permalink to this heading">¶</a></h2>
+<p>Module for MonotonicSequential.</p>
+<p>It inherits from keras Sequential class.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.Backward">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.decomon_sequential.</span></span><span class="sig-name descname"><span class="pre">Backward</span></span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#Backward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.Backward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.Backward.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'backward'</span></em><a class="headerlink" href="#decomon.models.decomon_sequential.Backward.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.DecomonModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.decomon_sequential.</span></span><span class="sig-name descname"><span class="pre">DecomonModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#DecomonModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.DecomonModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.DecomonModel.freeze_alpha">
+<span class="sig-name descname"><span class="pre">freeze_alpha</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#DecomonModel.freeze_alpha"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.DecomonModel.freeze_alpha" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.DecomonModel.freeze_weights">
+<span class="sig-name descname"><span class="pre">freeze_weights</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#DecomonModel.freeze_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.DecomonModel.freeze_weights" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.DecomonModel.reset_finetuning">
+<span class="sig-name descname"><span class="pre">reset_finetuning</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#DecomonModel.reset_finetuning"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.DecomonModel.reset_finetuning" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.DecomonModel.set_domain">
+<span class="sig-name descname"><span class="pre">set_domain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#DecomonModel.set_domain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.DecomonModel.set_domain" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.DecomonModel.unfreeze_alpha">
+<span class="sig-name descname"><span class="pre">unfreeze_alpha</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#DecomonModel.unfreeze_alpha"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.DecomonModel.unfreeze_alpha" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.DecomonModel.unfreeze_weights">
+<span class="sig-name descname"><span class="pre">unfreeze_weights</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#DecomonModel.unfreeze_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.DecomonModel.unfreeze_weights" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.DecomonSequential">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.decomon_sequential.</span></span><span class="sig-name descname"><span class="pre">DecomonSequential</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#DecomonSequential"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.DecomonSequential" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Sequential</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.DecomonSequential.freeze_alpha">
+<span class="sig-name descname"><span class="pre">freeze_alpha</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#DecomonSequential.freeze_alpha"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.DecomonSequential.freeze_alpha" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.DecomonSequential.freeze_weights">
+<span class="sig-name descname"><span class="pre">freeze_weights</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#DecomonSequential.freeze_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.DecomonSequential.freeze_weights" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.DecomonSequential.reset_finetuning">
+<span class="sig-name descname"><span class="pre">reset_finetuning</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#DecomonSequential.reset_finetuning"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.DecomonSequential.reset_finetuning" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.DecomonSequential.set_domain">
+<span class="sig-name descname"><span class="pre">set_domain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#DecomonSequential.set_domain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.DecomonSequential.set_domain" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.DecomonSequential.unfreeze_alpha">
+<span class="sig-name descname"><span class="pre">unfreeze_alpha</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#DecomonSequential.unfreeze_alpha"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.DecomonSequential.unfreeze_alpha" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.DecomonSequential.unfreeze_weights">
+<span class="sig-name descname"><span class="pre">unfreeze_weights</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#DecomonSequential.unfreeze_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.DecomonSequential.unfreeze_weights" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.Forward">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.decomon_sequential.</span></span><span class="sig-name descname"><span class="pre">Forward</span></span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#Forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.Forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.Forward.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'forward'</span></em><a class="headerlink" href="#decomon.models.decomon_sequential.Forward.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.clone">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.decomon_sequential.</span></span><span class="sig-name descname"><span class="pre">clone</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_fn=&lt;function</span> <span class="pre">to_monotonic&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim=-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dc_decomp=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode='backward'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope_backward='volume-slope'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune=False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#clone"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.clone" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> – Keras model</p></li>
+<li><p><strong>input_tensors</strong> – List of input tensors to be used as inputs of our
+model or None</p></li>
+<li><p><strong>layer_fn</strong> – cloning function to translate a layer into its decomon
+decomposition</p></li>
+<li><p><strong>input_dim</strong> – the input dimension use to propagate our linear
+relaxation</p></li>
+<li><p><strong>dc_decomp</strong> – boolean that indicates whether we return a difference
+of convex decomposition of our layer</p></li>
+<li><p><strong>convex_domain</strong> – the type of convex domain</p></li>
+<li><p><strong>mode</strong> – forward of backward</p></li>
+<li><p><strong>finetune</strong> – <p>???</p>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a decomon model</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.clone_functional_model">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.decomon_sequential.</span></span><span class="sig-name descname"><span class="pre">clone_functional_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_fn=&lt;function</span> <span class="pre">to_monotonic&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dc_decomp=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune=False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#clone_functional_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.clone_functional_model" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> – </p></li>
+<li><p><strong>input_tensors</strong> – optional list of input tensors to build the model
+upon. If not provided, placeholder will</p></li>
+<li><p><strong>layer_fn</strong> – callable to be applied on non-input layers in the
+model. By default it clones the layer.</p></li>
+<li><p><strong>input_dim</strong> – the input dimension use to propagate our linear
+relaxation</p></li>
+<li><p><strong>dc_decomp</strong> – boolean that indicates whether we return a difference
+of convex decomposition of our layer</p></li>
+<li><p><strong>convex_domain</strong> – the type of convex domain</p></li>
+<li><p><strong>finetune</strong> – <p>???</p>
+</p></li>
+</ul>
+</dd>
+</dl>
+<p>be created.</p>
+<p>Returns:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.clone_sequential_model">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.decomon_sequential.</span></span><span class="sig-name descname"><span class="pre">clone_sequential_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_fn=&lt;function</span> <span class="pre">to_monotonic&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim=-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dc_decomp=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune=False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#clone_sequential_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.clone_sequential_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clone a <cite>Sequential</cite> model instance.
+Model cloning is similar to calling a model on new inputs,
+except that it creates new layers (and thus new weights) instead
+of sharing the weights of the existing layers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> – Instance of <cite>Sequential</cite>.</p></li>
+<li><p><strong>input_tensors</strong> – optional list of input tensors to build the model
+upon. If not provided, placeholder will</p></li>
+<li><p><strong>layer_fn</strong> – callable to be applied on non-input layers in the
+model. By default it clones the layer.</p></li>
+<li><p><strong>input_dim</strong> – the input dimension use to propagate our linear
+relaxation</p></li>
+<li><p><strong>dc_decomp</strong> – boolean that indicates whether we return a difference
+of convex decomposition of our layer</p></li>
+<li><p><strong>convex_domain</strong> – the type of convex domain</p></li>
+<li><p><strong>finetune</strong> – <p>???</p>
+</p></li>
+</ul>
+</dd>
+</dl>
+<p>be created.
+Another example is to preserve the layer  to share the weights. This is required when we create a per-replica
+copy of the model with distribution strategy; we want the weights to be shared but still feed inputs
+separately so we create new input layers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>An instance of <cite>Sequential</cite> reproducing the behavior of the
+original model with decomon layers.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.convert">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.decomon_sequential.</span></span><span class="sig-name descname"><span class="pre">convert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_fn=&lt;function</span> <span class="pre">to_monotonic&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dc_decomp=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode='backward'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope_backward='volume-slope'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linearize=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options=None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#convert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.convert" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> – Keras model</p></li>
+<li><p><strong>input_tensors</strong> – input_tensors: List of input tensors to be used
+as inputs of our model or None</p></li>
+<li><p><strong>layer_fn</strong> – layer_fn: cloning function to translate a layer into
+its decomon decomposition</p></li>
+<li><p><strong>dc_decomp</strong> – dc_decomp: boolean that indicates whether we return a</p></li>
+<li><p><strong>convex_domain</strong> – convex_domain: the type of convex domain</p></li>
+<li><p><strong>n_subgrad</strong> – integer for optimizing linear bounds</p></li>
+</ul>
+</dd>
+</dl>
+<p>difference of convex decomposition of our layer</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>a decomon model</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.get_backward">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.decomon_sequential.</span></span><span class="sig-name descname"><span class="pre">get_backward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">back_bounds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'volume-slope'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#get_backward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.get_backward" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>model</strong> – </p>
+</dd>
+</dl>
+<p>Returns:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.get_backward_layer">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.decomon_sequential.</span></span><span class="sig-name descname"><span class="pre">get_backward_layer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">back_bounds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_layers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'volume-slope'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#get_backward_layer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.get_backward_layer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.get_backward_model">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.decomon_sequential.</span></span><span class="sig-name descname"><span class="pre">get_backward_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">back_bounds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'volume-slope'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#get_backward_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.get_backward_model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.get_backward_model_">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.decomon_sequential.</span></span><span class="sig-name descname"><span class="pre">get_backward_model_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">back_bounds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'volume-slope'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#get_backward_model_"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.get_backward_model_" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> – </p></li>
+<li><p><strong>back_bounds</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+<p>Returns:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.include_dim_layer_fn">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.decomon_sequential.</span></span><span class="sig-name descname"><span class="pre">include_dim_layer_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layer_fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dc_decomp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#include_dim_layer_fn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.include_dim_layer_fn" title="Permalink to this definition">¶</a></dt>
+<dd><p>include external parameters inside the translation of a layer to its decomon counterpart</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>layer_fn</strong> – </p></li>
+<li><p><strong>input_dim</strong> – </p></li>
+<li><p><strong>dc_decomp</strong> – </p></li>
+<li><p><strong>convex_domain</strong> – </p></li>
+<li><p><strong>finetune</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+<p>Returns:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.decomon_sequential.set_domain_priv">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.decomon_sequential.</span></span><span class="sig-name descname"><span class="pre">set_domain_priv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">convex_domain_prev</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/decomon_sequential.html#set_domain_priv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.decomon_sequential.set_domain_priv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-decomon.models.forward_cloning">
+<span id="decomon-models-forward-cloning-module"></span><h2>decomon.models.forward_cloning module<a class="headerlink" href="#module-decomon.models.forward_cloning" title="Permalink to this heading">¶</a></h2>
+<p>Module for MonotonicSequential.</p>
+<p>It inherits from keras Sequential class.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.forward_cloning.convert_forward">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.forward_cloning.</span></span><span class="sig-name descname"><span class="pre">convert_forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_fn=&lt;function</span> <span class="pre">to_monotonic&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim=-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dc_decomp=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shared=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">softmax_to_linear=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">back_bounds=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/forward_cloning.html#convert_forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.forward_cloning.convert_forward" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.forward_cloning.convert_forward_functional_model">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.forward_cloning.</span></span><span class="sig-name descname"><span class="pre">convert_forward_functional_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_fn=&lt;function</span> <span class="pre">to_monotonic&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shared=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">softmax_to_linear=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">count=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/forward_cloning.html#convert_forward_functional_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.forward_cloning.convert_forward_functional_model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-decomon.models.models">
+<span id="decomon-models-models-module"></span><h2>decomon.models.models module<a class="headerlink" href="#module-decomon.models.models" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.models.Backward">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.models.</span></span><span class="sig-name descname"><span class="pre">Backward</span></span><a class="reference internal" href="../_modules/decomon/models/models.html#Backward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.Backward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="decomon.models.models.Backward.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'backward'</span></em><a class="headerlink" href="#decomon.models.models.Backward.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.models.DecomonModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.models.</span></span><span class="sig-name descname"><span class="pre">DecomonModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#DecomonModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.DecomonModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.models.DecomonModel.freeze_alpha">
+<span class="sig-name descname"><span class="pre">freeze_alpha</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#DecomonModel.freeze_alpha"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.DecomonModel.freeze_alpha" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.models.DecomonModel.freeze_weights">
+<span class="sig-name descname"><span class="pre">freeze_weights</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#DecomonModel.freeze_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.DecomonModel.freeze_weights" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.models.DecomonModel.reset_finetuning">
+<span class="sig-name descname"><span class="pre">reset_finetuning</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#DecomonModel.reset_finetuning"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.DecomonModel.reset_finetuning" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.models.DecomonModel.set_domain">
+<span class="sig-name descname"><span class="pre">set_domain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#DecomonModel.set_domain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.DecomonModel.set_domain" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.models.DecomonModel.unfreeze_alpha">
+<span class="sig-name descname"><span class="pre">unfreeze_alpha</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#DecomonModel.unfreeze_alpha"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.DecomonModel.unfreeze_alpha" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.models.DecomonModel.unfreeze_weights">
+<span class="sig-name descname"><span class="pre">unfreeze_weights</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#DecomonModel.unfreeze_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.DecomonModel.unfreeze_weights" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.models.DecomonSequential">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.models.</span></span><span class="sig-name descname"><span class="pre">DecomonSequential</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#DecomonSequential"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.DecomonSequential" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Sequential</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.models.DecomonSequential.freeze_alpha">
+<span class="sig-name descname"><span class="pre">freeze_alpha</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#DecomonSequential.freeze_alpha"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.DecomonSequential.freeze_alpha" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.models.DecomonSequential.freeze_weights">
+<span class="sig-name descname"><span class="pre">freeze_weights</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#DecomonSequential.freeze_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.DecomonSequential.freeze_weights" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.models.DecomonSequential.reset_finetuning">
+<span class="sig-name descname"><span class="pre">reset_finetuning</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#DecomonSequential.reset_finetuning"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.DecomonSequential.reset_finetuning" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.models.DecomonSequential.set_domain">
+<span class="sig-name descname"><span class="pre">set_domain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#DecomonSequential.set_domain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.DecomonSequential.set_domain" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.models.DecomonSequential.unfreeze_alpha">
+<span class="sig-name descname"><span class="pre">unfreeze_alpha</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#DecomonSequential.unfreeze_alpha"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.DecomonSequential.unfreeze_alpha" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="decomon.models.models.DecomonSequential.unfreeze_weights">
+<span class="sig-name descname"><span class="pre">unfreeze_weights</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#DecomonSequential.unfreeze_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.DecomonSequential.unfreeze_weights" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="decomon.models.models.Forward">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">decomon.models.models.</span></span><span class="sig-name descname"><span class="pre">Forward</span></span><a class="reference internal" href="../_modules/decomon/models/models.html#Forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.Forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="decomon.models.models.Forward.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'forward'</span></em><a class="headerlink" href="#decomon.models.models.Forward.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.models.set_domain_priv">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.models.</span></span><span class="sig-name descname"><span class="pre">set_domain_priv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">convex_domain_prev</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/models.html#set_domain_priv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.models.set_domain_priv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-decomon.models.utils">
+<span id="decomon-models-utils-module"></span><h2>decomon.models.utils module<a class="headerlink" href="#module-decomon.models.utils" title="Permalink to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.check_input_tensors_functionnal">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">check_input_tensors_functionnal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim_init</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dc_decomp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#check_input_tensors_functionnal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.check_input_tensors_functionnal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.check_input_tensors_sequential">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">check_input_tensors_sequential</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim_init</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dc_decomp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#check_input_tensors_sequential"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.check_input_tensors_sequential" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.convert_2_mode">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">convert_2_mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode_from</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode_to</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'float32'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#convert_2_mode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.convert_2_mode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.convert_to_backward_bounds">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">convert_to_backward_bounds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#convert_to_backward_bounds"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.convert_to_backward_bounds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.fuse_forward_backward">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">fuse_forward_backward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">back_bounds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#fuse_forward_backward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.fuse_forward_backward" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.get_FORWARD">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">get_FORWARD</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'hybrid'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#get_FORWARD"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.get_FORWARD" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.get_IBP">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">get_IBP</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'hybrid'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#get_IBP"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.get_IBP" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.get_back_bounds_model">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">get_back_bounds_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">back_bounds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#get_back_bounds_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.get_back_bounds_model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.get_depth_dict">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">get_depth_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#get_depth_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.get_depth_dict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.get_inner_layers">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">get_inner_layers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#get_inner_layers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.get_inner_layers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.get_input_dim">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">get_input_dim</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_tensor</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#get_input_dim"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.get_input_dim" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.get_input_tensor_x">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">get_input_tensor_x</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tensors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim_init</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#get_input_tensor_x"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.get_input_tensor_x" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.get_inputs">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">get_inputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tensor_map</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#get_inputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.get_inputs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.get_key">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">get_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward_map</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#get_key"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.get_key" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.get_mode">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">get_mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">IBP</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#get_mode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.get_mode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.get_node_by_id">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">get_node_by_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outbound</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#get_node_by_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.get_node_by_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.get_node_by_id_">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">get_node_by_id_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#get_node_by_id_"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.get_node_by_id_" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.get_original_layer_name">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">get_original_layer_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pattern</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'_monotonic'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#get_original_layer_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.get_original_layer_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.include_dim_layer_fn">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">include_dim_layer_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layer_fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dc_decomp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_domain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IBP</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">finetune</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shared</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#include_dim_layer_fn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.include_dim_layer_fn" title="Permalink to this definition">¶</a></dt>
+<dd><p>include external parameters inside the translation of a layer to its decomon counterpart</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>layer_fn</strong> – </p></li>
+<li><p><strong>input_dim</strong> – </p></li>
+<li><p><strong>dc_decomp</strong> – </p></li>
+<li><p><strong>convex_domain</strong> – </p></li>
+<li><p><strong>finetune</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+<p>Returns:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.pre_process_inputs">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">pre_process_inputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_layer_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#pre_process_inputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.pre_process_inputs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="decomon.models.utils.set_name">
+<span class="sig-prename descclassname"><span class="pre">decomon.models.utils.</span></span><span class="sig-name descname"><span class="pre">set_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/decomon/models/utils.html#set_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#decomon.models.utils.set_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-decomon.models">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-decomon.models" title="Permalink to this heading">¶</a></h2>
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="decomon.types.html" class="btn btn-neutral float-right" title="decomon.types package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="decomon.metrics.html" class="btn btn-neutral float-left" title="decomon.metrics package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2022, Airbus.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
