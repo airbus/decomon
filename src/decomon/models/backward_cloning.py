@@ -205,20 +205,18 @@ def crown_(
         # to retrieve
         backward_bounds_ = backward_layer.call_no_previous(inputs)
         # update back_bounds
-        try:
-            if id(node) not in output_map.keys():
-                backward_bounds_ = backward_layer.call_no_previous(inputs)
-                output_map[id(node)] = backward_bounds_
-            else:
-                backward_bounds_ = output_map[id(node)]
+        if id(node) not in output_map.keys():
+            backward_bounds_ = backward_layer.call_no_previous(inputs)
+            output_map[id(node)] = backward_bounds_
+        else:
+            backward_bounds_ = output_map[id(node)]
 
-            if not isinstance(backward_bounds_, list):
-                backward_bounds_ = [e for e in backward_bounds_]
-            if len(backward_bounds):
-                backward_tmp = merge_layers(backward_bounds_ + backward_bounds)
-                backward_bounds_ = backward_tmp
-        except ValueError:
-            pass
+        if not isinstance(backward_bounds_, list):
+            backward_bounds_ = [e for e in backward_bounds_]
+        if len(backward_bounds):
+            backward_tmp = merge_layers(backward_bounds_ + backward_bounds)
+            backward_bounds_ = backward_tmp
+
     if not isinstance(backward_bounds_, list):
         backward_bounds = [e for e in backward_bounds_]
     else:
