@@ -17,7 +17,66 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.models import Model, Sequential
 
 
+@pytest.fixture(params=["hybrid", "ibp", "forward"])
+def mode(request):
+    return request.param
+
+
+@pytest.fixture(params=list(range(10)))
+def n(request):
+    return request.param
+
+
+@pytest.fixture(params=[32, 64, 16])
+def floatx(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def previous(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def use_bias(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def shared(request):
+    return request.param
+
+
+@pytest.fixture(params=["same", "valid"])
+def padding(request):
+    return request.param
+
+
+@pytest.fixture(params=[None, "linear", "relu"])
+def activation(request):
+    return request.param
+
+
+@pytest.fixture(params=["channels_last", "channels_first"])
+def data_format(request):
+    return request.param
+
+
+@pytest.fixture(params=[0, 1])
+def odd(request):
+    return request.param
+
+
+@pytest.fixture(params=["hybrid", "ibp", "forward", "crown", "crown-hybrid", "crown-ibp", "crown-forward"])
+def method(request):
+    return request.param
+
+
 class Helpers:
+    @staticmethod
+    def is_method_mode_compatible(method, mode):
+        return not (method in {"ibp", "crown-ibp"} and mode != "ibp")
+
     @staticmethod
     def get_standart_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
         """
