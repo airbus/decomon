@@ -253,7 +253,7 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
         M = t_tensor * s_tensor
         upper = K.expand_dims(u_c, -1) - K.expand_dims(l_c, 1)
         const = (K.max(upper, (-1, -2)) - K.min(upper, (-1, -2)))[:, None, None]
-        upper = upper - (const + K.cast(1, K.floatx())) * (1 - M)
+        upper = upper - (const + K.cast(1, const.dtype)) * (1 - M)
         return K.max(upper, (-1, -2))
 
     def adv_forward(x, w_u, b_u, w_l, b_l, y_tensor):
@@ -274,7 +274,7 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
         M = t_tensor * s_tensor
 
         const = (K.max(upper, (-1, -2)) - K.min(upper, (-1, -2)))[:, None, None]
-        upper = upper - (const + K.cast(1, K.floatx())) * (1 - M)
+        upper = upper - (const + K.cast(1, const.dtype)) * (1 - M)
         return K.max(upper, (-1, -2))
 
     def loss_adv(y_true, y_pred):
@@ -383,7 +383,7 @@ class DecomonLossFusion(DecomonLayer):
                 M = t_tensor * s_tensor
                 upper = K.expand_dims(u_c, -1) - K.expand_dims(l_c, 1)
                 const = (K.max(upper, (-1, -2)) - K.min(upper, (-1, -2)))[:, None, None]
-                upper = upper - (const + K.cast(1, K.floatx())) * (1 - M)
+                upper = upper - (const + K.cast(1, const.dtype)) * (1 - M)
                 return K.max(upper, (-1, -2))
 
             source_tensor = tf.linalg.diag(K.ones_like(l_c))

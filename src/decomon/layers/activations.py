@@ -121,7 +121,7 @@ def linear_hull_s_shape(
             # it happens with the convert function to spare memory footprint
             n_dim = np.prod(w_u.shape[1:])
             M = np.reshape(
-                np.diag([K.cast(1, dtype=K.floatx())] * n_dim), [1, n_dim] + list(w_u.shape[1:])
+                np.diag([K.cast(1, dtype=w_u_0.dtype)] * n_dim), [1, n_dim] + list(w_u.shape[1:])
             )  # usage de numpy pb pour les types
             w_u_ = M * K.concatenate([K.expand_dims(w_u_0, 1)] * n_dim, 1)
             w_l_ = M * K.concatenate([K.expand_dims(w_l_0, 1)] * n_dim, 1)
