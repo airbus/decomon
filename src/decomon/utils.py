@@ -824,8 +824,8 @@ def relu_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, slope=V_sl
     if mode not in [F_HYBRID.name, F_IBP.name, F_FORWARD.name]:
         raise ValueError(f"unknown mode {mode}")
 
-    z_value = K.cast(0.0, K.floatx())
-    o_value = K.cast(1.0, K.floatx())
+    z_value = K.cast(0.0, dtype=x[0].dtype)
+    o_value = K.cast(1.0, dtype=x[0].dtype)
 
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == F_HYBRID.name:
@@ -1043,7 +1043,7 @@ def get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, convex_dom
     s_l = func(l_c_flat)  # (None, n)
 
     # case 0:
-    coeff = (s_u - s_l) / K.maximum(K.cast(K.epsilon(), K.floatx()), u_c_flat - l_c_flat)
+    coeff = (s_u - s_l) / K.maximum(K.cast(K.epsilon(), dtype=x[0].dtype), u_c_flat - l_c_flat)
     alpha_u_0 = K.switch(greater_equal(s_u_prime, coeff), o_value + z_value * u_c_flat, z_value * u_c_flat)  # (None, n)
     alpha_u_1 = (o_value - alpha_u_0) * ((K.sign(l_c_flat) + o_value) / t_value)
 
@@ -1098,7 +1098,7 @@ def get_t_upper(u_c_flat, l_c_flat, s_l, func=K.sigmoid, f_prime=sigmoid_prime):
     # step1: find t
     u_c_flat_ = K.expand_dims(u_c_flat, -1)  # (None, n , 1)
     l_c_flat_ = K.expand_dims(l_c_flat, -1)  # (None, n,  1)
-    t_ = K.cast(np.linspace(0, 1, 100)[None, None, :], K.floatx()) * u_c_flat_  # (None, n , 100)
+    t_ = K.cast(np.linspace(0, 1, 100)[None, None, :], dtype=u_c_flat.dtype) * u_c_flat_  # (None, n , 100)
 
     s_p_t_ = f_prime(t_)  # (None, n, 100)
     s_t_ = func(t_)  # (None, n, 100)
@@ -1113,7 +1113,7 @@ def get_t_upper(u_c_flat, l_c_flat, s_l, func=K.sigmoid, f_prime=sigmoid_prime):
     t_value = K.sum(
         K.switch(
             K.equal(
-                o_value * K.cast(np.arange(0, 100)[None, None, :], K.floatx()) + z_value * u_c_flat_,
+                o_value * K.cast(np.arange(0, 100)[None, None, :], dtype=u_c_flat.dtype) + z_value * u_c_flat_,
                 K.expand_dims(index_t, -1) + z_value * u_c_flat_,
             ),
             t_,
@@ -1149,7 +1149,7 @@ def get_t_lower(u_c_flat, l_c_flat, s_u, func=K.sigmoid, f_prime=sigmoid_prime):
     # step1: find t
     u_c_flat_ = K.expand_dims(u_c_flat, -1)  # (None, n , 1)
     l_c_flat_ = K.expand_dims(l_c_flat, -1)  # (None, n,  1)
-    t_ = K.cast(np.linspace(0, 1.0, 100)[None, None, :], K.floatx()) * l_c_flat_  # (None, n , 100)
+    t_ = K.cast(np.linspace(0, 1.0, 100)[None, None, :], dtype=u_c_flat.dtype) * l_c_flat_  # (None, n , 100)
 
     s_p_t_ = f_prime(t_)  # (None, n, 100)
     s_t_ = func(t_)  # (None, n, 100)
@@ -1164,7 +1164,7 @@ def get_t_lower(u_c_flat, l_c_flat, s_u, func=K.sigmoid, f_prime=sigmoid_prime):
     t_value = K.sum(
         K.switch(
             K.equal(
-                o_value * K.cast(np.arange(0, 100)[None, None, :], K.floatx()) + z_value * u_c_flat_,
+                o_value * K.cast(np.arange(0, 100)[None, None, :], dtype=u_c_flat.dtype) + z_value * u_c_flat_,
                 K.expand_dims(index_t, -1) + z_value * u_c_flat_,
             ),
             t_,

@@ -1256,7 +1256,7 @@ def log(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
             x_0, w_u, b_u, w_l, b_l = x
             u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
             l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
-            l_c = K.maximum(K.epsilon(), l_c)
+            l_c = K.maximum(K.cast(K.epsilon(), dtype=l_c.dtype), l_c)
         else:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
 

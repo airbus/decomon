@@ -246,8 +246,8 @@ def clone(
 
     if len(convex_domain) == 0 or convex_domain["name"] != Ball.name:
 
-        u_c_tensor = Lambda(lambda z: z[:, 1])(z_tensor)
-        l_c_tensor = Lambda(lambda z: z[:, 0])(z_tensor)
+        u_c_tensor = Lambda(lambda z: z[:, 1], dtype=z_tensor.dtype)(z_tensor)
+        l_c_tensor = Lambda(lambda z: z[:, 0], dtype=z_tensor.dtype)(z_tensor)
 
         z_value = K.cast(0.0, z_tensor.dtype)
         o_value = K.cast(1.0, z_tensor.dtype)
