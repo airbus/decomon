@@ -8,21 +8,10 @@ from tensorflow.keras.layers import MaxPooling2D
 from decomon.layers.maxpooling import DecomonMaxPooling2D
 
 
-@pytest.mark.parametrize(
-    "data_format, odd, m_0, m_1, fast, mode, floatx",
-    [
-        ("channels_last", 0, 0, 1, False, "hybrid", 32),
-        ("channels_last", 0, 0, 1, False, "forward", 32),
-        ("channels_last", 0, 0, 1, False, "ibp", 32),
-        ("channels_last", 0, 0, 1, False, "hybrid", 16),
-        ("channels_last", 0, 0, 1, False, "forward", 16),
-        ("channels_last", 0, 0, 1, False, "ibp", 16),
-        ("channels_last", 0, 0, 1, False, "hybrid", 64),
-        ("channels_last", 0, 0, 1, False, "forward", 64),
-        ("channels_last", 0, 0, 1, False, "ibp", 64),
-    ],
-)
-def test_MaxPooling2D_box(data_format, odd, m_0, m_1, fast, mode, floatx, helpers):
+def test_MaxPooling2D_box(mode, floatx, helpers):
+    odd, m_0, m_1 = 0, 0, 1
+    data_format = "channels_last"
+    fast = False
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()

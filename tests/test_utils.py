@@ -10,7 +10,6 @@ from decomon.layers.utils import add, get_lower, get_upper, max_, maximum, minus
 from decomon.utils import substract
 
 
-@pytest.mark.parametrize("odd, floatx", [(0, 32), (0, 64), (0, 16)])
 def test_get_upper_multi_box(odd, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
@@ -40,41 +39,6 @@ def test_get_upper_multi_box(odd, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "n, floatx",
-    [
-        (0, 32),
-        (1, 32),
-        (2, 32),
-        (3, 32),
-        (4, 32),
-        (5, 32),
-        (6, 32),
-        (7, 32),
-        (8, 32),
-        (9, 32),
-        (0, 64),
-        (1, 64),
-        (2, 64),
-        (3, 64),
-        (4, 64),
-        (5, 64),
-        (6, 64),
-        (7, 64),
-        (8, 64),
-        (9, 64),
-        (0, 16),
-        (1, 16),
-        (2, 16),
-        (3, 16),
-        (4, 16),
-        (5, 16),
-        (6, 16),
-        (7, 16),
-        (8, 16),
-        (9, 16),
-    ],
-)
 def test_get_upper_box_numpy(n, floatx, helpers):
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -104,41 +68,6 @@ def test_get_upper_box_numpy(n, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "n, floatx",
-    [
-        (0, 32),
-        (1, 32),
-        (2, 32),
-        (3, 32),
-        (4, 32),
-        (5, 32),
-        (6, 32),
-        (7, 32),
-        (8, 32),
-        (9, 32),
-        (0, 64),
-        (1, 64),
-        (2, 64),
-        (3, 64),
-        (4, 64),
-        (5, 64),
-        (6, 64),
-        (7, 64),
-        (8, 64),
-        (9, 64),
-        (0, 16),
-        (1, 16),
-        (2, 16),
-        (3, 16),
-        (4, 16),
-        (5, 16),
-        (6, 16),
-        (7, 16),
-        (8, 16),
-        (9, 16),
-    ],
-)
 def test_get_upper_box(n, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
@@ -179,41 +108,6 @@ def test_get_upper_box(n, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "n, floatx",
-    [
-        (0, 32),
-        (1, 32),
-        (2, 32),
-        (3, 32),
-        (4, 32),
-        (5, 32),
-        (6, 32),
-        (7, 32),
-        (8, 32),
-        (9, 32),
-        (0, 64),
-        (1, 64),
-        (2, 64),
-        (3, 64),
-        (4, 64),
-        (5, 64),
-        (6, 64),
-        (7, 64),
-        (8, 64),
-        (9, 64),
-        (0, 16),
-        (1, 16),
-        (2, 16),
-        (3, 16),
-        (4, 16),
-        (5, 16),
-        (6, 16),
-        (7, 16),
-        (8, 16),
-        (9, 16),
-    ],
-)
 def test_get_lower_box(n, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
@@ -250,41 +144,6 @@ def test_get_lower_box(n, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "n, floatx",
-    [
-        (0, 32),
-        (1, 32),
-        (2, 32),
-        (3, 32),
-        (4, 32),
-        (5, 32),
-        (6, 32),
-        (7, 32),
-        (8, 32),
-        (9, 32),
-        (0, 64),
-        (1, 64),
-        (2, 64),
-        (3, 64),
-        (4, 64),
-        (5, 64),
-        (6, 64),
-        (7, 64),
-        (8, 64),
-        (9, 64),
-        (0, 16),
-        (1, 16),
-        (2, 16),
-        (3, 16),
-        (4, 16),
-        (5, 16),
-        (6, 16),
-        (7, 16),
-        (8, 16),
-        (9, 16),
-    ],
-)
 def test_get_lower_upper_box(n, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
@@ -314,92 +173,6 @@ def test_get_lower_upper_box(n, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "n, mode, floatx",
-    [
-        (1, "hybrid", 32),
-        (2, "hybrid", 32),
-        (3, "hybrid", 32),
-        (4, "hybrid", 32),
-        (5, "hybrid", 32),
-        (6, "hybrid", 32),
-        (7, "hybrid", 32),
-        (8, "hybrid", 32),
-        (9, "hybrid", 32),
-        (1, "ibp", 32),
-        (2, "ibp", 32),
-        (3, "ibp", 32),
-        (4, "ibp", 32),
-        (5, "ibp", 32),
-        (6, "ibp", 32),
-        (7, "ibp", 32),
-        (8, "ibp", 32),
-        (9, "ibp", 32),
-        (1, "forward", 32),
-        (2, "forward", 32),
-        (3, "forward", 32),
-        (4, "forward", 32),
-        (5, "forward", 32),
-        (6, "forward", 32),
-        (7, "forward", 32),
-        (8, "forward", 32),
-        (9, "forward", 32),
-        (1, "hybrid", 64),
-        (2, "hybrid", 64),
-        (3, "hybrid", 64),
-        (4, "hybrid", 64),
-        (5, "hybrid", 64),
-        (6, "hybrid", 64),
-        (7, "hybrid", 64),
-        (8, "hybrid", 64),
-        (9, "hybrid", 64),
-        (1, "ibp", 64),
-        (2, "ibp", 64),
-        (3, "ibp", 64),
-        (4, "ibp", 64),
-        (5, "ibp", 64),
-        (6, "ibp", 64),
-        (7, "ibp", 64),
-        (8, "ibp", 64),
-        (9, "ibp", 64),
-        (1, "forward", 64),
-        (2, "forward", 64),
-        (3, "forward", 64),
-        (4, "forward", 64),
-        (5, "forward", 64),
-        (6, "forward", 64),
-        (7, "forward", 64),
-        (8, "forward", 64),
-        (9, "forward", 64),
-        (1, "hybrid", 16),
-        (2, "hybrid", 16),
-        (3, "hybrid", 16),
-        (4, "hybrid", 16),
-        (5, "hybrid", 16),
-        (6, "hybrid", 16),
-        (7, "hybrid", 16),
-        (8, "hybrid", 16),
-        (9, "hybrid", 16),
-        (1, "ibp", 16),
-        (2, "ibp", 16),
-        (3, "ibp", 16),
-        (4, "ibp", 16),
-        (5, "ibp", 16),
-        (6, "ibp", 16),
-        (7, "ibp", 16),
-        (8, "ibp", 16),
-        (9, "ibp", 16),
-        (1, "forward", 16),
-        (2, "forward", 16),
-        (3, "forward", 16),
-        (4, "forward", 32),
-        (5, "forward", 16),
-        (6, "forward", 16),
-        (7, "forward", 16),
-        (8, "forward", 16),
-        (9, "forward", 16),
-    ],
-)
 def test_relu_1D_box(n, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
@@ -609,29 +382,6 @@ def test_relu_1D_box(n, mode, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "odd, mode, floatx",
-    [
-        (0, "hybrid", 32),
-        (1, "hybrid", 32),
-        (0, "forward", 32),
-        (1, "forward", 32),
-        (0, "ibp", 32),
-        (1, "ibp", 32),
-        (0, "hybrid", 64),
-        (1, "hybrid", 64),
-        (0, "forward", 64),
-        (1, "forward", 64),
-        (0, "ibp", 64),
-        (1, "ibp", 64),
-        (0, "hybrid", 16),
-        (1, "hybrid", 16),
-        (0, "forward", 16),
-        (1, "forward", 16),
-        (0, "ibp", 16),
-        (1, "ibp", 16),
-    ],
-)
 def test_add(odd, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(32))
@@ -732,29 +482,6 @@ def test_add(odd, mode, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "odd, mode, floatx",
-    [
-        (0, "hybrid", 32),
-        (1, "hybrid", 32),
-        (0, "forward", 32),
-        (1, "forward", 32),
-        (0, "ibp", 32),
-        (1, "ibp", 32),
-        (0, "hybrid", 64),
-        (1, "hybrid", 64),
-        (0, "forward", 64),
-        (1, "forward", 64),
-        (0, "ibp", 64),
-        (1, "ibp", 64),
-        (0, "hybrid", 16),
-        (1, "hybrid", 16),
-        (0, "forward", 16),
-        (1, "forward", 16),
-        (0, "ibp", 16),
-        (1, "ibp", 16),
-    ],
-)
 def test_minus(odd, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
@@ -841,29 +568,6 @@ def test_minus(odd, mode, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "odd, mode, floatx",
-    [
-        (0, "hybrid", 32),
-        (1, "hybrid", 32),
-        (0, "forward", 32),
-        (1, "forward", 32),
-        (0, "ibp", 32),
-        (1, "ibp", 32),
-        (0, "hybrid", 64),
-        (1, "hybrid", 64),
-        (0, "forward", 64),
-        (1, "forward", 64),
-        (0, "ibp", 64),
-        (1, "ibp", 64),
-        (0, "hybrid", 16),
-        (1, "hybrid", 16),
-        (0, "forward", 16),
-        (1, "forward", 16),
-        (0, "ibp", 16),
-        (1, "ibp", 16),
-    ],
-)
 def test_substract(odd, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
@@ -963,29 +667,6 @@ def test_substract(odd, mode, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "odd, mode, floatx",
-    [
-        (0, "hybrid", 32),
-        (1, "hybrid", 32),
-        (0, "forward", 32),
-        (1, "forward", 32),
-        (0, "ibp", 32),
-        (1, "ibp", 32),
-        (0, "hybrid", 64),
-        (1, "hybrid", 64),
-        (0, "forward", 64),
-        (1, "forward", 64),
-        (0, "ibp", 64),
-        (1, "ibp", 64),
-        (0, "hybrid", 16),
-        (1, "hybrid", 16),
-        (0, "forward", 16),
-        (1, "forward", 16),
-        (0, "ibp", 16),
-        (1, "ibp", 16),
-    ],
-)
 def test_maximum(odd, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
@@ -1084,29 +765,6 @@ def test_maximum(odd, mode, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "odd, mode, floatx",
-    [
-        (0, "hybrid", 32),
-        (1, "hybrid", 32),
-        (0, "forward", 32),
-        (1, "forward", 32),
-        (0, "ibp", 32),
-        (1, "ibp", 32),
-        (0, "hybrid", 64),
-        (1, "hybrid", 64),
-        (0, "forward", 64),
-        (1, "forward", 64),
-        (0, "ibp", 64),
-        (1, "ibp", 64),
-        (0, "hybrid", 16),
-        (1, "hybrid", 16),
-        (0, "forward", 16),
-        (1, "forward", 16),
-        (0, "ibp", 16),
-        (1, "ibp", 16),
-    ],
-)
 def test_max_(odd, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
@@ -1200,9 +858,6 @@ def test_max_(odd, mode, floatx, helpers):
 
 
 # DC_DECOMP = FALSE
-
-
-@pytest.mark.parametrize("odd", [0, 1])
 def test_max_nodc(odd, helpers):
 
     inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
@@ -1213,7 +868,6 @@ def test_max_nodc(odd, helpers):
     assert_allclose(len(f_max(inputs_)), 7)
 
 
-@pytest.mark.parametrize("odd", [0, 1])
 def test_maximum_nodc(odd, helpers):
 
     inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
@@ -1229,7 +883,6 @@ def test_maximum_nodc(odd, helpers):
     f_ref(inputs_ + inputs_)
 
 
-@pytest.mark.parametrize("odd", [0, 1])
 def test_minus_nodc(odd, helpers):
 
     inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
@@ -1244,7 +897,6 @@ def test_minus_nodc(odd, helpers):
     f_ref(inputs_)
 
 
-@pytest.mark.parametrize("odd", [0, 1])
 def test_add_nodc(odd, helpers):
 
     inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
@@ -1257,7 +909,6 @@ def test_add_nodc(odd, helpers):
     f_ref(inputs_ + inputs_)
 
 
-@pytest.mark.parametrize("n", [1, 2, 3, 4, 5, 6, 7, 8, 9])
 def test_relu_1D_box_nodc(n, helpers):
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
