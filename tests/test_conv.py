@@ -9,33 +9,12 @@ from tensorflow.keras.layers import Conv2D
 from decomon.layers.decomon_layers import DecomonConv2D, to_monotonic
 
 
-@pytest.mark.parametrize(
-    "data_format, odd, m_0, m_1, mode, floatx",
-    [
-        ("channels_last", 0, 0, 1, "hybrid", 32),
-        ("channels_last", 0, 0, 1, "forward", 32),
-        ("channels_last", 0, 0, 1, "ibp", 32),
-        ("channels_last", 0, 0, 1, "hybrid", 64),
-        ("channels_last", 0, 0, 1, "forward", 64),
-        ("channels_last", 0, 0, 1, "ibp", 64),
-        ("channels_last", 0, 0, 1, "hybrid", 16),
-        ("channels_last", 0, 0, 1, "forward", 16),
-        ("channels_last", 0, 0, 1, "ibp", 16),
-        ("channels_first", 0, 0, 1, "hybrid", 32),
-        ("channels_first", 0, 0, 1, "forward", 32),
-        ("channels_first", 0, 0, 1, "ibp", 32),
-        ("channels_first", 0, 0, 1, "hybrid", 64),
-        ("channels_first", 0, 0, 1, "forward", 64),
-        ("channels_first", 0, 0, 1, "ibp", 64),
-        ("channels_first", 0, 0, 1, "hybrid", 16),
-        ("channels_first", 0, 0, 1, "forward", 16),
-        ("channels_first", 0, 0, 1, "ibp", 16),
-    ],
-)
-def test_Decomon_conv_box(data_format, odd, m_0, m_1, mode, floatx, helpers):
+def test_Decomon_conv_box(data_format, mode, floatx, helpers):
 
     if data_format == "channels_first" and not len(K._get_available_gpus()):
         return
+
+    odd, m_0, m_1 = 0, 0, 1
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -123,21 +102,12 @@ def test_Decomon_conv_box(data_format, odd, m_0, m_1, mode, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "data_format, odd, m_0, m_1, floatx",
-    [
-        ("channels_last", 0, 0, 1, 32),
-        ("channels_last", 0, 0, 1, 64),
-        ("channels_last", 0, 0, 1, 16),
-        ("channels_first", 0, 0, 1, 32),
-        ("channels_first", 0, 0, 1, 64),
-        ("channels_first", 0, 0, 1, 16),
-    ],
-)
-def test_Decomon_conv_box_nodc(data_format, odd, m_0, m_1, floatx, helpers):
+def test_Decomon_conv_box_nodc(data_format, floatx, helpers):
 
     if data_format == "channels_first" and not len(K._get_available_gpus()):
         return
+
+    odd, m_0, m_1 = 0, 0, 1
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -172,18 +142,9 @@ def test_Decomon_conv_box_nodc(data_format, odd, m_0, m_1, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "data_format, odd, m_0, m_1, shared, floatx",
-    [
-        ("channels_last", 0, 0, 1, False, 32),
-        ("channels_last", 0, 0, 1, True, 32),
-        ("channels_last", 0, 0, 1, False, 64),
-        ("channels_last", 0, 0, 1, True, 64),
-        ("channels_last", 0, 0, 1, False, 16),
-        ("channels_last", 0, 0, 1, True, 16),
-    ],
-)
-def test_Decomon_conv_to_monotonic_box(data_format, odd, m_0, m_1, shared, floatx, helpers):
+def test_Decomon_conv_to_monotonic_box(shared, floatx, helpers):
+    data_format = "channels_last"
+    odd, m_0, m_1 = 0, 0, 1
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -234,8 +195,9 @@ def test_Decomon_conv_to_monotonic_box(data_format, odd, m_0, m_1, shared, float
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize("data_format, odd, m_0, m_1", [("channels_last", 0, 0, 1)])
-def test_Decomon_conv_to_monotonic_box_nodc(data_format, odd, m_0, m_1, helpers):
+def test_Decomon_conv_to_monotonic_box_nodc(helpers):
+    data_format = "channels_last"
+    odd, m_0, m_1 = 0, 0, 1
 
     conv_ref = Conv2D(10, kernel_size=(3, 3), activation="relu")
     inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)

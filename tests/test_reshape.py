@@ -7,21 +7,8 @@ from decomon.layers.decomon_layers import to_monotonic
 from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
 
 
-@pytest.mark.parametrize(
-    "odd, m_0, m_1, mode, floatx",
-    [
-        (0, 0, 1, "hybrid", 16),
-        (0, 0, 1, "forward", 32),
-        (0, 0, 1, "ibp", 32),
-        (0, 0, 1, "hybrid", 64),
-        (0, 0, 1, "forward", 64),
-        (0, 0, 1, "ibp", 64),
-        (0, 0, 1, "hybrid", 16),
-        (0, 0, 1, "forward", 16),
-        (0, 0, 1, "ibp", 16),
-    ],
-)
-def test_Decomon_reshape_box(odd, m_0, m_1, mode, floatx, helpers):
+def test_Decomon_reshape_box(mode, floatx, helpers):
+    odd, m_0, m_1 = 0, 0, 1
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -81,21 +68,8 @@ def test_Decomon_reshape_box(odd, m_0, m_1, mode, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "odd, m_0, m_1, mode, floatx",
-    [
-        (0, 0, 1, "hybrid", 32),
-        (0, 0, 1, "forward", 32),
-        (0, 0, 1, "ibp", 32),
-        (0, 0, 1, "hybrid", 64),
-        (0, 0, 1, "forward", 64),
-        (0, 0, 1, "ibp", 64),
-        (0, 0, 1, "hybrid", 16),
-        (0, 0, 1, "forward", 16),
-        (0, 0, 1, "ibp", 16),
-    ],
-)
-def test_Decomon_reshape_box_nodc(odd, m_0, m_1, mode, floatx, helpers):
+def test_Decomon_reshape_box_nodc(mode, floatx, helpers):
+    odd, m_0, m_1 = 0, 0, 1
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -156,18 +130,8 @@ def test_Decomon_reshape_box_nodc(odd, m_0, m_1, mode, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "odd, m_0, m_1, shared, floatx",
-    [
-        (0, 0, 1, False, 32),
-        (0, 0, 1, True, 32),
-        (0, 0, 1, False, 64),
-        (0, 0, 1, True, 64),
-        (0, 0, 1, False, 16),
-        (0, 0, 1, True, 16),
-    ],
-)
-def test_Decomon_reshape_to_monotonic_box(odd, m_0, m_1, shared, floatx, helpers):
+def test_Decomon_reshape_to_monotonic_box(shared, floatx, helpers):
+    odd, m_0, m_1 = 0, 0, 1
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -222,23 +186,8 @@ def test_Decomon_reshape_to_monotonic_box(odd, m_0, m_1, shared, floatx, helpers
 
 
 # permute
-
-
-@pytest.mark.parametrize(
-    "odd, m_0, m_1, mode, floatx",
-    [
-        (0, 0, 1, "hybrid", 32),
-        (0, 0, 1, "forward", 32),
-        (0, 0, 1, "ibp", 32),
-        (0, 0, 1, "hybrid", 64),
-        (0, 0, 1, "forward", 64),
-        (0, 0, 1, "ibp", 64),
-        (0, 0, 1, "hybrid", 16),
-        (0, 0, 1, "forward", 16),
-        (0, 0, 1, "ibp", 16),
-    ],
-)
-def test_Decomon_permute_box(odd, m_0, m_1, mode, floatx, helpers):
+def test_Decomon_permute_box(mode, floatx, helpers):
+    odd, m_0, m_1 = 0, 0, 1
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -299,21 +248,8 @@ def test_Decomon_permute_box(odd, m_0, m_1, mode, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "odd, m_0, m_1, mode, floatx",
-    [
-        (0, 0, 1, "hybrid", 32),
-        (0, 0, 1, "forward", 32),
-        (0, 0, 1, "ibp", 32),
-        (0, 0, 1, "hybrid", 64),
-        (0, 0, 1, "forward", 64),
-        (0, 0, 1, "ibp", 64),
-        (0, 0, 1, "hybrid", 16),
-        (0, 0, 1, "forward", 16),
-        (0, 0, 1, "ibp", 16),
-    ],
-)
-def test_Decomon_permute_box_nodc(odd, m_0, m_1, mode, floatx, helpers):
+def test_Decomon_permute_box_nodc(mode, floatx, helpers):
+    odd, m_0, m_1 = 0, 0, 1
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -374,18 +310,8 @@ def test_Decomon_permute_box_nodc(odd, m_0, m_1, mode, floatx, helpers):
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "odd, m_0, m_1, shared, floatx",
-    [
-        (0, 0, 1, False, 32),
-        (0, 0, 1, True, 32),
-        (0, 0, 1, False, 64),
-        (0, 0, 1, True, 64),
-        (0, 0, 1, False, 16),
-        (0, 0, 1, True, 16),
-    ],
-)
-def test_Decomon_permute_to_monotonic_box(odd, m_0, m_1, shared, floatx, helpers):
+def test_Decomon_permute_to_monotonic_box(shared, floatx, helpers):
+    odd, m_0, m_1 = 0, 0, 1
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()

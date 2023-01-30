@@ -7,17 +7,6 @@ import tensorflow.python.keras.backend as K
 from decomon.metrics.utils import categorical_cross_entropy
 
 
-@pytest.mark.parametrize(
-    "odd, mode, floatx",
-    [
-        (0, "hybrid", 32),
-        (1, "hybrid", 32),
-        (0, "forward", 32),
-        (1, "forward", 32),
-        (0, "ibp", 32),
-        (1, "ibp", 32),
-    ],
-)
 def test_categorical_cross_entropy(odd, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
