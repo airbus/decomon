@@ -1,0 +1,8 @@
+name: nb-decomon-py3.7
+channels:
+  - defaults
+dependencies:
+  - python=3.7
+  - pip
+  - pip:
+      - ..  # decomon
