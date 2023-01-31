@@ -1,5 +1,8 @@
 name: pypi
 
+env:
+  MAIN_REPO_NAME: 'airbus/decomon'
+
 on:
   release:
     types: [published]
@@ -37,7 +40,7 @@ jobs:
     - name: Publish package to TestPyPI (only for forks)
       env:
         TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
-      if: github.repository != 'airbus/decomon' && env.TEST_PYPI_API_TOKEN != ''
+      if: github.repository != env.MAIN_REPO_NAME && env.TEST_PYPI_API_TOKEN != ''
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}
@@ -45,7 +48,7 @@ jobs:
     - name: Publish package to PyPI (main repo)
       env:
         PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-      if: github.repository == 'airbus/decomon' && env.PYPI_API_TOKEN != ''
+      if: github.repository == env.MAIN_REPO_NAME && env.PYPI_API_TOKEN != ''
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
@@ -62,7 +65,7 @@ jobs:
           version=${{ needs.deploy.outputs.package_version }}
           old_pip_spec_pattern="\(pip.*install.*\)git+https.*egg=decomon"
           new_pip_spec_pattern="\1decomon==$version"
-          if ${{ github.repository != 'airbus/discrete-optimization' && secrets.TEST_PYPI_API_TOKEN != '' }} == 'true'; then
+          if ${{ github.repository != env.MAIN_REPO_NAME && secrets.TEST_PYPI_API_TOKEN != '' }} == 'true'; then
             # install from TestPypi if on a fork
             new_pip_spec_pattern="${new_pip_spec_pattern} --extra-index-url https://test.pypi.org/simple/"
           fi
