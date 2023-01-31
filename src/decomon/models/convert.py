@@ -246,44 +246,55 @@ def clone(
 
     if len(convex_domain) == 0 or convex_domain["name"] != Ball.name:
 
-        u_c_tensor = Lambda(lambda z: z[:, 1], dtype=z_tensor.dtype)(z_tensor)
-        l_c_tensor = Lambda(lambda z: z[:, 0], dtype=z_tensor.dtype)(z_tensor)
+        if ibp_:
+            u_c_tensor = Lambda(lambda z: z[:, 1], dtype=z_tensor.dtype)(z_tensor)
+            l_c_tensor = Lambda(lambda z: z[:, 0], dtype=z_tensor.dtype)(z_tensor)
 
-        z_value = K.cast(0.0, z_tensor.dtype)
-        o_value = K.cast(1.0, z_tensor.dtype)
-        W = Lambda(lambda z: tf.linalg.diag(z_value * z[:, 0] + o_value), dtype=z_tensor.dtype)(z_tensor)
-        b = Lambda(lambda z: z_value * z[:, 1], dtype=z_tensor.dtype)(z_tensor)
+        if forward_:
+            z_value = K.cast(0.0, z_tensor.dtype)
+            o_value = K.cast(1.0, z_tensor.dtype)
+            W = Lambda(lambda z: tf.linalg.diag(z_value * z[:, 0] + o_value), dtype=z_tensor.dtype)(z_tensor)
+            b = Lambda(lambda z: z_value * z[:, 1], dtype=z_tensor.dtype)(z_tensor)
 
     else:
 
         if convex_domain["p"] == np.inf:
             radius = convex_domain["eps"]
+            if ibp_:
+                u_c_tensor = Lambda(
+                    lambda var: var + K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
+                )(z_tensor)
+                l_c_tensor = Lambda(
+                    lambda var: var - K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
+                )(z_tensor)
+            if forward_:
+                z_value = K.cast(0.0, model.layers[0].dtype)
+                o_value = K.cast(1.0, model.layers[0].dtype)
 
-            u_c_tensor = Lambda(
-                lambda var: var + K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
-            )(z_tensor)
-            l_c_tensor = Lambda(
-                lambda var: var - K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
-            )(z_tensor)
-
-            z_value = K.cast(0.0, model.layers[0].dtype)
-            o_value = K.cast(1.0, model.layers[0].dtype)
-
-            W = tf.linalg.diag(z_value * u_c_tensor + o_value)
-            b = z_value * u_c_tensor
+                W = tf.linalg.diag(z_value * u_c_tensor + o_value)
+                b = z_value * u_c_tensor
 
         else:
             z_value = K.cast(0.0, model.layers[0].dtype)
             o_value = K.cast(1.0, model.layers[0].dtype)
 
             def get_bounds(z):
-                W = tf.linalg.diag(z_value * z + o_value)
-                b = z_value * z
-                u_c_ = get_upper(z, W, b, convex_domain)
-                l_c_ = get_lower(z, W, b, convex_domain)
-                return [W, b, u_c_, l_c_]
+                output=[]
+                if forward_:
+                    W = tf.linalg.diag(z_value * z + o_value)
+                    b = z_value * z
+                    output+=[W,b]
+                if ibp_:
+                    u_c_ = get_upper(z, W, b, convex_domain)
+                    l_c_ = get_lower(z, W, b, convex_domain)
+                    output+=[u_c_, l_c_]
+                return output
 
-            W, b, u_c_tensor, l_c_tensor = get_bounds(z_tensor)
+            output_ = get_bounds(z_tensor)
+            if ibp_:
+                u_c_tensor, l_c_tensor=output[-2:]
+            if forward_:
+                W, b = output[:2]
 
     if ibp_ and forward_:
         input_tensors = [z_tensor] + [u_c_tensor, W, b] + [l_c_tensor, W, b]
