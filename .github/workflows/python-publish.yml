@@ -53,14 +53,14 @@ jobs:
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
 
-  update-tutorials-for-colab:
+  update-tutorials-for-colab-and-binder:
     needs: [deploy]
     runs-on: ubuntu-latest
     outputs:
       tuto-tag-name: ${{ steps.push-tuto-release-tag.outputs.new_tag_name }}
     steps:
       - uses: actions/checkout@v3
-      - name: replace decomon version to install in notebooks
+      - name: replace decomon version to install in colab notebooks
         run: |
           version=${{ needs.deploy.outputs.package_version }}
           old_pip_spec_pattern="\(pip.*install.*\)git+https.*egg=decomon"
@@ -70,7 +70,20 @@ jobs:
             new_pip_spec_pattern="${new_pip_spec_pattern} --extra-index-url https://test.pypi.org/simple/"
           fi
           sed -i -e "s|${old_pip_spec_pattern}|${new_pip_spec_pattern}|" tutorials/*.ipynb
-      - name: push it on a dedicated tag
+      - name: replace decomon version to install in binder environment
+        run: |
+          version=${{ needs.deploy.outputs.package_version }}
+          linefilter="/^name/!"
+          old_pip_spec_pattern="\(\s*\)-.*decomon.*$"
+          new_pip_spec_pattern="\1- decomon==$version"
+          if ${{ github.repository != env.MAIN_REPO_NAME && secrets.TEST_PYPI_API_TOKEN != '' }} == 'true'; then
+            # install from TestPypi if on a fork
+            new_pip_spec_pattern="${new_pip_spec_pattern}\n\1- --extra-index-url https://test.pypi.org/simple/"
+          fi
+          sed_command="${linefilter}s|${old_pip_spec_pattern}|${new_pip_spec_pattern}|"
+          echo sed -i -e ${sed_command} binder/environment.yml
+          sed -i -e "${sed_command}" binder/environment.yml
+      - name: push modifications on a dedicated tag
         id: push-tuto-release-tag
         run: |
           current_tag_name=${GITHUB_REF/refs\/tags\//}  # stripping refs/tags/
@@ -78,7 +91,7 @@ jobs:
           echo ${new_tag_name}
           git config user.name "Actions"
           git config user.email "actions@github.com"
-          git commit tutorials/*.ipynb -m "Install appropriate version of decomon"
+          git commit binder/environment.yml tutorials/*.ipynb -m "Install appropriate version of decomon"
           git tag ${new_tag_name} -m "Release ${current_tag_name} + installation in tutorials updated"
           git push origin ${new_tag_name}
           # store new tag name
@@ -87,8 +100,8 @@ jobs:
   build-doc:
     uses: ./.github/workflows/build-doc.yml
     with:
-      notebooks-branch: ${{ needs.update-tutorials-for-colab.outputs.tuto-tag-name }}
-    needs: ["update-tutorials-for-colab"]
+      notebooks-branch: ${{ needs.update-tutorials-for-colab-and-binder.outputs.tuto-tag-name }}
+    needs: ["update-tutorials-for-colab-and-binder"]
 
   deploy-doc:
     needs: [build-doc, deploy]
