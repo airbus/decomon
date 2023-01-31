@@ -25,7 +25,7 @@ def test_relu_backward_1D_box(n, mode, floatx, helpers):
         decimal = 2
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
 
@@ -90,11 +90,11 @@ def test_add_backward_1D_box(n_0, n_1, mode, floatx, helpers):
         decimal = 2
 
     inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = helpers.get_standart_values_1d_box(n_0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_1d_box(n_0, dc_decomp=False)
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0 = inputs_0_
 
     inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1_ = helpers.get_standart_values_1d_box(n_1, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_1d_box(n_1, dc_decomp=False)
     x_1, y_1, z_1, u_c_1, W_u_1, b_u_1, l_c_1, W_l_1, b_l_1 = inputs_1_
 
     w_out = Input((1, 1), dtype=K.floatx())
@@ -192,11 +192,11 @@ def test_substract_backward_1D_box(n_0, n_1, mode, floatx, helpers):
         decimal = 2
 
     inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = helpers.get_standart_values_1d_box(n_0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_1d_box(n_0, dc_decomp=False)
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0 = inputs_0_
 
     inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1_ = helpers.get_standart_values_1d_box(n_1, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_1d_box(n_1, dc_decomp=False)
     x_1, y_1, z_1, u_c_1, W_u_1, b_u_1, l_c_1, W_l_1, b_l_1 = inputs_1_
 
     if mode == "hybrid":
@@ -299,11 +299,11 @@ def test_maximum_backward_1D_box(n_0, n_1, mode, floatx, helpers):
         decimal = 2
 
     inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = helpers.get_standart_values_1d_box(n_0, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_1d_box(n_0, dc_decomp=False)
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0 = inputs_0_
 
     inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1_ = helpers.get_standart_values_1d_box(n_1, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_1d_box(n_1, dc_decomp=False)
     x_1, y_1, z_1, u_c_1, W_u_1, b_u_1, l_c_1, W_l_1, b_l_1 = inputs_1_
 
     if mode == "hybrid":

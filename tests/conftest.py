@@ -78,7 +78,7 @@ class Helpers:
         return not (method in {"ibp", "crown-ibp"} and mode != "ibp")
 
     @staticmethod
-    def get_standart_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
+    def get_standard_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
         """
 
         :param n: A set of functions with their monotonic
@@ -288,7 +288,7 @@ class Helpers:
                 b_l_0,
                 h_0,
                 g_0,
-            ) = Helpers.get_standart_values_1d_box(0, dc_decomp)
+            ) = Helpers.get_standard_values_1d_box(0, dc_decomp)
             (
                 x_1,
                 y_1,
@@ -301,7 +301,7 @@ class Helpers:
                 b_l_1,
                 h_1,
                 g_1,
-            ) = Helpers.get_standart_values_1d_box(1, dc_decomp)
+            ) = Helpers.get_standard_values_1d_box(1, dc_decomp)
         else:
             (
                 x_0,
@@ -313,7 +313,7 @@ class Helpers:
                 l_c_0,
                 w_l_0,
                 b_l_0,
-            ) = Helpers.get_standart_values_1d_box(0, dc_decomp)
+            ) = Helpers.get_standard_values_1d_box(0, dc_decomp)
             (
                 x_1,
                 y_1,
@@ -324,7 +324,7 @@ class Helpers:
                 l_c_1,
                 w_l_1,
                 b_l_1,
-            ) = Helpers.get_standart_values_1d_box(1, dc_decomp)
+            ) = Helpers.get_standard_values_1d_box(1, dc_decomp)
 
         if not odd:
 
@@ -369,7 +369,7 @@ class Helpers:
                 b_l_2,
                 h_2,
                 g_2,
-            ) = Helpers.get_standart_values_1d_box(2)
+            ) = Helpers.get_standard_values_1d_box(2)
 
             # output (x_0+x_1, x_0+2*x_0, x_2)
             x_ = np.concatenate([x_0, x_1, x_2], -1)
@@ -425,7 +425,7 @@ class Helpers:
                 b_l_0,
                 h_0,
                 g_0,
-            ) = Helpers.get_standart_values_1d_box(m, dc_decomp=dc_decomp)
+            ) = Helpers.get_standard_values_1d_box(m, dc_decomp=dc_decomp)
         else:
             (
                 x_,
@@ -437,7 +437,7 @@ class Helpers:
                 l_c_0,
                 w_l_0,
                 b_l_0,
-            ) = Helpers.get_standart_values_1d_box(m, dc_decomp=dc_decomp)
+            ) = Helpers.get_standard_values_1d_box(m, dc_decomp=dc_decomp)
 
         y_ = np.concatenate([(i + 1) * y_0 for i in range(n * n)], -1).reshape((-1, n, n))
         b_u_ = np.concatenate([(i + 1) * b_u_0 for i in range(n * n)], -1).reshape((-1, n, n))
@@ -891,7 +891,7 @@ class Helpers:
                 b_l_0,
                 h_0,
                 g_0,
-            ) = Helpers.get_standart_values_1d_box(0, dc_decomp)
+            ) = Helpers.get_standard_values_1d_box(0, dc_decomp)
             (
                 x_1,
                 y_1,
@@ -904,7 +904,7 @@ class Helpers:
                 b_l_1,
                 h_1,
                 g_1,
-            ) = Helpers.get_standart_values_1d_box(3, dc_decomp)
+            ) = Helpers.get_standard_values_1d_box(3, dc_decomp)
         else:
             (
                 x_0,
@@ -916,7 +916,7 @@ class Helpers:
                 l_c_0,
                 w_l_0,
                 b_l_0,
-            ) = Helpers.get_standart_values_1d_box(0, dc_decomp)
+            ) = Helpers.get_standard_values_1d_box(0, dc_decomp)
             (
                 x_1,
                 y_1,
@@ -927,7 +927,7 @@ class Helpers:
                 l_c_1,
                 w_l_1,
                 b_l_1,
-            ) = Helpers.get_standart_values_1d_box(1, dc_decomp)
+            ) = Helpers.get_standard_values_1d_box(1, dc_decomp)
 
         if not odd:
 
@@ -968,9 +968,9 @@ class Helpers:
                     b_l_2,
                     h_2,
                     g_2,
-                ) = Helpers.get_standart_values_1d_box(2, dc_decomp)
+                ) = Helpers.get_standard_values_1d_box(2, dc_decomp)
             else:
-                (x_2, y_2, z_2, u_c_2, w_u_2, b_u_2, l_c_2, w_l_2, b_l_2) = Helpers.get_standart_values_1d_box(
+                (x_2, y_2, z_2, u_c_2, w_u_2, b_u_2, l_c_2, w_l_2, b_l_2) = Helpers.get_standard_values_1d_box(
                     2, dc_decomp
                 )
             x_ = np.concatenate([x_0, x_1, x_2], -1)

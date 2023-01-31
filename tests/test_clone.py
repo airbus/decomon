@@ -20,7 +20,7 @@ def test_convert_1D(n, method, mode, floatx, helpers):
         decimal = 2
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]

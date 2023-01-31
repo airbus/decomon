@@ -72,8 +72,8 @@ def test_DecomonOp_1D_box(decomon_op_class, tensor_op, decomon_op_kwargs, n, mod
 
     inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
-    inputs_1_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1
@@ -192,8 +192,8 @@ def test_Decomon_1D_box_to_monotonic(layer_class, tensor_op, layer_kwargs, n, he
 
     inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
-    inputs_1_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
+    inputs_0_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
+    inputs_1_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
 
     ref_op([inputs_0[0], inputs_1[0]])
 

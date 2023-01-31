@@ -26,7 +26,7 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx, helpers):
     ref_dense = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
 
     inputs = helpers.get_tensor_decomposition_1d_box()
-    inputs_ = helpers.get_standart_values_1d_box(n)
+    inputs_ = helpers.get_standard_values_1d_box(n)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]
@@ -318,7 +318,7 @@ def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared, helpers):
     dense_ref = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
 
     inputs = helpers.get_tensor_decomposition_1d_box()
-    inputs_ = helpers.get_standart_values_1d_box(n)
+    inputs_ = helpers.get_standard_values_1d_box(n)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
     z_ = inputs_[2]
     x_ = inputs_[0]
@@ -533,7 +533,7 @@ def test_DecomonDense_1D_box_nodc(n, activation, helpers):
     ref_dense = Dense(1, use_bias=True, activation=activation)
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     output = monotonic_dense(inputs[2:])
