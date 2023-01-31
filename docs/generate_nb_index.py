@@ -57,7 +57,10 @@ def get_colab_link(
     notebooks_branch: str,
     notebook_relative_path: str,
 ) -> str:
-    return f"https://colab.research.google.com/github/{notebooks_repo_name}/blob/{notebooks_branch}/{notebook_relative_path}"
+    if notebooks_repo_name:
+        return f"https://colab.research.google.com/github/{notebooks_repo_name}/blob/{notebooks_branch}/{notebook_relative_path}"
+    else:
+        return ""
 
 
 def get_binder_link(
@@ -66,43 +69,77 @@ def get_binder_link(
     notebooks_repo_url: str,
     notebooks_branch: str,
     notebook_relative_path: str,
+    notebooks_repo_name: str,
+    use_nbgitpuller: bool = False,
 ) -> str:
     # binder hub url
     jupyterhub = urllib.parse.urlsplit("https://mybinder.org")
 
-    # path to the binder env
-    binder_path = f"v2/gh/{binder_env_repo_name}/{binder_env_branch}"
+    if use_nbgitpuller:
+        # path to the binder env
+        binder_path = f"v2/gh/{binder_env_repo_name}/{binder_env_branch}"
 
-    # nbgitpuller query
-    notebooks_repo_basename = os.path.basename(notebooks_repo_url)
-    urlpath = f"tree/{notebooks_repo_basename}/{notebook_relative_path}"
-    next_url_params = urllib.parse.urlencode(
-        {
-            "repo": notebooks_repo_url,
-            "urlpath": urlpath,
-            "branch": notebooks_branch,
-        }
-    )
-    next_url = f"git-pull?{next_url_params}"
-    query = urllib.parse.urlencode({"urlpath": next_url})
-
-    # full link
-    link = urllib.parse.urlunsplit(
-        urllib.parse.SplitResult(
-            scheme=jupyterhub.scheme,
-            netloc=jupyterhub.netloc,
-            path=binder_path,
-            query=query,
-            fragment="",
+        # nbgitpuller query
+        notebooks_repo_basename = os.path.basename(notebooks_repo_url)
+        urlpath = f"tree/{notebooks_repo_basename}/{notebook_relative_path}"
+        next_url_params = urllib.parse.urlencode(
+            {
+                "repo": notebooks_repo_url,
+                "urlpath": urlpath,
+                "branch": notebooks_branch,
+            }
         )
-    )
+        next_url = f"git-pull?{next_url_params}"
+        query = urllib.parse.urlencode({"urlpath": next_url})
+
+        # full link
+        link = urllib.parse.urlunsplit(
+            urllib.parse.SplitResult(
+                scheme=jupyterhub.scheme,
+                netloc=jupyterhub.netloc,
+                path=binder_path,
+                query=query,
+                fragment="",
+            )
+        )
+    else:
+        if notebooks_repo_name:
+            # path to the binder env
+            binder_path = f"v2/gh/{notebooks_repo_name}/{notebooks_branch}"
+
+            # query to open proper notebook
+            query = urllib.parse.urlencode({"labpath": notebook_relative_path})
+
+            # full link
+            link = urllib.parse.urlunsplit(
+                urllib.parse.SplitResult(
+                    scheme=jupyterhub.scheme,
+                    netloc=jupyterhub.netloc,
+                    path=binder_path,
+                    query=query,
+                    fragment="",
+                )
+            )
+        else:
+            link = ""
 
     return link
 
 
-def get_repo_n_branches_for_binder_n_github_links() -> Tuple[bool, str, str, str, str, str]:
+def get_repo_n_branches_for_binder_n_github_links() -> Tuple[bool, str, str, str, str, str, bool]:
     # repos + branches to use for binder environment and notebooks content.
     creating_links = True
+    use_nbgitpuller = False
+    try:
+        use_nbgitpuller_str = os.environ["AUTODOC_BINDER_NBGITPULLER"]
+        try:
+            use_nbgitpuller_int = int(use_nbgitpuller_str)
+        except ValueError:
+            use_nbgitpuller_int = 1
+        if (use_nbgitpuller_str.lower() != "false") and (use_nbgitpuller_int != 0):
+            use_nbgitpuller = True
+    except KeyError:
+        pass
     try:
         binder_env_repo_name = os.environ["AUTODOC_BINDER_ENV_GH_REPO_NAME"]
     except KeyError:
@@ -137,6 +174,7 @@ def get_repo_n_branches_for_binder_n_github_links() -> Tuple[bool, str, str, str
         notebooks_branch,
         binder_env_repo_name,
         binder_env_branch,
+        use_nbgitpuller,
     )
 
 
@@ -152,6 +190,7 @@ if __name__ == "__main__":
         notebooks_branch,
         binder_env_repo_name,
         binder_env_branch,
+        use_nbgitpuller,
     ) = get_repo_n_branches_for_binder_n_github_links()
     # loop on notebooks sorted alphabetically by filenames
     for notebook_filepath in notebook_filepaths:
@@ -168,8 +207,13 @@ if __name__ == "__main__":
                 notebooks_repo_url=notebooks_repo_url,
                 notebooks_branch=notebooks_branch,
                 notebook_relative_path=notebook_relative_path,
+                notebooks_repo_name=notebooks_repo_name,
+                use_nbgitpuller=use_nbgitpuller,
             )
-            binder_badge = f"[![Binder](https://mybinder.org/badge_logo.svg)]({binder_link})"
+            if binder_link:
+                binder_badge = f"[![Binder](https://mybinder.org/badge_logo.svg)]({binder_link})"
+            else:
+                binder_badge = ""
             github_link = get_github_link(
                 notebooks_repo_url=notebooks_repo_url,
                 notebooks_branch=notebooks_branch,
@@ -181,10 +225,19 @@ if __name__ == "__main__":
                 notebooks_branch=notebooks_branch,
                 notebook_relative_path=notebook_relative_path,
             )
-            colab_badge = f"[![Colab](https://colab.research.google.com/assets/colab-badge.svg)]({colab_link})"
+            if colab_link:
+                colab_badge = f"[![Colab](https://colab.research.google.com/assets/colab-badge.svg)]({colab_link})"
+            else:
+                colab_badge = ""
             # markdown item
             # notebooks_list_text += f"{github_badge}\n{binder_badge}\n\n"
-            notebooks_list_text += f"{github_badge}\n{colab_badge}\n\n"
+            notebooks_list_text += f"{github_badge}\n"
+            if colab_badge:
+                notebooks_list_text += f"{colab_badge}\n"
+            if binder_badge:
+                notebooks_list_text += f"{binder_badge}\n"
+            notebooks_list_text += "\n"
+
         # description
         notebooks_list_text += "".join(description_lines)
         notebooks_list_text += "\n\n"
