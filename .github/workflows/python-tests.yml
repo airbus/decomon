@@ -111,3 +111,4 @@ jobs:
     uses: ./.github/workflows/deploy-doc.yml
     with:
       doc-version: ${{ needs.build-doc.outputs.doc-version }}
+      binder-env-fullref: ${{ github.repository }}/${{ github.ref_name}}

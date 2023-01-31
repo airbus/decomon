@@ -17,7 +17,27 @@ on:
         required: false
         default: "docs/build/html"
         type: string
+      binder-env-fullref:
+        description: "Full ref of the binder env to build. The build is triggered only if not empty."
+        required: false
+        default: ""
+        type: string
 jobs:
+  trigger-binder-build:
+    runs-on: ubuntu-latest
+    if: inputs.binder-env-fullref != ''
+    steps:
+      - uses: actions/checkout@v3  # checkout triggering branch to get scripts/trigger_binder.sh
+      - name: Trigger a build for default binder env ref on each BinderHub deployments in the mybinder.org federation
+        run: |
+          binder_env_full_ref=${{ inputs.binder-env-fullref }}
+          echo Triggering binder environment build for ${binder_env_full_ref}
+          bash scripts/trigger_binder.sh https://gke.mybinder.org/build/gh/${binder_env_full_ref}
+          bash scripts/trigger_binder.sh https://ovh.mybinder.org/build/gh/${binder_env_full_ref}
+          bash scripts/trigger_binder.sh https://ovh2.mybinder.org/build/gh/${binder_env_full_ref}
+          bash scripts/trigger_binder.sh https://turing.mybinder.org/build/gh/${binder_env_full_ref}
+          bash scripts/trigger_binder.sh https://gesis.mybinder.org/build/gh/${binder_env_full_ref}
+
   deploy-doc:
     runs-on: ubuntu-latest
     steps:
