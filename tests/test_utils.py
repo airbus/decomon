@@ -45,7 +45,7 @@ def test_get_upper_box_numpy(n, floatx, helpers):
     if floatx == 16:
         K.set_epsilon(1e-4)
     inputs = helpers.get_tensor_decomposition_1d_box()
-    inputs_ = helpers.get_standart_values_1d_box(n)
+    inputs_ = helpers.get_standard_values_1d_box(n)
 
     x, y, x_0, u_c, W_u, b_u, _, _, _, _, _ = inputs
     x_, y_, x_0_, u_c_, W_u_, b_u_, _, _, _, _, _ = inputs_
@@ -75,7 +75,7 @@ def test_get_upper_box(n, floatx, helpers):
     if floatx == 16:
         K.set_epsilon(1e-4)
     inputs = helpers.get_tensor_decomposition_1d_box()
-    inputs_ = helpers.get_standart_values_1d_box(n)
+    inputs_ = helpers.get_standard_values_1d_box(n)
 
     x, y, x_0, u_c, W_u, b_u, _, _, _, _, _ = inputs
     _, _, x_0_, u_c_, W_u_, b_u_, _, _, _, _, _ = inputs_
@@ -115,7 +115,7 @@ def test_get_lower_box(n, floatx, helpers):
     if floatx == 16:
         K.set_epsilon(1e-4)
     inputs = helpers.get_tensor_decomposition_1d_box()
-    inputs_ = helpers.get_standart_values_1d_box(n)
+    inputs_ = helpers.get_standard_values_1d_box(n)
     x, y, x_0, _, _, _, l_c, W_l, b_l, _, _ = inputs
 
     lower = get_lower(x_0, W_l, b_l, {})
@@ -151,7 +151,7 @@ def test_get_lower_upper_box(n, floatx, helpers):
     if floatx == 16:
         K.set_epsilon(1e-4)
     inputs = helpers.get_tensor_decomposition_1d_box()
-    inputs_ = helpers.get_standart_values_1d_box(n)
+    inputs_ = helpers.get_standard_values_1d_box(n)
     x, y, x_0, _, W_u, b_u, _, W_l, b_l, _, _ = inputs
 
     lower = get_lower(x_0, W_l, b_l, {})
@@ -185,7 +185,7 @@ def test_relu_1D_box(n, mode, floatx, helpers):
     else:
         decimal = 5
     inputs = helpers.get_tensor_decomposition_1d_box()
-    inputs_ = helpers.get_standart_values_1d_box(n)
+    inputs_ = helpers.get_standard_values_1d_box(n)
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs  # tensors
     (
@@ -912,7 +912,7 @@ def test_add_nodc(odd, helpers):
 def test_relu_1D_box_nodc(n, helpers):
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
 
     output = relu_(inputs[2:], dc_decomp=False)

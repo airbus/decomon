@@ -23,7 +23,7 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, previous, mode, floatx, 
         decimal = 2
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     layer_ = Dense(1, use_bias=use_bias, activation=activation, dtype=K.floatx())
@@ -240,7 +240,7 @@ def test_Backward_DecomonDense_1D_box_model(n, activation, helpers):
     layer = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=False)
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     output = layer(inputs[2:])

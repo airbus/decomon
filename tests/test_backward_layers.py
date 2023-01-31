@@ -23,7 +23,7 @@ def test_Backward_Activation_1D_box_model(n, activation, mode, previous, floatx,
     layer = DecomonActivation(activation, dc_decomp=False, mode=mode, dtype=K.floatx())
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     if mode == "hybrid":

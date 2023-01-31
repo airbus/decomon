@@ -8,7 +8,7 @@ from decomon.models.backward_cloning import get_backward_model as convert_backwa
 from decomon.models.forward_cloning import convert_forward
 
 
-def test_convert_forward_1D(n, mode, floatx, helpers):
+def test_convert_backward_1D(n, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -18,7 +18,7 @@ def test_convert_forward_1D(n, mode, floatx, helpers):
         decimal = 2
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = helpers.get_standart_values_1d_box(n, dc_decomp=False)
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
     x_ = inputs_[0]
     z_ = inputs_[2]
