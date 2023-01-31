@@ -512,11 +512,11 @@ def convert_2_mode(mode_from, mode_to, convex_domain, dtype=K.floatx()):
                 z_value = K.cast(0.0, u_c.dtype)
                 o_value = K.cast(1.0, u_c.dtype)
                 w = tf.linalg.diag(z_value * l_c)
-                b = z_value * l_c + o_value
+                #b = z_value * l_c + o_value
                 w_u = w
-                b_u = b
+                b_u = u_c
                 w_l = w
-                b_l = b
+                b_l = l_c
             else:
                 raise ValueError(f"Unknown mode {mode_to}")
         else:
