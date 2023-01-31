@@ -104,7 +104,8 @@ jobs:
     needs: ["update-tutorials-for-colab-and-binder"]
 
   deploy-doc:
-    needs: [build-doc, deploy]
+    needs: [build-doc, deploy, update-tutorials-for-colab-and-binder]
     uses: ./.github/workflows/deploy-doc.yml
     with:
       doc-version: ${{ needs.build-doc.outputs.doc-version }}
+      binder-env-fullref: ${{ github.repository }}/${{ needs.update-tutorials-for-colab-and-binder.outputs.tuto-tag-name }}
