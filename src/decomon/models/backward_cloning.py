@@ -339,7 +339,7 @@ def crown_model(
     forward_map=None,
     softmax_to_linear=True,
     joint=True,
-    layer_fn=get_backward_,
+    layer_fn=None,
     fuse=True,
     **kwargs,
 ):
@@ -368,11 +368,11 @@ def crown_model(
     # layer_fn
     ##########
     has_iter = False
+
     if layer_fn is not None and len(layer_fn.__code__.co_varnames) == 1 and "layer" in layer_fn.__code__.co_varnames:
         has_iter = True
 
-    if not has_iter:
-
+    elif not has_iter:
         def func(layer):
             return get_backward_(layer, mode=get_mode(IBP, forward))
 
@@ -463,6 +463,7 @@ def get_backward_model(
         forward_map = {}
     if len(back_bounds):
         if len(back_bounds) == 1:
+            # TO DO: this step can be optimized by using the last layer
             C = back_bounds[0]
             bias = K.cast(0.0, model.layers[0].dtype) * C[:, 0]
             back_bounds = [C, bias] * 2
@@ -484,7 +485,6 @@ def get_backward_model(
     )
 
     input_tensors, output, backward_map, toto = result
-
     output = convert_2_mode(
         mode_from=get_mode(IBP, forward),
         mode_to=get_mode(final_ibp, final_forward),
