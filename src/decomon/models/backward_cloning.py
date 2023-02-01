@@ -203,10 +203,13 @@ def crown_(
         backward_layer, backward_map_ = retrieve_layer(node, len(backward_bounds), layer_fn, backward_map, joint)
         backward_map.update(backward_map_)
         # to retrieve
-        backward_bounds_ = backward_layer.call_no_previous(inputs)
+        backward_layer.previous= False
+        #backward_bounds_ = backward_layer.call_no_previous(inputs)
+        backward_bounds_ = backward_layer(inputs)
         # update back_bounds
         if id(node) not in output_map.keys():
-            backward_bounds_ = backward_layer.call_no_previous(inputs)
+            #backward_bounds_ = backward_layer.call_no_previous(inputs)
+            backward_bounds_ = backward_layer(inputs)
             output_map[id(node)] = backward_bounds_
         else:
             backward_bounds_ = output_map[id(node)]
