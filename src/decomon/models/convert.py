@@ -292,9 +292,9 @@ def clone(
 
             output_ = get_bounds(z_tensor)
             if ibp_:
-                u_c_tensor, l_c_tensor=output[-2:]
+                u_c_tensor, l_c_tensor=output_[-2:]
             if forward_:
-                W, b = output[:2]
+                W, b = output_[:2]
 
     if ibp_ and forward_:
         input_tensors = [z_tensor] + [u_c_tensor, W, b] + [l_c_tensor, W, b]
