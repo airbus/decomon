@@ -47,7 +47,12 @@ class BackwardDense(BackwardLayer):
 
         if convex_domain is None:
             convex_domain = {}
-        self.layer = layer
+        self.layer = layer # should be removed, not good for config
+        self.kernel = self.layer.kernel
+        self.use_bias = self.layer.use_bias
+        if self.layer.use_bias:
+            self.bias = self.layer.bias
+
         self.activation = get(layer.get_config()["activation"])
         self.activation_name = layer.get_config()["activation"]
         self.slope = slope
@@ -83,7 +88,7 @@ class BackwardDense(BackwardLayer):
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
         # start with the activation: determine the upper and lower bounds before the weights
-        weights = self.layer.kernel
+        weights = self.kernel
 
         if self.activation_name != "linear":
             x = self.layer.call_linear(x_)
@@ -121,8 +126,8 @@ class BackwardDense(BackwardLayer):
         if len(w_out_l.shape) == 2:
             w_out_l = tf.linalg.diag(w_out_l)
 
-        if self.layer.use_bias:
-            bias = self.layer.bias
+        if self.use_bias:
+            bias = self.bias
             bias = K.expand_dims(K.expand_dims(bias, 0), -1)  # (None, n_out, 1)
             b_out_u_ = K.sum(w_out_u * bias, 1) + b_out_u  # (None, n_back)
             b_out_l_ = K.sum(w_out_l * bias, 1)
@@ -145,7 +150,7 @@ class BackwardDense(BackwardLayer):
             x_ = self.layer.input
 
         # start with the activation: determine the upper and lower bounds before the weights
-        weights = self.layer.kernel
+        weights = self.kernel
         if self.activation_name != "linear":
             x = self.layer.call_linear(x_)
             if self.finetune:
@@ -183,8 +188,8 @@ class BackwardDense(BackwardLayer):
             if len(w_out_l.shape) == 2:
                 w_out_l = tf.linalg.diag(w_out_l)
             weights = K.expand_dims(K.expand_dims(weights, 0), -1)  # (1, n_in, n_out, 1)
-            if self.layer.use_bias:
-                bias = self.layer.bias
+            if self.use_bias:
+                bias = self.bias
                 bias = K.expand_dims(K.expand_dims(bias, 0), -1)  # (None, n_out, 1)
                 b_out_u_ = K.sum(w_out_u * bias, 1) + b_out_u  # (None, n_back)
                 b_out_l_ = K.sum(w_out_l * bias, 1) + b_out_l
@@ -201,8 +206,8 @@ class BackwardDense(BackwardLayer):
             y_ = x_[-1]
             z_value = K.cast(0.0, self.dtype)
             w_out_u_, w_out_l_ = [weights[None] + z_value * K.expand_dims(y_, -1)] * 2
-            if self.layer.use_bias:
-                bias = self.layer.bias
+            if self.use_bias:
+                bias = self.bias
                 b_out_u_, b_out_l_ = [bias[None] + z_value * w_out_u_[:, 0]] * 2
             else:
                 b_out_u_, b_out_l_ = [z_value * w_out_u_[:, 0]] * 2
@@ -222,7 +227,9 @@ class BackwardDense(BackwardLayer):
         Returns:
 
         """
-
+        self._trainable_weights=[self.kernel]
+        if self.use_bias:
+            self._trainable_weights.append(self.bias)
         if self.finetune and self.activation_name != "linear":
             units = self.layer.units
             self.alpha_b_l = self.add_weight(
@@ -233,6 +240,7 @@ class BackwardDense(BackwardLayer):
                 self.alpha_b_u = self.add_weight(
                     shape=(units,), initializer="ones", name="alpha_u_b", regularizer=None, constraint=ClipAlpha()
                 )
+
         self.built = True
 
     def freeze_alpha(self):
