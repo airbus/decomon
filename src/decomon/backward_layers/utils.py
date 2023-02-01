@@ -111,19 +111,22 @@ def merge_with_previous(inputs):
     if len(w_b_l.shape) == 2:
         w_b_l = tf.linalg.diag(w_b_l)
 
-    w_b_u_ = K.expand_dims(w_b_u, 1)
-    w_b_l_ = K.expand_dims(w_b_l, 1)
-    w_out_u_ = K.expand_dims(w_out_u, -1)
-    w_out_l_ = K.expand_dims(w_out_l, -1)
-    b_out_u_ = K.expand_dims(b_out_u, -1)
-    b_out_l_ = K.expand_dims(b_out_l, -1)
+    #import pdb; pdb.set_trace()
 
     z_value = K.cast(0.0, dtype=w_out_u.dtype)
+    w_b_u_pos = K.maximum(w_b_u, z_value)
+    w_b_u_neg = K.minimum(w_b_u, z_value)
+    w_b_l_pos = K.maximum(w_b_l, z_value)
+    w_b_l_neg = K.minimum(w_b_l, z_value)
 
-    w_u = K.sum(K.maximum(w_b_u_, z_value) * w_out_u_ + K.minimum(w_b_u_, z_value) * w_out_l_, 2)
-    w_l = K.sum(K.maximum(w_b_l_, z_value) * w_out_l_ + K.minimum(w_b_l_, z_value) * w_out_u_, 2)
-    b_u = K.sum(K.maximum(w_b_u, z_value) * b_out_u_ + K.minimum(w_b_u, z_value) * b_out_l_, 1) + b_b_u
-    b_l = K.sum(K.maximum(w_b_l, z_value) * b_out_l_ + K.minimum(w_b_l, z_value) * b_out_u_, 1) + b_b_l
+    w_u = K.batch_dot(w_out_u, w_b_u_pos, (-1, -2)) +\
+          K.batch_dot(w_out_l, w_b_u_neg, (-1, -2))
+    w_l = K.batch_dot(w_out_l, w_b_l_pos, (-1, -2)) +\
+          K.batch_dot(w_out_u, w_b_l_neg, (-1, -2))
+    b_u = K.batch_dot(b_out_u, w_b_u_pos, (-1, -2)) +\
+          K.batch_dot(b_out_l, w_b_u_neg, (-1, -2)) + b_b_u
+    b_l = K.batch_dot(b_out_l, w_b_l_pos, (-1, -2)) +\
+          K.batch_dot(b_out_u, w_b_l_neg, (-1, -2)) + b_b_l
 
     return [w_u, b_u, w_l, b_l]
 
@@ -196,10 +199,12 @@ def backward_relu_(
     b_u_ = K.expand_dims(b_u_, -1)
     b_l_ = K.expand_dims(b_l_, -1)
 
+
     w_out_u_ = K.maximum(w_out_u, z_value) * w_u_ + K.minimum(w_out_u, z_value) * w_l_
     w_out_l_ = K.maximum(w_out_l, z_value) * w_l_ + K.minimum(w_out_l, z_value) * w_u_
     b_out_u_ = K.sum(K.maximum(w_out_u, z_value) * b_u_ + K.minimum(w_out_u, z_value) * b_l_, 1) + b_out_u
     b_out_l_ = K.sum(K.maximum(w_out_l, z_value) * b_l_ + K.minimum(w_out_l, z_value) * b_u_, 1) + b_out_l
+    import pdb; pdb.set_trace()
 
     return w_out_u_, b_out_u_, w_out_l_, b_out_l_
 

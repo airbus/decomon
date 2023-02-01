@@ -701,7 +701,6 @@ class BackwardActivation(BackwardLayer):
 
         # infer the output dimension
         y_ = inputs[-1]
-
         if self.activation_name != "linear":
             if self.finetune:
                 w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
