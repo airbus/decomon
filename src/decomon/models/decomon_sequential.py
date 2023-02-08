@@ -4,7 +4,7 @@ It inherits from keras Sequential class.
 
 """
 
-
+"""
 import inspect
 import warnings
 from copy import deepcopy
@@ -42,7 +42,7 @@ def include_dim_layer_fn(
     forward=True,
     finetune=True,
 ):
-    """include external parameters inside the translation of a layer to its decomon counterpart
+    ""include external parameters inside the translation of a layer to its decomon counterpart
 
     Args:
         layer_fn
@@ -53,7 +53,7 @@ def include_dim_layer_fn(
 
     Returns:
 
-    """
+    ""
     if convex_domain is None:
         convex_domain = {}
     if input_dim <= 0:
@@ -112,7 +112,7 @@ def clone(
     forward=True,
     finetune=False,
 ):
-    """
+    ""
     Args:
         model: Keras model
         input_tensors: List of input tensors to be used as inputs of our
@@ -129,7 +129,7 @@ def clone(
 
     Returns:
         a decomon model
-    """
+    ""
 
     if convex_domain is None:
         convex_domain = {}
@@ -178,7 +178,7 @@ def clone_sequential_model(
     forward=True,
     finetune=False,
 ):
-    """Clone a `Sequential` model instance.
+    ""Clone a `Sequential` model instance.
     Model cloning is similar to calling a model on new inputs,
     except that it creates new layers (and thus new weights) instead
     of sharing the weights of the existing layers.
@@ -203,7 +203,7 @@ def clone_sequential_model(
     Returns:
         An instance of `Sequential` reproducing the behavior of the
         original model with decomon layers.
-    """
+    ""
     if convex_domain is None:
         convex_domain = {}
     if input_dim == -1:
@@ -393,7 +393,7 @@ def clone_functional_model(
     forward=True,
     finetune=False,
 ):
-    """
+    ""
     Args:
         model
         input_tensors: optional list of input tensors to build the model
@@ -410,7 +410,7 @@ def clone_functional_model(
 
     Returns:
 
-    """
+    ""
 
     if convex_domain is None:
         convex_domain = {}
@@ -728,7 +728,7 @@ def convert(
     finetune=False,
     options=None,
 ):
-    """
+    ""
     Args:
         model: Keras model
         input_tensors: input_tensors: List of input tensors to be used
@@ -742,7 +742,7 @@ def convert(
 
     Returns:
         a decomon model
-    """
+    ""
 
     if convex_domain is None:
         convex_domain = {}
@@ -988,13 +988,13 @@ class DecomonSequential(tf.keras.Sequential):
 
 # BACKWARD MODE
 def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, options=None):
-    """
+    ""
     Args:
         model
 
     Returns:
 
-    """
+    ""
     # create inputs for back_bounds
     # the convert mode for an easy use has been activated
     # it implies that the bounds are on the input of the network directly
@@ -1038,14 +1038,14 @@ def get_backward(model, back_bounds=None, slope=V_slope.name, input_dim=-1, opti
 
 
 def get_backward_model_(model, back_bounds, input_model, slope=V_slope.name):
-    """
+    ""
     Args:
         model
         back_bounds
 
     Returns:
 
-    """
+    ""
     # retrieve all layers inside
     if hasattr(model, "dc_decomp") and model.dc_decomp:
         raise NotImplementedError()
@@ -1210,3 +1210,4 @@ def get_backward_layer(layer, back_bounds, input_layers, input_tensors, slope=V_
             back_bounds = join(layer, back_bounds)  # to define
 
     return back_bounds
+"""
