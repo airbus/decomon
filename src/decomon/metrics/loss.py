@@ -5,7 +5,7 @@ from tensorflow.keras.layers import Lambda
 
 from decomon.layers.activations import softmax as softmax_
 from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
-from decomon.models import DecomonModel
+from decomon.models.models import DecomonModel
 from decomon.models.utils import get_mode
 from decomon.utils import get_lower, get_upper, set_mode
 

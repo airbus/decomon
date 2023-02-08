@@ -385,8 +385,10 @@ def frac_pos(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwarg
         x_0, w_u, b_u, w_l, b_l = x
         u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
         l_c = get_lower(x_0, w_u, b_u, convex_domain=convex_domain)
-    if mode == F_HYBRID.name:
+    elif mode == F_HYBRID.name:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
+
+    if mode in [F_FORWARD.name, F_HYBRID.name]:
         u_c_ = 1.0 / l_c
         l_c_ = 1.0 / u_c
 

@@ -596,7 +596,6 @@ class BackwardActivation(BackwardLayer):
             else:
                 self.alpha_b_l = self.add_weight(
                     shape=(
-                        2,
                         input_dim,
                     ),
                     initializer="ones",
@@ -604,8 +603,8 @@ class BackwardActivation(BackwardLayer):
                     regularizer=None,
                     constraint=ClipAlpha(),
                 )
-                alpha_b_l = np.zeros((2, input_dim))
-                alpha_b_l[0] = 1
+                alpha_b_l = np.ones((input_dim,))
+                #alpha_b_l[0] = 1
                 K.set_value(self.alpha_b_l, alpha_b_l)
 
                 if self.activation_name[:4] != "relu":

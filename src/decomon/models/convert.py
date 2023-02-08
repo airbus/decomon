@@ -64,7 +64,7 @@ def get_ibp_forward_from_method(method):
     if method in [HYBRID.name, CROWN_HYBRID.name]:
         return True, True
     if method == CROWN.name:
-        return False, True
+        return True, False
     return True, True
 
 
@@ -188,10 +188,17 @@ def clone(
         dico_grid = {}
     if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
-
-    final_ibp, final_forward = ibp, forward
-
+    
     ibp_, forward_ = get_ibp_forward_from_method(method)
+    if 'final_ibp' not in kwargs:
+        final_ibp=ibp_
+    else:
+        final_ibp = kwargs['final_ibp']
+    
+    if 'final_forward' not in kwargs:
+        final_forward=forward_
+    else:
+        final_forward = kwargs['final_forward']
 
     method = method.lower()
     assert method in [
@@ -329,6 +336,7 @@ def clone(
     for elem in back_bounds:
         if isinstance(elem._keras_history.layer, InputLayer):
             back_bounds_.append(elem)
+
 
     return DecomonModel(
         input=[z_tensor] + back_bounds_ + extra_inputs,

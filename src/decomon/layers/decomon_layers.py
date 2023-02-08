@@ -1614,7 +1614,6 @@ def to_monotonic(
                         forward=forward,
                         shared=shared,
                         fast=fast,
-                        dtype=layer.dtype,
                     )
                     layer_list += layer_next_list
             break
