@@ -179,7 +179,7 @@ def test_convert_1D(n, archi, activation, sequential, use_bias, mode, method, us
     if mode == "ibp":
         forward = False
 
-    f_dense = clone(ref_nn, method=method, ibp=IBP, forward=forward)
+    f_dense = clone(ref_nn, method=method, final_ibp=IBP, final_forward=forward)
 
     f_ref = K.function(inputs, ref_nn(inputs[1]))
     y_ref = f_ref(inputs_)
