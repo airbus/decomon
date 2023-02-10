@@ -11,6 +11,7 @@ class Backward:
 class Forward:
     name = "forward"
 
+
 class DecomonModel(tf.keras.Model):
     def __init__(
         self,
@@ -72,6 +73,7 @@ class DecomonModel(tf.keras.Model):
             if hasattr(layer, "reset_finetuning"):
                 layer.reset_finetuning()
 
+
 """
 class DecomonSequential(tf.keras.Sequential):
     def __init__(
@@ -129,6 +131,7 @@ class DecomonSequential(tf.keras.Sequential):
             if hasattr(layer, "reset_finetuning"):
                 layer.unfreeze_alpha()
 """
+
 
 def set_domain_priv(convex_domain_prev, convex_domain):
     msg = "we can only change the parameters of the convex domain, not its nature"
