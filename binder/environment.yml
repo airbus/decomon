@@ -6,4 +6,5 @@ dependencies:
   - pip
   - pip:
       - kaggle
+      - pandas
       - ..  # decomon
