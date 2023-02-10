@@ -10,7 +10,7 @@ import decomon
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
-project = "DecoMon"
+project = "decomon"
 copyright = "2022, Airbus"
 author = "Airbus"
 
