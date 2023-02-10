@@ -1,11 +1,6 @@
-/* Copyright (C) Airbus SAS - All Rights Reserved
- * Unauthorized copying of this file, via any medium is strictly prohibited
- * Proprietary and confidential
- * Written by Melanie Ducoffe, Jayant Sen Gupta, Audrey Galametz and Joseph Nagel
- * {melanie.ducoffe, jayant.sengupta, audrey.galametz, joseph.nagel}@airbus.com
- */
+The MIT License
 
-Copyright (c) 2018 The Python Packaging Authority
+Copyright (c) 2022 AIRBUS http://airbus.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
