@@ -15,7 +15,6 @@ def get_adv_coverage_box(
     target_labels=None,
     batch_size=-1,
     n_sub_boxes=1,
-    fast=True,
 ):
     """if the output is negative, then it is a formal guarantee that there is no adversarial examples
 
@@ -31,8 +30,6 @@ def get_adv_coverage_box(
             contain multiple target labels for each sample)
         batch_size: for computational efficiency, one can split the
             calls to minibatches
-        fast: useful in the forward-backward or in the hybrid-backward
-            mode to optimize the scores
 
     Returns:
         numpy array, vector with upper bounds for adversarial attacks
@@ -106,7 +103,7 @@ def get_adv_coverage_box(
             T_ = [target_labels] * (len(x_) // batch_size + r)
 
         adv_score = np.concatenate(
-            [get_adv_box(model_, X_min_[i], X_max_[i], S_[i], T_[i], -1, fast=fast) for i in range(len(X_min_))]
+            [get_adv_box(model_, X_min_[i], X_max_[i], S_[i], T_[i], -1) for i in range(len(X_min_))]
         )
 
     else:
