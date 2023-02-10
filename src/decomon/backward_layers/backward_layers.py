@@ -47,7 +47,7 @@ class BackwardDense(BackwardLayer):
 
         if convex_domain is None:
             convex_domain = {}
-        self.layer = layer # should be removed, not good for config
+        self.layer = layer  # should be removed, not good for config
         self.kernel = self.layer.kernel
         self.use_bias = self.layer.use_bias
         if self.layer.use_bias:
@@ -227,7 +227,7 @@ class BackwardDense(BackwardLayer):
         Returns:
 
         """
-        self._trainable_weights=[self.kernel]
+        self._trainable_weights = [self.kernel]
         if self.use_bias:
             self._trainable_weights.append(self.bias)
         if self.finetune and self.activation_name != "linear":
@@ -595,16 +595,14 @@ class BackwardActivation(BackwardLayer):
 
             else:
                 self.alpha_b_l = self.add_weight(
-                    shape=(
-                        input_dim,
-                    ),
+                    shape=(input_dim,),
                     initializer="ones",
                     name="alpha_l_b",
                     regularizer=None,
                     constraint=ClipAlpha(),
                 )
                 alpha_b_l = np.ones((input_dim,))
-                #alpha_b_l[0] = 1
+                # alpha_b_l[0] = 1
                 K.set_value(self.alpha_b_l, alpha_b_l)
 
                 if self.activation_name[:4] != "relu":

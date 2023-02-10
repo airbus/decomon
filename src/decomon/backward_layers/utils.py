@@ -111,7 +111,7 @@ def merge_with_previous(inputs):
     if len(w_b_l.shape) == 2:
         w_b_l = tf.linalg.diag(w_b_l)
 
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
 
     z_value = K.cast(0.0, dtype=w_out_u.dtype)
     w_b_u_pos = K.maximum(w_b_u, z_value)
@@ -119,14 +119,10 @@ def merge_with_previous(inputs):
     w_b_l_pos = K.maximum(w_b_l, z_value)
     w_b_l_neg = K.minimum(w_b_l, z_value)
 
-    w_u = K.batch_dot(w_out_u, w_b_u_pos, (-1, -2)) +\
-          K.batch_dot(w_out_l, w_b_u_neg, (-1, -2))
-    w_l = K.batch_dot(w_out_l, w_b_l_pos, (-1, -2)) +\
-          K.batch_dot(w_out_u, w_b_l_neg, (-1, -2))
-    b_u = K.batch_dot(b_out_u, w_b_u_pos, (-1, -2)) +\
-          K.batch_dot(b_out_l, w_b_u_neg, (-1, -2)) + b_b_u
-    b_l = K.batch_dot(b_out_l, w_b_l_pos, (-1, -2)) +\
-          K.batch_dot(b_out_u, w_b_l_neg, (-1, -2)) + b_b_l
+    w_u = K.batch_dot(w_out_u, w_b_u_pos, (-1, -2)) + K.batch_dot(w_out_l, w_b_u_neg, (-1, -2))
+    w_l = K.batch_dot(w_out_l, w_b_l_pos, (-1, -2)) + K.batch_dot(w_out_u, w_b_l_neg, (-1, -2))
+    b_u = K.batch_dot(b_out_u, w_b_u_pos, (-1, -2)) + K.batch_dot(b_out_l, w_b_u_neg, (-1, -2)) + b_b_u
+    b_l = K.batch_dot(b_out_l, w_b_l_pos, (-1, -2)) + K.batch_dot(b_out_u, w_b_l_neg, (-1, -2)) + b_b_l
 
     return [w_u, b_u, w_l, b_l]
 
@@ -198,7 +194,6 @@ def backward_relu_(
     w_l_ = K.expand_dims(w_l_, -1)
     b_u_ = K.expand_dims(b_u_, -1)
     b_l_ = K.expand_dims(b_l_, -1)
-
 
     w_out_u_ = K.maximum(w_out_u, z_value) * w_u_ + K.minimum(w_out_u, z_value) * w_l_
     w_out_l_ = K.maximum(w_out_l, z_value) * w_l_ + K.minimum(w_out_l, z_value) * w_u_

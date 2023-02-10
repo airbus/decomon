@@ -1,11 +1,10 @@
 # extra layers necessary for backward LiRPA
 import tensorflow as tf
-from tensorflow.keras.layers import Layer
-from ..backward_layers.utils import merge_with_previous
-from ..utils import F_FORWARD, F_HYBRID, F_IBP, get_upper, get_lower
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import InputSpec
+from tensorflow.keras.layers import InputSpec, Layer
 
+from ..backward_layers.utils import merge_with_previous
+from ..utils import F_FORWARD, F_HYBRID, F_IBP, get_lower, get_upper
 
 
 class Fuse(Layer):
@@ -29,11 +28,11 @@ class Fuse(Layer):
     def get_config(self):
 
         config = super(Fuse, self).get_config()
-        config.update({'mode':self.mode})
+        config.update({"mode": self.mode})
         return config
 
-class Convert_2_backward_mode(Layer):
 
+class Convert_2_backward_mode(Layer):
     def __init__(self, mode, convex_domain, **kwargs):
         super(Convert_2_backward_mode, self).__init__(**kwargs)
         self.mode = mode
@@ -65,15 +64,15 @@ class Convert_2_backward_mode(Layer):
 
     def get_config(self):
         config = super(Convert_2_backward_mode, self).get_config()
-        config.update({'mode':self.mode, 'convex_domain':self.convex_domain})
-        return config   
+        config.update({"mode": self.mode, "convex_domain": self.convex_domain})
+        return config
+
 
 class MergeWithPrevious(Layer):
-
     def __init__(self, input_shape_layer=None, backward_shape_layer=None, **kwargs):
         super(MergeWithPrevious, self).__init__(**kwargs)
 
-        if not(input_shape_layer is None) and not(backward_shape_layer is None):
+        if not (input_shape_layer is None) and not (backward_shape_layer is None):
             _, n_in, n_h = input_shape_layer
             _, n_h, n_out = backward_shape_layer
 
@@ -81,12 +80,11 @@ class MergeWithPrevious(Layer):
             b_out_spec = InputSpec(ndim=2, axes={-1: n_h})
             w_b_spec = InputSpec(ndim=3, axes={-1: n_out, -2: n_h})
             b_b_spec = InputSpec(ndim=2, axes={-1: n_out})
-            self.input_spec = [w_out_spec, b_out_spec]*2+ [w_b_spec, b_b_spec]*2 #
+            self.input_spec = [w_out_spec, b_out_spec] * 2 + [w_b_spec, b_b_spec] * 2  #
 
     def call(self, inputs):
-        return merge_with_previous(inputs) 
+        return merge_with_previous(inputs)
 
-        
 
 class Convert_2_mode(Layer):
     def __init__(self, mode_from, mode_to, convex_domain, **kwargs):
@@ -100,7 +98,6 @@ class Convert_2_mode(Layer):
         mode_from = self.mode_from
         mode_to = self.mode_to
         convex_domain = self.convex_domain
-
 
         if mode_from == mode_to:
             return inputs_
@@ -136,10 +133,8 @@ class Convert_2_mode(Layer):
         if mode_to == F_HYBRID.name:
             return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
 
-
     def get_config(self):
 
         config = super(Convert_2_mode, self).get_config()
-        config.update({'mode_from':self.mode_from, 'mode_to':self.mode_to, 
-        'convex_domain':self.convex_domain})
+        config.update({"mode_from": self.mode_from, "mode_to": self.mode_to, "convex_domain": self.convex_domain})
         return config

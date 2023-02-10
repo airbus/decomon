@@ -636,9 +636,9 @@ def get_linear_hull_relu(upper, lower, slope, upper_g=0, lower_g=0, **kwargs):
     gamma = o_value
     if "finetune" in kwargs:
         # retrieve variables to optimize the slopes
-        gamma = kwargs['finetune'][None]
-        
-    w_l_ = gamma*w_l_ + (o_value-gamma)*(o_value-w_l_)
+        gamma = kwargs["finetune"][None]
+
+    w_l_ = gamma * w_l_ + (o_value - gamma) * (o_value - w_l_)
 
     # check inactive relu state: u<=0
     index_dead = -K.clip(K.sign(upper) - o_value, -o_value, z_value)  # =1 if inactive state

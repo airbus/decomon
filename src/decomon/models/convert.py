@@ -188,17 +188,17 @@ def clone(
         dico_grid = {}
     if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
-    
+
     ibp_, forward_ = get_ibp_forward_from_method(method)
-    if 'final_ibp' not in kwargs:
-        final_ibp=ibp_
+    if "final_ibp" not in kwargs:
+        final_ibp = ibp_
     else:
-        final_ibp = kwargs['final_ibp']
-    
-    if 'final_forward' not in kwargs:
-        final_forward=forward_
+        final_ibp = kwargs["final_ibp"]
+
+    if "final_forward" not in kwargs:
+        final_forward = forward_
     else:
-        final_forward = kwargs['final_forward']
+        final_forward = kwargs["final_forward"]
 
     method = method.lower()
     assert method in [
@@ -286,20 +286,20 @@ def clone(
             o_value = K.cast(1.0, model.layers[0].dtype)
 
             def get_bounds(z):
-                output=[]
+                output = []
                 if forward_:
                     W = tf.linalg.diag(z_value * z + o_value)
                     b = z_value * z
-                    output+=[W,b]
+                    output += [W, b]
                 if ibp_:
                     u_c_ = get_upper(z, W, b, convex_domain)
                     l_c_ = get_lower(z, W, b, convex_domain)
-                    output+=[u_c_, l_c_]
+                    output += [u_c_, l_c_]
                 return output
 
             output_ = get_bounds(z_tensor)
             if ibp_:
-                u_c_tensor, l_c_tensor=output_[-2:]
+                u_c_tensor, l_c_tensor = output_[-2:]
             if forward_:
                 W, b = output_[:2]
 
@@ -336,7 +336,6 @@ def clone(
     for elem in back_bounds:
         if isinstance(elem._keras_history.layer, InputLayer):
             back_bounds_.append(elem)
-
 
     return DecomonModel(
         input=[z_tensor] + back_bounds_ + extra_inputs,
