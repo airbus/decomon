@@ -7,7 +7,7 @@ name = "decomon"
 description = "Linear Relaxation for Certified Robustness Bound for Tensorflow Neural Networks"
 readme = "README.md"
 authors = [
-    {name = "melanie.ducoffe", email ="melanie.ducoffe@gmail.com"},
+    {email ="ai.decomon@gmail.com"},
 ]
 requires-python = ">=3.7"
 dependencies =[
