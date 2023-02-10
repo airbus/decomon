@@ -12,8 +12,6 @@ def test_get_upper_1d_box(n, method, mode, helpers):
         # skip method=ibp/crown-ibp with mode=forward/hybrid
         return
 
-    fast = False
-
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     # build a simple sequential model from keras
@@ -26,7 +24,7 @@ def test_get_upper_1d_box(n, method, mode, helpers):
     forward = get_FORWARD(mode)
     backward_model = convert(sequential, method=method, ibp=ibp, forward=forward, mode=mode)
 
-    upper = get_upper_box(backward_model, z[:, 0], z[:, 1], fast=fast)
+    upper = get_upper_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
 
     try:
@@ -41,8 +39,6 @@ def test_get_lower_1d_box(n, method, mode, helpers):
         # skip method=ibp/crown-ibp with mode=forward/hybrid
         return
 
-    fast = False
-
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     # build a simple sequential model from keras
@@ -55,7 +51,7 @@ def test_get_lower_1d_box(n, method, mode, helpers):
     forward = get_FORWARD(mode)
     backward_model = convert(sequential, method=method, ibp=ibp, forward=forward, mode=mode)
 
-    lower = get_lower_box(backward_model, z[:, 0], z[:, 1], fast=fast)
+    lower = get_lower_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
 
     try:
@@ -70,8 +66,6 @@ def test_get_range_1d_box(n, method, mode, helpers):
         # skip method=ibp/crown-ibp with mode=forward/hybrid
         return
 
-    fast = False
-
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     # build a simple sequential model from keras
@@ -84,7 +78,7 @@ def test_get_range_1d_box(n, method, mode, helpers):
     forward = get_FORWARD(mode)
     backward_model = convert(sequential, method=method, ibp=ibp, forward=forward, mode=mode)
 
-    upper, lower = get_range_box(backward_model, z[:, 0], z[:, 1], fast=fast)
+    upper, lower = get_range_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
 
     try:
@@ -100,7 +94,6 @@ def test_get_upper_multid_box(odd, method, mode, helpers):
         # skip method=ibp/crown-ibp with mode=forward/hybrid
         return
 
-    fast = False
     inputs_ = helpers.get_standard_values_multid_box_convert(odd, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     # build a simple sequential model from keras
@@ -112,7 +105,7 @@ def test_get_upper_multid_box(odd, method, mode, helpers):
     ibp = get_IBP(mode)
     forward = get_FORWARD(mode)
     backward_model = convert(sequential, method=method, ibp=ibp, forward=forward)
-    upper = get_upper_box(backward_model, z[:, 0], z[:, 1], fast=fast)
+    upper = get_upper_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
 
     assert (upper - y_ref).min() + 1e-6 >= 0.0
@@ -123,8 +116,6 @@ def test_get_lower_multid_box(odd, method, mode, helpers):
         # skip method=ibp/crown-ibp with mode=forward/hybrid
         return
 
-    fast = False
-
     inputs_ = helpers.get_standard_values_multid_box_convert(odd, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     # build a simple sequential model from keras
@@ -136,7 +127,7 @@ def test_get_lower_multid_box(odd, method, mode, helpers):
     ibp = get_IBP(mode)
     forward = get_FORWARD(mode)
     backward_model = convert(sequential, method=method, ibp=ibp, forward=forward)
-    lower = get_lower_box(backward_model, z[:, 0], z[:, 1], fast=fast)
+    lower = get_lower_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
 
     assert (y_ref - lower).min() + 1e-6 >= 0.0
@@ -147,7 +138,6 @@ def test_get_range_multid_box(odd, method, mode, helpers):
         # skip method=ibp/crown-ibp with mode=forward/hybrid
         return
 
-    fast = False
     inputs_ = helpers.get_standard_values_multid_box_convert(odd, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     # build a simple sequential model from keras
@@ -159,7 +149,7 @@ def test_get_range_multid_box(odd, method, mode, helpers):
     ibp = get_IBP(mode)
     forward = get_FORWARD(mode)
     backward_model = convert(sequential, method=method, ibp=ibp, forward=forward)
-    upper, lower = get_range_box(backward_model, z[:, 0], z[:, 1], fast=fast)
+    upper, lower = get_range_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
 
     assert (upper - y_ref).min() + 1e-6 >= 0.0

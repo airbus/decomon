@@ -25,7 +25,6 @@ def get_adv_box(
     target_labels=None,
     batch_size=-1,
     n_sub_boxes=1,
-    fast=True,
 ):
     """if the output is negative, then it is a formal guarantee that there is no adversarial examples
 
@@ -41,8 +40,6 @@ def get_adv_box(
             contain multiple target labels for each sample)
         batch_size: for computational efficiency, one can split the
             calls to minibatches
-        fast: useful in the forward-backward or in the hybrid-backward
-            mode to optimize the scores
 
     Returns:
         numpy array, vector with upper bounds for adversarial attacks
@@ -119,7 +116,7 @@ def get_adv_box(
             T_ = [target_labels] * (len(x_) // batch_size + r)
 
         adv_score = np.concatenate(
-            [get_adv_box(model_, X_min_[i], X_max_[i], S_[i], T_[i], -1, fast=fast) for i in range(len(X_min_))]
+            [get_adv_box(model_, X_min_[i], X_max_[i], S_[i], T_[i], -1) for i in range(len(X_min_))]
         )
 
     else:
@@ -229,7 +226,7 @@ def get_adv_box(
     return adv_score
 
 
-def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_size=-1, fast=True):
+def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_size=-1):
     """if the output is negative, then it is a formal guarantee that there is no adversarial examples
 
     Args:
@@ -244,8 +241,6 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
             contain multiple target labels for each sample)
         batch_size: for computational efficiency, one can split the
             calls to minibatches
-        fast: useful in the forward-backward or in the hybrid-backward
-            mode to optimize the scores
 
     Returns:
         numpy array, vector with upper bounds for adversarial attacks
@@ -312,7 +307,7 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
             T_ = [target_labels] * (len(x_) // batch_size + r)
 
         return np.concatenate(
-            [check_adv_box(model_, X_min_[i], X_max_[i], S_[i], T_[i], -1, fast=fast) for i in range(len(X_min_))]
+            [check_adv_box(model_, X_min_[i], X_max_[i], S_[i], T_[i], -1) for i in range(len(X_min_))]
         )
 
     else:
@@ -367,7 +362,7 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
 
 
 #### FORMAL BOUNDS ######
-def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
+def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
     """upper bound the maximum of a model in a given box
 
     Args:
@@ -376,8 +371,6 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         x_max: numpy array for the extremal upper corner of the boxes
         batch_size: for computational efficiency, one can split the
             calls to minibatches
-        fast: useful in the forward-backward or in the hybrid-backward
-            mode to optimize the scores
 
     Returns:
         numpy array, vector with upper bounds for adversarial attacks
@@ -386,7 +379,6 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
     if np.min(x_max - x_min) < 0:
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
-    fast = True
     # check that the model is a DecomonModel, else do the conversion
     if not (isinstance(model, DecomonModel)):
         model_ = convert(model, ibp=True, forward=True)
@@ -423,7 +415,7 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
 
-        results = [get_upper_box(model_, X_min_[i], X_max_[i], -1, fast=fast) for i in range(len(X_min_))]
+        results = [get_upper_box(model_, X_min_[i], X_max_[i], -1) for i in range(len(X_min_))]
 
         u_ = np.concatenate(results)
     else:
@@ -477,7 +469,7 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
     return u_
 
 
-def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
+def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
     """lower bound the minimum of a model in a given box
 
     Args:
@@ -486,8 +478,6 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         x_max: numpy array for the extremal upper corner of the boxes
         batch_size: for computational efficiency, one can split the
             calls to minibatches
-        fast: useful in the forward-backward or in the hybrid-backward
-            mode to optimize the scores
 
     Returns:
         numpy array, vector with lower bounds for adversarial attacks
@@ -496,7 +486,6 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
     if np.min(x_max - x_min) < 0:
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
-    fast = True
     # check that the model is a DecomonModel, else do the conversion
     if not (isinstance(model, DecomonModel)):
         model_ = convert(model, ibp=True, forward=True)
@@ -533,7 +522,7 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
 
-        results = [get_lower_box(model_, X_min_[i], X_max_[i], -1, fast=fast) for i in range(len(X_min_))]
+        results = [get_lower_box(model_, X_min_[i], X_max_[i], -1) for i in range(len(X_min_))]
 
         l_ = np.concatenate(results)
     else:
@@ -586,7 +575,7 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
     return l_
 
 
-def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
+def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
     """bounding the outputs of a model in a given box
     if the constant is negative, then it is a formal guarantee that there is no adversarial examples
 
@@ -596,8 +585,6 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
         x_max: numpy array for the extremal upper corner of the boxes
         batch_size: for computational efficiency, one can split the
             calls to minibatches
-        fast: useful in the forward-backward or in the hybrid-backward
-            mode to optimize the scores
 
     Returns:
         2 numpy array, vector with upper bounds and vector with lower
@@ -606,7 +593,6 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
     if np.min(x_max - x_min) < 0:
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
-    fast = True
     # check that the model is a DecomonModel, else do the conversion
     if not (isinstance(model, DecomonModel)):
         model_ = convert(model, ibp=True, forward=True)
@@ -642,7 +628,7 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
             r += 1
         X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        results = [get_range_box(model_, X_min_[i], X_max_[i], -1, fast=fast) for i in range(len(X_min_))]
+        results = [get_range_box(model_, X_min_[i], X_max_[i], -1) for i in range(len(X_min_))]
 
         u_ = [r[0] for r in results]
         l_ = [r[1] for r in results]
@@ -715,7 +701,7 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1, fast=True):
 
 
 # get upper bound of a sample with bounded noise
-def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
+def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1):
     """upper bound the maximum of a model in an Lp Ball
 
     Args:
@@ -725,9 +711,6 @@ def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
         p: the type of Lp norm (p=2, 1, np.inf)
         batch_size: for computational efficiency, one can split the
             calls to minibatches
-        fast: useful in the forward-backward or in the hybrid-backward
-            mode to optimize the scores
-    which the impact of noise is assessed
 
     Returns:
         numpy array, vector with upper bounds of the range of values
@@ -756,7 +739,7 @@ def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
         if len(x_) % batch_size > 0:
             r += 1
         X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        results = [get_upper_noise(model_, X_[i], eps=eps, p=p, batch_size=-1, fast=fast) for i in range(len(X_))]
+        results = [get_upper_noise(model_, X_[i], eps=eps, p=p, batch_size=-1) for i in range(len(X_))]
 
         return np.concatenate(results)
 
@@ -806,7 +789,7 @@ def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1, fast=True):
 
 
 # get upper bound of a sample with bounded noise
-def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
+def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1):
     """lower bound the minimum of a model in an Lp Ball
 
     Args:
@@ -816,9 +799,6 @@ def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
         p: the type of Lp norm (p=2, 1, np.inf)
         batch_size: for computational efficiency, one can split the
             calls to minibatches
-        fast: useful in the forward-backward or in the hybrid-backward
-            mode to optimize the scores
-    which the impact of noise is assessed
 
     Returns:
         numpy array, vector with lower bounds of the range of values
@@ -846,7 +826,7 @@ def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
         if len(x_) % batch_size > 0:
             r += 1
         X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        results = [get_lower_noise(model_, X_[i], eps=eps, p=p, batch_size=-1, fast=fast) for i in range(len(X_))]
+        results = [get_lower_noise(model_, X_[i], eps=eps, p=p, batch_size=-1) for i in range(len(X_))]
 
         return np.concatenate(results)
 
@@ -895,7 +875,7 @@ def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
 
 
 # get upper bound of a sample with bounded noise
-def get_range_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
+def get_range_noise(model, x, eps, p=np.inf, batch_size=-1):
     """Bounds the output of a model in an Lp Ball
 
     Args:
@@ -905,9 +885,6 @@ def get_range_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
         p: the type of Lp norm (p=2, 1, np.inf)
         batch_size: for computational efficiency, one can split the
             calls to minibatches
-        fast: useful in the forward-backward or in the hybrid-backward
-            mode to optimize the scores
-    which the impact of noise is assessed
 
     Returns:
         2 numpy arrays, vector with upper andlower bounds
@@ -936,7 +913,7 @@ def get_range_noise(model, x, eps, p=np.inf, batch_size=-1, fast=True):
         if len(x_) % batch_size > 0:
             r += 1
         X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        results = [get_range_noise(model_, X_[i], eps=eps, p=p, batch_size=-1, fast=fast) for i in range(len(X_))]
+        results = [get_range_noise(model_, X_[i], eps=eps, p=p, batch_size=-1) for i in range(len(X_))]
 
         u_ = [r[0] for r in results]
         l_ = [r[1] for r in results]
@@ -1154,7 +1131,6 @@ def get_adv_noise(
     p=np.inf,
     target_labels=None,
     batch_size=-1,
-    fast=True,
 ):
     """if the output is negative, then it is a formal guarantee that there is no adversarial examples
 
@@ -1170,8 +1146,6 @@ def get_adv_noise(
             contain multiple target labels for each sample)
         batch_size: for computational efficiency, one can split the
             calls to minibatches
-        fast: useful in the forward-backward or in the hybrid-backward
-            mode to optimize the scores
 
     Returns:
         numpy array, vector with upper bounds for adversarial attacks
@@ -1230,9 +1204,7 @@ def get_adv_noise(
             T_ = [target_labels] * (len(x_) // batch_size + r)
 
         results = [
-            get_adv_noise(
-                model_, X_[i], source_labels=S_[i], eps=eps, p=p, target_labels=T_[i], batch_size=-1, fast=fast
-            )
+            get_adv_noise(model_, X_[i], source_labels=S_[i], eps=eps, p=p, target_labels=T_[i], batch_size=-1)
             for i in range(len(X_))
         ]
 
