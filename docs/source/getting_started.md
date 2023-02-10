@@ -1,7 +1,7 @@
 # Getting started
 
 
-First define your Keras Neural Network and convert it into its `DecoMon` version
+First define your Keras Neural Network and convert it into its `decomon` version
 using the `clone` method. You can then call `get_upper_box` and `get_lower_box` to
 respectively obtain certified upper and lower bounds for the network's outputs
 within a box domain.
@@ -22,7 +22,7 @@ model = Sequential([Dense(10, activation="relu", input_dim=2)])
 x_min = np.zeros((1, 2))
 x_max = np.ones((1, 2))
 
-# Convert into a DecoMon neural network
+# Convert into a decomon neural network
 decomon_model = clone(model)
 
 # Get lower and upper bounds

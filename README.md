@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="https://raw.githubusercontent.com/airbus/decomon/main/docs/source/_static/banner.jpg" width="55%" alt="Decomon" align="center" />
+    <img src="https://raw.githubusercontent.com/airbus/decomon/main/docs/source/_static/banner.jpg" width="55%" alt="decomon" align="center" />
 </div>
 <br>
 
@@ -19,15 +19,15 @@
 </div>
 <br>
 
-# DecoMon: Automatic Certified Perturbation Analysis of Neural Networks
+# Decomon: Automatic Certified Perturbation Analysis of Neural Networks
 
 ## Introduction
 
-**What is DecoMon?** `DecoMon` is a library that allows the derivation of upper and lower bounds
+**What is decomon?** `decomon` is a library that allows the derivation of upper and lower bounds
 for the predictions of a Tensorflow/Keras neural network with perturbed inputs.
 In the current release, these bounds are represented as affine functions with respect to some variable under perturbation.
 
-Previous works that tackled certified robustness with backward propagation relied on forward upper and lower bounds. In `DecoMon`,
+Previous works that tackled certified robustness with backward propagation relied on forward upper and lower bounds. In `decomon`,
 we explored various ways to tighten forward upper and lower bounds, while remaining backpropagation-compatible
  thanks to symbolic optimization.
 
@@ -35,10 +35,10 @@ Our algorithm improves existing forward linear relaxation algorithms for general
 without manual derivation. Our implementation is also automatically **differentiable**.
 So far we support interval bound propagation, forward mode perturbation, backward mode perturbation as well as hybrid approaches.
 
-`DecoMon` is compatible with a wider range of perturbation: boxes, $L_{\inf, 1, 2}$ norms or general
+`decomon` is compatible with a wider range of perturbation: boxes, $L_{\inf, 1, 2}$ norms or general
 convex sets described by their vertices.
 
-We believe that DecoMon is a complementary tool to existing libraries for the certification of neural networks.
+We believe that decomon is a complementary tool to existing libraries for the certification of neural networks.
 
 Since we rely on Tensorflow and not Pytorch, we are opening up the possibility for a new community
 to formally assess the robustness of their networks, without worrying about the technicality of

@@ -1,6 +1,6 @@
 # Contributing
 
-We welcome all contributions to DecoMon.
+We welcome all contributions to decomon.
 
 You can help by:
 
