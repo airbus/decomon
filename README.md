@@ -45,63 +45,31 @@ to formally assess the robustness of their networks, without worrying about the 
 the implementation. In this way, we hope to promote the formal certification of neural networks
 into safety critical systems.
 
-If you encounter any problems with this library, feel free to create an issue or a pull request. We
-welcome contributions in any form from anyone. Please make sure beforehand that your contribution
-is aligned with [Black](https://github.com/psf/black) format.
 
 ## Installation
 
-Python 3.7+ and Tensorflow 2.4 are required. We recommend that you manage your python version using
-[asdf](https://asdf-vm.com/#/core-manage-asdf)
-
-Please install DecoMon first before running any examples following
-
+Quick version:
+```shell
+pip install decomon
 ```
-git clone https://github.com/airbus/decomon
-cd decomon
-poetry build
-```
+For more details, see the [online documentation](https://airbus.github.io/decomon/main/install).
 
-This library is still under heavy development.
+## Quick start
 
-## Quick Start
+You can see how to get certified lower and upper bounds for a basic Keras neural network in the
+[Getting started section](https://airbus.github.io/decomon/main/getting_started) of the online documentation.
 
-First define your Keras Neural Network and convert it into its `DecoMon` version
-using the `convert` method. You can then call `get_upper_box` and `get_lower_box` to
-respectively obtain certified upper and lower bounds for the network's outputs
-within a box domain.
 
-````python
-# import
-from decomon.models import convert
-from decomon import get_upper_box, get_lower_box, get_range_box, \
-                    get_range_noise
+## Documentation
 
-# Toy example with a Keras model:
-model = Sequential([Dense(10, activation='relu', input_dim=2)])
+The latest documentation is available [online](https://airbus.github.io/decomon).
 
-# Create a fake box with the right shape
-x_min = np.zeros(1, 2)
-x_max = np.ones(1, 2)
+## Examples
 
-# convert into a DecoMon neural network
-decomon_model = convert(model)
+Some educational notebooks are available in `tutorials/` folder.
+Links to launch them online with [colab](https://colab.research.google.com/) or [binder](https://mybinder.org/) are provided in the
+[Tutorials section](https://airbus.github.io/decomon/main/tutorials) of the online documentation.
 
-upper_bound = get_upper_box(decomon_model, x_min, x_max)
-lower_bound = get_lower_box(decomon_model, x_min, x_max)
-````
+## Contributing
 
-As mentioned other types of domains are possible and illustrated
-in our [tutorials](tutorials).
-
-## Units Tests
-
-Pytest is required to run unit tests (pip install pytest).
-
-Make sure you are in the `decomon` root directory and run unit tests (the "-v" verbose mode is optional but gives additional details):
-
-```
-cd YOUR_LOCAL_PATH_TO_GIT_CLONED_DECOMON
-
-poetry run pytest tests -v
-```
+We welcome any contribution. See more about how to contribute in the [online documentation](https://airbus.github.io/decomon/main/contribute).
