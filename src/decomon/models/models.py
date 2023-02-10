@@ -74,65 +74,6 @@ class DecomonModel(tf.keras.Model):
                 layer.reset_finetuning()
 
 
-"""
-class DecomonSequential(tf.keras.Sequential):
-    def __init__(
-        self,
-        layers=None,
-        convex_domain=None,
-        dc_decomp=False,
-        mode=Forward.name,
-        optimize="False",
-        IBP=True,
-        forward=False,
-        finetune=False,
-        **kwargs,
-    ):
-        super().__init__(layers=layers, name=name, **kwargs)
-        if convex_domain is None:
-            convex_domain = {}
-        self.convex_domain = convex_domain
-        self.optimize = optimize
-        self.nb_tensors = StaticVariables(dc_decomp).nb_tensors
-        self.dc_decomp = dc_decomp
-        self.mode = mode
-        self.IBP = IBP
-        self.forward = forward
-
-    def set_domain(self, convex_domain):
-        convex_domain = set_domain_priv(self.convex_domain, convex_domain)
-        self.convex_domain = convex_domain
-        for layer in self.layers:
-            if hasattr(layer, "convex_domain"):
-                layer.convex_domain = self.convex_domain
-
-    def freeze_weights(self):
-        for layer in self.layers:
-            if hasattr(layer, "freeze_weights"):
-                layer.freeze_weights()
-
-    def unfreeze_weights(self):
-        for layer in self.layers:
-            if hasattr(layer, "unfreeze_weights"):
-                layer.unfreeze_weights()
-
-    def freeze_alpha(self):
-        for layer in self.layers:
-            if hasattr(layer, "freeze_alpha"):
-                layer.freeze_alpha()
-
-    def unfreeze_alpha(self):
-        for layer in self.layers:
-            if hasattr(layer, "unfreeze_alpha"):
-                layer.unfreeze_alpha()
-
-    def reset_finetuning(self):
-        for layer in self.layers:
-            if hasattr(layer, "reset_finetuning"):
-                layer.unfreeze_alpha()
-"""
-
-
 def set_domain_priv(convex_domain_prev, convex_domain):
     msg = "we can only change the parameters of the convex domain, not its nature"
 
