@@ -79,7 +79,7 @@ def get_adv_box(
 
     z = np.concatenate([x_min, x_max], 1)
 
-    if isinstance(source_labels, (int, np.int64)):
+    if isinstance(source_labels, (int, np.int_)):
         source_labels = np.zeros((n_batch, 1)) + source_labels
 
     if isinstance(source_labels, list):
@@ -270,7 +270,7 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
     x_max = x_max.reshape((-1, 1, input_dim))
 
     z = np.concatenate([x_min, x_max], 1)
-    if isinstance(source_labels, (int, np.int64)):
+    if isinstance(source_labels, (int, np.int_)):
         source_labels = np.zeros((n_batch, 1)) + source_labels
 
     if isinstance(source_labels, list):
@@ -1174,7 +1174,7 @@ def get_adv_noise(
     x_ = x + 0 * x
     x_ = x_.reshape([-1] + input_shape)
 
-    if isinstance(source_labels, (int, np.int64)):
+    if isinstance(source_labels, (int, np.int_)):
         source_labels = np.zeros((n_batch, 1)) + source_labels
 
     if isinstance(source_labels, list):
