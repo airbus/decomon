@@ -69,7 +69,7 @@ def get_adv_coverage_box(
 
     z = np.concatenate([x_min, x_max], 1)
 
-    if isinstance(source_labels, (int, np.int64)):
+    if isinstance(source_labels, (int, np.int_)):
         source_labels = np.zeros((n_batch, 1)) + source_labels
 
     if isinstance(source_labels, list):

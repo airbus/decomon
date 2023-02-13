@@ -62,7 +62,7 @@ def get_adv_brightness(
     z[:, 0] = bright_min
     z[:, 1] = bright_max
 
-    if isinstance(source_labels, (int, np.int64)):
+    if isinstance(source_labels, (int, np.int_)):
         source_labels = np.zeros((len(x_), 1)) + source_labels
 
     if isinstance(source_labels, list):
