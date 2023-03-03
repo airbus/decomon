@@ -106,6 +106,16 @@ class BackwardGroupSort2(Wrapper):
 
         self.frozen_weights = False
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+                "finetune": self.finetune,
+            }
+        )
+        return config
+
     def call_previous(self, inputs):
 
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]

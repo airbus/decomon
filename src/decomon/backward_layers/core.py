@@ -6,5 +6,10 @@ class BackwardLayer(Wrapper):
         super().__init__(layer, **kwargs)
         self.rec = rec
 
+    def get_config(self):
+        config = super().get_config()
+        config.update({"rec": self.rec})
+        return config
+
     def set_previous(self, previous):
         raise NotImplementedError()

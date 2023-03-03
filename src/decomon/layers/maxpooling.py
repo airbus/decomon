@@ -26,10 +26,9 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
             padding=padding,
             data_format=data_format,
             mode=mode,
+            fast=fast,
             **kwargs,
         )
-
-        self.fast = fast
 
         if self.mode == F_IBP.name:
             self.input_spec = [
@@ -59,8 +58,6 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
 
         if self.dc_decomp:
             self.input_spec += [InputSpec(ndim=4), InputSpec(ndim=4)]
-
-        self.pool_size = pool_size
 
         # express maxpooling with convolutions
         if not self.fast or self.fast:

@@ -1,4 +1,7 @@
+import copy
+
 import tensorflow as tf
+from keras.engine.functional import get_network_config
 
 from decomon.layers.core import Box, StaticVariables
 
@@ -72,6 +75,11 @@ class DecomonModel(tf.keras.Model):
         for layer in self.layers:
             if hasattr(layer, "reset_finetuning"):
                 layer.reset_finetuning()
+
+    def get_config(self):
+        # Continue adding configs into what the super class has added.
+        config = super().get_config()
+        return copy.deepcopy(get_network_config(self, config=config))
 
 
 def set_domain_priv(convex_domain_prev, convex_domain):

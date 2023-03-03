@@ -26,8 +26,7 @@ class Fuse(Layer):
         return merge_with_previous([w_f_u, b_f_u, w_f_l, b_f_l] + backward_bounds)
 
     def get_config(self):
-
-        config = super(Fuse, self).get_config()
+        config = super().get_config()
         config.update({"mode": self.mode})
         return config
 
@@ -63,7 +62,7 @@ class Convert_2_backward_mode(Layer):
             return [x_0, u_c_, w_out_u, b_out_u, l_c_, w_out_l, b_out_l]
 
     def get_config(self):
-        config = super(Convert_2_backward_mode, self).get_config()
+        config = super().get_config()
         config.update({"mode": self.mode, "convex_domain": self.convex_domain})
         return config
 
@@ -71,7 +70,8 @@ class Convert_2_backward_mode(Layer):
 class MergeWithPrevious(Layer):
     def __init__(self, input_shape_layer=None, backward_shape_layer=None, **kwargs):
         super(MergeWithPrevious, self).__init__(**kwargs)
-
+        self.input_shape_layer = input_shape_layer
+        self.backward_shape_layer = backward_shape_layer
         if not (input_shape_layer is None) and not (backward_shape_layer is None):
             _, n_in, n_h = input_shape_layer
             _, n_h, n_out = backward_shape_layer
@@ -84,6 +84,16 @@ class MergeWithPrevious(Layer):
 
     def call(self, inputs):
         return merge_with_previous(inputs)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "input_shape_layer": self.input_shape_layer,
+                "backward_shape_layer": self.backward_shape_layer,
+            }
+        )
+        return config
 
 
 class Convert_2_mode(Layer):
@@ -134,7 +144,6 @@ class Convert_2_mode(Layer):
             return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
 
     def get_config(self):
-
-        config = super(Convert_2_mode, self).get_config()
+        config = super().get_config()
         config.update({"mode_from": self.mode_from, "mode_to": self.mode_to, "convex_domain": self.convex_domain})
         return config

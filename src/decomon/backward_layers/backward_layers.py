@@ -78,6 +78,17 @@ class BackwardDense(BackwardLayer):
 
         self.frozen_weights = False
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+                "previous": self.previous,
+                "finetune": self.finetune,
+            }
+        )
+        return config
+
     def call_previous(self, inputs):
 
         if not len(inputs):
@@ -333,6 +344,17 @@ class BackwardConv2D(BackwardLayer):
 
         self.frozen_weights = False
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+                "previous": self.previous,
+                "finetune": self.finetune,
+            }
+        )
+        return config
+
     def get_bounds_linear(self, w_out_u, b_out_u, w_out_l, b_out_l):
 
         output_shape_tensor = self.layer.output_shape[-1]
@@ -557,6 +579,17 @@ class BackwardActivation(BackwardLayer):
             self.frozen_alpha = False
         self.grid_finetune = []
         self.frozen_grid = False
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+                "previous": self.previous,
+                "finetune": self.finetune,
+            }
+        )
+        return config
 
     def build(self, input_shape):
         """
@@ -793,6 +826,15 @@ class BackwardFlatten(BackwardLayer):
             convex_domain = {}
         self.previous = previous
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "previous": self.previous,
+            }
+        )
+        return config
+
     def call(self, inputs, slope=V_slope.name, **kwargs):
         if self.previous:
             return inputs[-4:]
@@ -822,6 +864,15 @@ class BackwardReshape(BackwardLayer):
         if convex_domain is None:
             convex_domain = {}
         self.previous = previous
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "previous": self.previous,
+            }
+        )
+        return config
 
     def call_no_previous(self, inputs):
 
@@ -863,6 +914,15 @@ class BackwardPermute(BackwardLayer):
         self.dims = layer.dims
         self.op = layer.call
         self.previous = previous
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "previous": self.previous,
+            }
+        )
+        return config
 
     def call(self, inputs, slope=V_slope.name, **kwargs):
 
@@ -1001,8 +1061,19 @@ class BackwardInputLayer(BackwardLayer):
         else:
             self.mode = mode
             self.convex_domain = convex_domain
-        self.finetune = False
+        self.finetune = finetune
         self.previous = previous
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+                "previous": self.previous,
+                "finetune": self.finetune,
+            }
+        )
+        return config
 
     def call_previous(self, inputs):
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]

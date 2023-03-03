@@ -66,7 +66,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
     def __init__(self, filters, kernel_size, mode=F_HYBRID.name, **kwargs):
 
-        activation = kwargs["activation"]
+        activation = kwargs.get("activation", None)
         if "activation" in kwargs:
             kwargs["activation"] = None
         super().__init__(filters=filters, kernel_size=kernel_size, mode=mode, **kwargs)
