@@ -361,6 +361,16 @@ class DecomonLossFusion(DecomonLayer):
         self.asymptotic = asymptotic
         self.backward = backward
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "asymptotic": self.asymptotic,
+                "backward": self.backward,
+            }
+        )
+        return config
+
     def call_no_backward(self, inputs, **kwargs):
 
         if not self.asymptotic:
@@ -424,6 +434,15 @@ class DecomonRadiusRobust(DecomonLayer):
             raise NotImplementedError()
 
         self.backward = backward
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "backward": self.backward,
+            }
+        )
+        return config
 
     def call_no_backward(self, inputs, **kwargs):
 

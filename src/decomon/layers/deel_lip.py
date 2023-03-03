@@ -20,7 +20,7 @@ class DecomonGroupSort(DecomonLayer):
     def __init__(self, n=None, data_format="channels_last", k_coef_lip=1.0, mode=F_HYBRID.name, **kwargs):
         super().__init__(**kwargs)
         self.mode = mode
-
+        self.data_format = data_format
         if data_format == "channels_last":
             self.channel_axis = -1
         elif data_format == "channels_first":
@@ -34,6 +34,17 @@ class DecomonGroupSort(DecomonLayer):
         self.concat = DecomonConcatenate(
             mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp
         ).call
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "data_format": self.data_format,
+                "mode": self.mode,
+                "n": self.n,
+            }
+        )
+        return config
 
     def call(self, input, **kwargs):
 
@@ -84,6 +95,16 @@ class DecomonGroupSort2(DecomonLayer):
         self.op_concat = DecomonConcatenate(self.axis, mode=self.mode, convex_domain=self.convex_domain)
         self.op_reshape_in = None
         self.op_reshape_out = None
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "data_format": self.data_format,
+                "mode": self.mode,
+            }
+        )
+        return config
 
     def compute_output_shape(self, input_shape):
         return input_shape

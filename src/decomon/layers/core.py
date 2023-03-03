@@ -115,6 +115,20 @@ class DecomonLayer(ABC, Layer):
         self.linear_layer = False
         self.has_backward_bounds = False  # optimizing Forward LiRPA for adversarial perturbation
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "dc_decomp": self.dc_decomp,
+                "shared": self.shared,
+                "fast": self.fast,
+                "finetune": self.finetune,
+                "mode": self.mode,
+                "convex_domain": self.convex_domain,
+            }
+        )
+        return config
+
     def build(self, input_shape):
         """
         Args:

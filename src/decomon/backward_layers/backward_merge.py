@@ -61,6 +61,17 @@ class BackwardAdd(BackwardMerge):
 
         self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp).call
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+                "previous": self.previous,
+                "finetune": self.finetune,
+            }
+        )
+        return config
+
     def call_previous(self, inputs):
 
         x_ = inputs[:-4]
@@ -136,6 +147,17 @@ class BackwardAverage(BackwardMerge):
         self.finetune = False
         self.previous = previous
         self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=False).call
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+                "previous": self.previous,
+                "finetune": self.finetune,
+            }
+        )
+        return config
 
     def call_previous(self, inputs):
 
@@ -216,6 +238,15 @@ class BackwardSubtract(BackwardMerge):
         self.slope = slope
         self.mode = self.layer.mode
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+            }
+        )
+        return config
+
     def call(self, inputs, **kwargs):
 
         x_ = inputs[:-4]
@@ -255,6 +286,15 @@ class BackwardMaximum(BackwardMerge):
         self.slope = slope
         self.mode = self.layer.mode
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+            }
+        )
+        return config
+
     def call(self, inputs, **kwargs):
 
         x_ = inputs[:-4]
@@ -293,6 +333,15 @@ class BackwardMinimum(BackwardMerge):
 
         self.slope = slope
         self.mode = self.layer.mode
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+            }
+        )
+        return config
 
     def call(self, inputs, **kwargs):
 
@@ -334,6 +383,15 @@ class BackwardConcatenate(BackwardMerge):
         self.mode = self.layer.mode
         self.axis = self.layer.axis
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+            }
+        )
+        return config
+
     def call(self, inputs, **kwargs):
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -369,6 +427,15 @@ class BackwardMultiply(BackwardMerge):
 
         self.slope = slope
         self.mode = self.layer.mode
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+            }
+        )
+        return config
 
     def call(self, inputs, **kwargs):
 
@@ -413,6 +480,15 @@ class BackwardDot(BackwardMerge):
         self.convex_domain = self.layer.convex_domain
 
         raise NotImplementedError()
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+            }
+        )
+        return config
 
     def call(self, inputs, **kwargs):
 
