@@ -3,16 +3,9 @@ import copy
 import tensorflow as tf
 from keras.engine.functional import get_network_config
 
-from decomon.layers.core import Box, StaticVariables
-
-
-# create static variables for varying convex domain
-class Backward:
-    name = "backward"
-
-
-class Forward:
-    name = "forward"
+from decomon.layers.core import StaticVariables
+from decomon.models.utils import ConvertMethod
+from decomon.utils import ConvexDomainType
 
 
 class DecomonModel(tf.keras.Model):
@@ -22,7 +15,7 @@ class DecomonModel(tf.keras.Model):
         output,
         convex_domain=None,
         dc_decomp=False,
-        method=Forward.name,
+        method=ConvertMethod.FORWARD_AFFINE,
         optimize="True",
         IBP=True,
         forward=True,
@@ -38,7 +31,7 @@ class DecomonModel(tf.keras.Model):
         self.optimize = optimize
         self.nb_tensors = StaticVariables(dc_decomp).nb_tensors
         self.dc_decomp = dc_decomp
-        self.method = method
+        self.method = ConvertMethod(method)
         self.IBP = IBP
         self.forward = forward
         self.finetune = finetune
@@ -87,11 +80,11 @@ def set_domain_priv(convex_domain_prev, convex_domain):
 
     convex_domain_ = convex_domain
     if convex_domain == {}:
-        convex_domain = {"name": Box.name}
+        convex_domain = {"name": ConvexDomainType.BOX}
 
-    if len(convex_domain_prev) == 0 or convex_domain_prev["name"] == Box.name:
+    if len(convex_domain_prev) == 0 or convex_domain_prev["name"] == ConvexDomainType.BOX:
         # Box
-        if convex_domain["name"] != Box.name:
+        if convex_domain["name"] != ConvexDomainType.BOX:
             raise NotImplementedError(msg)
 
     if convex_domain_prev["name"] != convex_domain["name"]:

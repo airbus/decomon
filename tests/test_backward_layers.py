@@ -8,6 +8,7 @@ from tensorflow.keras.layers import Input
 from tensorflow.keras.models import Model
 
 from decomon.backward_layers.backward_layers import get_backward
+from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonActivation, DecomonFlatten
 from decomon.layers.decomon_reshape import DecomonReshape
 
@@ -26,18 +27,21 @@ def test_Backward_Activation_1D_box_model(n, activation, mode, previous, floatx,
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
         output = layer(input_mode)
         z_0, u_c_0, _, _, l_c_0, _, _ = output
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
         output = layer(input_mode)
         z_0, _, _, _, _ = output
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         input_mode = [inputs[3], inputs[6]]
         output = layer(input_mode)
         u_c_0, l_c_0 = output
+    else:
+        raise ValueError("Unknown mode.")
 
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
@@ -96,18 +100,21 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, previous,
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
         output = layer(input_mode)
         z_0, u_c_0, _, _, l_c_0, _, _ = output
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
         output = layer(input_mode)
         z_0, _, _, _, _ = output
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         input_mode = [inputs[3], inputs[6]]
         output = layer(input_mode)
         u_c_0, l_c_0 = output
+    else:
+        raise ValueError("Unknown mode.")
 
     # output = layer(inputs[2:])
     # z_0, u_c_0, _, _, l_c_0, _, _ = output
@@ -192,18 +199,21 @@ def test_Backward_Flatten_multiD_box(odd, floatx, mode, previous, data_format, h
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
         output = layer(input_mode)
         z_0, u_c_0, _, _, l_c_0, _, _ = output
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
         output = layer(input_mode)
         z_0, _, _, _, _ = output
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         input_mode = [inputs[3], inputs[6]]
         output = layer(input_mode)
         u_c_0, l_c_0 = output
+    else:
+        raise ValueError("Unknown mode.")
 
     # output = layer(inputs[2:])
     # z_0, u_c_0, _, _, l_c_0, _, _ = output
@@ -268,18 +278,21 @@ def test_Backward_Reshape_multiD_box(odd, floatx, mode, previous, data_format, h
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
         output = layer(input_mode)
         z_0, u_c_0, _, _, l_c_0, _, _ = output
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
         output = layer(input_mode)
         z_0, _, _, _, _ = output
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         input_mode = [inputs[3], inputs[6]]
         output = layer(input_mode)
         u_c_0, l_c_0 = output
+    else:
+        raise ValueError("Unknown mode.")
 
     # output = layer(inputs[2:])
     # z_0, u_c_0, _, _, l_c_0, _, _ = output

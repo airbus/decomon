@@ -1,4 +1,4 @@
-from decomon.layers.core import F_FORWARD
+from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import (
     DecomonActivation,
     DecomonBatchNormalization,
@@ -25,7 +25,7 @@ from decomon.layers.maxpooling import DecomonMaxPooling2D
 
 def test_decomon_reshape():
     dims = (1, 2, 3)
-    mode = F_FORWARD.name
+    mode = ForwardMode.AFFINE
     layer = DecomonPermute(dims=dims, mode=mode)
     config = layer.get_config()
     assert config["dims"] == dims

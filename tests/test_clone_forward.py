@@ -15,6 +15,7 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model, Sequential
 
+from decomon.layers.core import ForwardMode
 from decomon.models.forward_cloning import convert_forward
 
 
@@ -170,15 +171,16 @@ def test_convert_forward_1D(n, mode, floatx, helpers):
 
     IBP = True
     forward = True
-    if mode == "forward":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.AFFINE:
         IBP = False
-    if mode == "ibp":
+    if mode == ForwardMode.IBP:
         forward = False
 
     input_tensors = inputs[2:]
-    if mode == "ibp":
+    if mode == ForwardMode.IBP:
         input_tensors = [u_c, l_c]
-    if mode == "forward":
+    if mode == ForwardMode.AFFINE:
         input_tensors = [z, W_u, b_u, W_l, b_l]
 
     _, output, _, _ = convert_forward(ref_nn, IBP=IBP, forward=forward, shared=True, input_tensors=input_tensors)
@@ -188,12 +190,14 @@ def test_convert_forward_1D(n, mode, floatx, helpers):
 
     y_ref = f_ref(inputs_)
     u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = [None] * 6
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_ = f_dense(inputs_[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_ = f_dense(inputs_[2:])
+    else:
+        raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
         x_,

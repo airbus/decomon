@@ -1,11 +1,11 @@
-from decomon.layers.core import F_HYBRID
+from decomon.layers.core import ForwardMode
 from decomon.layers.utils import exp, expand_dims, log, sum
 from decomon.utils import add, minus
 
 # compute categorical cross entropy
 
 
-def categorical_cross_entropy(input_, dc_decomp=False, mode=F_HYBRID.name, convex_domain=None):
+def categorical_cross_entropy(input_, dc_decomp=False, mode=ForwardMode.HYBRID, convex_domain=None):
 
     # step 1: exponential
     if convex_domain is None:
