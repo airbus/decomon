@@ -3,11 +3,11 @@ import tensorflow as tf
 from tensorflow.keras.layers import Flatten
 from tensorflow.python.keras import backend as K
 
-from decomon.layers import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
-from decomon.layers.core import Grid
+from decomon.layers.core import ForwardMode, StaticVariables
 from decomon.layers.utils import sort
 from decomon.utils import (
-    V_slope,
+    ConvexDomainType,
+    Slope,
     get_linear_hull_relu,
     get_lower,
     get_lower_box,
@@ -20,7 +20,9 @@ from decomon.utils import (
 )
 
 
-def backward_add(inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain=None, mode=F_HYBRID.name):
+def backward_add(
+    inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain=None, mode=ForwardMode.HYBRID
+):
     """Backward  LiRPA of inputs_0+inputs_1
 
     Args:
@@ -38,12 +40,13 @@ def backward_add(inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, con
     """
     if convex_domain is None:
         convex_domain = {}
+    mode = ForwardMode(mode)
     op_flat = Flatten(dtype=K.floatx())  # pas terrible  a revoir
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
-    if mode == F_IBP.name:
+    if mode == ForwardMode.IBP:
         u_c_0, l_c_0 = inputs_0[:nb_tensors]
         u_c_1, l_c_1 = inputs_1[:nb_tensors]
-    elif mode == F_HYBRID.name:
+    elif mode == ForwardMode.HYBRID:
         x, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0 = inputs_0[:nb_tensors]
         x, u_c_1, w_u_1, b_u_1, l_c_1, w_l_1, b_l_1 = inputs_1[:nb_tensors]
         u_c_0_ = get_upper(x, w_u_0, b_u_0, convex_domain=convex_domain)
@@ -54,7 +57,7 @@ def backward_add(inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, con
         u_c_1 = K.minimum(u_c_1, u_c_1_)
         l_c_0 = K.maximum(l_c_0, l_c_0_)
         l_c_1 = K.maximum(l_c_1, l_c_1_)
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         x, w_u_0, b_u_0, w_l_0, b_l_0 = inputs_0[:nb_tensors]
         x, w_u_1, b_u_1, w_l_1, b_l_1 = inputs_1[:nb_tensors]
         u_c_0 = get_upper(x, w_u_0, b_u_0, convex_domain=convex_domain)
@@ -134,8 +137,8 @@ def backward_relu_(
     w_out_l,
     b_out_l,
     convex_domain=None,
-    slope=V_slope.name,
-    mode=F_HYBRID.name,
+    slope=Slope.V_SLOPE,
+    mode=ForwardMode.HYBRID,
     fast=True,
     **kwargs,
 ):
@@ -158,18 +161,19 @@ def backward_relu_(
 
     if convex_domain is None:
         convex_domain = {}
+    mode = ForwardMode(mode)
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
-    if mode == F_HYBRID.name:
+    if mode == ForwardMode.HYBRID:
         # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensors]
         upper = u_c
         lower = l_c
-    elif mode == F_IBP.name:
+    elif mode == ForwardMode.IBP:
         # y, x_0, u_c, l_c = x[:4]
         u_c, l_c = x[:nb_tensors]
         upper = u_c
         lower = l_c
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         # y, x_0, w_u, b_u, w_l, b_l = x[:6]
         x_0, w_u, b_u, w_l, b_l = x[:nb_tensors]
         upper = get_upper(x_0, w_u, b_u, convex_domain)
@@ -177,7 +181,7 @@ def backward_relu_(
     else:
         raise ValueError(f"Unknown mode {mode}")
 
-    if len(convex_domain) and convex_domain["name"] == Grid.name and mode != F_IBP.name:
+    if len(convex_domain) and convex_domain["name"] == ConvexDomainType.GRID and mode != ForwardMode.IBP:
 
         raise NotImplementedError()
 
@@ -210,8 +214,8 @@ def backward_softplus_(
     w_out_l,
     b_out_l,
     convex_domain=None,
-    slope=V_slope.name,
-    mode=F_HYBRID.name,
+    slope=Slope.V_SLOPE,
+    mode=ForwardMode.HYBRID,
     fast=True,
     **kwargs,
 ):
@@ -234,16 +238,17 @@ def backward_softplus_(
 
     if convex_domain is None:
         convex_domain = {}
+    mode = ForwardMode(mode)
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
-    if mode == F_HYBRID.name:
+    if mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensors]
         upper = u_c
         lower = l_c
-    elif mode == F_IBP.name:
+    elif mode == ForwardMode.IBP:
         u_c, l_c = x[:nb_tensors]
         upper = u_c
         lower = l_c
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         x_0, w_u, b_u, w_l, b_l = x[:nb_tensors]
         upper = get_upper(x_0, w_u, b_u, convex_domain)
         lower = get_lower(x_0, w_l, b_l, convex_domain)
@@ -322,8 +327,8 @@ def backward_maximum(
     w_out_l,
     b_out_l,
     convex_domain=None,
-    slope=V_slope.name,
-    mode=F_HYBRID.name,
+    slope=Slope.V_SLOPE,
+    mode=ForwardMode.HYBRID,
     **kwargs,
 ):
     """Backward  LiRPA of maximum(inputs_0, inputs_1)
@@ -365,7 +370,16 @@ def backward_maximum(
 
 # convex hull of the maximum between two functions
 def backward_max_(
-    x, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, axis=-1, **kwargs
+    x,
+    w_out_u,
+    b_out_u,
+    w_out_l,
+    b_out_l,
+    convex_domain=None,
+    slope=Slope.V_SLOPE,
+    mode=ForwardMode.HYBRID,
+    axis=-1,
+    **kwargs,
 ):
     """Backward  LiRPA of max
 
@@ -383,18 +397,19 @@ def backward_max_(
     """
     if convex_domain is None:
         convex_domain = {}
+    mode = ForwardMode(mode)
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     z_value = K.cast(0.0, x.dtype)
     x_0, b_u, b_l, w_u, w_l, u_c, l_c = None, None, None, None, None, None, None
     u_c_tmp, w_u_tmp, b_u_tmp, l_c_tmp, w_l_tmp, b_l_tmp = None, None, None, None, None, None
     u_c_list, w_u_list, b_u_list, l_c_list, w_l_list, b_l_list = None, None, None, None, None, None
-    if mode == F_HYBRID.name:
+    if mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensor]
         y = u_c
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         x_0, w_u, b_u, w_l, b_l = x[:nb_tensor]
         y = b_u
-    elif mode == F_IBP.name:
+    elif mode == ForwardMode.IBP:
         u_c, l_c = x[:nb_tensor]
         y = u_c
     else:
@@ -404,14 +419,14 @@ def backward_max_(
     max_dim = input_shape[axis]
 
     # do some transpose so that the last axis is also at the end
-    if mode in [F_HYBRID.name, F_IBP.name]:
+    if mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
 
         u_c_list = tf.split(u_c, max_dim, axis)
         l_c_list = tf.split(l_c, max_dim, axis)
         u_c_tmp = u_c_list[0] + z_value * (u_c_list[0])
         l_c_tmp = l_c_list[0] + z_value * (l_c_list[0])
 
-    if mode in [F_HYBRID.name, F_FORWARD.name]:
+    if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
 
         b_u_list = tf.split(b_u, max_dim, axis)
         b_l_list = tf.split(b_l, max_dim, axis)
@@ -429,7 +444,7 @@ def backward_max_(
 
     outputs = []
     output_tmp = []  # store output at every level
-    if mode == F_HYBRID.name:
+    if mode == ForwardMode.HYBRID:
         output_tmp = [
             x_0,
             u_c_tmp,
@@ -445,7 +460,7 @@ def backward_max_(
             outputs.append([[elem for elem in output_tmp], output_i])
             output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
 
-    if mode == F_IBP.name:
+    if mode == ForwardMode.IBP:
         output_tmp = [
             u_c_tmp,
             l_c_tmp,
@@ -456,7 +471,7 @@ def backward_max_(
             outputs.append([[elem for elem in output_tmp], output_i])
             output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
 
-    if mode == F_FORWARD.name:
+    if mode == ForwardMode.AFFINE:
         output_tmp = [
             x_0,
             w_u_tmp,
@@ -505,8 +520,8 @@ def backward_minimum(
     w_out_l,
     b_out_l,
     convex_domain=None,
-    slope=V_slope.name,
-    mode=F_HYBRID.name,
+    slope=Slope.V_SLOPE,
+    mode=ForwardMode.HYBRID,
     **kwargs,
 ):
     """Backward  LiRPA of minimum(inputs_0, inputs_1)
@@ -557,7 +572,9 @@ def backward_minimum(
     return bounds_0_, bounds_1_
 
 
-def backward_minus(w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name):
+def backward_minus(
+    w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, slope=Slope.V_SLOPE, mode=ForwardMode.HYBRID
+):
     """Backward  LiRPA of -x
 
     Args:
@@ -605,7 +622,7 @@ def backward_scale(scale_factor, w_out_u, b_out_u, w_out_l, b_out_l):
 
 
 def backward_substract(
-    inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain=None, mode=F_HYBRID.name
+    inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain=None, mode=ForwardMode.HYBRID
 ):
     """Backward  LiRPA of inputs_0 - inputs_1
 
@@ -635,7 +652,15 @@ def backward_substract(
 
 
 def backward_multiply(
-    inputs_0, inputs_1, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name
+    inputs_0,
+    inputs_1,
+    w_out_u,
+    b_out_u,
+    w_out_l,
+    b_out_l,
+    convex_domain=None,
+    slope=Slope.V_SLOPE,
+    mode=ForwardMode.HYBRID,
 ):
     """Backward  LiRPA of element-wise multiply inputs_0*inputs_1
 
@@ -656,13 +681,14 @@ def backward_multiply(
 
     if convex_domain is None:
         convex_domain = {}
-    if mode == F_IBP.name:
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.IBP:
         u_0, l_0 = inputs_0
         u_1, l_1 = inputs_1
-    elif mode == F_HYBRID.name:
+    elif mode == ForwardMode.HYBRID:
         x_0, u_0, w_u_0, b_u_0, l_0, w_l_0, b_l_0 = inputs_0
         x_1, u_1, w_u_1, b_u_1, l_1, w_l_1, b_l_1 = inputs_1
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         x_0, w_u_0, b_u_0, w_l_0, b_l_0 = inputs_0
         x_1, w_u_1, b_u_1, w_l_1, b_l_1 = inputs_1
         u_0 = get_upper(x_0, w_u_0, b_u_0, convex_domain=convex_domain)
@@ -725,8 +751,8 @@ def backward_sort(
     b_out_l,
     axis=-1,
     convex_domain=None,
-    slope=V_slope.name,
-    mode=F_HYBRID.name,
+    slope=Slope.V_SLOPE,
+    mode=ForwardMode.HYBRID,
     **kwargs,
 ):
     """Backward  LiRPA of sort
@@ -747,20 +773,21 @@ def backward_sort(
     """
     if convex_domain is None:
         convex_domain = {}
+    mode = ForwardMode(mode)
     z_value = K.cast(0.0, w_out_u.dtype)
 
     # build the tightest contain bounds for inputs_
-    if mode == F_IBP.name:
+    if mode == ForwardMode.IBP:
         u_c_, l_c_ = inputs_
         y = u_c_
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         x_0, w_u_, b_u_, w_l_, b_l_ = inputs_
         y = b_u_
         u_c_0 = get_upper(x_0, w_u_, b_u_, convex_domain=convex_domain)
         l_c_0 = get_lower(x_0, w_l_, b_l_, convex_domain=convex_domain)
         u_c_ = u_c_0
         l_c_ = l_c_0
-    elif mode == F_HYBRID.name:
+    elif mode == ForwardMode.HYBRID:
         x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = inputs_
         y = u_c_
         u_c_0 = get_upper(x_0, w_u_, b_u_, convex_domain=convex_domain)
@@ -775,7 +802,7 @@ def backward_sort(
     w_tmp = z_value * K.concatenate([y[:, None] * n_dim], 1)
 
     inputs_tmp = [x_0, u_c_, w_tmp, u_c_, l_c_, w_tmp, l_c_]
-    outputs_tmp = sort(inputs_tmp, axis=axis, convex_domain=convex_domain, mode=F_HYBRID.name)
+    outputs_tmp = sort(inputs_tmp, axis=axis, convex_domain=convex_domain, mode=ForwardMode.HYBRID)
     _, _, w_u_tmp, b_u_tmp, _, w_l_tmp, b_l_tmp = outputs_tmp
 
     # w_u_tmp (None, n_dim, y.shape[1:)
@@ -815,14 +842,16 @@ def get_identity_lirpa(inputs):
     return w_out_u, b_out_u, w_out_l, b_out_l
 
 
-def get_IBP(mode=F_HYBRID.name):
-    if mode in [F_HYBRID.name, F_IBP.name]:
+def get_IBP(mode=ForwardMode.HYBRID):
+    mode = ForwardMode(mode)
+    if mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
         return True
     return False
 
 
-def get_FORWARD(mode=F_HYBRID.name):
-    if mode in [F_HYBRID.name, F_FORWARD.name]:
+def get_FORWARD(mode=ForwardMode.HYBRID):
+    mode = ForwardMode(mode)
+    if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
         return True
     return False
 

@@ -4,6 +4,7 @@
 import pytest
 import tensorflow.python.keras.backend as K
 
+from decomon.layers.core import ForwardMode
 from decomon.metrics.utils import categorical_cross_entropy
 
 
@@ -24,18 +25,21 @@ def test_categorical_cross_entropy(odd, mode, floatx, helpers):
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0 = inputs_0
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         output = categorical_cross_entropy(inputs_0[2:], dc_decomp=False, mode=mode)
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output = categorical_cross_entropy([z_0, W_u_0, b_u_0, W_l_0, b_l_0], dc_decomp=False, mode=mode)
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output = categorical_cross_entropy([u_c_0, l_c_0], dc_decomp=False, mode=mode)
+    else:
+        raise ValueError("Unknown mode.")
 
     f_ref = K.function(inputs_0, -y_0 + K.log(K.sum(K.exp(y_0), -1))[:, None])
     f_entropy = K.function(inputs_0, output)
 
     y_ = f_ref(inputs_)
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_entropy(inputs_)
         helpers.assert_output_properties_box(
             x,
@@ -53,7 +57,7 @@ def test_categorical_cross_entropy(odd, mode, floatx, helpers):
             "minus_multid_{}".format(odd),
             decimal=decimal,
         )
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_ = f_entropy(inputs_)
         helpers.assert_output_properties_box(
             x,
@@ -71,7 +75,7 @@ def test_categorical_cross_entropy(odd, mode, floatx, helpers):
             "minus_multid_{}".format(odd),
             decimal=decimal,
         )
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_ = f_entropy(inputs_)
         helpers.assert_output_properties_box(
             x,
@@ -89,6 +93,8 @@ def test_categorical_cross_entropy(odd, mode, floatx, helpers):
             "minus_multid_{}".format(odd),
             decimal=decimal,
         )
+    else:
+        raise ValueError("Unknown mode.")
 
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)

@@ -1,9 +1,9 @@
 ## Measuring the percentage of the input space that could be discarded as we are able to prove the property on it
 import numpy as np
 
-from decomon.layers.core import Box
 from decomon.models.convert import clone as convert
 from decomon.models.models import DecomonModel
+from decomon.utils import ConvexDomainType
 from decomon.wrapper import get_adv_box, refine_boxes
 
 
@@ -41,7 +41,7 @@ def get_adv_coverage_box(
     if not isinstance(model, DecomonModel):
         model_ = convert(model)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] == Box.name
+        assert len(model.convex_domain) == 0 or model.convex_domain["name"] == ConvexDomainType.BOX
         model_ = model
 
     n_split = 1

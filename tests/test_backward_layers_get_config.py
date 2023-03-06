@@ -30,7 +30,7 @@ from decomon.backward_layers.crown import (
     MergeWithPrevious,
 )
 from decomon.backward_layers.deel_lip import BackwardGroupSort2
-from decomon.layers.core import F_FORWARD
+from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import (
     DecomonActivation,
     DecomonBatchNormalization,
@@ -140,7 +140,7 @@ def test_deel_lip():
 
 
 def test_crown():
-    mode = F_FORWARD
+    mode = ForwardMode.AFFINE
     convex_domain = {}
     input_shape_layer = (1, 2, 4)
     backward_shape_layer = (2, 5, 10)

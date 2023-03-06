@@ -15,6 +15,7 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model
 
+from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import to_decomon
 from decomon.layers.decomon_merge_layers import (
     DecomonAdd,
@@ -81,12 +82,15 @@ def test_DecomonOp_1D_box(decomon_op_class, tensor_op, decomon_op_kwargs, n, mod
     x0_, y0_, z0_, u_c0_, W_u0_, b_u0_, l_c0_, W_l0_, b_l0_ = inputs_0_
     x1_, y1_, z1_, u_c1_, W_u1_, b_u1_, l_c1_, W_l1_, b_l1_ = inputs_1_
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         output_decomon = decomon_op(inputs_0[2:] + inputs_1[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output_decomon = decomon_op([z0, W_u0, b_u0, W_l0, b_l0] + [z1, W_u1, b_u1, W_l1, b_l1])
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output_decomon = decomon_op([u_c0, l_c0] + [u_c1, l_c1])
+    else:
+        raise ValueError("Unknown mode.")
 
     model = Model(inputs_0[2:] + inputs_1[2:], output_decomon)
     y_ = tensor_op(y0_, y1_)
@@ -94,12 +98,14 @@ def test_DecomonOp_1D_box(decomon_op_class, tensor_op, decomon_op_kwargs, n, mod
     output_ = model.predict(inputs_0_[2:] + inputs_1_[2:])
     u_, w_u_, b_u_, l_, w_l_, b_l_ = [None] * 6
     z_ = z0_
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_ = output_
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_, l_ = output_
+    else:
+        raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
         inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add", decimal=decimal
@@ -143,12 +149,15 @@ def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, od
     x0_, y0_, z0_, u_c0_, W_u0_, b_u0_, l_c0_, W_l0_, b_l0_ = inputs_0_
     x1_, y1_, z1_, u_c1_, W_u1_, b_u1_, l_c1_, W_l1_, b_l1_ = inputs_1_
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         output_decomon = decomon_op(inputs_0[2:] + inputs_1[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output_decomon = decomon_op([z0, W_u0, b_u0, W_l0, b_l0] + [z1, W_u1, b_u1, W_l1, b_l1])
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output_decomon = decomon_op([u_c0, l_c0] + [u_c1, l_c1])
+    else:
+        raise ValueError("Unknown mode.")
 
     model = Model(inputs_0[2:] + inputs_1[2:], output_decomon)
     y_ = tensor_op(y0_, y1_)
@@ -156,12 +165,14 @@ def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, od
     output_ = model.predict(inputs_0_[2:] + inputs_1_[2:])
     u_, w_u_, b_u_, l_, w_l_, b_l_ = [None] * 6
     z_ = z0_
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_ = output_
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_, l_ = output_
+    else:
+        raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
         inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add", decimal=decimal

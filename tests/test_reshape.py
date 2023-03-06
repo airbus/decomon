@@ -3,6 +3,7 @@ import pytest
 import tensorflow.python.keras.backend as K
 from tensorflow.keras.layers import Permute, Reshape
 
+from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import to_decomon
 from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
 
@@ -30,23 +31,29 @@ def test_Decomon_reshape_box(mode, floatx, helpers):
 
     monotonic_layer = DecomonReshape((target_shape), dc_decomp=True, mode=mode, dtype=K.floatx())
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         output = monotonic_layer(inputs[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output = monotonic_layer([z, W_u, b_u, W_l, b_l, h, g])
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output = monotonic_layer([u_c, l_c, h, g])
+    else:
+        raise ValueError("Unknown mode.")
 
     f_reshape = K.function(inputs[2:], output)
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_reshape(inputs_[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_reshape(inputs_[2:])
         u_c_ = None
         l_c_ = None
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_reshape(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
+    else:
+        raise ValueError("Unknown mode.")
+
     helpers.assert_output_properties_box(
         x_,
         y_,
@@ -91,23 +98,28 @@ def test_Decomon_reshape_box_nodc(mode, floatx, helpers):
 
     monotonic_layer = DecomonReshape((target_shape), dc_decomp=False, mode=mode, dtype=K.floatx())
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         output = monotonic_layer(inputs[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output = monotonic_layer([z, W_u, b_u, W_l, b_l])
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output = monotonic_layer([u_c, l_c])
+    else:
+        raise ValueError("Unknown mode.")
 
     f_reshape = K.function(inputs[2:], output)
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_reshape(inputs_[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_ = f_reshape(inputs_[2:])
         u_c_ = None
         l_c_ = None
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_ = f_reshape(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
+    else:
+        raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
         x_,
@@ -209,23 +221,28 @@ def test_Decomon_permute_box(mode, floatx, helpers):
 
     monotonic_layer = DecomonPermute(target_shape, dc_decomp=True, mode=mode, dtype=K.floatx())
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         output = monotonic_layer(inputs[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output = monotonic_layer([z, W_u, b_u, W_l, b_l, h, g])
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output = monotonic_layer([u_c, l_c, h, g])
+    else:
+        raise ValueError("Unknown mode.")
 
     f_permute = K.function(inputs[2:], output)
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_permute(inputs_[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_permute(inputs_[2:])
         u_c_ = None
         l_c_ = None
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_permute(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
+    else:
+        raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
         x_,
@@ -271,23 +288,28 @@ def test_Decomon_permute_box_nodc(mode, floatx, helpers):
 
     monotonic_layer = DecomonPermute(target_shape, dc_decomp=False, mode=mode, dtype=K.floatx())
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         output = monotonic_layer(inputs[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output = monotonic_layer([z, W_u, b_u, W_l, b_l])
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output = monotonic_layer([u_c, l_c])
+    else:
+        raise ValueError("Unknown mode.")
 
     f_permute = K.function(inputs[2:], output)
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_permute(inputs_[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_ = f_permute(inputs_[2:])
         u_c_ = None
         l_c_ = None
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_ = f_permute(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
+    else:
+        raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
         x_,

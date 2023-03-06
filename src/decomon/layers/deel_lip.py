@@ -1,6 +1,6 @@
 import logging
 
-from decomon.layers.core import F_FORWARD, F_HYBRID, DecomonLayer
+from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.decomon_merge_layers import DecomonConcatenate
 from decomon.layers.decomon_reshape import DecomonReshape
 from decomon.layers.utils import ClipAlpha, expand_dims, max_, min_, sort
@@ -17,9 +17,8 @@ except ImportError:
 
 
 class DecomonGroupSort(DecomonLayer):
-    def __init__(self, n=None, data_format="channels_last", k_coef_lip=1.0, mode=F_HYBRID.name, **kwargs):
-        super().__init__(**kwargs)
-        self.mode = mode
+    def __init__(self, n=None, data_format="channels_last", k_coef_lip=1.0, mode=ForwardMode.HYBRID, **kwargs):
+        super().__init__(mode=mode, **kwargs)
         self.data_format = data_format
         if data_format == "channels_last":
             self.channel_axis = -1
@@ -79,9 +78,8 @@ class DecomonGroupSort(DecomonLayer):
 
 
 class DecomonGroupSort2(DecomonLayer):
-    def __init__(self, n=2, data_format="channels_last", k_coef_lip=1.0, mode=F_HYBRID.name, **kwargs):
-        super().__init__(**kwargs)
-        self.mode = mode
+    def __init__(self, n=2, data_format="channels_last", k_coef_lip=1.0, mode=ForwardMode.HYBRID, **kwargs):
+        super().__init__(mode=mode, **kwargs)
         self.data_format = data_format
 
         if self.data_format == "channels_last":
@@ -155,7 +153,7 @@ class DecomonGroupSort2(DecomonLayer):
         self.params_max = []
         self.params_min = []
 
-        if self.finetune and self.mode in [F_FORWARD.name, F_HYBRID.name]:
+        if self.finetune and self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             self.beta_max_ = self.add_weight(
                 shape=target_shape, initializer="ones", name="beta_max", regularizer=None, constraint=ClipAlpha()
             )

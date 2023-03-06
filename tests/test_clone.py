@@ -4,6 +4,7 @@
 import pytest
 import tensorflow.python.keras.backend as K
 
+from decomon.layers.core import ForwardMode
 from decomon.models import clone
 
 
@@ -30,9 +31,10 @@ def test_convert_1D(n, method, mode, floatx, helpers):
 
     IBP = True
     forward = True
-    if mode == "forward":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.AFFINE:
         IBP = False
-    if mode == "ibp":
+    if mode == ForwardMode.IBP:
         forward = False
 
     f_dense = clone(ref_nn, method=method, final_ibp=IBP, final_forward=forward)
@@ -41,12 +43,14 @@ def test_convert_1D(n, method, mode, floatx, helpers):
     y_ref = f_ref(inputs_)
 
     u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = [None] * 6
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(z_)
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_ = f_dense(z_)
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_ = f_dense(z_)
+    else:
+        raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
         x_,

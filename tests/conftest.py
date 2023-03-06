@@ -16,8 +16,11 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model, Sequential
 
+from decomon.layers.core import ForwardMode
+from decomon.models.utils import ConvertMethod
 
-@pytest.fixture(params=["hybrid", "ibp", "forward"])
+
+@pytest.fixture(params=[m.value for m in ForwardMode])
 def mode(request):
     return request.param
 
@@ -67,7 +70,7 @@ def odd(request):
     return request.param
 
 
-@pytest.fixture(params=["hybrid", "ibp", "forward", "crown", "crown-hybrid", "crown-ibp", "crown-forward"])
+@pytest.fixture(params=[m.value for m in ConvertMethod])
 def method(request):
     return request.param
 
@@ -75,7 +78,10 @@ def method(request):
 class Helpers:
     @staticmethod
     def is_method_mode_compatible(method, mode):
-        return not (method in {"ibp", "crown-ibp"} and mode != "ibp")
+        return not (
+            ConvertMethod(method) in {ConvertMethod.CROWN_FORWARD_IBP, ConvertMethod.FORWARD_IBP}
+            and ForwardMode(mode) != ForwardMode.IBP
+        )
 
     @staticmethod
     def get_standard_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):

@@ -12,6 +12,7 @@ from decomon.backward_layers.utils import (
     backward_relu_,
     backward_substract,
 )
+from decomon.layers.core import ForwardMode
 from decomon.utils import relu_, substract
 
 
@@ -39,19 +40,22 @@ def test_relu_backward_1D_box(n, mode, floatx, helpers):
 
     x_, y_, z_, u_c_, W_u_, B_u_, l_c_, W_l_, B_l_ = inputs_
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
         output = relu_(input_mode, dc_decomp=False, mode=mode)
         z_0, u_c_0, _, _, l_c_0, _, _ = output
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         input_mode = [z, W_u, b_u, W_l, b_l]
         output = relu_(input_mode, dc_decomp=False, mode=mode)
         z_0, _, _, _, _ = output
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         input_mode = [u_c, l_c]
         output = relu_(input_mode, dc_decomp=False, mode=mode)
         z_0 = z_
         u_c_0, l_c_0 = output
+    else:
+        raise ValueError("Unknown mode.")
 
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1), dtype=K.floatx())
@@ -116,15 +120,18 @@ def test_reduce_backward_1D_box(n_0, n_1, backward_func, tensor_op, mode, floatx
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         input_tmp_0 = inputs_0[2:]
         input_tmp_1 = inputs_1[2:]
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         input_tmp_0 = [inputs_0[3], inputs_0[6]]
         input_tmp_1 = [inputs_1[3], inputs_1[6]]
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         input_tmp_0 = [inputs_0[2], inputs_0[4], inputs_0[5], inputs_0[7], inputs_0[8]]
         input_tmp_1 = [inputs_1[2], inputs_1[4], inputs_1[5], inputs_1[7], inputs_1[8]]
+    else:
+        raise ValueError("Unknown mode.")
 
     back_bounds_0, back_bounds_1 = backward_func(input_tmp_0, input_tmp_1, w_out, b_out, w_out, b_out, mode=mode)
     f_add = K.function(inputs_0 + inputs_1 + [w_out, b_out], back_bounds_0 + back_bounds_1)

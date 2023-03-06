@@ -1,3 +1,5 @@
+from enum import Enum
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.python.keras.backend as K
@@ -8,62 +10,31 @@ from decomon.layers.decomon_layers import to_decomon
 from decomon.models.backward_cloning import get_backward_model as convert_backward
 from decomon.models.forward_cloning import convert_forward
 from decomon.models.models import DecomonModel
-from decomon.models.utils import convert_2_mode, get_mode
-from decomon.utils import Ball, get_lower, get_upper
+from decomon.models.utils import ConvertMethod, convert_2_mode, get_mode
+from decomon.utils import ConvexDomainType, get_lower, get_upper
 
 
-class FORWARD_FEED:
-    name = "feed_forward"
-
-
-class BACKWARD_FEED:
-    name = "feed_backward"
-
-
-# define the set of methods
-class CROWN:
-    name = "crown"
-
-
-class CROWN_IBP:
-    name = "crown-ibp"
-
-
-class CROWN_FORWARD:
-    name = "crown-forward"
-
-
-class CROWN_HYBRID:
-    name = "crown-hybrid"
-
-
-class IBP:
-    name = "ibp"
-
-
-class FORWARD:
-    name = "forward"
-
-
-class HYBRID:
-    name = "hybrid"
+class FeedDirection(Enum):
+    FORWARD = "feed_forward"
+    BACKWARD = "feed_backward"
 
 
 def get_direction(method):
-    if method in [IBP.name, FORWARD.name, HYBRID.name]:
-        return FORWARD_FEED.name
+    if ConvertMethod(method) in [ConvertMethod.FORWARD_IBP, ConvertMethod.FORWARD_AFFINE, ConvertMethod.FORWARD_HYBRID]:
+        return FeedDirection.FORWARD
     else:
-        return BACKWARD_FEED.name
+        return FeedDirection.BACKWARD
 
 
 def get_ibp_forward_from_method(method):
-    if method in [IBP.name, CROWN_IBP.name]:
+    method = ConvertMethod(method)
+    if method in [ConvertMethod.FORWARD_IBP, ConvertMethod.CROWN_FORWARD_IBP]:
         return True, False
-    if method in [FORWARD.name, CROWN_FORWARD.name]:
+    if method in [ConvertMethod.FORWARD_AFFINE, ConvertMethod.CROWN_FORWARD_AFFINE]:
         return False, True
-    if method in [HYBRID.name, CROWN_HYBRID.name]:
+    if method in [ConvertMethod.FORWARD_HYBRID, ConvertMethod.CROWN_FORWARD_HYBRID]:
         return True, True
-    if method == CROWN.name:
+    if method == ConvertMethod.CROWN:
         return True, False
     return True, True
 
@@ -76,7 +47,7 @@ def switch_mode_mapping(forward_map, IBP, forward, method):
 def convert(
     model,
     input_tensors,
-    method=CROWN.name,
+    method=ConvertMethod.CROWN,
     ibp=False,
     forward=False,
     back_bounds=None,
@@ -107,11 +78,10 @@ def convert(
         finetune_forward = True
         finetune_backward = True
 
-    method = method.lower()
-    if not method in [algo.name for algo in [CROWN, CROWN_FORWARD, CROWN_HYBRID, CROWN_IBP, IBP, FORWARD, HYBRID]]:
-        raise KeyError()
+    if isinstance(method, str):
+        method = ConvertMethod(method.lower())
 
-    if method != CROWN.name:
+    if method != ConvertMethod.CROWN:
 
         ibp_, forward_ = ibp, forward
 
@@ -132,7 +102,7 @@ def convert(
         )
         input_tensors, _, layer_map, forward_map = results
 
-    if get_direction(method) == BACKWARD_FEED.name:
+    if get_direction(method) == FeedDirection.BACKWARD:
         input_tensors, output, layer_map, forward_map = convert_backward(
             model=model,
             input_tensors=input_tensors,
@@ -166,7 +136,7 @@ def clone(
     convex_domain=None,
     ibp=True,
     forward=True,
-    method="crown",
+    method=ConvertMethod.CROWN,
     back_bounds=None,
     finetune=False,
     shared=True,
@@ -200,16 +170,8 @@ def clone(
     else:
         final_forward = kwargs["final_forward"]
 
-    method = method.lower()
-    assert method in [
-        IBP.name,
-        FORWARD.name,
-        HYBRID.name,
-        CROWN.name,
-        CROWN_IBP.name,
-        CROWN_FORWARD.name,
-        CROWN_HYBRID.name,
-    ]
+    if isinstance(method, str):
+        method = ConvertMethod(method.lower())
 
     if not to_keras:
         raise NotImplementedError("Only convert to Keras for now.")
@@ -241,7 +203,7 @@ def clone(
     else:
         input_dim_ = input_dim
 
-    if len(convex_domain) == 0 or convex_domain["name"] != Ball.name:
+    if len(convex_domain) == 0 or convex_domain["name"] != ConvexDomainType.BALL:
         input_shape_x = (2, input_dim_)
     else:
         if isinstance(input_dim, tuple):
@@ -251,7 +213,7 @@ def clone(
 
     z_tensor = Input(shape=input_shape_x, dtype=model.layers[0].dtype)
 
-    if len(convex_domain) == 0 or convex_domain["name"] != Ball.name:
+    if len(convex_domain) == 0 or convex_domain["name"] != ConvexDomainType.BALL:
 
         if ibp_:
             u_c_tensor = Lambda(lambda z: z[:, 1], dtype=z_tensor.dtype)(z_tensor)
