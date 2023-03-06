@@ -522,7 +522,7 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
 
 
 # get upper bound of a sample with bounded noise
-def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1):
+def get_upper_noise(model, x, eps, p=np.inf, batch_size=-1):
     """upper bound the maximum of a model in an Lp Ball
 
     Args:
@@ -537,76 +537,8 @@ def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1):
         numpy array, vector with upper bounds of the range of values
         taken by the model inside the ball
     """
-    # check that the model is a DecomonModel, else do the conversion
-    convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
 
-    # check that the model is a DecomonModel, else do the conversion
-    if not isinstance(model, DecomonModel):
-        model_ = convert(model, method="crown-hybrid", convex_domain=convex_domain, ibp=True, forward=False)
-    else:
-        model_ = model
-        if eps >= 0:
-            model_.set_domain(convex_domain)
-
-    # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[1:])
-    input_dim = np.prod(input_shape)
-    x_ = x + 0 * x
-    x_ = x_.reshape([-1] + input_shape)
-
-    if batch_size > 0:
-        # split
-        r = 0
-        if len(x_) % batch_size > 0:
-            r += 1
-        X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        results = [get_upper_noise(model_, X_[i], eps=eps, p=p, batch_size=-1) for i in range(len(X_))]
-
-        return np.concatenate(results)
-
-    IBP = model_.IBP
-    forward = model_.forward
-    output = model_.predict(x_)
-    shape = output[-1].shape[1:]
-    shape_ = np.prod(shape)
-
-    x_ = x_.reshape((len(x_), -1))
-    ord = _get_dual_ord(p)
-
-    if forward:
-        if IBP:
-            _, u_i, w_u_f, b_u_f, _, _, _ = output[:7]
-            if len(u_i.shape) > 2:
-                u_i = np.reshape(u_i, (-1, input_dim))
-        else:
-            _, w_u_f, b_u_f, _, _ = output[:5]
-
-        # reshape if necessary
-        if len(w_u_f.shape) > 3:
-            w_u_f = np.reshape(w_u_f, (-1, input_dim, shape_))
-            b_u_f = np.reshape(b_u_f, (-1, shape_))
-
-        u_f = eps * np.linalg.norm(w_u_f, ord=ord, axis=1) + np.sum(w_u_f * x_[:, :, None], 1) + b_u_f
-
-    else:
-        u_i = output[0]
-        if len(u_i.shape) > 2:
-            u_i = np.reshape(u_i, (-1, input_dim))
-            ######
-
-    if IBP and forward:
-        u_ = np.minimum(u_i, u_f)
-    elif IBP and not forward:
-        u_ = u_i
-    elif not IBP and forward:
-        u_ = u_f
-    else:
-        raise NotImplementedError("not IBP and not forward not implemented")
-
-    if len(shape) > 1:
-        u_ = np.reshape(u_ + [-1] + list(shape))
-
-    return u_
+    return get_range_noise(model=model, x=x, eps=eps, p=p, batch_size=batch_size)[0]
 
 
 # get upper bound of a sample with bounded noise
@@ -625,74 +557,8 @@ def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1):
         numpy array, vector with lower bounds of the range of values
         taken by the model inside the ball
     """
-    # check that the model is a DecomonModel, else do the conversion
-    convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
 
-    if not isinstance(model, DecomonModel):
-        model_ = convert(model, method="crown-hybrid", convex_domain=convex_domain, ibp=True, forward=False)
-    else:
-        model_ = model
-        if eps >= 0:
-            model_.set_domain(convex_domain)
-
-    # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[1:])
-    input_dim = np.prod(input_shape)
-    x_ = x + 0 * x
-    x_ = x_.reshape([-1] + input_shape)
-
-    if batch_size > 0:
-        # split
-        r = 0
-        if len(x_) % batch_size > 0:
-            r += 1
-        X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        results = [get_lower_noise(model_, X_[i], eps=eps, p=p, batch_size=-1) for i in range(len(X_))]
-
-        return np.concatenate(results)
-
-    IBP = model_.IBP
-    forward = model_.forward
-    output = model_.predict(x_)
-    shape = list(output[-1].shape[1:])
-    shape_ = np.prod(shape)
-
-    x_ = x_.reshape((len(x_), -1))
-    ord = _get_dual_ord(p)
-
-    if forward:
-        if IBP:
-            _, _, _, _, l_i, w_l_f, b_l_f = output[:7]
-            if len(l_i.shape) > 2:
-                l_i = np.reshape(l_i, (-1, shape_))
-        else:
-            _, _, _, w_l_f, b_l_f = output[:5]
-
-        # reshape if necessary
-        if len(w_l_f.shape) > 3:
-            w_l_f = np.reshape(w_l_f, (-1, input_dim, shape_))
-            b_l_f = np.reshape(b_l_f, (-1, shape_))
-        l_f = -eps * np.linalg.norm(w_l_f, ord=ord, axis=1) + np.sum(w_l_f * x_[:, :, None], 1) + b_l_f
-
-    else:
-        l_i = output[1]
-        if len(l_i.shape) > 2:
-            l_i = np.reshape(l_i, (-1, shape_))
-            ######
-
-    if IBP and forward:
-        l_ = np.maximum(l_i, l_f)
-    elif IBP and not forward:
-        l_ = l_i
-    elif not IBP and forward:
-        l_ = l_f
-    else:
-        raise NotImplementedError("not IBP and not forward not implemented")
-
-    if len(shape) > 1:
-        l_ = np.reshape(l_, [-1] + shape)
-
-    return l_
+    return get_range_noise(model=model, x=x, eps=eps, p=p, batch_size=batch_size)[1]
 
 
 # get upper bound of a sample with bounded noise
@@ -736,10 +602,7 @@ def get_range_noise(model, x, eps, p=np.inf, batch_size=-1):
         X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         results = [get_range_noise(model_, X_[i], eps=eps, p=p, batch_size=-1) for i in range(len(X_))]
 
-        u_ = [r[0] for r in results]
-        l_ = [r[1] for r in results]
-
-        return np.concatenate(u_), np.concatenate(l_)
+        return np.concatenate([r[0] for r in results]), np.concatenate([r[1] for r in results])
 
     IBP = model_.IBP
     forward = model_.forward
