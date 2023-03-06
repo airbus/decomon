@@ -73,11 +73,11 @@ def get_adv_coverage_box(
         source_labels = np.array(source_labels).reshape((n_batch, -1))
 
     source_labels = source_labels.reshape((n_batch, -1))
-    source_labels = source_labels.astype("int64")
+    source_labels = source_labels.astype(np.int_)
 
     if target_labels is not None:
         target_labels = target_labels.reshape((n_batch, -1))
-        target_labels = target_labels.astype("int64")
+        target_labels = target_labels.astype(np.int_)
 
     if n_split > 1:
         shape = list(source_labels.shape[1:])
