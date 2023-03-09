@@ -1,7 +1,7 @@
 import logging
 
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Layer
+from tensorflow.keras.layers import Wrapper
 
 from decomon.backward_layers.activations import get
 from decomon.backward_layers.utils import V_slope, get_FORWARD, get_IBP, get_input_dim
@@ -19,7 +19,7 @@ except ImportError:
     )
 
 
-class BackwardDense(Layer):
+class BackwardDense(Wrapper):
     """Backward  LiRPA of Dense"""
 
     def __init__(
@@ -65,7 +65,7 @@ class BackwardDense(Layer):
         self.frozen_weights = False
 
 
-class BackwardGroupSort2(Layer):
+class BackwardGroupSort2(Wrapper):
     """Backward LiRPA of GroupSort2"""
 
     def __init__(
@@ -79,10 +79,9 @@ class BackwardGroupSort2(Layer):
         input_dim=-1,
         **kwargs,
     ):
-        super().__init__(kwargs)
+        super().__init__(layer, kwargs)
         if convex_domain is None:
             convex_domain = {}
-        self.layer = layer
         self.slope = slope
         self.finetune = finetune
 
