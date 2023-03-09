@@ -26,8 +26,8 @@ from decomon.layers.utils import broadcast, multiply, permute_dimensions, split
 
 
 class BackwardMerge(BackwardLayer):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, layer, **kwargs):
+        super().__init__(layer, **kwargs)
 
 
 class BackwardAdd(BackwardMerge):
@@ -44,10 +44,9 @@ class BackwardAdd(BackwardMerge):
         input_dim=-1,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(layer, **kwargs)
         if convex_domain is None:
             convex_domain = {}
-        self.layer = layer
         self.slope = slope
         if hasattr(self.layer, "mode"):
             self.mode = self.layer.mode
@@ -123,11 +122,10 @@ class BackwardAverage(BackwardMerge):
         input_dim=-1,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(layer, **kwargs)
 
         if convex_domain is None:
             convex_domain = {}
-        self.layer = layer
         self.slope = slope
         if hasattr(self.layer, "mode"):
             self.mode = self.layer.mode
@@ -211,11 +209,10 @@ class BackwardSubtract(BackwardMerge):
     """Backward  LiRPA of Subtract"""
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(layer, **kwargs)
         if not isinstance(layer, DecomonSubtract):
             raise KeyError()
 
-        self.layer = layer
         self.slope = slope
         self.mode = self.layer.mode
 
@@ -251,11 +248,10 @@ class BackwardMaximum(BackwardMerge):
     """Backward  LiRPA of Maximum"""
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(layer, **kwargs)
         if not isinstance(layer, DecomonMaximum):
             raise KeyError()
 
-        self.layer = layer
         self.slope = slope
         self.mode = self.layer.mode
 
@@ -291,11 +287,10 @@ class BackwardMinimum(BackwardMerge):
     """Backward  LiRPA of Minimum"""
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(layer, **kwargs)
         if not isinstance(layer, DecomonMinimum):
             raise KeyError()
 
-        self.layer = layer
         self.slope = slope
         self.mode = self.layer.mode
 
@@ -331,11 +326,10 @@ class BackwardConcatenate(BackwardMerge):
     """Backward  LiRPA of Concatenate"""
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(layer, **kwargs)
         if not isinstance(layer, DecomonConcatenate):
             raise KeyError()
 
-        self.layer = layer
         self.slope = slope
         self.mode = self.layer.mode
         self.axis = self.layer.axis
@@ -369,11 +363,10 @@ class BackwardMultiply(BackwardMerge):
     """Backward  LiRPA of Multiply"""
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(layer, **kwargs)
         if not isinstance(layer, DecomonMultiply):
             raise KeyError()
 
-        self.layer = layer
         self.slope = slope
         self.mode = self.layer.mode
 
@@ -409,11 +402,10 @@ class BackwardDot(BackwardMerge):
     """Backward  LiRPA of Dot"""
 
     def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(layer, **kwargs)
         if not isinstance(layer, DecomonDot):
             raise KeyError()
 
-        self.layer = layer
         self.slope = slope
         self.mode = self.layer.mode
         self.axes = [i for i in self.layer.axes]

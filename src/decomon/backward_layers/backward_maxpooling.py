@@ -1,14 +1,14 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Flatten, Layer
+from tensorflow.keras.layers import Flatten, Wrapper
 
 from decomon.backward_layers.utils import backward_max_
 from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP
 from decomon.utils import V_slope, get_lower, get_upper
 
 
-class BackwardMaxPooling2D(Layer):
+class BackwardMaxPooling2D(Wrapper):
     """Backward  LiRPA of MaxPooling2D"""
 
     def __init__(
@@ -22,7 +22,7 @@ class BackwardMaxPooling2D(Layer):
         input_dim=-1,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(layer, **kwargs)
         if convex_domain is None:
             convex_domain = {}
         raise NotImplementedError()
