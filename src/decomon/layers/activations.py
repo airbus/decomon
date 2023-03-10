@@ -429,7 +429,7 @@ def deserialize(name):
     elif name == TANH:
         return tanh
     elif name == RELU:
-        return relu_
+        return relu
     elif name == EXPONENTIAL:
         return exponential
     elif name == LINEAR:
