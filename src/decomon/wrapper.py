@@ -128,9 +128,9 @@ def get_adv_box(
         # two possitible cases: the model improves the bound based on the knowledge of the labels
         if model_.backward_bounds:
             C = np.diag([1] * n_label)[None] - source_labels[:, :, None]
-            output = model_.predict([z, C])
+            output = model_.predict([z, C], verbose=0)
         else:
-            output = model_.predict(z)
+            output = model_.predict(z, verbose=0)
 
         def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None, backward=False):
 
@@ -312,7 +312,7 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
 
     else:
 
-        output = model_.predict(z)
+        output = model_.predict(z, verbose=0)
 
         if not forward:
             # translate  into forward information
@@ -421,7 +421,7 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
     else:
         IBP = model_.IBP
         forward = model_.forward
-        output = model_.predict(z)
+        output = model_.predict(z, verbose=0)
         shape = output[-1].shape[1:]
         shape_ = np.prod(shape)
 
@@ -529,7 +529,7 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
         IBP = model_.IBP
         forward = model_.forward
 
-        output = model_.predict(z)
+        output = model_.predict(z, verbose=0)
         shape = list(output[-1].shape[1:])
         shape_ = np.prod(shape)
 
@@ -639,7 +639,7 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
         IBP = model_.IBP
         forward = model_.forward
 
-        output = model_.predict(z)
+        output = model_.predict(z, verbose=0)
         shape = list(output[-1].shape[1:])
         shape_ = np.prod(shape)
 
@@ -745,7 +745,7 @@ def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1):
 
     IBP = model_.IBP
     forward = model_.forward
-    output = model_.predict(x_)
+    output = model_.predict(x_, verbose=0)
     shape = output[-1].shape[1:]
     shape_ = np.prod(shape)
 
@@ -832,7 +832,7 @@ def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1):
 
     IBP = model_.IBP
     forward = model_.forward
-    output = model_.predict(x_)
+    output = model_.predict(x_, verbose=0)
     shape = list(output[-1].shape[1:])
     shape_ = np.prod(shape)
 
@@ -923,7 +923,7 @@ def get_range_noise(model, x, eps, p=np.inf, batch_size=-1):
     IBP = model_.IBP
     forward = model_.forward
 
-    output = model_.predict(x_)
+    output = model_.predict(x_, verbose=0)
     shape = list(output[-1].shape[1:])
     shape_ = np.prod(shape)
 
@@ -1213,7 +1213,7 @@ def get_adv_noise(
 
         IBP = model_.IBP
         forward = model_.forward
-        output = model_.predict(x_)
+        output = model_.predict(x_, verbose=0)
 
         def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
 
