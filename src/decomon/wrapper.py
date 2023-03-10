@@ -143,9 +143,9 @@ def get_adv_box(
         output: npt.NDArray[np.float_]
         if model_.backward_bounds:
             C = np.diag([1] * n_label)[None] - source_labels[:, :, None]
-            output = model_.predict([z, C])
+            output = model_.predict([z, C], verbose=0)
         else:
-            output = model_.predict(z)
+            output = model_.predict(z, verbose=0)
 
         def get_ibp_score(
             u_c: npt.NDArray[np.float_],
@@ -355,7 +355,7 @@ def check_adv_box(
 
     else:
 
-        output = model_.predict(z)
+        output = model_.predict(z, verbose=0)
 
         if not affine:
             # translate  into affine information
@@ -532,7 +532,7 @@ def get_range_box(
         ibp = model_.ibp
         affine = model_.affine
 
-        output = model_.predict(z)
+        output = model_.predict(z, verbose=0)
         shape = list(output[-1].shape[1:])
         shape_ = np.prod(shape)
 
@@ -704,7 +704,7 @@ def get_range_noise(
     ibp = model_.ibp
     affine = model_.affine
 
-    output = model_.predict(x_)
+    output = model_.predict(x_, verbose=0)
     shape = list(output[-1].shape[1:])
     shape_ = np.prod(shape)
 
@@ -1011,7 +1011,7 @@ def get_adv_noise(
 
         ibp = model_.ibp
         affine = model_.affine
-        output = model_.predict(x_)
+        output = model_.predict(x_, verbose=0)
 
         def get_ibp_score(
             u_c: npt.NDArray[np.float_],
