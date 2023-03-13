@@ -208,23 +208,6 @@ def get_mode(IBP=True, forward=True):
         return F_FORWARD.name
 
 
-def get_IBP(mode=F_HYBRID.name):
-    if mode in [F_HYBRID.name, F_IBP.name]:
-        return True
-    return False
-
-
-def get_FORWARD(mode=F_HYBRID.name):
-    if mode in [F_HYBRID.name, F_FORWARD.name]:
-        return True
-    return False
-
-
-def get_node_by_id_(node):
-
-    return f"NODE_{node.flat_output_ids}_{node.flat_input_ids}"
-
-
 def get_node_by_id(node, outbound=False, model=None):
     layer_ = node.outbound_layer
     input_names = str(id(node))
