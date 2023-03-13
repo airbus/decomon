@@ -16,7 +16,6 @@ from decomon.layers.activations import sigmoid, softmax, softsign, tanh
         (softmax, K.softmax, "softmax", 4),
     ],
 )
-@pytest.mark.parametrize("n,mode,floatx", [(0, "forward", 32)])
 def test_activation_1D_box(n, mode, floatx, helpers, activation_func, tensor_func, funcname, decimal):
     # softmax: test only n=0,3
     if funcname == "softmax":
