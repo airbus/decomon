@@ -30,7 +30,7 @@ from decomon.layers.decomon_merge_layers import (  # add some layers to module n
     DecomonMinimum,
     DecomonMultiply,
     DecomonSubtract,
-    to_monotonic_merge,
+    to_decomon_merge,
 )
 from decomon.layers.decomon_reshape import (  # add some layers to module namespace `globals()`
     DecomonPermute,
@@ -1508,7 +1508,7 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
 # conditional import for deel-lip
 
 
-def to_monotonic(
+def to_decomon(
     layer,
     input_dim,
     dc_decomp=False,
@@ -1553,7 +1553,7 @@ def to_monotonic(
             raise ValueError(f"the layer {layer.name} has not been built yet")
 
     if isinstance(layer, Merge):
-        return to_monotonic_merge(layer, input_dim, dc_decomp, convex_domain, finetune, IBP, forward)
+        return to_decomon_merge(layer, input_dim, dc_decomp, convex_domain, finetune, IBP, forward)
 
     # do case by case for optimizing
 
@@ -1604,7 +1604,7 @@ def to_monotonic(
                 layer_list.append(layer_next)
             else:
                 if isinstance(activation, dict):
-                    layer_next_list = to_monotonic(
+                    layer_next_list = to_decomon(
                         layer.activation,
                         input_dim,
                         dc_decomp=dc_decomp,

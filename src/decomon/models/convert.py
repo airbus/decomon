@@ -4,7 +4,7 @@ import tensorflow.python.keras.backend as K
 from tensorflow.keras.layers import Input, InputLayer, Lambda
 from tensorflow.keras.models import Model
 
-from decomon.layers.decomon_layers import to_monotonic
+from decomon.layers.decomon_layers import to_decomon
 from decomon.models.backward_cloning import get_backward_model as convert_backward
 from decomon.models.forward_cloning import convert_forward
 from decomon.models.models import DecomonModel
@@ -80,7 +80,7 @@ def convert(
     ibp=False,
     forward=False,
     back_bounds=None,
-    layer_fn=to_monotonic,
+    layer_fn=to_decomon,
     input_dim=-1,
     convex_domain=None,
     finetune=False,
@@ -161,7 +161,7 @@ def convert(
 
 def clone(
     model,
-    layer_fn=to_monotonic,
+    layer_fn=to_decomon,
     dc_decomp=False,
     convex_domain=None,
     ibp=True,

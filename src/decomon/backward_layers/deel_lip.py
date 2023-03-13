@@ -6,7 +6,7 @@ from tensorflow.keras.layers import Wrapper
 from decomon.backward_layers.activations import get
 from decomon.backward_layers.utils import V_slope, get_FORWARD, get_IBP, get_input_dim
 from decomon.layers.core import F_HYBRID
-from decomon.layers.decomon_layers import to_monotonic
+from decomon.layers.decomon_layers import to_decomon
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class BackwardDense(Wrapper):
             self.mode = mode
             self.convex_domain = convex_domain
             input_dim_ = get_input_dim(input_dim, self.convex_domain)
-            self.layer = to_monotonic(
+            self.layer = to_decomon(
                 layer,
                 input_dim_,
                 dc_decomp=False,
@@ -92,7 +92,7 @@ class BackwardGroupSort2(Wrapper):
             self.mode = mode
             self.convex_domain = convex_domain
             input_dim_ = get_input_dim(input_dim, self.convex_domain)
-            self.layer = to_monotonic(
+            self.layer = to_decomon(
                 layer,
                 input_dim_,
                 dc_decomp=False,
