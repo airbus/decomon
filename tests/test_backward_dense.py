@@ -8,7 +8,7 @@ from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.models import Model
 
 from decomon.backward_layers.backward_layers import get_backward
-from decomon.layers.decomon_layers import DecomonDense, to_monotonic
+from decomon.layers.decomon_layers import DecomonDense, to_decomon
 
 
 def test_Backward_Dense_1D_box(n, activation, use_bias, previous, mode, floatx, helpers):
@@ -39,7 +39,7 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, previous, mode, floatx, 
         IBP = False
         forward = True
 
-    layer = to_monotonic(layer_, (2, input_dim), dc_decomp=False, IBP=IBP, forward=forward, shared=True)[0]
+    layer = to_decomon(layer_, (2, input_dim), dc_decomp=False, IBP=IBP, forward=forward, shared=True)[0]
 
     if mode == "hybrid":
         input_mode = inputs[2:]
@@ -170,7 +170,7 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, previou
         IBP = False
         forward = True
 
-    layer = to_monotonic(layer_, (2, input_dim), dc_decomp=False, IBP=IBP, forward=forward, shared=True)[0]
+    layer = to_decomon(layer_, (2, input_dim), dc_decomp=False, IBP=IBP, forward=forward, shared=True)[0]
 
     if mode == "hybrid":
         input_mode = inputs[2:]

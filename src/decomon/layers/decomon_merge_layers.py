@@ -465,7 +465,7 @@ class DecomonDot(Dot, DecomonLayer):
         return outputs
 
 
-def to_monotonic_merge(
+def to_decomon_merge(
     layer,
     input_dim,
     dc_decomp=False,

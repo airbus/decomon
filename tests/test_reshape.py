@@ -3,7 +3,7 @@ import pytest
 import tensorflow.python.keras.backend as K
 from tensorflow.keras.layers import Permute, Reshape
 
-from decomon.layers.decomon_layers import to_monotonic
+from decomon.layers.decomon_layers import to_decomon
 from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
 
 
@@ -151,7 +151,7 @@ def test_Decomon_reshape_to_monotonic_box(shared, floatx, helpers):
     output_ref = reshape_ref(inputs[1])
 
     input_dim = x_.shape[-1]
-    monotonic_layer = to_monotonic(reshape_ref, input_dim, dc_decomp=True, shared=shared)
+    monotonic_layer = to_decomon(reshape_ref, input_dim, dc_decomp=True, shared=shared)
 
     output = monotonic_layer[0](inputs[2:])
     if len(monotonic_layer) > 1:
@@ -332,7 +332,7 @@ def test_Decomon_permute_to_monotonic_box(shared, floatx, helpers):
     output_ref = permute_ref(inputs[1])
 
     input_dim = x_.shape[-1]
-    monotonic_layer = to_monotonic(permute_ref, input_dim, dc_decomp=True, shared=shared)
+    monotonic_layer = to_decomon(permute_ref, input_dim, dc_decomp=True, shared=shared)
 
     output = monotonic_layer[0](inputs[2:])
     if len(monotonic_layer) > 1:

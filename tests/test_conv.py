@@ -6,7 +6,7 @@ import pytest
 import tensorflow.python.keras.backend as K
 from tensorflow.keras.layers import Conv2D
 
-from decomon.layers.decomon_layers import DecomonConv2D, to_monotonic
+from decomon.layers.decomon_layers import DecomonConv2D, to_decomon
 
 
 def test_Decomon_conv_box(data_format, mode, floatx, helpers):
@@ -161,7 +161,7 @@ def test_Decomon_conv_to_monotonic_box(shared, floatx, helpers):
     output_ref = conv_ref(inputs[1])
 
     input_dim = x.shape[-1]
-    monotonic_layer = to_monotonic(conv_ref, input_dim, dc_decomp=True, shared=shared)
+    monotonic_layer = to_decomon(conv_ref, input_dim, dc_decomp=True, shared=shared)
 
     output = monotonic_layer[0](inputs[2:])
     if len(monotonic_layer) > 1:
@@ -207,7 +207,7 @@ def test_Decomon_conv_to_monotonic_box_nodc(helpers):
     output_ref = conv_ref(inputs[1])
 
     input_dim = x.shape[-1]
-    monotonic_layer = to_monotonic(conv_ref, input_dim, dc_decomp=False)
+    monotonic_layer = to_decomon(conv_ref, input_dim, dc_decomp=False)
 
     output = monotonic_layer[0](inputs[2:])
     if len(monotonic_layer) > 1:

@@ -24,7 +24,7 @@ from decomon.layers.decomon_layers import (  # add some layers to module namespa
     DecomonFlatten,
     DecomonPermute,
     DecomonReshape,
-    to_monotonic,
+    to_decomon,
 )
 from decomon.layers.utils import ClipAlpha, NonNeg, NonPos
 
@@ -64,7 +64,7 @@ class BackwardDense(BackwardLayer):
             self.mode = mode
             self.convex_domain = convex_domain
             input_dim_ = get_input_dim(input_dim, self.convex_domain)
-            self.layer = to_monotonic(
+            self.layer = to_decomon(
                 layer,
                 input_dim_,
                 dc_decomp=False,
@@ -330,7 +330,7 @@ class BackwardConv2D(BackwardLayer):
             self.mode = mode
             self.convex_domain = convex_domain
             input_dim_ = get_input_dim(input_dim, self.convex_domain)
-            self.layer = to_monotonic(
+            self.layer = to_decomon(
                 layer,
                 input_dim_,
                 dc_decomp=False,
