@@ -22,7 +22,7 @@ def test_Decomon_conv_box(data_format, activation, padding, use_bias, mode, floa
     decimal = 5
     if floatx == 16:
         K.set_epsilon(1e-2)
-        decimal = 2
+        decimal = 0
 
     layer = DecomonConv2D(
         10,

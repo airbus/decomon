@@ -67,6 +67,26 @@ def odd(request):
     return request.param
 
 
+@pytest.fixture(params=[1, 2, 11])
+def channels(request):
+    return request.param
+
+
+@pytest.fixture(params=[1, 2, 3])
+def filter_size(request):
+    return request.param
+
+
+@pytest.fixture(params=[1, 2])
+def strides(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def flatten(request):
+    return request.param
+
+
 @pytest.fixture(params=["hybrid", "ibp", "forward", "crown", "crown-hybrid", "crown-ibp", "crown-forward"])
 def method(request):
     return request.param

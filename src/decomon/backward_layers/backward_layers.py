@@ -13,7 +13,9 @@ from decomon.backward_layers.utils import (
     get_IBP,
     get_identity_lirpa,
     get_input_dim,
+    merge_with_previous,
 )
+from decomon.backward_layers.utils_conv import get_toeplitz
 from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, Grid, Option
 from decomon.layers.decomon_layers import (  # add some layers to module namespace `globals()`
     DecomonActivation,
@@ -310,6 +312,12 @@ class BackwardConv2D(BackwardLayer):
         else:
             self.mode = mode
             self.convex_domain = convex_domain
+
+        self.kernel = self.layer.kernel
+        self.use_bias = self.layer.use_bias
+        if self.layer.use_bias:
+            self.bias = self.layer.bias
+
         self.finetune = finetune
 
         self.previous = previous
@@ -334,6 +342,55 @@ class BackwardConv2D(BackwardLayer):
             )[0]
 
         self.frozen_weights = False
+
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+                "previous": self.previous,
+                "finetune": self.finetune,
+            }
+        )
+        return config
+
+    def get_affine_components(self, x):
+        """Conv is a linear operator but its affine component is implicit
+           we use im2col and extract_patches to express the affine matrix
+           Note that this matrix is Toeplitz
+
+        Args:
+            x: list of input tensors
+        Returns:
+            the affine operators W, b : conv(x)= Wx + b
+        """
+
+        w_out_u_ = get_toeplitz(self.layer, True)
+        output_shape = self.layer.get_output_shape_at(0)
+        if isinstance(output_shape, list):
+            output_shape = output_shape[-1]
+        output_shape = output_shape[1:]
+        if self.layer.data_format == "channels_last":
+            b_out_u_ = K.reshape(K.zeros(output_shape, dtype=self.layer.dtype), (-1, output_shape[-1]))
+        else:
+            b_out_u_ = K.permute_dimensions(
+                K.reshape(K.zeros(output_shape, dtype=self.layer.dtype), (-1, output_shape[0])), (1, 0)
+            )
+
+        if self.layer.use_bias:
+            bias_ = K.cast(self.layer.bias, self.layer.dtype)
+            b_out_u_ = b_out_u_ + bias_[None]
+        b_out_u_ = K.flatten(b_out_u_)
+
+        z_value = K.cast(0.0, self.dtype)
+        y_ = x[-1]
+        shape = np.prod(y_.shape[1:])
+        y_flatten = K.reshape(z_value * y_, (-1, np.prod(shape)))  # (None, n_in)
+        w_out_ = K.sum(y_flatten, -1)[:, None, None] + w_out_u_
+        b_out_ = K.sum(y_flatten, -1)[:, None] + b_out_u_
+
+        return w_out_, b_out_
 
     def get_bounds_linear(self, w_out_u, b_out_u, w_out_l, b_out_l):
 
@@ -456,19 +513,16 @@ class BackwardConv2D(BackwardLayer):
                     x_output, convex_domain=self.convex_domain, slope=self.slope, mode=self.mode, previous=False
                 )
 
-            return self.get_bounds_linear(w_out_u, b_out_u, w_out_l, b_out_l)
+            w_out_, b_out_ = self.get_affine_components(x)
+            return merge_with_previous([w_out_, b_out_] * 2 + [w_out_u, b_out_u, w_out_l, b_out_l])
 
         else:
-            weight, bias = self.layer.get_backward_weights(x)
 
-            z_value = K.cast(0.0, self.dtype)
-            y_ = x[-1]
-            shape = np.prod(y_.shape[1:])
-            y_flatten = K.reshape(z_value * y_, (-1, np.prod(shape), 1))  # (None, n_in, 1)
-            w_out_u_ = y_flatten + K.expand_dims(weight, 0)
-            w_out_l_ = w_out_u_
-            b_out_u_ = K.sum(y_flatten, 1) + bias
-            b_out_l_ = b_out_u_
+            w_out_, b_out_ = self.get_affine_components(x)
+            w_out_u_ = w_out_
+            w_out_l_ = w_out_
+            b_out_u_ = b_out_
+            b_out_l_ = b_out_
 
         return w_out_u_, b_out_u_, w_out_l_, b_out_l_
 
