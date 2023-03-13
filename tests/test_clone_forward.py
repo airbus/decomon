@@ -105,7 +105,7 @@ def toy_struct_cnn(dtype="float32"):
 # @pytest.mark.parametrize(
 #    "n, activation, mode, shared, floatx",
 #
-def test_toy_network_1D(helpers, n=0, archi=None, activation="relu", use_bias=True):
+def test_toy_network_1D(helpers, n, archi=None, activation="relu", use_bias=True):
 
     if archi is None:
         archi = [4, 1]
@@ -126,7 +126,7 @@ def test_toy_network_1D(helpers, n=0, archi=None, activation="relu", use_bias=Tr
     np.allclose(y_0, y_1)
 
 
-def test_toy_network_multiD(helpers, odd=0, archi=None, activation="relu", use_bias=True):
+def test_toy_network_multiD(helpers, odd, archi=None, activation="relu", use_bias=True):
 
     if archi is None:
         archi = [4, 1]
