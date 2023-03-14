@@ -1,12 +1,15 @@
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Lambda
+from tensorflow.keras.layers import Lambda, Layer
 from tensorflow.math import greater_equal
 from tensorflow.python.keras import backend as K
+from tensorflow.types.experimental import TensorLike
 
 from decomon.layers.core import ForwardMode, StaticVariables
+from decomon.models.models import DecomonModel
 
 
 class ConvexDomainType(Enum):
@@ -25,8 +28,11 @@ class Slope(Enum):
     O_SLOPE = "one-lb"
 
 
+TensorFunction = Callable[[TensorLike], tf.Tensor]
+
+
 # linear hull for activation function
-def relu_prime(x):
+def relu_prime(x: TensorLike) -> tf.Tensor:
     """Derivative of relu
 
     Args:
@@ -39,7 +45,7 @@ def relu_prime(x):
     return K.clip(K.sign(x), K.cast(0, dtype=x.dtype), K.cast(1, dtype=x.dtype))
 
 
-def sigmoid_prime(x):
+def sigmoid_prime(x: TensorLike) -> tf.Tensor:
     """Derivative of sigmoid
 
     Args:
@@ -53,7 +59,7 @@ def sigmoid_prime(x):
     return s_x * (K.cast(1, dtype=x.dtype) - s_x)
 
 
-def tanh_prime(x):
+def tanh_prime(x: TensorLike) -> tf.Tensor:
     """Derivative of tanh
 
     Args:
@@ -67,7 +73,7 @@ def tanh_prime(x):
     return K.cast(1, dtype=x.dtype) - K.pow(s_x, K.cast(2, dtype=x.dtype))
 
 
-def softsign_prime(x):
+def softsign_prime(x: TensorLike) -> tf.Tensor:
     """Derivative of softsign
 
     Args:
@@ -87,7 +93,7 @@ def softsign_prime(x):
 ##############
 
 # case 1: a box
-def get_upper_box(x_min, x_max, w, b, **kwargs):
+def get_upper_box(x_min: tf.Tensor, x_max: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
     """#compute the max of an affine function
     within a box (hypercube) defined by its extremal corners
 
@@ -119,7 +125,7 @@ def get_upper_box(x_min, x_max, w, b, **kwargs):
     return K.sum(w_pos * x_max_ + w_neg * x_min_, 1) + b
 
 
-def get_lower_box(x_min, x_max, w, b, **kwargs):
+def get_lower_box(x_min: tf.Tensor, x_max: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
     """
     Args:
         x_min: lower bound of the box domain
@@ -150,7 +156,7 @@ def get_lower_box(x_min, x_max, w, b, **kwargs):
 
 
 # case 2 : a ball
-def get_lq_norm(x, p, axis=-1):
+def get_lq_norm(x: tf.Tensor, p: int, axis: int = -1) -> tf.Tensor:
     """compute Lp norm (p=1 or 2)
 
     Args:
@@ -171,7 +177,7 @@ def get_lq_norm(x, p, axis=-1):
     return x_q
 
 
-def get_upper_ball(x_0, eps, p, w, b, **kwargs):
+def get_upper_ball(x_0: tf.Tensor, eps: float, p: int, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
     """max of an affine function over an Lp ball
 
     Args:
@@ -208,7 +214,7 @@ def get_upper_ball(x_0, eps, p, w, b, **kwargs):
         return K.sum(w * x_0, 1) + upper
 
 
-def get_lower_ball(x_0, eps, p, w, b, **kwargs):
+def get_lower_ball(x_0: tf.Tensor, eps: float, p: int, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
     """min of an affine fucntion over an Lp ball
 
     Args:
@@ -245,7 +251,7 @@ def get_lower_ball(x_0, eps, p, w, b, **kwargs):
         return K.sum(w * x_0, 1) + lower
 
 
-def get_lower_ball_finetune(x_0, eps, p, w, b, **kwargs):
+def get_lower_ball_finetune(x_0: tf.Tensor, eps: float, p: int, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
 
     if "finetune_lower" in kwargs and "upper" in kwargs or "lower" in kwargs:
 
@@ -297,7 +303,7 @@ def get_lower_ball_finetune(x_0, eps, p, w, b, **kwargs):
     return get_lower_ball(x_0, eps, p, w, b)
 
 
-def get_upper_ball_finetune(x_0, eps, p, w, b, **kwargs):
+def get_upper_ball_finetune(x_0: tf.Tensor, eps: float, p: int, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
 
     if "finetune_upper" in kwargs and "upper" in kwargs or "lower" in kwargs:
 
@@ -349,7 +355,9 @@ def get_upper_ball_finetune(x_0, eps, p, w, b, **kwargs):
     return get_upper_ball(x_0, eps, p, w, b)
 
 
-def get_upper(x, w, b, convex_domain=None, **kwargs):
+def get_upper(
+    x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, convex_domain: Optional[Dict[str, Any]] = None, **kwargs: Any
+) -> tf.Tensor:
     """Meta function that aggregates all the way
     to compute a constant upper bounds depending on the convex domain
 
@@ -387,7 +395,9 @@ def get_upper(x, w, b, convex_domain=None, **kwargs):
         raise NotImplementedError()
 
 
-def get_lower(x, w, b, convex_domain=None, **kwargs):
+def get_lower(
+    x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, convex_domain: Optional[Dict[str, Any]] = None, **kwargs: Any
+) -> tf.Tensor:
     """Meta function that aggregates all the way
     to compute a constant lower bound depending on the convex domain
         :param x: the tensors that represent the domain
@@ -419,47 +429,47 @@ def get_lower(x, w, b, convex_domain=None, **kwargs):
         raise NotImplementedError()
 
 
-def get_lower_layer(convex_domain=None):
+def get_lower_layer(convex_domain: Optional[Dict[str, Any]] = None) -> Layer:
     if convex_domain is None:
         convex_domain = {}
 
-    def func(inputs):
+    def func(inputs: List[tf.Tensor]) -> tf.Tensor:
         return get_lower(inputs[0], inputs[1], inputs[2], convex_domain=convex_domain)
 
     return Lambda(func)
 
 
-def get_upper_layer(convex_domain=None):
+def get_upper_layer(convex_domain: Optional[Dict[str, Any]] = None) -> Layer:
     if convex_domain is None:
         convex_domain = {}
 
-    def func(inputs):
+    def func(inputs: List[tf.Tensor]) -> tf.Tensor:
         return get_upper(inputs[0], inputs[1], inputs[2], convex_domain=convex_domain)
 
     return Lambda(func)
 
 
-def get_lower_layer_box():
-    def func(inputs):
+def get_lower_layer_box() -> Layer:
+    def func(inputs: List[tf.Tensor]) -> tf.Tensor:
         return get_lower_box(inputs[0], inputs[1], inputs[2], inputs[3])
 
     return Lambda(func)
 
 
-def get_upper_layer_box():
-    def func(inputs):
+def get_upper_layer_box() -> Layer:
+    def func(inputs: List[tf.Tensor]) -> tf.Tensor:
         return get_upper_box(inputs[0], inputs[1], inputs[2], inputs[3])
 
     return Lambda(func)
 
 
-def backward_maximum(inputs_, convex_domain):
+def backward_maximum(inputs_: List[tf.Tensor], convex_domain: Optional[Dict[str, Any]] = None) -> List[tf.Tensor]:
 
     back_bounds_0 = inputs_[2:6]
     back_bounds = inputs_[6:]
 
     output = inputs_[:2] + back_bounds_0
-    for i in range(len(back_bounds) / 4):
+    for i in range(int(len(back_bounds) / 4)):
         output = maximum(
             output,
             inputs_[:2] + back_bounds[4 * i : 4 * (i + 1)],
@@ -471,13 +481,13 @@ def backward_maximum(inputs_, convex_domain):
     return output[-2:]
 
 
-def backward_minimum(inputs_, convex_domain):
+def backward_minimum(inputs_: List[tf.Tensor], convex_domain: Optional[Dict[str, Any]] = None) -> List[tf.Tensor]:
 
     back_bounds_0 = inputs_[2:6]
     back_bounds = inputs_[6:]
 
     output = inputs_[:2] + back_bounds_0
-    for i in range(len(back_bounds) / 4):
+    for i in range(int(len(back_bounds) / 4)):
         output = minimum(
             output,
             inputs_[:2] + back_bounds[4 * i : 4 * (i + 1)],
@@ -489,7 +499,7 @@ def backward_minimum(inputs_, convex_domain):
     return output[2:4]
 
 
-def noisy_lower(lower):
+def noisy_lower(lower: tf.Tensor) -> tf.Tensor:
 
     # if some random binary variable is set to 0 return K.maximum(upper,- upper)
     var_ = K.minimum(lower, -lower)
@@ -498,7 +508,7 @@ def noisy_lower(lower):
     return proba * lower + (1 - proba) * var_
 
 
-def noisy_upper(upper):
+def noisy_upper(upper: tf.Tensor) -> tf.Tensor:
 
     # if some random binary variable is set to 0 return K.maximum(upper,- upper)
     var_ = K.maximum(upper, -upper)
@@ -508,18 +518,20 @@ def noisy_upper(upper):
 
 
 ##### corners ######
-def get_lower_bound_grid(x, W, b, n):
+def get_lower_bound_grid(x: tf.Tensor, W: tf.Tensor, b: tf.Tensor, n: int) -> tf.Tensor:
 
     A, B = convert_lower_search_2_subset_sum(x, W, b, n)
     return subset_sum_lower(A, B, repeat=n)
 
 
-def get_upper_bound_grid(x, W, b, n):
+def get_upper_bound_grid(x: tf.Tensor, W: tf.Tensor, b: tf.Tensor, n: int) -> tf.Tensor:
 
     return -get_lower_bound_grid(x, -W, -b, n)
 
 
-def get_bound_grid(x, W_u, b_u, W_l, b_l, n):
+def get_bound_grid(
+    x: tf.Tensor, W_u: tf.Tensor, b_u: tf.Tensor, W_l: tf.Tensor, b_l: tf.Tensor, n: int
+) -> Tuple[tf.Tensor, tf.Tensor]:
 
     upper = get_upper_bound_grid(x, W_u, b_u, n)
     lower = get_lower_bound_grid(x, W_l, b_l, n)
@@ -528,7 +540,7 @@ def get_bound_grid(x, W_u, b_u, W_l, b_l, n):
 
 
 # convert max Wx +b s.t Wx+b<=0 into a subset-sum problem with positive values
-def convert_lower_search_2_subset_sum(x, W, b, n):
+def convert_lower_search_2_subset_sum(x: tf.Tensor, W: tf.Tensor, b: tf.Tensor, n: int) -> Tuple[tf.Tensor, tf.Tensor]:
 
     x_min = x[:, 0]
     x_max = x[:, 1]
@@ -543,7 +555,7 @@ def convert_lower_search_2_subset_sum(x, W, b, n):
     return weights, const
 
 
-def subset_sum_lower(W, b, repeat=1):
+def subset_sum_lower(W: tf.Tensor, b: tf.Tensor, repeat: int = 1) -> tf.Tensor:
 
     B = tf.sort(W, 1)
     C = K.repeat_elements(B, rep=repeat, axis=1)
@@ -555,7 +567,14 @@ def subset_sum_lower(W, b, repeat=1):
 
 
 # define routines to get linear relaxations useful both for forward and backward
-def get_linear_hull_relu(upper, lower, slope, upper_g=0, lower_g=0, **kwargs):
+def get_linear_hull_relu(
+    upper: tf.Tensor,
+    lower: tf.Tensor,
+    slope: Union[str, Slope],
+    upper_g: float = 0.0,
+    lower_g: float = 0.0,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     slope = Slope(slope)
     # in case upper=lower, this cases are
     # considered with index_dead and index_linear
@@ -622,7 +641,9 @@ def get_linear_hull_relu(upper, lower, slope, upper_g=0, lower_g=0, **kwargs):
     return [w_u_, b_u_, w_l_, b_l_]
 
 
-def get_linear_hull_sigmoid(upper, lower, slope, **kwargs):
+def get_linear_hull_sigmoid(
+    upper: tf.Tensor, lower: tf.Tensor, slope: Union[str, Slope], **kwargs: Any
+) -> List[tf.Tensor]:
 
     x = [upper, lower]
     return get_linear_hull_s_shape(
@@ -630,13 +651,17 @@ def get_linear_hull_sigmoid(upper, lower, slope, **kwargs):
     )
 
 
-def get_linear_hull_tanh(upper, lower, slope, **kwargs):
+def get_linear_hull_tanh(
+    upper: tf.Tensor, lower: tf.Tensor, slope: Union[str, Slope], **kwargs: Any
+) -> List[tf.Tensor]:
 
     x = [upper, lower]
     return get_linear_hull_s_shape(x, func=K.tanh, f_prime=tanh_prime, convex_domain={}, mode=ForwardMode.IBP, **kwargs)
 
 
-def get_linear_softplus_hull(upper, lower, slope, **kwargs):
+def get_linear_softplus_hull(
+    upper: tf.Tensor, lower: tf.Tensor, slope: Union[str, Slope], **kwargs: Any
+) -> List[tf.Tensor]:
     slope = Slope(slope)
     # in case upper=lower, this cases are
     # considered with index_dead and index_linear
@@ -698,7 +723,13 @@ def get_linear_softplus_hull(upper, lower, slope, **kwargs):
     return [w_u_, b_u_, w_l_, b_l_]
 
 
-def substract(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID):
+def substract(
+    inputs_0: List[tf.Tensor],
+    inputs_1: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+) -> List[tf.Tensor]:
     """LiRPA implementation of inputs_0-inputs_1
 
     Args:
@@ -719,7 +750,13 @@ def substract(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=Forw
     return output
 
 
-def add(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID):
+def add(
+    inputs_0: List[tf.Tensor],
+    inputs_1: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+) -> List[tf.Tensor]:
     """LiRPA implementation of inputs_0+inputs_1
 
     Args:
@@ -787,7 +824,14 @@ def add(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=ForwardMod
     return output
 
 
-def relu_(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, slope=Slope.V_SLOPE, **kwargs):
+def relu_(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
 
     if convex_domain is None:
         convex_domain = {}
@@ -857,7 +901,9 @@ def relu_(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, slope
     return output
 
 
-def minus(inputs, mode=ForwardMode.HYBRID, dc_decomp=False, **kwargs):
+def minus(
+    inputs: List[tf.Tensor], mode: Union[str, ForwardMode] = ForwardMode.HYBRID, dc_decomp: bool = False, **kwargs: Any
+) -> List[tf.Tensor]:
     """LiRPA implementation of minus(x)=-x.
 
     Args:
@@ -906,7 +952,15 @@ def minus(inputs, mode=ForwardMode.HYBRID, dc_decomp=False, **kwargs):
     return output
 
 
-def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, finetune=False, **kwargs):
+def maximum(
+    inputs_0: List[tf.Tensor],
+    inputs_1: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    finetune: bool = False,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """LiRPA implementation of element-wise max
 
     Args:
@@ -937,7 +991,15 @@ def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=Forwar
     )
 
 
-def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, finetune=False, **kwargs):
+def minimum(
+    inputs_0: List[tf.Tensor],
+    inputs_1: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    finetune: bool = False,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """LiRPA implementation of element-wise min
 
     Args:
@@ -969,8 +1031,13 @@ def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=Forwar
 
 
 def get_linear_hull_s_shape(
-    x, func=K.sigmoid, f_prime=sigmoid_prime, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs
-):
+    x: List[tf.Tensor],
+    func: TensorFunction = K.sigmoid,
+    f_prime: TensorFunction = sigmoid_prime,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """Computing the linear hull of shape functions  given the pre activation neurons
 
     Args:
@@ -1050,7 +1117,13 @@ def get_linear_hull_s_shape(
     return [w_u_, b_u_, w_l_, b_l_]
 
 
-def get_t_upper(u_c_flat, l_c_flat, s_l, func=K.sigmoid, f_prime=sigmoid_prime):
+def get_t_upper(
+    u_c_flat: tf.Tensor,
+    l_c_flat: tf.Tensor,
+    s_l: tf.Tensor,
+    func: TensorFunction = K.sigmoid,
+    f_prime: TensorFunction = sigmoid_prime,
+) -> List[tf.Tensor]:
     """linear interpolation between lower and upper bounds on the function func to have a symbolic approximation of the best
     coefficient for the affine upper bound
 
@@ -1102,7 +1175,13 @@ def get_t_upper(u_c_flat, l_c_flat, s_l, func=K.sigmoid, f_prime=sigmoid_prime):
     return [w_u, b_u]
 
 
-def get_t_lower(u_c_flat, l_c_flat, s_u, func=K.sigmoid, f_prime=sigmoid_prime):
+def get_t_lower(
+    u_c_flat: tf.Tensor,
+    l_c_flat: tf.Tensor,
+    s_u: tf.Tensor,
+    func: TensorFunction = K.sigmoid,
+    f_prime: TensorFunction = sigmoid_prime,
+) -> List[tf.Tensor]:
     """linear interpolation between lower and upper bounds on the function func to have a symbolic approximation of the best
     coefficient for the affine lower bound
 
@@ -1153,7 +1232,12 @@ def get_t_lower(u_c_flat, l_c_flat, s_u, func=K.sigmoid, f_prime=sigmoid_prime):
     return [w_l, b_l]
 
 
-def set_mode(x, final_mode, mode, convex_domain=None):
+def set_mode(
+    x: List[tf.Tensor],
+    final_mode: Union[str, ForwardMode],
+    mode: Union[str, ForwardMode],
+    convex_domain: Optional[Dict[str, Any]] = None,
+) -> List[tf.Tensor]:
     if convex_domain is None:
         convex_domain = {}
 
@@ -1188,8 +1272,8 @@ def set_mode(x, final_mode, mode, convex_domain=None):
         raise ValueError(f"Unknown final_mode {final_mode}")
 
 
-def get_AB(model_):
-    dico_AB = {}
+def get_AB(model_: DecomonModel) -> Dict[str, List[tf.Variable]]:
+    dico_AB: Dict[str, List[tf.Variable]] = {}
     convex_domain = model_.convex_domain
     if not (
         len(convex_domain) and convex_domain["name"] == ConvexDomainType.GRID and convex_domain["option"] == "milp"
@@ -1206,8 +1290,8 @@ def get_AB(model_):
     return dico_AB
 
 
-def get_AB_finetune(model_):
-    dico_AB = {}
+def get_AB_finetune(model_: DecomonModel) -> Dict[str, tf.Variable]:
+    dico_AB: Dict[str, tf.Variable] = {}
     convex_domain = model_.convex_domain
     if not (
         len(convex_domain) and convex_domain["name"] == ConvexDomainType.GRID and convex_domain["option"] == "milp"
