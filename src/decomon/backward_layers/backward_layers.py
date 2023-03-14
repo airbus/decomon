@@ -343,7 +343,6 @@ class BackwardConv2D(BackwardLayer):
 
         self.frozen_weights = False
 
-
     def get_config(self):
         config = super().get_config()
         config.update(
@@ -356,9 +355,11 @@ class BackwardConv2D(BackwardLayer):
         return config
 
     def get_affine_components(self, x):
-        """Conv is a linear operator but its affine component is implicit
-           we use im2col and extract_patches to express the affine matrix
-           Note that this matrix is Toeplitz
+        """Express the implicit affine matrix of the convolution layer.
+
+        Conv is a linear operator but its affine component is implicit
+        we use im2col and extract_patches to express the affine matrix
+        Note that this matrix is Toeplitz
 
         Args:
             x: list of input tensors
