@@ -6,6 +6,7 @@ import pytest
 import tensorflow.python.keras.backend as K
 from numpy.testing import assert_allclose, assert_almost_equal
 
+from decomon.layers.core import ForwardMode
 from decomon.layers.utils import add, get_lower, get_upper, max_, maximum, minus, relu_
 from decomon.utils import substract
 
@@ -202,18 +203,21 @@ def test_relu_1D_box(n, mode, floatx, helpers):
         g_0,
     ) = inputs_  # numpy values
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         x_vec = inputs[2:]
         x_vec_ = inputs_[2:]
         output = relu_(x_vec, dc_decomp=True, mode=mode)
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         x_vec = [u_c, l_c, h, g]
         x_vec_ = [u_c_0, l_c_0, h_0, g_0]
         output = relu_(x_vec, dc_decomp=True, mode=mode)
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         x_vec = [z, W_u, b_u, W_l, b_l, h, g]
         x_vec_ = [z_0, W_u_0, b_u_0, W_l_0, b_l_0, h_0, g_0]
         output = relu_(x_vec, dc_decomp=True, mode=mode)
+    else:
+        raise ValueError("Unknown mode.")
 
     lower = get_lower(z, W_l, b_l)
     upper = get_upper(z, W_u, b_u)
@@ -230,16 +234,18 @@ def test_relu_1D_box(n, mode, floatx, helpers):
 
     # y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_relu_(inputs_[1:])
 
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_relu_(x_vec_)
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_relu_(x_vec_)
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_relu_(x_vec_)
+    else:
+        raise ValueError("Unknown mode.")
 
     if upper_ <= 0:
         # check that we find this case !
-        if mode in ["forward", "hybrid"]:
+        if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             assert_almost_equal(
                 w_u_,
                 np.zeros_like(w_u_),
@@ -265,7 +271,7 @@ def test_relu_1D_box(n, mode, floatx, helpers):
                 err_msg="b_l_!=0 but upper_<=0 in call {}".format(n),
             )
 
-        if mode in ["ibp", "hybrid"]:
+        if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
             assert_almost_equal(
                 u_c_,
                 np.zeros_like(u_c_),
@@ -281,7 +287,7 @@ def test_relu_1D_box(n, mode, floatx, helpers):
 
     if lower_ >= 0:
         # check that we find this case !
-        if mode in ["forward", "hybrid"]:
+        if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             assert_almost_equal(
                 w_u_,
                 W_u_0,
@@ -306,7 +312,7 @@ def test_relu_1D_box(n, mode, floatx, helpers):
                 decimal=decimal,
                 err_msg="b_l_!=b_l but lower_>=0 upper_<=0 in call {}".format(n),
             )
-        if mode in ["ibp", "hybrid"]:
+        if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
             assert_almost_equal(
                 u_c_,
                 u_c_0,
@@ -320,11 +326,11 @@ def test_relu_1D_box(n, mode, floatx, helpers):
                 err_msg="l_c_!=l_c but lower_>=0  in call {}".format(n),
             )
 
-    if mode != "ibp":
+    if mode != ForwardMode.IBP:
         assert_almost_equal(z_0[:, 0], z_[:, 0], decimal=decimal, err_msg="the lower bound should be unchanged")
         assert_almost_equal(z_0[:, 1], z_[:, 1], decimal=decimal, err_msg="the upper bound should be unchanged")
 
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         helpers.assert_output_properties_box(
             x_0,
             y_,
@@ -342,7 +348,7 @@ def test_relu_1D_box(n, mode, floatx, helpers):
             decimal=decimal,
         )
 
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         helpers.assert_output_properties_box(
             x_0,
             y_,
@@ -360,7 +366,7 @@ def test_relu_1D_box(n, mode, floatx, helpers):
             decimal=decimal,
         )
 
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         helpers.assert_output_properties_box(
             x_0,
             y_,
@@ -377,6 +383,8 @@ def test_relu_1D_box(n, mode, floatx, helpers):
             "relu_{}".format(n),
             decimal=decimal,
         )
+    else:
+        raise ValueError("Unknown mode.")
 
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)
@@ -403,17 +411,20 @@ def test_add(odd, mode, floatx, helpers):
     x_1, y_1, z_1, u_c_1, W_u_1, b_u_1, l_c_1, W_l_1, b_l_1, h_1, g_1 = inputs_1
     # x_, y_, z_, u_c_, W_u_, b_u_, l_c_, W_l_, b_l_, h_, g_ = inputs_
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         output = add(inputs_0[2:], inputs_1[2:], dc_decomp=True, mode=mode)
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output = add(
             [z_0, W_u_0, b_u_0, W_l_0, b_l_0, h_0, g_0],
             [z_1, W_u_1, b_u_1, W_l_1, b_l_1, h_1, g_1],
             dc_decomp=True,
             mode=mode,
         )
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output = add([u_c_0, l_c_0, h_0, g_0], [u_c_1, l_c_1, h_1, g_1], dc_decomp=True, mode=mode)
+    else:
+        raise ValueError("Unknown mode.")
 
     # TO FINISH
 
@@ -422,7 +433,7 @@ def test_add(odd, mode, floatx, helpers):
 
     # y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_add(inputs_ + inputs_)
     y_ = f_ref(inputs_ + inputs_)
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_add(inputs_ + inputs_)
         helpers.assert_output_properties_box(
             inputs_[0],
@@ -441,7 +452,7 @@ def test_add(odd, mode, floatx, helpers):
             decimal=decimal,
         )
 
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_add(inputs_ + inputs_)
         helpers.assert_output_properties_box(
             inputs_[0],
@@ -459,7 +470,7 @@ def test_add(odd, mode, floatx, helpers):
             "add_multid_{}".format(odd),
             decimal=decimal,
         )
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_add(inputs_ + inputs_)
         helpers.assert_output_properties_box(
             inputs_[0],
@@ -477,6 +488,8 @@ def test_add(odd, mode, floatx, helpers):
             "add_multid_{}".format(odd),
             decimal=decimal,
         )
+    else:
+        raise ValueError("Unknown mode.")
 
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)
@@ -499,17 +512,20 @@ def test_minus(odd, mode, floatx, helpers):
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0, h_0, g_0 = inputs_0
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         output = minus(inputs_0[2:], dc_decomp=True, mode=mode)
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output = minus([z_0, W_u_0, b_u_0, W_l_0, b_l_0, h_0, g_0], dc_decomp=True, mode=mode)
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output = minus([u_c_0, l_c_0, h_0, g_0], dc_decomp=True, mode=mode)
+    else:
+        raise ValueError("Unknown mode.")
 
     f_ref = K.function(inputs_0, -inputs_0[1])
     f_minus = K.function(inputs_0, output)
     y_ = f_ref(inputs_)
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_minus(inputs_)
         helpers.assert_output_properties_box(
             x,
@@ -527,7 +543,7 @@ def test_minus(odd, mode, floatx, helpers):
             "minus_multid_{}".format(odd),
             decimal=decimal,
         )
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_minus(inputs_)
         helpers.assert_output_properties_box(
             x,
@@ -545,7 +561,7 @@ def test_minus(odd, mode, floatx, helpers):
             "minus_multid_{}".format(odd),
             decimal=decimal,
         )
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_minus(inputs_)
         helpers.assert_output_properties_box(
             x,
@@ -563,6 +579,8 @@ def test_minus(odd, mode, floatx, helpers):
             "minus_multid_{}".format(odd),
             decimal=decimal,
         )
+    else:
+        raise ValueError("Unknown mode.")
 
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)
@@ -588,17 +606,20 @@ def test_substract(odd, mode, floatx, helpers):
     x_1, y_1, z_1, u_c_1, W_u_1, b_u_1, l_c_1, W_l_1, b_l_1, h_1, g_1 = inputs_1
     # x_, y_, z_, u_c_, W_u_, b_u_, l_c_, W_l_, b_l_, h_, g_ = inputs_
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         output = substract(inputs_0[2:], inputs_1[2:], dc_decomp=True, mode=mode)
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output = substract(
             [z_0, W_u_0, b_u_0, W_l_0, b_l_0, h_0, g_0],
             [z_1, W_u_1, b_u_1, W_l_1, b_l_1, h_1, g_1],
             dc_decomp=True,
             mode=mode,
         )
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output = substract([u_c_0, l_c_0, h_0, g_0], [u_c_1, l_c_1, h_1, g_1], dc_decomp=True, mode=mode)
+    else:
+        raise ValueError("Unknown mode.")
 
     # TO FINISH
 
@@ -607,7 +628,7 @@ def test_substract(odd, mode, floatx, helpers):
 
     # y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_add(inputs_ + inputs_)
     y_ = f_ref(inputs_ + inputs_)
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_sub(inputs_ + inputs_)
         helpers.assert_output_properties_box(
             inputs_[0],
@@ -626,7 +647,7 @@ def test_substract(odd, mode, floatx, helpers):
             decimal=decimal,
         )
 
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_sub(inputs_ + inputs_)
         helpers.assert_output_properties_box(
             inputs_[0],
@@ -644,7 +665,7 @@ def test_substract(odd, mode, floatx, helpers):
             "add_multid_{}".format(odd),
             decimal=decimal,
         )
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_sub(inputs_ + inputs_)
         helpers.assert_output_properties_box(
             inputs_[0],
@@ -662,6 +683,8 @@ def test_substract(odd, mode, floatx, helpers):
             "add_multid_{}".format(odd),
             decimal=decimal,
         )
+    else:
+        raise ValueError("Unknown mode.")
 
     K.set_floatx("float{}".format(floatx))
     K.set_epsilon(eps)
@@ -687,23 +710,26 @@ def test_maximum(odd, mode, floatx, helpers):
 
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         output = maximum(inputs_0[2:], inputs_1[2:], dc_decomp=True, mode=mode)
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output = maximum(
             [z_0, W_u_0, b_u_0, W_l_0, b_l_0, h_0, g_0],
             [z_1, W_u_1, b_u_1, W_l_1, b_l_1, h_1, g_1],
             dc_decomp=True,
             mode=mode,
         )
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output = maximum([u_c_0, l_c_0, h_0, g_0], [u_c_1, l_c_1, h_1, g_1], dc_decomp=True, mode=mode)
+    else:
+        raise ValueError("Unknown mode.")
 
     f_ref = K.function(inputs_0 + inputs_1, K.maximum(inputs_0[1], inputs_1[1]))
     f_maximum = K.function(inputs_0 + inputs_1, output)
     y_ = f_ref(inputs_ + inputs_)
 
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_maximum(inputs_ + inputs_)
         helpers.assert_output_properties_box(
             x,
@@ -721,7 +747,7 @@ def test_maximum(odd, mode, floatx, helpers):
             "maximum_multid_{}".format(odd),
             decimal=decimal,
         )
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output_ = f_maximum(inputs_ + inputs_)
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = output_
         helpers.assert_output_properties_box(
@@ -740,7 +766,7 @@ def test_maximum(odd, mode, floatx, helpers):
             "maximum_multid_{}".format(odd),
             decimal=decimal,
         )
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output_ = f_maximum(inputs_ + inputs_)
         u_c_, l_c_, h_, g_ = output_
         z_ = inputs_[2]
@@ -760,6 +786,8 @@ def test_maximum(odd, mode, floatx, helpers):
             "maximum_multid_{}".format(odd),
             decimal=decimal,
         )
+    else:
+        raise ValueError("Unknown mode.")
 
     K.set_floatx("float{}".format(floatx))
     K.set_epsilon(eps)
@@ -785,19 +813,22 @@ def test_max_(odd, mode, floatx, helpers):
     x_ = inputs_[0]
     z_ = inputs_[2]
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         output = max_(inputs[2:], dc_decomp=True, mode=mode)
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output = max_([z, W_u, b_u, W_l, b_l, h, g], dc_decomp=True, mode=mode)
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output = max_([u_c, l_c, h, g], dc_decomp=True, mode=mode)
+    else:
+        raise ValueError("Unknown mode.")
 
     f_ref = K.function(inputs, K.max(inputs[1], -1))
     f_max = K.function(inputs, output)
 
     y_ = f_ref(inputs_)
 
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_max(inputs_)
         helpers.assert_output_properties_box(
             x_,
@@ -816,7 +847,7 @@ def test_max_(odd, mode, floatx, helpers):
             decimal=decimal,
         )
 
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_max(inputs_)
         helpers.assert_output_properties_box(
             x_,
@@ -835,7 +866,7 @@ def test_max_(odd, mode, floatx, helpers):
             decimal=decimal,
         )
 
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_max(inputs_)
         helpers.assert_output_properties_box(
             x_,
@@ -853,6 +884,9 @@ def test_max_(odd, mode, floatx, helpers):
             "max_multid_{}".format(odd),
             decimal=decimal,
         )
+    else:
+        raise ValueError("Unknown mode.")
+
     K.set_epsilon(eps)
     K.set_floatx("float{}".format(32))
 

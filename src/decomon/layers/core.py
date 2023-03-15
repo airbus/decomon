@@ -1,49 +1,27 @@
 from abc import ABC, abstractmethod
+from enum import Enum
+from typing import Union
 
 from tensorflow.keras.layers import Layer
 
-from decomon.types import Optional
 
-#  the different forward (from input to output) linear based relaxation perturbation analysis
+class ForwardMode(Enum):
+    """The different forward (from input to output) linear based relaxation perturbation analysis."""
 
-# propgation of constant bounds from input to output
-class F_IBP:
-    name = "ibp"
+    IBP = "ibp"
+    """Propagation of constant bounds from input to output."""
 
+    AFFINE = "affine"
+    """Propagation of affine bounds from input to output."""
 
-# propagation of affine bounds from input to output
-class F_FORWARD:
-    name = "forward"
-
-
-# propagation of constant and affines bounds from input to output
-class F_HYBRID:
-    name = "hybrid"
+    HYBRID = "hybrid"
+    """Propagation of constant and affines bounds from input to output."""
 
 
-# create static variables for varying convex domain
-class Ball:
-    name = "ball"  # Lp Ball around an example
+DEEL_LIP = "deel-lip>"
 
 
-class Box:
-    name = "box"  # Hypercube
-
-
-class Grid:
-    name = "grid"
-
-
-class Vertex:
-    name = "vertex"  # convex set represented by its vertices
-    # (no verification is proceeded to assess that the set is convex)
-
-
-class DEEL_LIP:
-    name = "deel-lip>"
-
-
-class Option:
+class Option(Enum):
     lagrangian = "lagrangian"
     milp = "milp"
 
@@ -51,7 +29,7 @@ class Option:
 class StaticVariables:
     """Storing static values on the number of input tensors for our layers"""
 
-    def __init__(self, dc_decomp: Optional[bool] = False, mode: Optional[str] = F_HYBRID.name):
+    def __init__(self, dc_decomp: bool = False, mode: Union[str, ForwardMode] = ForwardMode.HYBRID):
         """
         Args:
             dc_decomp: boolean that indicates whether we return a
@@ -60,13 +38,13 @@ class StaticVariables:
         gradient
         """
 
-        self.mode = mode
+        self.mode = ForwardMode(mode)
 
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             nb_tensors = 7
-        elif self.mode == F_IBP.name:
+        elif self.mode == ForwardMode.IBP:
             nb_tensors = 2
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             nb_tensors = 5
         else:
             raise NotImplementedError(f"unknown forward mode {mode}")
@@ -83,11 +61,11 @@ class DecomonLayer(ABC, Layer):
     def __init__(
         self,
         convex_domain=None,
-        dc_decomp: Optional[bool] = False,
-        mode: Optional[str] = F_HYBRID.name,
-        finetune: Optional[bool] = False,
-        shared: Optional[bool] = False,
-        fast: Optional[bool] = True,
+        dc_decomp: bool = False,
+        mode: str = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
         **kwargs,
     ):
         """
@@ -105,7 +83,7 @@ class DecomonLayer(ABC, Layer):
         self.nb_tensors = StaticVariables(dc_decomp, mode).nb_tensors
         self.dc_decomp = dc_decomp
         self.convex_domain = convex_domain
-        self.mode = mode
+        self.mode = ForwardMode(mode)
         self.finetune = finetune  # extra optimization with hyperparameters
         self.frozen_weights = False
         self.frozen_alpha = False

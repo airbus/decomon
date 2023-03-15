@@ -8,12 +8,14 @@ from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.models import Model
 
 from decomon.backward_layers.backward_layers import get_backward
-from decomon.layers.decomon_layers import DecomonDense, to_monotonic
+from decomon.layers.core import ForwardMode
+from decomon.layers.decomon_layers import DecomonDense, to_decomon
+from decomon.utils import Slope
 
 
 def test_Backward_Dense_1D_box(n, activation, use_bias, previous, mode, floatx, helpers):
 
-    slope = "volume-slope"
+    slope = Slope.V_SLOPE
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -29,30 +31,35 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, previous, mode, floatx, 
     layer_ = Dense(1, use_bias=use_bias, activation=activation, dtype=K.floatx())
     input_dim = x.shape[-1]
     layer_(inputs[1])
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         IBP = True
         forward = True
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         IBP = True
         forward = False
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         IBP = False
         forward = True
+    else:
+        raise ValueError("Unknown mode.")
 
-    layer = to_monotonic(layer_, (2, input_dim), dc_decomp=False, IBP=IBP, forward=forward, shared=True)[0]
+    layer = to_decomon(layer_, (2, input_dim), dc_decomp=False, IBP=IBP, forward=forward, shared=True)[0]
 
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
         output = layer(input_mode)
         z_0, u_c_0, _, _, l_c_0, _, _ = output
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
         output = layer(input_mode)
         z_0, _, _, _, _ = output
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         input_mode = [inputs[3], inputs[6]]
         output = layer(input_mode)
         u_c_0, l_c_0 = output
+    else:
+        raise ValueError("Unknown mode.")
 
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
@@ -160,30 +167,35 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, previou
     input_dim = x.shape[-1]
     layer_ = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
     layer_(inputs[1])
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         IBP = True
         forward = True
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         IBP = True
         forward = False
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         IBP = False
         forward = True
+    else:
+        raise ValueError("Unknown mode.")
 
-    layer = to_monotonic(layer_, (2, input_dim), dc_decomp=False, IBP=IBP, forward=forward, shared=True)[0]
+    layer = to_decomon(layer_, (2, input_dim), dc_decomp=False, IBP=IBP, forward=forward, shared=True)[0]
 
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
         output = layer(input_mode)
         z_0, u_c_0, _, _, l_c_0, _, _ = output
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
         output = layer(input_mode)
         z_0, _, _, _, _ = output
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         input_mode = [inputs[3], inputs[6]]
         output = layer(input_mode)
         u_c_0, l_c_0 = output
+    else:
+        raise ValueError("Unknown mode.")
 
     # output = layer(inputs[2:])
     # z_0, u_c_0, _, _, l_c_0, _, _ = output

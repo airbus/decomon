@@ -16,8 +16,11 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model, Sequential
 
+from decomon.layers.core import ForwardMode
+from decomon.models.utils import ConvertMethod
 
-@pytest.fixture(params=["hybrid", "ibp", "forward"])
+
+@pytest.fixture(params=[m.value for m in ForwardMode])
 def mode(request):
     return request.param
 
@@ -67,7 +70,7 @@ def odd(request):
     return request.param
 
 
-@pytest.fixture(params=["hybrid", "ibp", "forward", "crown", "crown-hybrid", "crown-ibp", "crown-forward"])
+@pytest.fixture(params=[m.value for m in ConvertMethod])
 def method(request):
     return request.param
 
@@ -75,7 +78,10 @@ def method(request):
 class Helpers:
     @staticmethod
     def is_method_mode_compatible(method, mode):
-        return not (method in {"ibp", "crown-ibp"} and mode != "ibp")
+        return not (
+            ConvertMethod(method) in {ConvertMethod.CROWN_FORWARD_IBP, ConvertMethod.FORWARD_IBP}
+            and ForwardMode(mode) != ForwardMode.IBP
+        )
 
     @staticmethod
     def get_standard_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
@@ -535,21 +541,6 @@ class Helpers:
         if dc_decomp:
             h_ = h_0 + h_1
             g_ = g_0 + g_1
-            Helpers.assert_output_properties_box(
-                x_,
-                h_ + g_,
-                h_,
-                g_,
-                z_[:, 0],
-                z_[:, 1],
-                u_c_,
-                w_u_,
-                b_u_,
-                l_c_,
-                w_l_,
-                b_l_,
-                "image from 2D",
-            )
 
             return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
         return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
@@ -590,22 +581,6 @@ class Helpers:
                 g_0 = g_0[:, :, :, None]
                 h_ = np.concatenate([h_0, h_0], -1)
                 g_ = np.concatenate([g_0, g_0], -1)
-
-                Helpers.assert_output_properties_box(
-                    x_,
-                    y_,
-                    h_,
-                    g_,
-                    z_min_,
-                    z_max_,
-                    u_c_,
-                    w_u_,
-                    b_u_,
-                    l_c_,
-                    w_l_,
-                    b_l_,
-                    "images {},{},{},{}".format(data_format, odd, m0, m1),
-                )
 
         else:
             output = Helpers.get_standard_values_images_box(

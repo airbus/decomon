@@ -6,10 +6,9 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Layer
 
 from decomon.backward_layers.utils import backward_relu_, backward_softplus_
-from decomon.layers import F_FORWARD, F_HYBRID, F_IBP
-from decomon.layers.core import StaticVariables
+from decomon.layers.core import ForwardMode, StaticVariables
 from decomon.utils import (
-    V_slope,
+    Slope,
     get_linear_hull_relu,
     get_linear_hull_s_shape,
     get_linear_hull_sigmoid,
@@ -43,8 +42,8 @@ def backward_relu(
     alpha=0.0,
     max_value=None,
     threshold=0.0,
-    slope=V_slope.name,
-    mode=F_HYBRID.name,
+    slope=Slope.V_SLOPE,
+    mode=ForwardMode.HYBRID,
     previous=True,
     **kwargs,
 ):
@@ -66,6 +65,7 @@ def backward_relu(
 
     if convex_domain is None:
         convex_domain = {}
+    mode = ForwardMode(mode)
     if dc_decomp:
         raise NotImplementedError()
 
@@ -83,13 +83,13 @@ def backward_relu(
             )
         else:
             nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
-            if mode == F_IBP.name:
+            if mode == ForwardMode.IBP:
                 upper, lower = x[:nb_tensors]
-            elif mode == F_FORWARD.name:
+            elif mode == ForwardMode.AFFINE:
                 z_, w_u_, b_u_, w_l_, b_l_ = x[:nb_tensors]
                 upper = get_upper(z_, w_u_, b_u_)
                 lower = get_lower(z_, w_l_, b_l_)
-            elif mode == F_HYBRID.name:
+            elif mode == ForwardMode.HYBRID:
                 _, upper, _, _, lower, _, _ = x[:nb_tensors]
             else:
                 raise ValueError(f"Unknown mode {mode}")
@@ -104,7 +104,7 @@ def backward_relu(
 
 
 def backward_sigmoid(
-    inputs, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    inputs, dc_decomp=False, convex_domain=None, slope=Slope.V_SLOPE, mode=ForwardMode.HYBRID, previous=True, **kwargs
 ):
     """Backward  LiRPA of sigmoid
 
@@ -123,7 +123,7 @@ def backward_sigmoid(
         convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
-
+    mode = ForwardMode(mode)
     if previous:
         x = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -144,13 +144,13 @@ def backward_sigmoid(
     else:
         nb_tensors = StaticVariables(dc_decomp=False, mode=mode)
 
-        if mode == F_IBP.name:
+        if mode == ForwardMode.IBP:
             upper, lower = inputs[:nb_tensors]
-        elif mode == F_FORWARD.name:
+        elif mode == ForwardMode.AFFINE:
             z_, w_u_, b_u_, w_l_, b_l_ = inputs[:nb_tensors]
             upper = get_upper(z_, w_u_, b_u_)
             lower = get_lower(z_, w_l_, b_l_)
-        elif mode == F_HYBRID.name:
+        elif mode == ForwardMode.HYBRID:
             _, upper, _, _, lower, _, _ = inputs[:nb_tensors]
         else:
             raise ValueError(f"Unknown mode {mode}")
@@ -158,7 +158,7 @@ def backward_sigmoid(
 
 
 def backward_tanh(
-    inputs, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    inputs, dc_decomp=False, convex_domain=None, slope=Slope.V_SLOPE, mode=ForwardMode.HYBRID, previous=True, **kwargs
 ):
     """Backward  LiRPA of tanh
 
@@ -177,7 +177,7 @@ def backward_tanh(
         convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
-
+    mode = ForwardMode(mode)
     if previous:
         x = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -200,13 +200,13 @@ def backward_tanh(
 
         nb_tensors = StaticVariables(dc_decomp=False, mode=mode)
 
-        if mode == F_IBP.name:
+        if mode == ForwardMode.IBP:
             upper, lower = inputs[:nb_tensors]
-        elif mode == F_FORWARD.name:
+        elif mode == ForwardMode.AFFINE:
             z_, w_u_, b_u_, w_l_, b_l_ = inputs[:nb_tensors]
             upper = get_upper(z_, w_u_, b_u_)
             lower = get_lower(z_, w_l_, b_l_)
-        elif mode == F_HYBRID.name:
+        elif mode == ForwardMode.HYBRID:
             _, upper, _, _, lower, _, _ = inputs[:nb_tensors]
         else:
             raise ValueError(f"Unknown mode {mode}")
@@ -214,7 +214,7 @@ def backward_tanh(
 
 
 def backward_hard_sigmoid(
-    x, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    x, dc_decomp=False, convex_domain=None, slope=Slope.V_SLOPE, mode=ForwardMode.HYBRID, previous=True, **kwargs
 ):
     """Backward  LiRPA of hard sigmoid
 
@@ -233,12 +233,12 @@ def backward_hard_sigmoid(
         convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
-
+    mode = ForwardMode(mode)
     raise NotImplementedError()
 
 
 def backward_elu(
-    x, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    x, dc_decomp=False, convex_domain=None, slope=Slope.V_SLOPE, mode=ForwardMode.HYBRID, previous=True, **kwargs
 ):
     """Backward  LiRPA of Exponential Linear Unit
 
@@ -257,12 +257,13 @@ def backward_elu(
         convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
-
+    mode = ForwardMode(mode)
+    slope = Slope(slope)
     raise NotImplementedError()
 
 
 def backward_selu(
-    x, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    x, dc_decomp=False, convex_domain=None, slope=Slope.V_SLOPE, mode=ForwardMode.HYBRID, previous=True, **kwargs
 ):
     """Backward LiRPA of Scaled Exponential Linear Unit (SELU)
 
@@ -281,12 +282,13 @@ def backward_selu(
         convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
-
+    mode = ForwardMode(mode)
+    slope = Slope(slope)
     raise NotImplementedError()
 
 
 def backward_linear(
-    x, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    x, dc_decomp=False, convex_domain=None, slope=Slope.V_SLOPE, mode=ForwardMode.HYBRID, previous=True, **kwargs
 ):
     """Backward LiRPA of linear
 
@@ -304,12 +306,13 @@ def backward_linear(
         convex_domain = {}
     if previous:
         return x[-4:]
-
+    mode = ForwardMode(mode)
+    slope = Slope(slope)
     raise NotImplementedError()
 
 
 def backward_exponential(
-    x, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    x, dc_decomp=False, convex_domain=None, slope=Slope.V_SLOPE, mode=ForwardMode.HYBRID, previous=True, **kwargs
 ):
     """Backward LiRPAof exponential
 
@@ -327,12 +330,13 @@ def backward_exponential(
         convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
-
+    mode = ForwardMode(mode)
+    slope = Slope(slope)
     raise NotImplementedError()
 
 
 def backward_softplus(
-    x, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    x, dc_decomp=False, convex_domain=None, slope=Slope.V_SLOPE, mode=ForwardMode.HYBRID, previous=True, **kwargs
 ):
     """Backward LiRPA of softplus
 
@@ -351,6 +355,7 @@ def backward_softplus(
         convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
+    mode = ForwardMode(mode)
     if previous:
         y = x[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = x[-4:]
@@ -361,13 +366,13 @@ def backward_softplus(
     else:
         nb_tensors = StaticVariables(dc_decomp=False, mode=mode)
 
-        if mode == F_IBP.name:
+        if mode == ForwardMode.IBP:
             upper, lower = x[:nb_tensors]
-        elif mode == F_FORWARD.name:
+        elif mode == ForwardMode.AFFINE:
             z_, w_u_, b_u_, w_l_, b_l_ = x[:nb_tensors]
             upper = get_upper(z_, w_u_, b_u_)
             lower = get_lower(z_, w_l_, b_l_)
-        elif mode == F_HYBRID.name:
+        elif mode == ForwardMode.HYBRID:
             _, upper, _, _, lower, _, _ = x[:nb_tensors]
         else:
             raise ValueError(f"Unknown mode {mode}")
@@ -375,7 +380,7 @@ def backward_softplus(
 
 
 def backward_softsign(
-    x, dc_decom=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, **kwargs
+    x, dc_decom=False, convex_domain=None, slope=Slope.V_SLOPE, mode=ForwardMode.HYBRID, previous=True, **kwargs
 ):
     """Backward LiRPA of softsign
 
@@ -413,7 +418,7 @@ def backward_softsign(
         return [w_u_, b_u_, w_l_, b_l_]
 
 
-def backward_softsign_(y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, mode=F_HYBRID.name, **kwargs):
+def backward_softsign_(y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
 
     if convex_domain is None:
         convex_domain = {}
@@ -437,7 +442,14 @@ def backward_softsign_(y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None
 
 
 def backward_softmax(
-    x, dc_decomp=False, convex_domain=None, slope=V_slope.name, mode=F_HYBRID.name, previous=True, axis=-1, **kwargs
+    x,
+    dc_decomp=False,
+    convex_domain=None,
+    slope=Slope.V_SLOPE,
+    mode=ForwardMode.HYBRID,
+    previous=True,
+    axis=-1,
+    **kwargs,
 ):
     """Backward LiRPA of softmax
 
@@ -457,7 +469,8 @@ def backward_softmax(
         convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
-
+    mode = ForwardMode(mode)
+    slope = Slope(slope)
     raise NotImplementedError()
 
 

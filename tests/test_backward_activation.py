@@ -5,6 +5,7 @@ from tensorflow.keras.layers import Input
 
 from decomon.backward_layers.activations import backward_relu, backward_softsign
 from decomon.layers.activations import softsign
+from decomon.layers.core import ForwardMode
 from decomon.utils import relu_
 
 
@@ -31,19 +32,22 @@ def test_activation_backward_1D_box(n, mode, previous, floatx, activation_func, 
 
     x_, y_, z_, u_c_, W_u_, B_u_, l_c_, W_l_, B_l_ = inputs_
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
         output = activation_func(input_mode, dc_decomp=False, mode=mode)
         z_0, u_c_0, _, _, l_c_0, _, _ = output
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         input_mode = [z, W_u, b_u, W_l, b_l]
         output = activation_func(input_mode, dc_decomp=False, mode=mode)
         z_0, _, _, _, _ = output
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         input_mode = [u_c, l_c]
         output = activation_func(input_mode, dc_decomp=False, mode=mode)
         z_0 = z_
         u_c_0, l_c_0 = output
+    else:
+        raise ValueError("Unknown mode.")
 
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1), dtype=K.floatx())

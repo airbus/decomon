@@ -1,11 +1,21 @@
-import numpy as np
+from typing import Callable, List, Optional, Sequence, Tuple, Union
 
-from decomon.layers.core import Ball, Box, Grid
+import keras
+import numpy as np
+import numpy.typing as npt
+
 from decomon.models.convert import clone as convert
 from decomon.models.models import DecomonModel
+from decomon.models.utils import ConvertMethod
+from decomon.utils import ConvexDomainType
+
+IntegerType = Union[int, np.int_]
+"""Alias for integers types."""
+LabelType = Union[IntegerType, Sequence[IntegerType], np.typing.NDArray[np.int_]]
+"""Alias for labels types."""
 
 
-def _get_dual_ord(p):
+def _get_dual_ord(p: float) -> float:
     if p == np.inf:
         return 1
     elif p == 1:
@@ -16,16 +26,26 @@ def _get_dual_ord(p):
         raise ValueError(f"p must be equal to 1, 2, or np.inf, unknown value {p}.")
 
 
+def _prepare_labels(labels: LabelType, n_batch: int) -> np.typing.NDArray[np.int_]:
+    if isinstance(labels, (int, np.int_)):
+        labels = np.zeros((n_batch, 1), dtype=np.int_) + labels
+    elif not isinstance(labels, np.ndarray):
+        labels = np.array(labels).reshape((n_batch, -1))
+    else:
+        labels = labels.reshape((n_batch, -1))
+    return labels.astype("int_")
+
+
 ##### ADVERSARIAL ROBUSTTNESS #####
 def get_adv_box(
-    model,
-    x_min,
-    x_max,
-    source_labels,
-    target_labels=None,
-    batch_size=-1,
-    n_sub_boxes=1,
-):
+    model: Union[keras.Model, DecomonModel],
+    x_min: npt.NDArray[np.float_],
+    x_max: npt.NDArray[np.float_],
+    source_labels: LabelType,
+    target_labels: Optional[LabelType] = None,
+    batch_size: int = -1,
+    n_sub_boxes: int = 1,
+) -> npt.NDArray[np.float_]:
     """if the output is negative, then it is a formal guarantee that there is no adversarial examples
 
     Args:
@@ -48,10 +68,14 @@ def get_adv_box(
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion
+    model_: DecomonModel
     if not isinstance(model, DecomonModel):
         model_ = convert(model, ibp=True, forward=True)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
+        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
+            ConvexDomainType.BOX,
+            ConvexDomainType.GRID,
+        ]
         model_ = model
 
     n_split = 1
@@ -79,18 +103,9 @@ def get_adv_box(
 
     z = np.concatenate([x_min, x_max], 1)
 
-    if isinstance(source_labels, (int, np.int_)):
-        source_labels = np.zeros((n_batch, 1)) + source_labels
-
-    if isinstance(source_labels, list):
-        source_labels = np.array(source_labels).reshape((n_batch, -1))
-
-    source_labels = source_labels.reshape((n_batch, -1))
-    source_labels = source_labels.astype("int64")
-
+    source_labels = _prepare_labels(source_labels, n_batch)
     if target_labels is not None:
-        target_labels = target_labels.reshape((n_batch, -1))
-        target_labels = target_labels.astype("int64")
+        target_labels = _prepare_labels(target_labels, n_batch)
 
     if n_split > 1:
         shape = list(source_labels.shape[1:])
@@ -106,18 +121,15 @@ def get_adv_box(
         X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         S_ = [source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        if (
-            (target_labels is not None)
-            and (not isinstance(target_labels, int))
-            and (str(target_labels.dtype)[:3] != "int")
-        ):
+        if target_labels is not None:
             T_ = [target_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+            adv_score = np.concatenate(
+                [get_adv_box(model_, X_min_[i], X_max_[i], S_[i], T_[i], -1) for i in range(len(X_min_))]
+            )
         else:
-            T_ = [target_labels] * (len(x_) // batch_size + r)
-
-        adv_score = np.concatenate(
-            [get_adv_box(model_, X_min_[i], X_max_[i], S_[i], T_[i], -1) for i in range(len(X_min_))]
-        )
+            adv_score = np.concatenate(
+                [get_adv_box(model_, X_min_[i], X_max_[i], S_[i], None, -1) for i in range(len(X_min_))]
+            )
 
     else:
 
@@ -126,13 +138,20 @@ def get_adv_box(
         n_label = source_labels.shape[-1]
 
         # two possitible cases: the model improves the bound based on the knowledge of the labels
+        output: npt.NDArray[np.float_]
         if model_.backward_bounds:
             C = np.diag([1] * n_label)[None] - source_labels[:, :, None]
             output = model_.predict([z, C], verbose=0)
         else:
             output = model_.predict(z, verbose=0)
 
-        def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None, backward=False):
+        def get_ibp_score(
+            u_c: npt.NDArray[np.float_],
+            l_c: npt.NDArray[np.float_],
+            source_tensor: npt.NDArray[np.int_],
+            target_tensor: Optional[npt.NDArray[np.int_]] = None,
+            backward: bool = False,
+        ) -> npt.NDArray[np.float_]:
 
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
@@ -154,7 +173,16 @@ def get_adv_box(
 
             return np.max(np.max(upper, -2), -1)
 
-        def get_forward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None, backward=False):
+        def get_forward_score(
+            z_tensor: npt.NDArray[np.float_],
+            w_u: npt.NDArray[np.float_],
+            b_u: npt.NDArray[np.float_],
+            w_l: npt.NDArray[np.float_],
+            b_l: npt.NDArray[np.float_],
+            source_tensor: npt.NDArray[np.int_],
+            target_tensor: Optional[npt.NDArray[np.int_]] = None,
+            backward: bool = False,
+        ) -> npt.NDArray[np.float_]:
 
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
@@ -226,7 +254,14 @@ def get_adv_box(
     return adv_score
 
 
-def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_size=-1):
+def check_adv_box(
+    model: Union[keras.Model, DecomonModel],
+    x_min: npt.NDArray[np.float_],
+    x_max: npt.NDArray[np.float_],
+    source_labels: npt.NDArray[np.int_],
+    target_labels: Optional[npt.NDArray[np.int_]] = None,
+    batch_size: int = -1,
+) -> npt.NDArray[np.float_]:
     """if the output is negative, then it is a formal guarantee that there is no adversarial examples
 
     Args:
@@ -252,7 +287,10 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
     if not isinstance(model, DecomonModel):
         model_ = convert(model, ibp=True, forward=True)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
+        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
+            ConvexDomainType.BOX,
+            ConvexDomainType.GRID,
+        ]
         model_ = model
 
     IBP = model_.IBP
@@ -277,11 +315,11 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
         source_labels = np.array(source_labels).reshape((n_batch, -1))
 
     source_labels = source_labels.reshape((n_batch, -1))
-    source_labels = source_labels.astype("int64")
+    source_labels = source_labels.astype(np.int_)
 
     if target_labels is not None:
         target_labels = target_labels.reshape((n_batch, -1))
-        target_labels = target_labels.astype("int64")
+        target_labels = target_labels.astype(np.int_)
 
     if n_split > 1:
         shape = list(source_labels.shape[1:])
@@ -297,6 +335,7 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
         X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         S_ = [source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        T_: List[Optional[npt.NDArray[np.int_]]]
         if (
             (target_labels is not None)
             and (not isinstance(target_labels, int))
@@ -322,7 +361,15 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
             IBP = False
             forward = True
 
-        def get_forward_sample(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None):
+        def get_forward_sample(
+            z_tensor: npt.NDArray[np.float_],
+            w_u: npt.NDArray[np.float_],
+            b_u: npt.NDArray[np.float_],
+            w_l: npt.NDArray[np.float_],
+            b_l: npt.NDArray[np.float_],
+            source_tensor: npt.NDArray[np.int_],
+            target_tensor: Optional[npt.NDArray[np.int_]] = None,
+        ) -> npt.NDArray[np.float_]:
 
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
@@ -362,7 +409,13 @@ def check_adv_box(model, x_min, x_max, source_labels, target_labels=None, batch_
 
 
 #### FORMAL BOUNDS ######
-def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
+def get_upper_box(
+    model: Union[keras.Model, DecomonModel],
+    x_min: npt.NDArray[np.float_],
+    x_max: npt.NDArray[np.float_],
+    batch_size: int = -1,
+    n_sub_boxes: int = 1,
+) -> npt.NDArray[np.float_]:
     """upper bound the maximum of a model in a given box
 
     Args:
@@ -376,100 +429,16 @@ def get_upper_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
         numpy array, vector with upper bounds for adversarial attacks
     """
 
-    if np.min(x_max - x_min) < 0:
-        raise UserWarning("Inconsistency Error: x_max < x_min")
-
-    # check that the model is a DecomonModel, else do the conversion
-    if not (isinstance(model, DecomonModel)):
-        model_ = convert(model, ibp=True, forward=True)
-    else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
-        model_ = model
-
-    n_split = 1
-    n_batch = len(x_min)
-
-    if n_sub_boxes > 1:
-        x_min, x_max = refine_boxes(x_min, x_max, n_sub_boxes)
-        # reshape
-        n_split = x_min.shape[1]
-        shape = list(x_min.shape[2:])
-        x_min = np.reshape(x_min, [-1] + shape)
-        x_max = np.reshape(x_max, [-1] + shape)
-
-    # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[2:])
-    input_dim = np.prod(input_shape)
-    x_ = x_min + 0 * x_min
-    x_ = x_.reshape([-1] + input_shape)
-    x_min = x_min.reshape((-1, 1, input_dim))
-    x_max = x_max.reshape((-1, 1, input_dim))
-
-    z = np.concatenate([x_min, x_max], 1)
-
-    if batch_size > 0:
-        # split
-        r = 0
-        if len(x_) % batch_size > 0:
-            r += 1
-        X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-
-        results = [get_upper_box(model_, X_min_[i], X_max_[i], -1) for i in range(len(X_min_))]
-
-        u_ = np.concatenate(results)
-    else:
-        IBP = model_.IBP
-        forward = model_.forward
-        output = model_.predict(z, verbose=0)
-        shape = output[-1].shape[1:]
-        shape_ = np.prod(shape)
-
-        if forward:
-            if IBP:
-                _, u_i, w_u_f, b_u_f, _, _, _ = output[:7]
-                if len(u_i.shape) > 2:
-                    u_i = np.reshape(u_i, (-1, shape_))
-
-            else:
-                _, w_u_f, b_u_f, _, _ = output[:5]
-
-            # reshape if necessary
-            if len(w_u_f.shape) > 3:
-                w_u_f = np.reshape(w_u_f, (-1, input_dim, shape_))
-                b_u_f = np.reshape(b_u_f, (-1, input_dim, shape_))
-
-            u_f = (
-                np.sum(np.maximum(w_u_f, 0) * x_max[:, 0, :, None], 1)
-                + np.sum(np.minimum(w_u_f, 0) * x_min[:, 0, :, None], 1)
-                + b_u_f
-            )
-
-        else:
-            u_i = output[0]
-            if len(u_i.shape) > 2:
-                u_i = np.reshape(u_i, (-1, shape_))
-                ######
-
-        if IBP and forward:
-            u_ = np.minimum(u_i, u_f)
-        elif IBP and not forward:
-            u_ = u_i
-        elif not IBP and forward:
-            u_ = u_f
-        else:
-            raise NotImplementedError("not IBP and not forward not implemented")
-
-        if len(shape) > 1:
-            u_ = np.reshape(u_, [-1] + list(shape))
-
-    if n_split > 1:
-        u_ = np.max(np.reshape(u_, (-1, n_split)), -1)
-
-    return u_
+    return get_range_box(model=model, x_min=x_min, x_max=x_max, batch_size=batch_size, n_sub_boxes=n_sub_boxes)[0]
 
 
-def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
+def get_lower_box(
+    model: Union[keras.Model, DecomonModel],
+    x_min: npt.NDArray[np.float_],
+    x_max: npt.NDArray[np.float_],
+    batch_size: int = -1,
+    n_sub_boxes: int = 1,
+) -> npt.NDArray[np.float_]:
     """lower bound the minimum of a model in a given box
 
     Args:
@@ -483,99 +452,16 @@ def get_lower_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
         numpy array, vector with lower bounds for adversarial attacks
     """
 
-    if np.min(x_max - x_min) < 0:
-        raise UserWarning("Inconsistency Error: x_max < x_min")
-
-    # check that the model is a DecomonModel, else do the conversion
-    if not (isinstance(model, DecomonModel)):
-        model_ = convert(model, ibp=True, forward=True)
-    else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
-        model_ = model
-
-    n_split = 1
-    n_batch = len(x_min)
-
-    if n_sub_boxes > 1:
-        x_min, x_max = refine_boxes(x_min, x_max, n_sub_boxes)
-        # reshape
-        n_split = x_min.shape[1]
-        shape = list(x_min.shape[2:])
-        x_min = np.reshape(x_min, [-1] + shape)
-        x_max = np.reshape(x_max, [-1] + shape)
-
-    # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[2:])
-    input_dim = np.prod(input_shape)
-    x_ = x_min + 0 * x_min
-    x_ = x_.reshape([-1] + input_shape)
-    x_min = x_min.reshape((-1, 1, input_dim))
-    x_max = x_max.reshape((-1, 1, input_dim))
-
-    z = np.concatenate([x_min, x_max], 1)
-
-    if batch_size > 0:
-        # split
-        r = 0
-        if len(x_) % batch_size > 0:
-            r += 1
-        X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-
-        results = [get_lower_box(model_, X_min_[i], X_max_[i], -1) for i in range(len(X_min_))]
-
-        l_ = np.concatenate(results)
-    else:
-        IBP = model_.IBP
-        forward = model_.forward
-
-        output = model_.predict(z, verbose=0)
-        shape = list(output[-1].shape[1:])
-        shape_ = np.prod(shape)
-
-        if forward:
-            if IBP:
-                _, _, _, _, l_i, w_l_f, b_l_f = output[:7]
-                if len(l_i.shape) > 2:
-                    l_i = np.reshape(l_i, (-1, shape_))
-            else:
-                _, _, _, w_l_f, b_l_f = output[:5]
-
-            # reshape if necessary
-            if len(w_l_f.shape) > 3:
-                w_l_f = np.reshape(w_l_f, (-1, input_dim, shape_))
-                b_l_f = np.reshape(b_l_f, (-1, input_dim, shape_))
-
-            l_f = (
-                np.sum(np.maximum(w_l_f, 0) * x_min[:, 0, :, None], 1)
-                + np.sum(np.minimum(w_l_f, 0) * x_max[:, 0, :, None], 1)
-                + b_l_f
-            )
-
-        else:
-            l_i = output[1]
-            if len(l_i.shape) > 2:
-                l_i = np.reshape(l_i, (-1, shape_))
-                ######
-
-        if IBP and forward:
-            l_ = np.maximum(l_i, l_f)
-        elif IBP and not forward:
-            l_ = l_i
-        elif not IBP and forward:
-            l_ = l_f
-        else:
-            raise NotImplementedError("not IBP and not forward not implemented")
-
-        if len(shape) > 1:
-            l_ = np.reshape(l_, [-1] + list(shape_))
-
-    if n_split > 1:
-        l_ = np.min(np.reshape(l_, (-1, n_split)), -1)
-    return l_
+    return get_range_box(model=model, x_min=x_min, x_max=x_max, batch_size=batch_size, n_sub_boxes=n_sub_boxes)[1]
 
 
-def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
+def get_range_box(
+    model: Union[keras.Model, DecomonModel],
+    x_min: npt.NDArray[np.float_],
+    x_max: npt.NDArray[np.float_],
+    batch_size: int = -1,
+    n_sub_boxes: int = 1,
+) -> Tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
     """bounding the outputs of a model in a given box
     if the constant is negative, then it is a formal guarantee that there is no adversarial examples
 
@@ -597,7 +483,10 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
     if not (isinstance(model, DecomonModel)):
         model_ = convert(model, ibp=True, forward=True)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
+        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
+            ConvexDomainType.BOX,
+            ConvexDomainType.GRID,
+        ]
         model_ = model
 
     n_split = 1
@@ -630,11 +519,9 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
         X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         results = [get_range_box(model_, X_min_[i], X_max_[i], -1) for i in range(len(X_min_))]
 
-        u_ = [r[0] for r in results]
-        l_ = [r[1] for r in results]
+        u_ = np.concatenate([r[0] for r in results])
+        l_ = np.concatenate([r[1] for r in results])
 
-        u_ = np.concatenate(u_)
-        l_ = np.concatenate(l_)
     else:
         IBP = model_.IBP
         forward = model_.forward
@@ -647,8 +534,8 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
             if IBP:
                 _, u_i, w_u_f, b_u_f, l_i, w_l_f, b_l_f = output[:7]
                 if len(u_i.shape) > 2:
-                    u_i = np.reshape(u_i, (-1, u_i.shape_))
-                    l_i = np.reshape(l_i, (-1, l_i.shape_))
+                    u_i = np.reshape(u_i, (-1, shape_))
+                    l_i = np.reshape(l_i, (-1, shape_))
             else:
                 _, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
 
@@ -674,8 +561,8 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
             u_i = output[0]
             l_i = output[1]
             if len(u_i.shape) > 2:
-                u_i = np.reshape(u_i, (-1, u_i.shape_))
-                l_i = np.reshape(l_i, (-1, l_i.shape_))
+                u_i = np.reshape(u_i, (-1, shape_))
+                l_i = np.reshape(l_i, (-1, shape_))
 
         if IBP and forward:
             u_ = np.minimum(u_i, u_f)
@@ -701,7 +588,13 @@ def get_range_box(model, x_min, x_max, batch_size=-1, n_sub_boxes=1):
 
 
 # get upper bound of a sample with bounded noise
-def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1):
+def get_upper_noise(
+    model: Union[keras.Model, DecomonModel],
+    x: npt.NDArray[np.float_],
+    eps: float,
+    p: float = np.inf,
+    batch_size: int = -1,
+) -> npt.NDArray[np.float_]:
     """upper bound the maximum of a model in an Lp Ball
 
     Args:
@@ -716,80 +609,18 @@ def get_upper_noise(model, x, eps=0, p=np.inf, batch_size=-1):
         numpy array, vector with upper bounds of the range of values
         taken by the model inside the ball
     """
-    # check that the model is a DecomonModel, else do the conversion
-    convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
 
-    # check that the model is a DecomonModel, else do the conversion
-    if not isinstance(model, DecomonModel):
-        model_ = convert(model, method="crown-hybrid", convex_domain=convex_domain, ibp=True, forward=False)
-    else:
-        model_ = model
-        if eps >= 0:
-            model_.set_domain(convex_domain)
-
-    # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[1:])
-    input_dim = np.prod(input_shape)
-    x_ = x + 0 * x
-    x_ = x_.reshape([-1] + input_shape)
-
-    if batch_size > 0:
-        # split
-        r = 0
-        if len(x_) % batch_size > 0:
-            r += 1
-        X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        results = [get_upper_noise(model_, X_[i], eps=eps, p=p, batch_size=-1) for i in range(len(X_))]
-
-        return np.concatenate(results)
-
-    IBP = model_.IBP
-    forward = model_.forward
-    output = model_.predict(x_, verbose=0)
-    shape = output[-1].shape[1:]
-    shape_ = np.prod(shape)
-
-    x_ = x_.reshape((len(x_), -1))
-    ord = _get_dual_ord(p)
-
-    if forward:
-        if IBP:
-            _, u_i, w_u_f, b_u_f, _, _, _ = output[:7]
-            if len(u_i.shape) > 2:
-                u_i = np.reshape(u_i, (-1, input_dim))
-        else:
-            _, w_u_f, b_u_f, _, _ = output[:5]
-
-        # reshape if necessary
-        if len(w_u_f.shape) > 3:
-            w_u_f = np.reshape(w_u_f, (-1, input_dim, shape_))
-            b_u_f = np.reshape(b_u_f, (-1, shape_))
-
-        u_f = eps * np.linalg.norm(w_u_f, ord=ord, axis=1) + np.sum(w_u_f * x_[:, :, None], 1) + b_u_f
-
-    else:
-        u_i = output[0]
-        if len(u_i.shape) > 2:
-            u_i = np.reshape(u_i, (-1, input_dim))
-            ######
-
-    if IBP and forward:
-        u_ = np.minimum(u_i, u_f)
-    elif IBP and not forward:
-        u_ = u_i
-    elif not IBP and forward:
-        u_ = u_f
-    else:
-        raise NotImplementedError("not IBP and not forward not implemented")
-
-    if len(shape) > 1:
-        u_ = np.reshape(u_ + [-1] + list(shape))
-
-    return u_
+    return get_range_noise(model=model, x=x, eps=eps, p=p, batch_size=batch_size)[0]
 
 
 # get upper bound of a sample with bounded noise
-def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1):
+def get_lower_noise(
+    model: Union[keras.Model, DecomonModel],
+    x: npt.NDArray[np.float_],
+    eps: float,
+    p: float = np.inf,
+    batch_size: int = -1,
+) -> npt.NDArray[np.float_]:
     """lower bound the minimum of a model in an Lp Ball
 
     Args:
@@ -804,78 +635,18 @@ def get_lower_noise(model, x, eps, p=np.inf, batch_size=-1):
         numpy array, vector with lower bounds of the range of values
         taken by the model inside the ball
     """
-    # check that the model is a DecomonModel, else do the conversion
-    convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
 
-    if not isinstance(model, DecomonModel):
-        model_ = convert(model, method="crown-hybrid", convex_domain=convex_domain, ibp=True, forward=False)
-    else:
-        model_ = model
-        if eps >= 0:
-            model_.set_domain(convex_domain)
-
-    # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[1:])
-    input_dim = np.prod(input_shape)
-    x_ = x + 0 * x
-    x_ = x_.reshape([-1] + input_shape)
-
-    if batch_size > 0:
-        # split
-        r = 0
-        if len(x_) % batch_size > 0:
-            r += 1
-        X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        results = [get_lower_noise(model_, X_[i], eps=eps, p=p, batch_size=-1) for i in range(len(X_))]
-
-        return np.concatenate(results)
-
-    IBP = model_.IBP
-    forward = model_.forward
-    output = model_.predict(x_, verbose=0)
-    shape = list(output[-1].shape[1:])
-    shape_ = np.prod(shape)
-
-    x_ = x_.reshape((len(x_), -1))
-    ord = _get_dual_ord(p)
-
-    if forward:
-        if IBP:
-            _, _, _, _, l_i, w_l_f, b_l_f = output[:7]
-            if len(l_i.shape) > 2:
-                l_i = np.reshape(l_i, (-1, shape_))
-        else:
-            _, _, _, w_l_f, b_l_f = output[:5]
-
-        # reshape if necessary
-        if len(w_l_f.shape) > 3:
-            w_l_f = np.reshape(w_l_f, (-1, input_dim, shape_))
-            b_l_f = np.reshape(b_l_f, (-1, shape_))
-        l_f = -eps * np.linalg.norm(w_l_f, ord=ord, axis=1) + np.sum(w_l_f * x_[:, :, None], 1) + b_l_f
-
-    else:
-        l_i = output[1]
-        if len(l_i.shape) > 2:
-            l_i = np.reshape(l_i, (-1, shape_))
-            ######
-
-    if IBP and forward:
-        l_ = np.maximum(l_i, l_f)
-    elif IBP and not forward:
-        l_ = l_i
-    elif not IBP and forward:
-        l_ = l_f
-    else:
-        raise NotImplementedError("not IBP and not forward not implemented")
-
-    if len(shape) > 1:
-        l_ = np.reshape(l_, [-1] + shape)
-
-    return l_
+    return get_range_noise(model=model, x=x, eps=eps, p=p, batch_size=batch_size)[1]
 
 
 # get upper bound of a sample with bounded noise
-def get_range_noise(model, x, eps, p=np.inf, batch_size=-1):
+def get_range_noise(
+    model: Union[keras.Model, DecomonModel],
+    x: npt.NDArray[np.float_],
+    eps: float,
+    p: float = np.inf,
+    batch_size: int = -1,
+) -> Tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
     """Bounds the output of a model in an Lp Ball
 
     Args:
@@ -892,10 +663,12 @@ def get_range_noise(model, x, eps, p=np.inf, batch_size=-1):
     """
 
     # check that the model is a DecomonModel, else do the conversion
-    convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
+    convex_domain = {"name": ConvexDomainType.BALL, "p": p, "eps": max(0, eps)}
 
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, method="crown-hybrid", convex_domain=convex_domain, ibp=True, forward=False)
+        model_ = convert(
+            model, method=ConvertMethod.CROWN_FORWARD_HYBRID, convex_domain=convex_domain, ibp=True, forward=False
+        )
     else:
         model_ = model
         if eps >= 0:
@@ -915,10 +688,7 @@ def get_range_noise(model, x, eps, p=np.inf, batch_size=-1):
         X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         results = [get_range_noise(model_, X_[i], eps=eps, p=p, batch_size=-1) for i in range(len(X_))]
 
-        u_ = [r[0] for r in results]
-        l_ = [r[1] for r in results]
-
-        return np.concatenate(u_), np.concatenate(l_)
+        return np.concatenate([r[0] for r in results]), np.concatenate([r[1] for r in results])
 
     IBP = model_.IBP
     forward = model_.forward
@@ -976,7 +746,9 @@ def get_range_noise(model, x, eps, p=np.inf, batch_size=-1):
     return u_, l_
 
 
-def refine_boxes(x_min, x_max, n_sub_boxes=10):
+def refine_boxes(
+    x_min: npt.NDArray[np.float_], x_max: npt.NDArray[np.float_], n_sub_boxes: int = 10
+) -> Tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
 
     # flatten x_min and x_max
     shape = list(x_min.shape[1:])
@@ -990,7 +762,9 @@ def refine_boxes(x_min, x_max, n_sub_boxes=10):
     X_min = np.zeros((len(x_min), 1, n)) + x_min[:, None]
     X_max = np.zeros((len(x_max), 1, n)) + x_max[:, None]
 
-    def split(x_min_, x_max_, j):
+    def split(
+        x_min_: npt.NDArray[np.float_], x_max_: npt.NDArray[np.float_], j: npt.NDArray[np.int_]
+    ) -> Tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
         n_0 = len(x_min_)
         n_k = x_min_.shape[1]
 
@@ -1022,7 +796,17 @@ def refine_boxes(x_min, x_max, n_sub_boxes=10):
     return X_min, X_max
 
 
-def refine_box(func, model, x_min, x_max, n_split, source_labels=None, target_labels=None, batch_size=-1, random=True):
+def refine_box(
+    func: Callable[..., npt.NDArray[np.float_]],
+    model: Union[keras.Model, DecomonModel],
+    x_min: npt.NDArray[np.float_],
+    x_max: npt.NDArray[np.float_],
+    n_split: int,
+    source_labels: Optional[npt.NDArray[np.int_]] = None,
+    target_labels: Optional[npt.NDArray[np.int_]] = None,
+    batch_size: int = -1,
+    random: bool = True,
+) -> npt.NDArray[np.float_]:
 
     if func.__name__ not in [
         elem.__name__ for elem in [get_upper_box, get_lower_box, get_adv_box, check_adv_box, get_range_box]
@@ -1033,7 +817,10 @@ def refine_box(func, model, x_min, x_max, n_split, source_labels=None, target_la
     if not isinstance(model, DecomonModel):
         model_ = convert(model)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [Box.name, Grid.name]
+        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
+            ConvexDomainType.BOX,
+            ConvexDomainType.GRID,
+        ]
         model_ = model
 
     # reshape x_mmin, x_max
@@ -1059,7 +846,7 @@ def refine_box(func, model, x_min, x_max, n_split, source_labels=None, target_la
     if func.__name__ == get_lower_box.__name__:
         maximize = False
 
-    def priv_func(X_min, X_max):
+    def priv_func(X_min: npt.NDArray[np.float_], X_max: npt.NDArray[np.float_]) -> npt.NDArray[np.float_]:
         if func.__name__ in [elem.__name__ for elem in [get_upper_box, get_lower_box, get_range_box]]:
 
             results = func(model_, x_min=X_min, x_max=X_max, batch_size=batch_size)
@@ -1090,8 +877,8 @@ def refine_box(func, model, x_min, x_max, n_split, source_labels=None, target_la
         while count < n_split:
 
             if not random:
-                i = np.argmax(np.max(index_max[n_i, :count], -1))
-                j = np.argmax(index_max[n_i, i])
+                i = int(np.argmax(np.max(index_max[n_i, :count], -1)))
+                j = int(np.argmax(index_max[n_i, i]))
             else:
                 i = np.random.randint(count - 1)
                 j = np.random.randint(input_dim)
@@ -1124,14 +911,14 @@ def refine_box(func, model, x_min, x_max, n_split, source_labels=None, target_la
 
 ### adversarial robustness Lp norm
 def get_adv_noise(
-    model,
-    x,
-    source_labels,
-    eps=0,
-    p=np.inf,
-    target_labels=None,
-    batch_size=-1,
-):
+    model: Union[keras.Model, DecomonModel],
+    x: npt.NDArray[np.float_],
+    source_labels: LabelType,
+    eps: float = 0.0,
+    p: float = np.inf,
+    target_labels: Optional[LabelType] = None,
+    batch_size: int = -1,
+) -> npt.NDArray[np.float_]:
     """if the output is negative, then it is a formal guarantee that there is no adversarial examples
 
     Args:
@@ -1151,7 +938,7 @@ def get_adv_noise(
         numpy array, vector with upper bounds for adversarial attacks
     """
 
-    convex_domain = {"name": Ball.name, "p": p, "eps": max(0, eps)}
+    convex_domain = {"name": ConvexDomainType.BALL, "p": p, "eps": max(0, eps)}
 
     # check that the model is a DecomonModel, else do the conversion
     if not isinstance(model, DecomonModel):
@@ -1175,17 +962,13 @@ def get_adv_noise(
     x_ = x_.reshape([-1] + input_shape)
 
     if isinstance(source_labels, (int, np.int_)):
-        source_labels = np.zeros((n_batch, 1)) + source_labels
-
-    if isinstance(source_labels, list):
-        source_labels = np.array(source_labels).reshape((n_batch, -1))
-
-    source_labels = source_labels.reshape((n_batch, -1))
-    source_labels = source_labels.astype("int64")
+        source_labels = np.zeros((n_batch, 1), dtype=np.int_) + source_labels
+    source_labels = np.array(source_labels).reshape((n_batch, -1)).astype(np.int_)
 
     if target_labels is not None:
-        target_labels = target_labels.reshape((n_batch, -1))
-        target_labels = target_labels.astype("int64")
+        if isinstance(target_labels, (int, np.int_)):
+            target_labels = np.zeros((n_batch, 1), dtype=np.int_) + source_labels
+        target_labels = np.array(target_labels).reshape((n_batch, -1)).astype(np.int_)
 
     if batch_size > 0:
         # split
@@ -1194,6 +977,7 @@ def get_adv_noise(
             r += 1
         X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         S_ = [source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        T_: List[Optional[npt.NDArray[np.int_]]]
         if (
             (target_labels is not None)
             and (not isinstance(target_labels, int))
@@ -1215,7 +999,12 @@ def get_adv_noise(
         forward = model_.forward
         output = model_.predict(x_, verbose=0)
 
-        def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
+        def get_ibp_score(
+            u_c: npt.NDArray[np.float_],
+            l_c: npt.NDArray[np.float_],
+            source_tensor: npt.NDArray[np.int_],
+            target_tensor: Optional[npt.NDArray[np.int_]] = None,
+        ) -> npt.NDArray[np.float_]:
 
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
@@ -1234,7 +1023,15 @@ def get_adv_noise(
 
             return np.max(np.max(upper, -2), -1)
 
-        def get_forward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None):
+        def get_forward_score(
+            z_tensor: npt.NDArray[np.float_],
+            w_u: npt.NDArray[np.float_],
+            b_u: npt.NDArray[np.float_],
+            w_l: npt.NDArray[np.float_],
+            b_l: npt.NDArray[np.float_],
+            source_tensor: npt.NDArray[np.int_],
+            target_tensor: Optional[npt.NDArray[np.int_]] = None,
+        ) -> npt.NDArray[np.float_]:
 
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
