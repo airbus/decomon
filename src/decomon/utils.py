@@ -9,7 +9,6 @@ from tensorflow.python.keras import backend as K
 from tensorflow.types.experimental import TensorLike
 
 from decomon.layers.core import ForwardMode, StaticVariables
-from decomon.models.models import DecomonModel
 
 
 class ConvexDomainType(Enum):
@@ -1270,42 +1269,3 @@ def set_mode(
         return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
     else:
         raise ValueError(f"Unknown final_mode {final_mode}")
-
-
-def get_AB(model_: DecomonModel) -> Dict[str, List[tf.Variable]]:
-    dico_AB: Dict[str, List[tf.Variable]] = {}
-    convex_domain = model_.convex_domain
-    if not (
-        len(convex_domain) and convex_domain["name"] == ConvexDomainType.GRID and convex_domain["option"] == "milp"
-    ):
-        return dico_AB
-
-    for layer in model_.layers:
-        name = layer.name
-        sub_names = name.split("backward_activation")
-        if len(sub_names) > 1:
-            key = f"{layer.layer.name}_{layer.rec}"
-            if key not in dico_AB:
-                dico_AB[key] = layer.grid_finetune
-    return dico_AB
-
-
-def get_AB_finetune(model_: DecomonModel) -> Dict[str, tf.Variable]:
-    dico_AB: Dict[str, tf.Variable] = {}
-    convex_domain = model_.convex_domain
-    if not (
-        len(convex_domain) and convex_domain["name"] == ConvexDomainType.GRID and convex_domain["option"] == "milp"
-    ):
-        return dico_AB
-
-    if not model_.finetune:
-        return dico_AB
-
-    for layer in model_.layers:
-        name = layer.name
-        sub_names = name.split("backward_activation")
-        if len(sub_names) > 1:
-            key = f"{layer.layer.name}_{layer.rec}"
-            if key not in dico_AB:
-                dico_AB[key] = layer.alpha_b_l
-    return dico_AB

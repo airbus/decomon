@@ -1,4 +1,5 @@
 import copy
+from typing import Dict, List
 
 import tensorflow as tf
 from keras.engine.functional import get_network_config
@@ -91,3 +92,42 @@ def set_domain_priv(convex_domain_prev, convex_domain):
         raise NotImplementedError(msg)
 
     return convex_domain_
+
+
+def get_AB(model_: DecomonModel) -> Dict[str, List[tf.Variable]]:
+    dico_AB: Dict[str, List[tf.Variable]] = {}
+    convex_domain = model_.convex_domain
+    if not (
+        len(convex_domain) and convex_domain["name"] == ConvexDomainType.GRID and convex_domain["option"] == "milp"
+    ):
+        return dico_AB
+
+    for layer in model_.layers:
+        name = layer.name
+        sub_names = name.split("backward_activation")
+        if len(sub_names) > 1:
+            key = f"{layer.layer.name}_{layer.rec}"
+            if key not in dico_AB:
+                dico_AB[key] = layer.grid_finetune
+    return dico_AB
+
+
+def get_AB_finetune(model_: DecomonModel) -> Dict[str, tf.Variable]:
+    dico_AB: Dict[str, tf.Variable] = {}
+    convex_domain = model_.convex_domain
+    if not (
+        len(convex_domain) and convex_domain["name"] == ConvexDomainType.GRID and convex_domain["option"] == "milp"
+    ):
+        return dico_AB
+
+    if not model_.finetune:
+        return dico_AB
+
+    for layer in model_.layers:
+        name = layer.name
+        sub_names = name.split("backward_activation")
+        if len(sub_names) > 1:
+            key = f"{layer.layer.name}_{layer.rec}"
+            if key not in dico_AB:
+                dico_AB[key] = layer.alpha_b_l
+    return dico_AB

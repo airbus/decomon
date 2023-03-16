@@ -9,8 +9,8 @@ from importlib.metadata import PackageNotFoundError, version
 
 from . import layers, models
 from .metrics.loss import get_adv_loss, get_lower_loss, get_model, get_upper_loss
-from .utils import get_AB as get_grid_params
-from .utils import get_AB_finetune as get_grid_slope
+from .models.models import get_AB as get_grid_params
+from .models.models import get_AB_finetune as get_grid_slope
 from .wrapper import (
     check_adv_box,
     get_adv_box,
