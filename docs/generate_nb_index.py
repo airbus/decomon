@@ -9,6 +9,7 @@ from typing import List, Tuple
 NOTEBOOKS_LIST_PLACEHOLDER = "[[notebooks-list]]"
 NOTEBOOKS_PAGE_TEMPLATE_RELATIVE_PATH = "tutorials.template.md"
 NOTEBOOKS_PAGE_RELATIVE_PATH = "tutorials.md"
+NOTEBOOKS_SECTION_KEY_VAR_SEP = "_"
 NOTEBOOKS_DIRECTORY_NAME = "tutorials"
 
 DEFAULT_REPO_NAME = "airbus/decomon"
@@ -16,6 +17,7 @@ DEFAULT_REPO_NAME = "airbus/decomon"
 doc_dir = os.path.dirname(os.path.abspath(__file__))
 doc_source_dir = os.path.abspath(f"{doc_dir}/source")
 rootdir = os.path.abspath(f"{doc_dir}/..")
+notebooksdir = f"{rootdir}/{NOTEBOOKS_DIRECTORY_NAME}"
 
 logger = logging.getLogger(__name__)
 
@@ -181,8 +183,11 @@ def get_repo_n_branches_for_binder_n_github_links() -> Tuple[bool, str, str, str
 if __name__ == "__main__":
 
     # List existing notebooks and and write Notebooks page
-    notebook_filepaths = sorted(glob.glob(f"{rootdir}/{NOTEBOOKS_DIRECTORY_NAME}/*.ipynb"))
+    notebook_filepaths = sorted(glob.glob(f"{notebooksdir}/**/*.ipynb", recursive=True))
     notebooks_list_text = ""
+    notebooksdir_prefixlen = len(notebooksdir) + 1
+    sections_baselevel = 2
+    current_sections = []
     (
         creating_links,
         notebooks_repo_url,
@@ -194,10 +199,22 @@ if __name__ == "__main__":
     ) = get_repo_n_branches_for_binder_n_github_links()
     # loop on notebooks sorted alphabetically by filenames
     for notebook_filepath in notebook_filepaths:
+        # get subsections arborescence
+        notebook_relpath = notebook_filepath[notebooksdir_prefixlen:]
+        notebook_arbo = notebook_relpath.split(os.path.sep)
+        notebook_sections = notebook_arbo[:-1]
+        #  write missing sections
+        for i_section, section in enumerate(notebook_sections):
+            if i_section >= len(current_sections) or section != current_sections[i_section]:
+                section_prefix = (sections_baselevel + i_section) * "#"
+                section_name = section.split(NOTEBOOKS_SECTION_KEY_VAR_SEP)[-1]
+                notebooks_list_text += f"{section_prefix} {section_name}\n\n"
+        current_sections = notebook_sections
+        # extract title and description
         title, description_lines = extract_notebook_title_n_description(notebook_filepath)
-        # subsection title
-        notebooks_list_text += f"## {title}\n\n"
-        # links
+        # write title
+        title_prefix = (sections_baselevel + len(notebook_sections)) * "#"
+        notebooks_list_text += f"{title_prefix} {title}\n\n"  # links
         if creating_links:
             notebook_path_prefix_len = len(f"{rootdir}/")
             notebook_relative_path = notebook_filepath[notebook_path_prefix_len:]
