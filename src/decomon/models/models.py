@@ -1,5 +1,5 @@
 import copy
-from typing import Dict, List
+from typing import Any, Dict, List, Optional, Union
 
 import tensorflow as tf
 from keras.engine.functional import get_network_config
@@ -12,24 +12,22 @@ from decomon.utils import ConvexDomainType
 class DecomonModel(tf.keras.Model):
     def __init__(
         self,
-        input,
-        output,
-        convex_domain=None,
-        dc_decomp=False,
-        method=ConvertMethod.FORWARD_AFFINE,
-        optimize="True",
-        IBP=True,
-        forward=True,
-        finetune=False,
-        shared=True,
-        backward_bounds=False,
-        **kwargs,
+        input: Union[tf.Tensor, List[tf.Tensor]],
+        output: Union[tf.Tensor, List[tf.Tensor]],
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        method: Union[str, ConvertMethod] = ConvertMethod.FORWARD_AFFINE,
+        IBP: bool = True,
+        forward: bool = True,
+        finetune: bool = False,
+        shared: bool = True,
+        backward_bounds: bool = False,
+        **kwargs: Any,
     ):
         super().__init__(input, output, **kwargs)
         if convex_domain is None:
             convex_domain = {}
         self.convex_domain = convex_domain
-        self.optimize = optimize
         self.nb_tensors = StaticVariables(dc_decomp).nb_tensors
         self.dc_decomp = dc_decomp
         self.method = ConvertMethod(method)
@@ -37,46 +35,47 @@ class DecomonModel(tf.keras.Model):
         self.forward = forward
         self.finetune = finetune
         self.backward_bounds = backward_bounds
+        self.shared = shared
 
-    def set_domain(self, convex_domain):
-        convex_domain = set_domain_priv(self.convex_domain, convex_domain)
+    def set_domain(self, convex_domain: Dict[str, Any]) -> None:
+        convex_domain = _check_domain(self.convex_domain, convex_domain)
         self.convex_domain = convex_domain
         for layer in self.layers:
             if hasattr(layer, "convex_domain"):
                 layer.convex_domain = self.convex_domain
 
-    def freeze_weights(self):
+    def freeze_weights(self) -> None:
         for layer in self.layers:
             if hasattr(layer, "freeze_weights"):
                 layer.freeze_weights()
 
-    def unfreeze_weights(self):
+    def unfreeze_weights(self) -> None:
         for layer in self.layers:
             if hasattr(layer, "unfreeze_weights"):
                 layer.unfreeze_weights()
 
-    def freeze_alpha(self):
+    def freeze_alpha(self) -> None:
         for layer in self.layers:
             if hasattr(layer, "freeze_alpha"):
                 layer.freeze_alpha()
 
-    def unfreeze_alpha(self):
+    def unfreeze_alpha(self) -> None:
         for layer in self.layers:
             if hasattr(layer, "unfreeze_alpha"):
                 layer.unfreeze_alpha()
 
-    def reset_finetuning(self):
+    def reset_finetuning(self) -> None:
         for layer in self.layers:
             if hasattr(layer, "reset_finetuning"):
                 layer.reset_finetuning()
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         # Continue adding configs into what the super class has added.
         config = super().get_config()
         return copy.deepcopy(get_network_config(self, config=config))
 
 
-def set_domain_priv(convex_domain_prev, convex_domain):
+def _check_domain(convex_domain_prev: Dict[str, Any], convex_domain: Dict[str, Any]) -> Dict[str, Any]:
     msg = "we can only change the parameters of the convex domain, not its nature"
 
     convex_domain_ = convex_domain
