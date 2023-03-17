@@ -1,15 +1,16 @@
-import inspect
-from copy import deepcopy
 from enum import Enum
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import tensorflow as tf
 import tensorflow.python.keras.backend as K
+from keras.engine.node import Node
 from tensorflow.keras.layers import (
     Concatenate,
     Flatten,
     Input,
     Lambda,
+    Layer,
     Maximum,
     Minimum,
 )
@@ -35,57 +36,16 @@ class ConvertMethod(Enum):
     FORWARD_HYBRID = "forward-hybrid"
 
 
-def include_dim_layer_fn(
-    layer_fn, input_dim, dc_decomp=False, convex_domain=None, IBP=True, forward=True, finetune=False, shared=True
-):
-    """include external parameters inside the translation of a layer to its decomon counterpart
-
-    Args:
-        layer_fn
-        input_dim
-        dc_decomp
-        convex_domain
-        finetune
-
-    Returns:
-
-    """
-    if convex_domain is None:
-        convex_domain = {}
-    if input_dim <= 0:
-        raise ValueError()
-    else:
-        if "input_dim" in inspect.signature(layer_fn).parameters:
-            layer_fn_copy = deepcopy(layer_fn)
-            if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
-                input_dim = (2, input_dim)
-            else:
-                if convex_domain["name"] == ConvexDomainType.BOX and not isinstance(input_dim, tuple):
-                    input_dim = (2, input_dim)
-
-            def func(x):
-                return layer_fn_copy(
-                    x,
-                    input_dim,
-                    convex_domain=convex_domain,
-                    dc_decomp=dc_decomp,
-                    IBP=IBP,
-                    forward=forward,
-                    finetune=finetune,
-                    shared=shared,
-                )
-
-            layer_fn = func
-
-        else:
-            return layer_fn
-
-    return layer_fn
-
-
 def check_input_tensors_sequential(
-    model, input_tensors, input_dim, input_dim_init, IBP, forward, dc_decomp, convex_domain
-):
+    model: Model,
+    input_tensors: Optional[List[tf.Tensor]],
+    input_dim: int,
+    input_dim_init: int,
+    IBP: bool,
+    forward: bool,
+    dc_decomp: bool,
+    convex_domain: Optional[Dict[str, Any]],
+) -> List[tf.Tensor]:
 
     if convex_domain is None:
         convex_domain = {}
@@ -157,8 +117,8 @@ def check_input_tensors_sequential(
         # assert that input_tensors is a List of 6 InputLayer objects
         # If input tensors are provided, the original model's InputLayer is
         # overwritten with a different InputLayer.
-        assert isinstance(input_tensors, list), "expected input_tensors to be a List or None, but got dtype={}".format(
-            input_tensors.dtype
+        assert isinstance(input_tensors, list), "expected input_tensors to be a List or None, but got {}".format(
+            type(input_tensors)
         )
 
         if dc_decomp:
@@ -191,7 +151,13 @@ def check_input_tensors_sequential(
     return input_tensors
 
 
-def get_input_tensor_x(model, input_tensors, input_dim, input_dim_init, convex_domain):
+def get_input_tensor_x(
+    model: Model,
+    input_tensors: Optional[List[tf.Tensor]],
+    input_dim: int,
+    input_dim_init: int,
+    convex_domain: Dict[str, Any],
+) -> Input:
     if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
         input_dim_ = (2, input_dim)
         z_tensor = Input(input_dim_, dtype=model.layers[0].dtype)
@@ -208,13 +174,20 @@ def get_input_tensor_x(model, input_tensors, input_dim, input_dim_init, convex_d
 
 
 def check_input_tensors_functionnal(
-    model, input_tensors, input_dim, input_dim_init, IBP, forward, dc_decomp, convex_domain
-):
+    model: Model,
+    input_tensors: Optional[List[tf.Tensor]],
+    input_dim: int,
+    input_dim_init: int,
+    IBP: bool,
+    forward: bool,
+    dc_decomp: bool,
+    convex_domain: Optional[Dict[str, Any]],
+) -> List[tf.Tensor]:
 
     raise NotImplementedError()
 
 
-def get_mode(IBP=True, forward=True):
+def get_mode(IBP: bool = True, forward: bool = True) -> ForwardMode:
 
     if IBP:
         if forward:
@@ -225,232 +198,17 @@ def get_mode(IBP=True, forward=True):
         return ForwardMode.AFFINE
 
 
-def get_node_by_id(node, outbound=False, model=None):
-    layer_ = node.outbound_layer
-    input_names = str(id(node))
-    if outbound:
-        return f"{layer_.name}_NODE_{input_names}"
-    return f"NODE_{input_names}"
-
-
-def set_name(layer, extra_id):
-
-    layer._name = f"{layer.name}_{extra_id}"
-
-
-def get_inputs(node, tensor_map):
-    output = []
-    # get parents nodes
-    node_prev = node.parent_nodes
-    if len(node_prev) == 0:
-        raise ValueError()
-    key_prev_id = [get_node_by_id(node_p_i, True) for node_p_i in node_prev]
-    for key_p_i in key_prev_id:
-        output += tensor_map[key_p_i]
-    return output
-
-
-def convert_to_backward_bounds(mode, inputs, input_dim):
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        _, _, w_u, b_u, _, w_l, b_l = inputs
-    elif mode == ForwardMode.AFFINE:
-        _, w_u, b_u, w_l, b_l = inputs
-    elif mode == ForwardMode.IBP:
-        u_c, l_c = inputs
-        z_value = K.cast(0.0, u_c.dtype)
-        n_out = np.prod(u_c.shape[1:])
-        b_u = K.reshape(u_c, (-1, n_out))
-        b_l = K.reshape(l_c, (-1, n_out))
-        w_u = K.zeros((1, input_dim, 1)) + z_value * K.expand_dims(b_u, 1)
-        w_l = K.zeros((1, input_dim, 1)) + z_value * K.expand_dims(b_l, 1)
-    else:
-        raise ValueError(f"Unknown mode {mode}")
-    return w_u, b_u, w_l, b_l
-
-
-def get_input_dim(x_tensor):
-    return x_tensor.shape[-1]
-
-
-def get_original_layer_name(layer, pattern="_monotonic"):
-
-    pattern_layer = layer.name.split(pattern)
-    if len(pattern_layer) == 1:
-        return []
-    return ["".join(pattern_layer[:-1])]
-
-
-def get_key(layer, id_node, forward_map):
-    layer_name = layer.name
-    n_word = len(layer_name)
-
-    keys = [key for key in forward_map if key[:n_word] == layer_name]
-    if len(keys) == 0:
-        raise KeyError
-    if len(keys) == 1:
-        return keys[0]
-    else:
-        raise NotImplementedError()
-
-
-def get_back_bounds_model(back_bounds, model):
-
-    depth = 0  # start from the beginning
-    nodes = model._nodes_by_depth[depth]
-    back_bounds_list = []
-    n = int(len(back_bounds) / len(nodes))
-    for i in range(len(nodes)):
-        back_bounds_list.append(back_bounds[i * n : (i + 1) * n])
-    return back_bounds_list
-
-
-def fuse_forward_backward(
-    mode, inputs, back_bounds, upper_layer=None, lower_layer=None, convex_domain=None, x_tensor=None
-):
-
-    if convex_domain is None:
-        convex_domain = {}
-    mode = ForwardMode(mode)
-    if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-
-        if upper_layer is None:
-            upper_layer = get_upper_layer(convex_domain)
-        if lower_layer is None:
-            lower_layer = get_lower_layer(convex_domain)
-
-    if mode == ForwardMode.IBP:
-        w_out_u, b_out_u, w_out_l, b_out_l = back_bounds
-
-        if x_tensor is None:
-            raise ValueError  # we need some information on the domain
-        u_out_c = upper_layer([x_tensor, w_out_u, b_out_u])
-        l_out_c = lower_layer([x_tensor, w_out_l, b_out_l])
-
-        return [u_out_c, l_out_c]
-    elif mode in {ForwardMode.AFFINE, ForwardMode.HYBRID}:
-        if mode == ForwardMode.AFFINE:
-            _, w_u, b_u, w_l, b_l = inputs
-        else:
-            _, _, w_u, b_u, _, w_l, b_l = inputs
-
-        def func(variables):
-            w_u, b_u, w_l, b_l, w_out_u, b_out_u, w_out_l, b_out_l = variables
-            if len(w_u.shape) == 2:
-                return w_out_u, b_out_u, w_out_l, b_out_l
-            z_value = K.cast(0.0, w_u.dtype)
-            w_u_ = K.reshape(w_u, [-1, w_u.shape[1], np.prod(w_u.shape[2:])])
-            w_l_ = K.reshape(w_l, [-1, w_l.shape[1], np.prod(w_l.shape[2:])])
-            b_u_ = K.reshape(b_u, [-1, np.prod(b_u.shape[1:])])
-            b_l_ = K.reshape(b_l, [-1, np.prod(b_l.shape[1:])])
-
-            w_u_pos = K.maximum(w_out_u, z_value)
-            w_u_neg = K.minimum(w_out_u, z_value)
-            w_l_pos = K.maximum(w_out_l, z_value)
-            w_l_neg = K.minimum(w_out_l, z_value)
-
-            w_out_u_ = K.sum(K.expand_dims(w_u_pos, 1) * K.expand_dims(w_u_, -1), 2) + K.sum(
-                K.expand_dims(w_u_neg, 1) * K.expand_dims(w_l_, -1), 2
-            )
-            w_out_l_ = K.sum(K.expand_dims(w_l_pos, 1) * K.expand_dims(w_l_, -1), 2) + K.sum(
-                K.expand_dims(w_l_neg, 1) * K.expand_dims(w_u_, -1), 2
-            )
-
-            b_out_u_ = (
-                K.sum(w_u_pos * K.expand_dims(b_u_, -1), 1) + K.sum(w_u_neg * K.expand_dims(b_l_, -1), 1) + b_out_u
-            )
-            b_out_l_ = (
-                K.sum(w_l_pos * K.expand_dims(b_l_, -1), 1) + K.sum(w_l_neg * K.expand_dims(b_u_, -1), 1) + b_out_l
-            )
-
-            return w_out_u_, b_out_u_, w_out_l_, b_out_l_
-
-        lambda_ = Lambda(func, dtype=w_u.dtype)
-
-        w_out_u_, b_out_u_, w_out_l_, b_out_l_ = lambda_([w_u, b_u, w_l, b_l] + back_bounds)
-
-        if mode == ForwardMode.AFFINE:
-            return [inputs[0], w_out_u_, b_out_u_, w_out_l_, b_out_l_]
-        else:
-            u_out_c = upper_layer([x_tensor, w_out_u_, b_out_u_])
-            l_out_c = lower_layer([x_tensor, w_out_l_, b_out_l_])
-
-            return [inputs[0], u_out_c, w_out_u_, b_out_u_, l_out_c, w_out_l_, b_out_l_]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
-
-
-def pre_process_inputs(input_layer_, mode, **kwargs):
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.IBP:
-        return input_layer_
-    # convert input_layer_ according
-    elif mode in {ForwardMode.HYBRID, ForwardMode.AFFINE}:
-        if "upper_layer" in kwargs:
-            upper_layer = kwargs["upper_layer"]
-            lower_layer = kwargs["lower_layer"]
-        else:
-            if "convex_domain" in kwargs:
-                convex_domain = kwargs["convex_domain"]
-            else:
-                convex_domain = {}
-
-            upper_layer = get_upper_layer(convex_domain)
-            lower_layer = get_lower_layer(convex_domain)
-
-        if mode == ForwardMode.AFFINE:
-            x, w_u, b_u, w_l, b_l = input_layer_
-            u_c_out, l_c_out = [upper_layer([x, w_u, b_u]), lower_layer([x, w_u, b_u])]
-
-        else:
-            x, u_c, w_u, b_u, l_c, w_l, b_l = input_layer_
-            u_c_out, l_c_out = [
-                Minimum()([u_c, upper_layer([x, w_u, b_u])]),
-                Maximum()([l_c, lower_layer([x, w_u, b_u])]),
-            ]
-
-        if "flatten" in kwargs:
-            op_flatten = kwargs["flatten"]
-        else:
-            op_flatten = Flatten()
-
-        u_c_out_flatten = op_flatten(u_c_out)
-        l_c_out_flatten = op_flatten(l_c_out)
-
-        if "concatenate" in kwargs:
-            op_concat = kwargs["concatenate"]
-        else:
-            op_concat = Concatenate(axis=1)
-
-        x_ = op_concat([l_c_out_flatten[:, None], u_c_out_flatten[:, None]])
-        z_value = K.cast(0.0, u_c_out.dtype)
-
-        def func_create_weights(z):
-            return tf.linalg.diag(z_value * z)
-
-        init_weights = Lambda(func_create_weights, dtype=u_c_out.dtype)
-
-        if mode == ForwardMode.AFFINE:
-            input_model = [x_, init_weights(u_c_out), u_c_out, init_weights(l_c_out), l_c_out]
-        else:
-            input_model = [x_, u_c_out, init_weights(u_c_out), u_c_out, l_c_out, init_weights(l_c_out), l_c_out]
-
-        return input_model
-    else:
-        raise ValueError(f"Unknown mode {mode}")
-
-
-def get_depth_dict(model):
+def get_depth_dict(model: Model) -> Dict[int, List[Node]]:
 
     depth_keys = list(model._nodes_by_depth.keys())
     depth_keys.sort(reverse=True)
 
     nodes_list = []
 
-    dico_depth = {}
-    dico_nodes = {}
+    dico_depth: Dict[int, int] = {}
+    dico_nodes: Dict[int, List[Node]] = {}
 
-    def fill_dico(node, dico_depth=None):
+    def fill_dico(node: Node, dico_depth: Optional[Dict[int, int]] = None) -> Dict[int, int]:
         if dico_depth is None:
             dico_depth = {}
 
@@ -487,7 +245,7 @@ def get_depth_dict(model):
     return dico_nodes
 
 
-def get_inner_layers(model):
+def get_inner_layers(model: Model) -> int:
 
     count = 0
     for layer in model.layers:
@@ -498,11 +256,16 @@ def get_inner_layers(model):
     return count
 
 
-def convert_2_mode(mode_from, mode_to, convex_domain, dtype=K.floatx()):
+def convert_2_mode(
+    mode_from: Union[str, ForwardMode],
+    mode_to: Union[str, ForwardMode],
+    convex_domain: Optional[Dict[str, Any]],
+    dtype: Union[str, tf.DType] = K.floatx(),
+) -> Layer:
     mode_from = ForwardMode(mode_from)
     mode_to = ForwardMode(mode_to)
 
-    def get_2_mode_priv(inputs_):
+    def get_2_mode_priv(inputs_: List[tf.Tensor]) -> List[tf.Tensor]:
 
         if mode_from == mode_to:
             return inputs_

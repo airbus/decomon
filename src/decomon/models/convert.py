@@ -1,14 +1,16 @@
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
 import tensorflow.python.keras.backend as K
-from tensorflow.keras.layers import Input, InputLayer, Lambda
+from tensorflow.keras.layers import Input, InputLayer, Lambda, Layer
 from tensorflow.keras.models import Model
 
+from decomon.backward_layers.core import BackwardLayer
 from decomon.layers.decomon_layers import to_decomon
-from decomon.models.backward_cloning import get_backward_model as convert_backward
-from decomon.models.forward_cloning import convert_forward
+from decomon.models.backward_cloning import convert_backward
+from decomon.models.forward_cloning import LayerMapDict, OutputMapDict, convert_forward
 from decomon.models.models import DecomonModel
 from decomon.models.utils import ConvertMethod, convert_2_mode, get_mode
 from decomon.utils import ConvexDomainType, get_lower, get_upper
@@ -19,14 +21,14 @@ class FeedDirection(Enum):
     BACKWARD = "feed_backward"
 
 
-def get_direction(method):
+def get_direction(method: Union[str, ConvertMethod]) -> FeedDirection:
     if ConvertMethod(method) in [ConvertMethod.FORWARD_IBP, ConvertMethod.FORWARD_AFFINE, ConvertMethod.FORWARD_HYBRID]:
         return FeedDirection.FORWARD
     else:
         return FeedDirection.BACKWARD
 
 
-def get_ibp_forward_from_method(method):
+def get_ibp_forward_from_method(method: Union[str, ConvertMethod]) -> Tuple[bool, bool]:
     method = ConvertMethod(method)
     if method in [ConvertMethod.FORWARD_IBP, ConvertMethod.CROWN_FORWARD_IBP]:
         return True, False
@@ -39,47 +41,51 @@ def get_ibp_forward_from_method(method):
     return True, True
 
 
-def switch_mode_mapping(forward_map, IBP, forward, method):
+def switch_mode_mapping(
+    forward_map: OutputMapDict, IBP: bool, forward: bool, method: Union[str, ConvertMethod]
+) -> None:
     raise NotImplementedError()
 
 
 # create status
 def convert(
-    model,
-    input_tensors,
-    method=ConvertMethod.CROWN,
-    ibp=False,
-    forward=False,
-    back_bounds=None,
-    layer_fn=to_decomon,
-    input_dim=-1,
-    convex_domain=None,
-    finetune=False,
-    shared=True,
-    softmax_to_linear=True,
-    layer_map=None,
-    forward_map=None,
-    finetune_forward=False,
-    finetune_backward=False,
-    final_ibp=False,
-    final_forward=False,
-    **kwargs,
-):
+    model: Model,
+    input_tensors: List[tf.Tensor],
+    method: Union[str, ConvertMethod] = ConvertMethod.CROWN,
+    ibp: bool = False,
+    forward: bool = False,
+    back_bounds: Optional[List[tf.Tensor]] = None,
+    layer_fn: Callable[..., List[Layer]] = to_decomon,
+    input_dim: int = -1,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    finetune: bool = False,
+    forward_map: Optional[OutputMapDict] = None,
+    shared: bool = True,
+    softmax_to_linear: bool = True,
+    finetune_forward: bool = False,
+    finetune_backward: bool = False,
+    final_ibp: bool = False,
+    final_forward: bool = False,
+    **kwargs: Any,
+) -> Tuple[
+    List[tf.Tensor],
+    List[tf.Tensor],
+    Union[LayerMapDict, Dict[Tuple[int, bool], BackwardLayer]],
+    Optional[OutputMapDict],
+]:
 
     if back_bounds is None:
         back_bounds = []
     if convex_domain is None:
         convex_domain = {}
-    if layer_map is None:
-        layer_map = {}
-    if forward_map is None:
-        forward_map = {}
     if finetune:
         finetune_forward = True
         finetune_backward = True
 
     if isinstance(method, str):
         method = ConvertMethod(method.lower())
+
+    layer_map: Union[LayerMapDict, Dict[Tuple[int, bool], BackwardLayer]]
 
     if method != ConvertMethod.CROWN:
 
@@ -97,7 +103,6 @@ def convert(
             finetune=finetune_forward,
             shared=shared,
             softmax_to_linear=softmax_to_linear,
-            forward_map=forward_map,
             back_bounds=back_bounds,
         )
         input_tensors, _, layer_map, forward_map = results
@@ -112,7 +117,6 @@ def convert(
             IBP=ibp,
             forward=forward,
             finetune=finetune_backward,
-            layer_map=layer_map,
             forward_map=forward_map,
             final_ibp=final_ibp,
             final_forward=final_forward,
@@ -130,23 +134,19 @@ def convert(
 
 
 def clone(
-    model,
-    layer_fn=to_decomon,
-    dc_decomp=False,
-    convex_domain=None,
-    ibp=True,
-    forward=True,
-    method=ConvertMethod.CROWN,
-    back_bounds=None,
-    finetune=False,
-    shared=True,
-    finetune_forward=False,
-    finetune_backward=False,
-    extra_inputs=None,
-    to_keras=True,
-    dico_grid=None,
-    **kwargs,
-):
+    model: Model,
+    layer_fn: Callable[..., List[Layer]] = to_decomon,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    method: Union[str, ConvertMethod] = ConvertMethod.CROWN,
+    back_bounds: Optional[List[tf.Tensor]] = None,
+    finetune: bool = False,
+    shared: bool = True,
+    finetune_forward: bool = False,
+    finetune_backward: bool = False,
+    extra_inputs: Optional[List[tf.Tensor]] = None,
+    to_keras: bool = True,
+    **kwargs: Any,
+) -> DecomonModel:
 
     if convex_domain is None:
         convex_domain = {}
@@ -154,8 +154,6 @@ def clone(
         back_bounds = []
     if extra_inputs is None:
         extra_inputs = []
-    if dico_grid is None:
-        dico_grid = {}
     if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
 
@@ -180,7 +178,7 @@ def clone(
         finetune_forward = True
         finetune_backward = True
 
-    input_dim = np.prod(model.input_shape[1:])
+    input_dim: int = np.prod(model.input_shape[1:])
     input_shape = None
     input_shape_vec = None
 
@@ -198,18 +196,11 @@ def clone(
             if not np.allclose(input_shape, input_shape_):
                 raise ValueError("Expected that every input layers use the same input_tensor")
 
-    if isinstance(input_dim, tuple):
-        input_dim_ = list(input_dim)[-1]
-    else:
-        input_dim_ = input_dim
-
+    input_shape_x: Tuple[int, ...]
     if len(convex_domain) == 0 or convex_domain["name"] != ConvexDomainType.BALL:
-        input_shape_x = (2, input_dim_)
+        input_shape_x = (2, input_dim)
     else:
-        if isinstance(input_dim, tuple):
-            input_shape_x = input_dim
-        else:
-            input_shape_x = (input_dim_,)
+        input_shape_x = (input_dim,)
 
     z_tensor = Input(shape=input_shape_x, dtype=model.layers[0].dtype)
 
@@ -247,7 +238,7 @@ def clone(
             z_value = K.cast(0.0, model.layers[0].dtype)
             o_value = K.cast(1.0, model.layers[0].dtype)
 
-            def get_bounds(z):
+            def get_bounds(z: tf.Tensor) -> List[tf.Tensor]:
                 output = []
                 if forward_:
                     W = tf.linalg.diag(z_value * z + o_value)
@@ -276,6 +267,7 @@ def clone(
 
     _, output, _, _ = convert(
         model,
+        layer_fn=layer_fn,
         input_tensors=input_tensors,
         back_bounds=back_bounds,
         method=method,

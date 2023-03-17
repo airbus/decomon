@@ -3,43 +3,108 @@
 It inherits from keras Sequential class.
 
 """
-
+import inspect
+from copy import deepcopy
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
+import tensorflow as tf
+from tensorflow.keras.layers import Layer
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.utils.generic_utils import to_list
 
+from decomon.layers.core import DecomonLayer
 from decomon.layers.decomon_layers import to_decomon
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.utils import (
     check_input_tensors_sequential,
     get_depth_dict,
     get_inner_layers,
-    include_dim_layer_fn,
 )
+from decomon.utils import ConvexDomainType
+
+OutputMapKey = Union[str, int]
+OutputMapVal = Union[List[tf.Tensor], "OutputMapDict"]
+OutputMapDict = Dict[OutputMapKey, OutputMapVal]
+
+LayerMapVal = Union[List[DecomonLayer], "LayerMapDict"]
+LayerMapDict = Dict[int, LayerMapVal]
+
+
+def include_dim_layer_fn(
+    layer_fn: Callable[..., List[DecomonLayer]],
+    input_dim: int,
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    IBP: bool = True,
+    forward: bool = True,
+    finetune: bool = False,
+    shared: bool = True,
+) -> Callable[[Layer], List[DecomonLayer]]:
+    """include external parameters inside the translation of a layer to its decomon counterpart
+
+    Args:
+        layer_fn
+        input_dim
+        dc_decomp
+        convex_domain
+        finetune
+
+    Returns:
+
+    """
+    if convex_domain is None:
+        convex_domain = {}
+    if "input_dim" in inspect.signature(layer_fn).parameters:
+        layer_fn_copy = deepcopy(layer_fn)
+        input_dim_: Union[int, Tuple[int, int]]
+        if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BOX:
+            input_dim_ = (2, input_dim)
+        else:
+            input_dim_ = input_dim
+
+        def func(layer: Layer) -> List[DecomonLayer]:
+            return layer_fn_copy(
+                layer,
+                input_dim=input_dim_,
+                convex_domain=convex_domain,
+                dc_decomp=dc_decomp,
+                IBP=IBP,
+                forward=forward,
+                finetune=finetune,
+                shared=shared,
+            )
+
+        layer_fn = func
+
+    else:
+
+        def func(layer: Layer) -> List[DecomonLayer]:
+            return layer_fn(layer)
+
+        layer_fn = func
+
+    return layer_fn
 
 
 def convert_forward(
-    model,
-    input_tensors=None,
-    layer_fn=to_decomon,
-    input_dim=-1,
-    dc_decomp=False,
-    convex_domain=None,
-    IBP=True,
-    forward=True,
-    finetune=False,
-    shared=True,
-    softmax_to_linear=True,
-    back_bounds=None,
-    joint=True,
-    **kwargs,
-):
+    model: Model,
+    input_tensors: Optional[List[tf.Tensor]] = None,
+    layer_fn: Callable[..., List[DecomonLayer]] = to_decomon,
+    input_dim: int = -1,
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    IBP: bool = True,
+    forward: bool = True,
+    finetune: bool = False,
+    shared: bool = True,
+    softmax_to_linear: bool = True,
+    joint: bool = True,
+    **kwargs: Any,
+) -> Tuple[List[tf.Tensor], List[tf.Tensor], LayerMapDict, OutputMapDict]:
 
     if convex_domain is None:
         convex_domain = {}
-    if back_bounds is None:
-        back_bounds = []
     if not isinstance(model, Model):
         raise ValueError()
 
@@ -48,36 +113,41 @@ def convert_forward(
         input_tensors,
         layer_fn,
         input_dim=input_dim,
+        dc_decomp=dc_decomp,
         convex_domain=convex_domain,
         IBP=IBP,
         forward=forward,
         finetune=finetune,
         shared=shared,
-        softmax_to_linear=True,
+        softmax_to_linear=softmax_to_linear,
+        joint=joint,
+        **kwargs,
     )
 
     return f_output
 
 
 def convert_forward_functional_model(
-    model,
-    input_tensors=None,
-    layer_fn=to_decomon,
-    input_dim=1,
-    convex_domain=None,
-    IBP=True,
-    forward=True,
-    finetune=False,
-    shared=True,
-    softmax_to_linear=True,
-    count=0,
-    joint=True,
-    **kwargs,
-):
+    model: Model,
+    input_tensors: Optional[List[tf.Tensor]] = None,
+    layer_fn: Callable[..., List[DecomonLayer]] = to_decomon,
+    input_dim: int = 1,
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    IBP: bool = True,
+    forward: bool = True,
+    finetune: bool = False,
+    shared: bool = True,
+    softmax_to_linear: bool = True,
+    count: int = 0,
+    joint: bool = True,
+    **kwargs: Any,
+) -> Tuple[List[tf.Tensor], List[tf.Tensor], LayerMapDict, OutputMapDict]:
 
     if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
 
+    input_dim_init: int
     if input_dim == -1:
         input_dim_init = -1
         if isinstance(model.input_shape, list):
@@ -103,7 +173,7 @@ def convert_forward_functional_model(
         has_iter = True
 
     if not has_iter:
-        layer_fn_ = include_dim_layer_fn(
+        layer_fn = include_dim_layer_fn(
             layer_fn,
             input_dim=input_dim,
             convex_domain=convex_domain,
@@ -112,11 +182,6 @@ def convert_forward_functional_model(
             finetune=finetune,
             shared=shared,
         )  # return a list of Decomon layers
-
-        def func(layer):
-            return layer_fn_(layer)
-
-        layer_fn = func
 
     if not callable(layer_fn):
         raise ValueError("Expected `layer_fn` argument to be a callable.")
@@ -128,9 +193,9 @@ def convert_forward_functional_model(
     keys = [e for e in dico_nodes.keys()]
     keys.sort(reverse=True)
 
-    output_map = {}
-    layer_map = {}
-    output = input_tensors
+    output_map: OutputMapDict = {}
+    layer_map: LayerMapDict = {}
+    output: List[tf.Tensor] = input_tensors
     for depth in keys:
         nodes = dico_nodes[depth]
         for node in nodes:
@@ -165,15 +230,15 @@ def convert_forward_functional_model(
             else:
 
                 list_layer_decomon = layer_fn(layer)
-                layer_map[id(node)] = []
+                layer_list: List[DecomonLayer] = []
                 for layer_decomon in list_layer_decomon:
                     layer_decomon._name = f"{layer_decomon.name}_{count}"
                     count += 1
                     output = layer_decomon(output)
-                    layer_map[id(node)].append(layer_decomon)
+                    layer_list.append(layer_decomon)
                     if len(list_layer_decomon) > 1:
                         output_map[f"{id(node)}_{layer_decomon.name}"] = output
-
+                layer_map[id(node)] = layer_list
             output_map[id(node)] = output
 
     output = []
