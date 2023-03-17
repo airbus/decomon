@@ -11,6 +11,7 @@ NOTEBOOKS_PAGE_TEMPLATE_RELATIVE_PATH = "tutorials.template.md"
 NOTEBOOKS_PAGE_RELATIVE_PATH = "tutorials.md"
 NOTEBOOKS_SECTION_KEY_VAR_SEP = "_"
 NOTEBOOKS_DIRECTORY_NAME = "tutorials"
+DECOMON_LINKS_OPENING_TAG = "<decomonlinks>"
 
 DEFAULT_REPO_NAME = "airbus/decomon"
 
@@ -42,8 +43,25 @@ def extract_notebook_title_n_description(
             description_lines = cell["source"]
     if not title:
         title = os.path.splitext(os.path.basename(notebook_filepath))[0]
+    description_lines = filter_tags_from_description(
+        description_lines=description_lines, html_tag_to_remove=DECOMON_LINKS_OPENING_TAG
+    )
 
     return title, description_lines
+
+
+def filter_tags_from_description(description_lines: List[str], html_tag_to_remove: str) -> List[str]:
+    description = "".join(description_lines)
+    # opening/closing tags
+    opening_tag = html_tag_to_remove
+    closing_tag = opening_tag[0] + "/" + opening_tag[1:]
+    # find them
+    opening_tag_idx = description.find(opening_tag)
+    closing_tag_idx = description.find(closing_tag)
+    # keep the outer part
+    if opening_tag_idx > -1 and closing_tag_idx > -1:
+        description = description[:opening_tag_idx] + description[closing_tag_idx + len(closing_tag) :]
+    return description.splitlines(keepends=True)
 
 
 def get_github_link(
