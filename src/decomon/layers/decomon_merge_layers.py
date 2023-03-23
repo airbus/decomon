@@ -15,7 +15,7 @@ from tensorflow.keras.layers import (
 
 from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.utils import broadcast, multiply, permute_dimensions
-from decomon.utils import maximum, minus, substract
+from decomon.utils import ConvexDomainType, maximum, minus, substract
 
 ##### Merge Layer ####
 
@@ -486,7 +486,7 @@ class DecomonDot(Dot, DecomonLayer):
 
 def to_decomon_merge(
     layer: Layer,
-    input_dim: Union[int, Tuple[int, ...]],
+    input_dim: int,
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     finetune: bool = False,
@@ -500,7 +500,7 @@ def to_decomon_merge(
 
     Args:
         layer: a Keras Layer
-        input_dim: either an integer or a tuple that represents the dim
+        input_dim: an integer that represents the dim
             of the input convex domain
         dc_decomp: boolean that indicates whether we return a difference
             of convex decomposition of our layer
@@ -545,11 +545,10 @@ def to_decomon_merge(
     input_shape = input_shape_list
 
     n_input = len(input_shape_list)
-    if isinstance(input_dim, tuple):
-        x_shape = Input(input_dim)
-        input_dim = input_dim[-1]
+    if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BOX:
+        x_shape = Input((2, input_dim), dtype=layer.dtype)
     else:
-        x_shape = Input((input_dim,))
+        x_shape = Input((input_dim,), dtype=layer.dtype)
 
     w_shape = [Input(tuple([input_dim] + input_shape[i])) for i in range(n_input)]
     y_shape = [Input(tuple(input_shape[i])) for i in range(n_input)]

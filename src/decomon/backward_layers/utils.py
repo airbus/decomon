@@ -854,10 +854,3 @@ def get_FORWARD(mode=ForwardMode.HYBRID):
     if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
         return True
     return False
-
-
-def get_input_dim(input_dim, convex_domain):
-    if len(convex_domain) == 0:
-        return 2, input_dim
-    else:
-        return input_dim

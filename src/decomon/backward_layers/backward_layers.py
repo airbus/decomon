@@ -7,12 +7,7 @@ from tensorflow.python.ops import array_ops
 
 from decomon.backward_layers.activations import get
 from decomon.backward_layers.core import BackwardLayer
-from decomon.backward_layers.utils import (
-    get_FORWARD,
-    get_IBP,
-    get_identity_lirpa,
-    get_input_dim,
-)
+from decomon.backward_layers.utils import get_FORWARD, get_IBP, get_identity_lirpa
 from decomon.layers.core import ForwardMode, Option
 from decomon.layers.decomon_layers import (  # add some layers to module namespace `globals()`
     DecomonActivation,
@@ -63,10 +58,9 @@ class BackwardDense(BackwardLayer):
         else:
             self.mode = ForwardMode(mode)
             self.convex_domain = convex_domain
-            input_dim_ = get_input_dim(input_dim, self.convex_domain)
             self.layer = to_decomon(
                 layer,
-                input_dim_,
+                input_dim,
                 dc_decomp=False,
                 convex_domain=self.convex_domain,
                 finetune=False,
@@ -329,10 +323,9 @@ class BackwardConv2D(BackwardLayer):
         else:
             self.mode = mode
             self.convex_domain = convex_domain
-            input_dim_ = get_input_dim(input_dim, self.convex_domain)
             self.layer = to_decomon(
                 layer,
-                input_dim_,
+                input_dim,
                 dc_decomp=False,
                 convex_domain=self.convex_domain,
                 finetune=False,

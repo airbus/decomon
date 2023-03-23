@@ -44,7 +44,7 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, previous, mode, floatx, 
     else:
         raise ValueError("Unknown mode.")
 
-    layer = to_decomon(layer_, (2, input_dim), dc_decomp=False, IBP=IBP, forward=forward, shared=True)[0]
+    layer = to_decomon(layer_, input_dim, dc_decomp=False, IBP=IBP, forward=forward, shared=True)[0]
 
     if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
@@ -180,7 +180,7 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, previou
     else:
         raise ValueError("Unknown mode.")
 
-    layer = to_decomon(layer_, (2, input_dim), dc_decomp=False, IBP=IBP, forward=forward, shared=True)[0]
+    layer = to_decomon(layer_, input_dim, dc_decomp=False, IBP=IBP, forward=forward, shared=True)[0]
 
     if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
