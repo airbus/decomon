@@ -57,16 +57,11 @@ def include_dim_layer_fn(
         convex_domain = {}
     if "input_dim" in inspect.signature(layer_fn).parameters:
         layer_fn_copy = deepcopy(layer_fn)
-        input_dim_: Union[int, Tuple[int, int]]
-        if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BOX:
-            input_dim_ = (2, input_dim)
-        else:
-            input_dim_ = input_dim
 
         def func(layer: Layer) -> List[DecomonLayer]:
             return layer_fn_copy(
                 layer,
-                input_dim=input_dim_,
+                input_dim=input_dim,
                 convex_domain=convex_domain,
                 dc_decomp=dc_decomp,
                 IBP=IBP,

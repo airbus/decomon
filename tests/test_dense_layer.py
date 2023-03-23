@@ -357,7 +357,7 @@ def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared, helpers):
         raise ValueError("Unknown mode.")
 
     monotonic_dense = to_decomon(
-        dense_ref, (2, input_dim), dc_decomp=True, IBP=IBP, forward=forward, shared=shared
+        dense_ref, input_dim, dc_decomp=True, IBP=IBP, forward=forward, shared=shared
     )  # ATTENTION: it will be a list
 
     W_, bias = monotonic_dense[0].get_weights()
@@ -477,7 +477,7 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode, helpers):
     else:
         raise ValueError("Unknown mode.")
 
-    monotonic_dense = to_decomon(dense_ref, (2, input_dim), dc_decomp=True, IBP=IBP, forward=forward)
+    monotonic_dense = to_decomon(dense_ref, input_dim, dc_decomp=True, IBP=IBP, forward=forward)
 
     W_, bias = monotonic_dense[0].get_weights()
     W_0, b_0 = dense_ref.get_weights()
@@ -613,7 +613,7 @@ def test_DecomonDense_multiD_to_monotonic_box_nodc(odd, activation, mode, helper
 
     y_ref = f_ref(inputs_)
 
-    monotonic_dense = to_decomon(dense_ref, (2, input_dim), dc_decomp=False)
+    monotonic_dense = to_decomon(dense_ref, input_dim, dc_decomp=False)
 
     W_, bias = monotonic_dense[0].get_weights()
     W_0, b_0 = dense_ref.get_weights()

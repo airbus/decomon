@@ -1534,7 +1534,7 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
 
 def to_decomon(
     layer: Layer,
-    input_dim: Union[int, Tuple[int, ...]],
+    input_dim: int,
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     finetune: bool = False,
@@ -1550,7 +1550,7 @@ def to_decomon(
 
     Args:
         layer: a Keras Layer
-        input_dim: either an integer or a tuple that represents the dim
+        input_dim: an integer that represents the dim
             of the input convex domain
         dc_decomp: boolean that indicates whether we return a difference
             of convex decomposition of our layer
@@ -1651,9 +1651,8 @@ def to_decomon(
 
     try:
         input_shape = list(layer.input_shape)[1:]
-        if isinstance(input_dim, tuple):
-            x_shape = Input(input_dim, dtype=layer.dtype)
-            input_dim = input_dim[-1]
+        if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BOX:
+            x_shape = Input((2, input_dim), dtype=layer.dtype)
         else:
             x_shape = Input((input_dim,), dtype=layer.dtype)
 
