@@ -24,8 +24,8 @@ from decomon.backward_layers.backward_merge import (
     BackwardSubtract,
 )
 from decomon.backward_layers.crown import (
-    Convert_2_backward_mode,
-    Convert_2_mode,
+    Convert2BackwardMode,
+    Convert2Mode,
     Fuse,
     MergeWithPrevious,
 )
@@ -149,7 +149,7 @@ def test_crown():
     config = layer.get_config()
     assert config["mode"] == mode
 
-    layer = Convert_2_backward_mode(mode=mode, convex_domain=convex_domain)
+    layer = Convert2BackwardMode(mode=mode, convex_domain=convex_domain)
     config = layer.get_config()
     assert config["mode"] == mode
     assert "convex_domain" in config

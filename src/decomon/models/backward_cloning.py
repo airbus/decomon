@@ -14,8 +14,8 @@ from decomon.backward_layers.backward_layers import to_backward
 from decomon.backward_layers.backward_merge import BackwardMerge
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.crown import (
-    Convert_2_backward_mode,
-    Convert_2_mode,
+    Convert2BackwardMode,
+    Convert2Mode,
     Fuse,
     MergeWithPrevious,
 )
@@ -299,7 +299,7 @@ def get_input_nodes(
                             # set_mode_layer = convert_backward_2_mode(
                             #    get_mode(IBP, forward), convex_domain, dtype=input_tensors[0].dtype
                             # )
-                            set_mode_layer = Convert_2_backward_mode(get_mode(IBP, forward), convex_domain)
+                            set_mode_layer = Convert2BackwardMode(get_mode(IBP, forward), convex_domain)
                         output_crown_ = set_mode_layer(input_tensors + output_crown)
                         output += to_list(output_crown_)
                         # crown_map[id(parent)]=output_crown_
@@ -378,7 +378,7 @@ def crown_model(
     if not finetune:
         joint = True
     # set_mode_layer = convert_backward_2_mode(get_mode(IBP, forward), convex_domain, dtype=input_tensors[0].dtype)
-    set_mode_layer = Convert_2_backward_mode(get_mode(IBP, forward), convex_domain)
+    set_mode_layer = Convert2BackwardMode(get_mode(IBP, forward), convex_domain)
 
     input_map, backward_map, crown_map = get_input_nodes(
         model=model,
@@ -476,7 +476,7 @@ def convert_backward(
     input_tensors, output, backward_map, toto = result
     mode_from = get_mode(IBP, forward)
     mode_to = get_mode(final_ibp, final_forward)
-    output = Convert_2_mode(
+    output = Convert2Mode(
         mode_from=mode_from,
         mode_to=mode_to,
         convex_domain=convex_domain,
