@@ -1,4 +1,4 @@
-from typing import Any, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import tensorflow as tf
 import tensorflow.keras.backend as K
@@ -13,14 +13,31 @@ class DecomonReshape(Reshape, DecomonLayer):
     """
 
     def __init__(
-        self, target_shape: Tuple[int, ...], mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any
+        self,
+        target_shape: Tuple[int, ...],
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
+        **kwargs: Any,
     ):
         """
         Args:
             data_format
             **kwargs
         """
-        super().__init__(target_shape=target_shape, mode=mode, **kwargs)
+        super().__init__(
+            target_shape=target_shape,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
 
         if self.mode == ForwardMode.HYBRID:
             self.input_spec = [
@@ -122,13 +139,32 @@ class DecomonPermute(Permute, DecomonLayer):
     See Keras official documentation for further details on the Reshape operator
     """
 
-    def __init__(self, dims: Tuple[int, ...], mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
+    def __init__(
+        self,
+        dims: Tuple[int, ...],
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
+        **kwargs: Any,
+    ):
         """
         Args:
             data_format
             **kwargs
         """
-        super().__init__(dims=dims, mode=mode, **kwargs)
+        super().__init__(
+            dims=dims,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
 
         if self.mode == ForwardMode.HYBRID:
             self.input_spec = [

@@ -26,10 +26,23 @@ class DecomonGroupSort(DecomonLayer):
         n: Optional[int] = None,
         data_format: str = "channels_last",
         k_coef_lip: float = 1.0,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
         **kwargs: Any,
     ):
-        super().__init__(mode=mode, **kwargs)
+        super().__init__(
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
         self.data_format = data_format
         if data_format == "channels_last":
             self.channel_axis = -1
@@ -100,10 +113,23 @@ class DecomonGroupSort2(DecomonLayer):
         n: int = 2,
         data_format: str = "channels_last",
         k_coef_lip: float = 1.0,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
         **kwargs: Any,
     ):
-        super().__init__(mode=mode, **kwargs)
+        super().__init__(
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
         self.data_format = data_format
 
         if self.data_format == "channels_last":
