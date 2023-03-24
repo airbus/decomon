@@ -1,3 +1,5 @@
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
@@ -14,19 +16,26 @@ class BackwardMaxPooling2D(BackwardLayer):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         slope=Slope.V_SLOPE,
         previous=True,
-        mode=ForwardMode.HYBRID,
-        convex_domain=None,
         finetune=False,
         input_dim=-1,
-        **kwargs,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        **kwargs: Any,
     ):
-        super().__init__(layer, **kwargs)
-        if convex_domain is None:
-            convex_domain = {}
-        self.mode = ForwardMode(mode)
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
         raise NotImplementedError()
 
     def _pooling_function(
