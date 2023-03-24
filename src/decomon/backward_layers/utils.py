@@ -616,7 +616,7 @@ def backward_scale(scale_factor, w_out_u, b_out_u, w_out_l, b_out_l):
     if scale_factor >= 0:
         output = [scale_factor * w_out_u, b_out_u, scale_factor * w_out_l, b_out_l]
     else:
-        output = [scale_factor * w_out_l, b_out_u, scale_factor * w_out_l, b_out_l]
+        output = [scale_factor * w_out_l, b_out_l, scale_factor * w_out_u, b_out_u]
 
     return output
 
