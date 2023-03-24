@@ -7,7 +7,7 @@ import tensorflow.python.keras.backend as K
 from tensorflow.keras.layers import Input
 from tensorflow.keras.models import Model
 
-from decomon.backward_layers.backward_layers import get_backward
+from decomon.backward_layers.backward_layers import to_backward
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonActivation, DecomonFlatten
 from decomon.layers.decomon_reshape import DecomonReshape
@@ -46,7 +46,7 @@ def test_Backward_Activation_1D_box_model(n, activation, mode, previous, floatx,
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
     # get backward layer
-    layer_backward = get_backward(layer, previous=previous)
+    layer_backward = to_backward(layer, previous=previous)
     if previous:
         w_out_u_, b_out_u_, w_out_l_, b_out_l_ = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
         model = Model(inputs[2:] + [w_out, b_out], [w_out_u_, b_out_u_, w_out_l_, b_out_l_])
@@ -122,7 +122,7 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, previous,
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
     # get backward layer
-    layer_backward = get_backward(layer, previous=previous)
+    layer_backward = to_backward(layer, previous=previous)
     if previous:
         w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
         f_dense = K.function(inputs + [w_out, b_out], [w_out_u, b_out_u, w_out_l, b_out_l])
@@ -221,7 +221,7 @@ def test_Backward_Flatten_multiD_box(odd, floatx, mode, previous, data_format, h
     w_out = Input((1, 1))
     b_out = Input((1,))
     # get backward layer
-    layer_backward = get_backward(layer, previous=previous)
+    layer_backward = to_backward(layer, previous=previous)
     if previous:
         w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
         f_dense = K.function(inputs + [w_out, b_out], [w_out_u, b_out_u, w_out_l, b_out_l])
@@ -300,7 +300,7 @@ def test_Backward_Reshape_multiD_box(odd, floatx, mode, previous, data_format, h
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
     # get backward layer
-    layer_backward = get_backward(layer, previous=previous)
+    layer_backward = to_backward(layer, previous=previous)
     if previous:
         w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
         f_dense = K.function(inputs + [w_out, b_out], [w_out_u, b_out_u, w_out_l, b_out_l])

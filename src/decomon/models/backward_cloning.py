@@ -10,7 +10,7 @@ from tensorflow.keras.layers import Dense, Dropout, Lambda, Layer, Permute, Resh
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
 
-from decomon.backward_layers.backward_layers import get_backward
+from decomon.backward_layers.backward_layers import to_backward
 from decomon.backward_layers.backward_merge import BackwardMerge
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.crown import (
@@ -320,7 +320,7 @@ def crown_model(
     forward_map: Optional[OutputMapDict] = None,
     softmax_to_linear: bool = True,
     joint: bool = True,
-    layer_fn: Callable[..., BackwardLayer] = get_backward,
+    layer_fn: Callable[..., BackwardLayer] = to_backward,
     fuse: bool = True,
     **kwargs: Any,
 ) -> Tuple[List[tf.Tensor], List[tf.Tensor], Dict[Tuple[int, bool], BackwardLayer], None]:
@@ -358,7 +358,7 @@ def crown_model(
     if not has_iter:
         # layer, slope = V_slope.name, previous = True, mode = ForwardMode.F_HYBRID, convex_domain = {}, finetune = False, rec = 1, ** kwargs
         def func(layer: Layer) -> Layer:
-            return get_backward(layer, mode=get_mode(IBP, forward), finetune=finetune)
+            return to_backward(layer, mode=get_mode(IBP, forward), finetune=finetune)
 
         layer_fn = func
 
@@ -442,7 +442,7 @@ def convert_backward(
     forward_map: Optional[OutputMapDict] = None,
     softmax_to_linear: bool = True,
     joint: bool = True,
-    layer_fn: Callable[..., BackwardLayer] = get_backward,
+    layer_fn: Callable[..., BackwardLayer] = to_backward,
     final_ibp: bool = True,
     final_forward: bool = False,
     **kwargs: Any,

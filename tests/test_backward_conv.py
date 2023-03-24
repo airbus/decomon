@@ -6,7 +6,7 @@ import pytest
 import tensorflow.python.keras.backend as K
 from tensorflow.keras.layers import Input
 
-from decomon.backward_layers.backward_layers import get_backward
+from decomon.backward_layers.backward_layers import to_backward
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonConv2D
 
@@ -61,7 +61,7 @@ def test_Decomon_conv_box(data_format, activation, padding, use_bias, mode, floa
     w_out = Input((output_shape, output_shape))
     b_out = Input((output_shape,))
     # get backward layer
-    layer_backward = get_backward(layer, previous=previous)
+    layer_backward = to_backward(layer, previous=previous)
 
     if previous:
         w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode + [w_out, b_out, w_out, b_out])

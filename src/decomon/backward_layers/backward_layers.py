@@ -1121,7 +1121,7 @@ class BackwardInputLayer(BackwardLayer):
             return self.call_no_previous(inputs)
 
 
-def get_backward(
+def to_backward(
     layer, slope=Slope.V_SLOPE, previous=True, mode=ForwardMode.HYBRID, convex_domain=None, finetune=False, **kwargs
 ):
     if convex_domain is None:
