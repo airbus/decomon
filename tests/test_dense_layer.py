@@ -33,7 +33,7 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx, helpers):
     z_ = inputs_[2]
 
     ref_dense(inputs[1])
-    monotonic_dense.shared_weights(ref_dense)
+    monotonic_dense.share_weights(ref_dense)
 
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
