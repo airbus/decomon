@@ -1,3 +1,6 @@
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import (
     Add,
@@ -6,6 +9,7 @@ from tensorflow.keras.layers import (
     Dot,
     Input,
     Lambda,
+    Layer,
     Multiply,
 )
 
@@ -22,18 +26,22 @@ class DecomonAdd(Add, DecomonLayer):
 
     """
 
-    def __init__(self, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(
+        self,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        **kwargs: Any,
+    ):
         super().__init__(mode=mode, **kwargs)
 
-    def build(self, input_shape):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
         n_comp = self.nb_tensors
         input_shape_y = input_shape[::n_comp]
         super().build(input_shape_y)
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         return input_shape
 
-    def call(self, inputs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         if self.dc_decomp:
             raise NotImplementedError()
@@ -91,20 +99,20 @@ class DecomonAverage(Average, DecomonLayer):
 
     """
 
-    def __init__(self, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(self, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
         super().__init__(mode=mode, **kwargs)
         self.op = Lambda(lambda x: sum(x) / len(x))
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
 
         return input_shape
 
-    def build(self, input_shape):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
         n_comp = self.nb_tensors
         input_shape_y = input_shape[::n_comp]
         super().build(input_shape_y)
 
-    def call(self, inputs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         if self.dc_decomp:
             raise NotImplementedError()
@@ -160,14 +168,14 @@ class DecomonSubtract(DecomonLayer):
 
     """
 
-    def __init__(self, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(self, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
         super().__init__(mode=mode, **kwargs)
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
 
         return input_shape
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         if self.dc_decomp:
             raise NotImplementedError()
@@ -188,14 +196,14 @@ class DecomonMinimum(DecomonLayer):
 
     """
 
-    def __init__(self, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(self, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
         super().__init__(mode=mode, **kwargs)
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
 
         return input_shape
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         if self.dc_decomp:
             raise NotImplementedError()
@@ -228,13 +236,13 @@ class DecomonMaximum(DecomonLayer):
 
     """
 
-    def __init__(self, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(self, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
         super().__init__(mode=mode, **kwargs)
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         return input_shape
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         if self.dc_decomp:
             raise NotImplementedError()
@@ -264,20 +272,23 @@ class DecomonConcatenate(Concatenate, DecomonLayer):
 
     """
 
-    def __init__(self, axis=-1, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(self, axis: int = -1, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
         super().__init__(axis=axis, mode=mode, **kwargs)
 
-        self.op = super().call
+        def func(inputs: List[tf.Tensor]) -> tf.Tensor:
+            return Concatenate.call(self, inputs)
+
+        self.op = func
         if self.axis == -1:
             self.op_w = self.op
         else:
             self.op_w = Concatenate(axis=self.axis + 1)
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
 
         return input_shape
 
-    def build(self, input_shape):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
         n_comp = self.nb_tensors
         if self.mode == ForwardMode.IBP:
             input_shape_y = input_shape[::n_comp]
@@ -289,7 +300,7 @@ class DecomonConcatenate(Concatenate, DecomonLayer):
             raise ValueError(f"Unknown mode {self.mode}")
         super().build(input_shape_y)
 
-    def call(self, inputs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         if self.dc_decomp:
             raise NotImplementedError()
 
@@ -344,10 +355,10 @@ class DecomonMultiply(Multiply, DecomonLayer):
 
     """
 
-    def __init__(self, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(self, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
         super().__init__(mode=mode, **kwargs)
 
-    def build(self, input_shape):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
 
         n_comp = self.nb_tensors
         if self.mode == ForwardMode.IBP:
@@ -360,7 +371,7 @@ class DecomonMultiply(Multiply, DecomonLayer):
             raise ValueError(f"Unknown mode {self.mode}")
         super().build(input_shape_)
 
-    def call(self, inputs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         if self.dc_decomp:
             raise NotImplementedError()
@@ -387,11 +398,19 @@ class DecomonDot(Dot, DecomonLayer):
 
     """
 
-    def __init__(self, axes=(-1, -1), mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(
+        self,
+        axes: Union[int, Tuple[int, int]] = (-1, -1),
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        **kwargs: Any,
+    ):
         super().__init__(axes=axes, mode=mode, **kwargs)
-        self.axes = axes
+        if isinstance(axes, int):
+            self.axes = (axes, axes)
+        else:
+            self.axes = axes
 
-    def build(self, input_shape):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
 
         n_comp = self.nb_tensors
         if self.mode == ForwardMode.IBP:
@@ -404,7 +423,7 @@ class DecomonDot(Dot, DecomonLayer):
             raise ValueError(f"Unknown mode {self.mode}")
         super().build(input_shape_)
 
-    def call(self, inputs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         if self.dc_decomp:
             raise NotImplementedError()
@@ -466,14 +485,14 @@ class DecomonDot(Dot, DecomonLayer):
 
 
 def to_decomon_merge(
-    layer,
-    input_dim,
-    dc_decomp=False,
-    convex_domain=None,
-    finetune=False,
-    IBP=True,
-    forward=True,
-):
+    layer: Layer,
+    input_dim: Union[int, Tuple[int, ...]],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    finetune: bool = False,
+    IBP: bool = True,
+    forward: bool = True,
+) -> List[DecomonLayer]:
     """Transform a standard Merge layer into a Decomon layer.
 
     Type of layer is tested to know how to transform it into a MonotonicLayer of the good type.

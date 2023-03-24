@@ -1,3 +1,5 @@
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
@@ -16,15 +18,20 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
 
     """
 
+    pool_size: Tuple[int, int]
+    strides: Tuple[int, int]
+    padding: str
+    data_format: str
+
     def __init__(
         self,
-        pool_size=(2, 2),
-        strides=None,
-        padding="valid",
-        data_format=None,
-        mode=ForwardMode.HYBRID,
-        fast=True,
-        **kwargs,
+        pool_size: Union[int, Tuple[int, int]] = (2, 2),
+        strides: Optional[Union[int, Tuple[int, int]]] = None,
+        padding: str = "valid",
+        data_format: Optional[str] = None,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        fast: bool = True,
+        **kwargs: Any,
     ):
 
         super().__init__(
@@ -67,12 +74,12 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
             self.input_spec += [InputSpec(ndim=4), InputSpec(ndim=4)]
 
         # express maxpooling with convolutions
-        self.filters = np.zeros((pool_size[0], pool_size[1], 1, np.prod(pool_size)), dtype=self.dtype)
-        for i in range(pool_size[0]):
-            for j in range(pool_size[1]):
-                self.filters[i, j, 0, i * pool_size[0] + j] = 1
+        self.filters = np.zeros((self.pool_size[0], self.pool_size[1], 1, np.prod(self.pool_size)), dtype=self.dtype)
+        for i in range(self.pool_size[0]):
+            for j in range(self.pool_size[1]):
+                self.filters[i, j, 0, i * self.pool_size[0] + j] = 1
 
-        def conv_(x):
+        def conv_(x: tf.Tensor) -> tf.Tensor:
 
             if self.data_format in [None, "channels_last"]:
                 return K.cast(
@@ -80,9 +87,9 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
                         conv2d(
                             x,
                             self.filters,
-                            strides=strides,
-                            padding=padding,
-                            data_format=data_format,
+                            strides=self.strides,
+                            padding=self.padding,
+                            data_format=self.data_format,
                         ),
                         -2,
                     ),
@@ -94,9 +101,9 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
                         conv2d(
                             x,
                             self.filters,
-                            strides=strides,
-                            padding=padding,
-                            data_format=data_format,
+                            strides=self.strides,
+                            padding=self.padding,
+                            data_format=self.data_format,
                         ),
                         1,
                     ),
@@ -105,7 +112,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
 
         self.internal_op = conv_
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         """
         Args:
             input_shape
@@ -117,7 +124,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
         if self.grad_bounds:
             raise NotImplementedError()
 
-        output_shape_ = super().compute_output_shape(input_shape[0])
+        output_shape_ = MaxPooling2D.compute_output_shape(self, input_shape[0])
         input_dim = input_shape[-1][1]
         if self.mode == ForwardMode.IBP:
             output_shape = [output_shape_] * 2
@@ -136,7 +143,15 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
 
         return output_shape
 
-    def _pooling_function_fast(self, inputs, pool_size, strides, padding, data_format, mode):
+    def _pooling_function_fast(
+        self,
+        inputs: List[tf.Tensor],
+        pool_size: Tuple[int, int],
+        strides: Tuple[int, int],
+        padding: str,
+        data_format: str,
+        mode: ForwardMode,
+    ) -> List[tf.Tensor]:
 
         if self.dc_decomp:
             raise NotImplementedError()
@@ -156,7 +171,7 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
 
         if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
 
-            if mode in ForwardMode.AFFINE:
+            if mode == ForwardMode.AFFINE:
                 u_c = get_upper(x_0, w_u, b_u)
                 l_c = get_lower(x_0, w_l, b_l)
 
@@ -193,7 +208,15 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
             raise ValueError(f"Unknown mode {mode}")
         return output
 
-    def _pooling_function_not_fast(self, inputs, pool_size, strides, padding, data_format, mode):
+    def _pooling_function_not_fast(
+        self,
+        inputs: List[tf.Tensor],
+        pool_size: Tuple[int, int],
+        strides: Tuple[int, int],
+        padding: str,
+        data_format: str,
+        mode: ForwardMode,
+    ) -> List[tf.Tensor]:
         nb_tensors = self.nb_tensors
         if self.dc_decomp:
             h, g = inputs[-2:]
@@ -260,14 +283,22 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
 
         return output
 
-    def _pooling_function(self, inputs, pool_size, strides, padding, data_format, mode):
+    def _pooling_function(
+        self,
+        inputs: List[tf.Tensor],
+        pool_size: Tuple[int, int],
+        strides: Tuple[int, int],
+        padding: str,
+        data_format: str,
+        mode: ForwardMode,
+    ) -> List[tf.Tensor]:
 
         if self.fast:
             return self._pooling_function_fast(inputs, pool_size, strides, padding, data_format, mode)
         else:
             return self._pooling_function_not_fast(inputs, pool_size, strides, padding, data_format, mode)
 
-    def call(self, inputs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         return self._pooling_function(inputs, self.pool_size, self.strides, self.padding, self.data_format, self.mode)
 
