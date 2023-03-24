@@ -20,51 +20,6 @@ except ImportError:
     )
 
 
-class BackwardDense(Wrapper):
-    """Backward  LiRPA of Dense"""
-
-    def __init__(
-        self,
-        layer,
-        slope=Slope.V_SLOPE,
-        previous=True,
-        mode=ForwardMode.HYBRID,
-        convex_domain=None,
-        finetune=False,
-        input_dim=-1,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-
-        if convex_domain is None:
-            convex_domain = {}
-        self.layer = layer
-        self.activation = get(layer.get_config()["activation"])
-        self.activation_name = layer.get_config()["activation"]
-        self.slope = Slope(slope)
-        self.finetune = finetune
-        self.previous = previous
-        if hasattr(self.layer, "mode"):
-            self.mode = self.layer.mode
-            self.convex_domain = self.layer.convex_domain
-        else:
-            self.mode = ForwardMode(mode)
-            self.convex_domain = convex_domain
-            self.layer = to_decomon(
-                layer,
-                input_dim,
-                dc_decomp=False,
-                convex_domain=self.convex_domain,
-                finetune=False,
-                IBP=get_IBP(self.mode),
-                forward=get_FORWARD(self.mode),
-                shared=True,
-                fast=False,
-            )[0]
-
-        self.frozen_weights = False
-
-
 class BackwardGroupSort2(Wrapper):
     """Backward LiRPA of GroupSort2"""
 
