@@ -1,14 +1,16 @@
+from typing import Any, Dict, Optional, Union
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.backend import conv2d_transpose
-from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Flatten, Layer
 from tensorflow.python.ops import array_ops
 
 from decomon.backward_layers.activations import get
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import get_FORWARD, get_IBP, get_identity_lirpa
-from decomon.layers.core import ForwardMode, Option
+from decomon.layers.core import DecomonLayer, ForwardMode, Option
 from decomon.layers.decomon_layers import (  # add some layers to module namespace `globals()`
     DecomonActivation,
     DecomonBatchNormalization,
@@ -29,35 +31,35 @@ class BackwardDense(BackwardLayer):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         slope=Slope.V_SLOPE,
         previous=True,
-        mode=ForwardMode.HYBRID,
-        convex_domain=None,
         finetune=False,
         input_dim=-1,
-        **kwargs,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        **kwargs: Any,
     ):
-        super().__init__(layer, **kwargs)
-
-        if convex_domain is None:
-            convex_domain = {}
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
         self.kernel = self.layer.kernel
         self.use_bias = self.layer.use_bias
         if self.layer.use_bias:
             self.bias = self.layer.bias
-
         self.activation = get(layer.get_config()["activation"])
         self.activation_name = layer.get_config()["activation"]
         self.slope = Slope(slope)
         self.finetune = finetune
-        self.previous = previous
-        if hasattr(self.layer, "mode"):
-            self.mode = self.layer.mode
-            self.convex_domain = self.layer.convex_domain
-        else:
-            self.mode = ForwardMode(mode)
-            self.convex_domain = convex_domain
+        if not isinstance(self.layer, DecomonLayer):
             self.layer = to_decomon(
                 layer,
                 input_dim,
@@ -69,7 +71,6 @@ class BackwardDense(BackwardLayer):
                 shared=True,
                 fast=False,
             )[0]
-
         self.frozen_weights = False
 
     def get_config(self):
@@ -77,7 +78,6 @@ class BackwardDense(BackwardLayer):
         config.update(
             {
                 "slope": self.slope,
-                "previous": self.previous,
                 "finetune": self.finetune,
             }
         )
@@ -291,38 +291,31 @@ class BackwardConv2D(BackwardLayer):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         slope=Slope.V_SLOPE,
         previous=True,
-        mode=ForwardMode.HYBRID,
-        convex_domain=None,
         finetune=False,
         input_dim=-1,
-        **kwargs,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        **kwargs: Any,
     ):
-        super().__init__(layer, **kwargs)
-
-        if convex_domain is None:
-            convex_domain = {}
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
         self.activation = get(layer.get_config()["activation"])
         self.activation_name = layer.get_config()["activation"]
         self.slope = Slope(slope)
-        if hasattr(self.layer, "mode"):
-            self.mode = self.layer.mode
-            self.convex_domain = self.layer.convex_domain
-        else:
-            self.mode = ForwardMode(mode)
-            self.convex_domain = convex_domain
         self.finetune = finetune
-
-        self.previous = previous
-
-        if hasattr(self.layer, "mode"):
-            self.mode = self.layer.mode
-            self.convex_domain = self.layer.convex_domain
-        else:
-            self.mode = mode
-            self.convex_domain = convex_domain
+        if not isinstance(self.layer, DecomonLayer):
             self.layer = to_decomon(
                 layer,
                 input_dim,
@@ -334,7 +327,6 @@ class BackwardConv2D(BackwardLayer):
                 shared=True,
                 fast=False,
             )[0]
-
         self.frozen_weights = False
 
     def get_config(self):
@@ -342,7 +334,6 @@ class BackwardConv2D(BackwardLayer):
         config.update(
             {
                 "slope": self.slope,
-                "previous": self.previous,
                 "finetune": self.finetune,
             }
         )
@@ -551,18 +542,25 @@ class BackwardConv2D(BackwardLayer):
 class BackwardActivation(BackwardLayer):
     def __init__(
         self,
-        layer,
+        layer: Layer,
         slope=Slope.V_SLOPE,
         previous=True,
-        mode=ForwardMode.HYBRID,
-        convex_domain=None,
         finetune=False,
-        **kwargs,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        **kwargs: Any,
     ):
-        super().__init__(layer, **kwargs)
-
-        if convex_domain is None:
-            convex_domain = {}
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
         self.activation = get(layer.get_config()["activation"])
         self.activation_name = layer.get_config()["activation"]
         self.slope = Slope(slope)
@@ -572,7 +570,6 @@ class BackwardActivation(BackwardLayer):
         else:
             self.mode = ForwardMode(mode)
             self.convex_domain = convex_domain
-        self.previous = previous
         self.finetune = finetune
         self.finetune_param = []
         if self.finetune:
@@ -585,7 +582,6 @@ class BackwardActivation(BackwardLayer):
         config.update(
             {
                 "slope": self.slope,
-                "previous": self.previous,
                 "finetune": self.finetune,
             }
         )
@@ -820,27 +816,25 @@ class BackwardFlatten(BackwardLayer):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         slope=Slope.V_SLOPE,
         previous=True,
-        mode=ForwardMode.HYBRID,
-        convex_domain=None,
         finetune=False,
-        **kwargs,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        **kwargs: Any,
     ):
-        super().__init__(layer, **kwargs)
-        if convex_domain is None:
-            convex_domain = {}
-        self.previous = previous
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "previous": self.previous,
-            }
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
         )
-        return config
 
     def call(self, inputs, slope=Slope.V_SLOPE, **kwargs):
         if self.previous:
@@ -866,27 +860,25 @@ class BackwardReshape(BackwardLayer):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         slope=Slope.V_SLOPE,
         previous=True,
-        mode=ForwardMode.HYBRID,
-        convex_domain=None,
         finetune=False,
-        **kwargs,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        **kwargs: Any,
     ):
-        super().__init__(layer, **kwargs)
-        if convex_domain is None:
-            convex_domain = {}
-        self.previous = previous
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "previous": self.previous,
-            }
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
         )
-        return config
 
     def call_no_previous(self, inputs):
 
@@ -921,29 +913,27 @@ class BackwardPermute(BackwardLayer):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         slope=Slope.V_SLOPE,
         previous=True,
-        mode=ForwardMode.HYBRID,
-        convex_domain=None,
         finetune=False,
-        **kwargs,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        **kwargs: Any,
     ):
-        super().__init__(layer, **kwargs)
-        if convex_domain is None:
-            convex_domain = {}
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
         self.dims = layer.dims
         self.op = layer.call
-        self.previous = previous
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "previous": self.previous,
-            }
-        )
-        return config
 
     def call(self, inputs, slope=Slope.V_SLOPE, **kwargs):
 
@@ -984,18 +974,25 @@ class BackwardDropout(BackwardLayer):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         slope=Slope.V_SLOPE,
         previous=True,
-        mode=ForwardMode.HYBRID,
-        convex_domain=None,
         finetune=False,
-        rec=1,
-        **kwargs,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        **kwargs: Any,
     ):
-        super().__init__(layer, **kwargs)
-        if convex_domain is None:
-            convex_domain = {}
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
 
     def call(self, inputs, slope=Slope.V_SLOPE, **kwargs):
 
@@ -1021,14 +1018,29 @@ class BackwardBatchNormalization(BackwardLayer):
     """Backward  LiRPA of Batch Normalization"""
 
     def __init__(
-        self, layer, slope=Slope.V_SLOPE, mode=ForwardMode.HYBRID, convex_domain=None, finetune=False, **kwargs
+        self,
+        layer: Layer,
+        slope=Slope.V_SLOPE,
+        finetune=False,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        previous: bool = True,
+        **kwargs: Any,
     ):
-        super().__init__(layer, **kwargs)
-        if convex_domain is None:
-            convex_domain = {}
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
+
         if not isinstance(layer, DecomonBatchNormalization):
             raise NotImplementedError()
-        self.mode = self.layer.mode
         self.axis = self.layer.axis
         self.op_flat = Flatten()
 
@@ -1073,26 +1085,27 @@ class BackwardBatchNormalization(BackwardLayer):
 class BackwardInputLayer(BackwardLayer):
     def __init__(
         self,
-        layer,
+        layer: Layer,
         slope=Slope.V_SLOPE,
         previous=True,
-        mode=ForwardMode.HYBRID,
-        convex_domain=None,
         finetune=False,
-        **kwargs,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        **kwargs: Any,
     ):
-        super().__init__(layer, **kwargs)
-        if convex_domain is None:
-            convex_domain = {}
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
         self.slope = Slope(slope)
-        if hasattr(self.layer, "mode"):
-            self.mode = self.layer.mode
-            self.convex_domain = self.layer.convex_domain
-        else:
-            self.mode = ForwardMode(mode)
-            self.convex_domain = convex_domain
         self.finetune = finetune
-        self.previous = previous
 
     def get_config(self):
         config = super().get_config()
@@ -1100,7 +1113,6 @@ class BackwardInputLayer(BackwardLayer):
             {
                 "slope": self.slope,
                 "previous": self.previous,
-                "finetune": self.finetune,
             }
         )
         return config

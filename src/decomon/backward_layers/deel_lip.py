@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Dict, Optional, Union
 
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Layer
@@ -6,7 +7,7 @@ from tensorflow.keras.layers import Layer
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import get_FORWARD, get_IBP
 from decomon.layers.core import ForwardMode
-from decomon.layers.decomon_layers import to_decomon
+from decomon.layers.decomon_layers import DecomonLayer, to_decomon
 from decomon.utils import Slope
 
 logger = logging.getLogger(__name__)
@@ -25,27 +26,31 @@ class BackwardGroupSort2(BackwardLayer):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         slope=Slope.V_SLOPE,
         previous=True,
-        mode=ForwardMode.HYBRID,
-        convex_domain=None,
         finetune=False,
         input_dim=-1,
-        **kwargs,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        **kwargs: Any,
     ):
-        super().__init__(layer, **kwargs)
-        if convex_domain is None:
-            convex_domain = {}
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
+
         self.slope = Slope(slope)
         self.finetune = finetune
 
-        if hasattr(self.layer, "mode"):
-            self.mode = self.layer.mode
-            self.convex_domain = self.layer.convex_domain
-        else:
-            self.mode = ForwardMode(mode)
-            self.convex_domain = convex_domain
+        if not isinstance(layer, DecomonLayer):
             self.layer = to_decomon(
                 layer,
                 input_dim,
