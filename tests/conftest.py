@@ -70,6 +70,26 @@ def odd(request):
     return request.param
 
 
+@pytest.fixture(params=[1, 2, 11])
+def channels(request):
+    return request.param
+
+
+@pytest.fixture(params=[1, 2, 3])
+def filter_size(request):
+    return request.param
+
+
+@pytest.fixture(params=[1, 2])
+def strides(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def flatten(request):
+    return request.param
+
+
 @pytest.fixture(params=[m.value for m in ConvertMethod])
 def method(request):
     return request.param
