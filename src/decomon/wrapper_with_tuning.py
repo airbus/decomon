@@ -1,12 +1,26 @@
+from typing import Union
+
+import keras
 import numpy as np
+import numpy.typing as npt
 from tensorflow.keras.optimizers import Adam
 
 from decomon.metrics.loss import get_upper_loss
+from decomon.models.models import DecomonModel
 from decomon.wrapper import get_lower_box, get_upper_box, refine_boxes
 
 
 #### FORMAL BOUNDS ######
-def get_upper_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1, n_sub_boxes=1, lr=0.1, epochs=100):
+def get_upper_box_tuning(
+    model: Union[keras.Model, DecomonModel],
+    decomon_model_concat: keras.Model,
+    x_min: npt.NDArray[np.float_],
+    x_max: npt.NDArray[np.float_],
+    batch_size: int = 1,
+    n_sub_boxes: int = 1,
+    lr: float = 0.1,
+    epochs: int = 100,
+) -> npt.NDArray[np.float_]:
     """upper bound the maximum of a model in a given box
 
     Args:
@@ -83,7 +97,16 @@ def get_upper_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1
 
 
 #### FORMAL BOUNDS ######
-def get_lower_box_tuning(model, decomon_model_concat, x_min, x_max, batch_size=1, n_sub_boxes=1, lr=0.1, epochs=100):
+def get_lower_box_tuning(
+    model: Union[keras.Model, DecomonModel],
+    decomon_model_concat: keras.Model,
+    x_min: npt.NDArray[np.float_],
+    x_max: npt.NDArray[np.float_],
+    batch_size: int = 1,
+    n_sub_boxes: int = 1,
+    lr: float = 0.1,
+    epochs: int = 100,
+) -> npt.NDArray[np.float_]:
     """upper bound the maximum of a model in a given box
 
     Args:

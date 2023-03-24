@@ -9,7 +9,7 @@ from tensorflow.keras.layers import (
     Multiply,
 )
 
-from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
+from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.utils import broadcast, multiply, permute_dimensions
 from decomon.utils import maximum, minus, substract
 
@@ -22,7 +22,7 @@ class DecomonAdd(Add, DecomonLayer):
 
     """
 
-    def __init__(self, mode=F_HYBRID.name, **kwargs):
+    def __init__(self, mode=ForwardMode.HYBRID, **kwargs):
         super().__init__(mode=mode, **kwargs)
 
     def build(self, input_shape):
@@ -41,21 +41,21 @@ class DecomonAdd(Add, DecomonLayer):
         n_comp = self.nb_tensors
 
         # splits the inputs
-        if self.mode in [F_HYBRID.name, F_FORWARD.name]:
+        if self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
             inputs_x = inputs[::n_comp]
             output_x = inputs_x[0]
 
-        if self.mode == F_IBP.name:
+        if self.mode == ForwardMode.IBP:
             inputs_u = inputs[::n_comp]
             inputs_l = inputs[1::n_comp]
-        elif self.mode == F_HYBRID.name:
+        elif self.mode == ForwardMode.HYBRID:
             inputs_u = inputs[1::n_comp]
             inputs_w_u = inputs[2::n_comp]
             inputs_b_u = inputs[3::n_comp]
             inputs_l = inputs[4::n_comp]
             inputs_w_l = inputs[5::n_comp]
             inputs_b_l = inputs[6::n_comp]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             inputs_w_u = inputs[1::n_comp]
             inputs_b_u = inputs[2::n_comp]
             inputs_w_l = inputs[3::n_comp]
@@ -63,59 +63,26 @@ class DecomonAdd(Add, DecomonLayer):
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
-        if self.mode in [F_IBP.name, F_HYBRID.name]:
+        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
             output_u = sum(inputs_u)
             output_l = sum(inputs_l)
-        if self.mode in [F_FORWARD.name, F_HYBRID.name]:
+        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             output_b_u = sum(inputs_b_u)
             output_b_l = sum(inputs_b_l)
 
             output_w_u = sum(inputs_w_u)
             output_w_l = sum(inputs_w_l)
 
-        if self.mode == F_IBP.name:
+        if self.mode == ForwardMode.IBP:
             output = [output_u, output_l]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             output = [output_x, output_w_u, output_b_u, output_w_l, output_b_l]
-        elif self.mode == F_HYBRID.name:
+        elif self.mode == ForwardMode.HYBRID:
             output = [output_x, output_u, output_w_u, output_b_u, output_l, output_w_l, output_b_l]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
         return output
-
-    def call_dumb(self, inputs):
-
-        if self.dc_decomp:
-            raise NotImplementedError()
-
-        n_comp = self.nb_tensors
-        if self.mode in [F_HYBRID.name, F_FORWARD.name]:
-            input_x = inputs[0]
-
-        inputs_ = [inputs[i * n_comp : (i + 1) * n_comp] for i in range(int(len(inputs) / n_comp))]
-
-        if self.mode == F_HYBRID.name:
-            inputs_u = [inputs_[j][1] for j in range(len(inputs_))]
-            inputs_l = [inputs_[j][4] for j in range(len(inputs_))]
-
-            inputs_wu = [inputs_[j][2] for j in range(len(inputs_))]
-            inputs_bu = [inputs_[j][3] for j in range(len(inputs_))]
-
-            inputs_wl = [inputs_[j][5] for j in range(len(inputs_))]
-            inputs_bl = [inputs_[j][6] for j in range(len(inputs_))]
-        else:
-            raise NotImplementedError()
-
-        return [
-            input_x,
-            inputs_u[0] + inputs_u[1],
-            inputs_wu[0] + inputs_wu[1],
-            inputs_bu[0] + inputs_bu[1],
-            inputs_l[0] + inputs_l[1],
-            inputs_wl[0] + inputs_wl[1],
-            inputs_bl[0] + inputs_bl[1],
-        ]
 
 
 class DecomonAverage(Average, DecomonLayer):
@@ -124,7 +91,7 @@ class DecomonAverage(Average, DecomonLayer):
 
     """
 
-    def __init__(self, mode=F_HYBRID.name, **kwargs):
+    def __init__(self, mode=ForwardMode.HYBRID, **kwargs):
         super().__init__(mode=mode, **kwargs)
         self.op = Lambda(lambda x: sum(x) / len(x))
 
@@ -145,19 +112,19 @@ class DecomonAverage(Average, DecomonLayer):
         n_comp = self.nb_tensors
 
         # splits the inputs
-        if self.mode in [F_FORWARD.name, F_HYBRID.name]:
+        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             output_x = inputs[0]
-        if self.mode == F_IBP.name:
+        if self.mode == ForwardMode.IBP:
             inputs_u = inputs[::n_comp]
             inputs_l = inputs[1::n_comp]
-        elif self.mode == F_HYBRID.name:
+        elif self.mode == ForwardMode.HYBRID:
             inputs_u = inputs[1::n_comp]
             inputs_w_u = inputs[2::n_comp]
             inputs_b_u = inputs[3::n_comp]
             inputs_l = inputs[4::n_comp]
             inputs_w_l = inputs[5::n_comp]
             inputs_b_l = inputs[6::n_comp]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             inputs_w_u = inputs[1::n_comp]
             inputs_b_u = inputs[2::n_comp]
             inputs_w_l = inputs[3::n_comp]
@@ -165,21 +132,21 @@ class DecomonAverage(Average, DecomonLayer):
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
-        if self.mode in [F_IBP.name, F_HYBRID.name]:
+        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
             output_u = self.op(inputs_u)
             output_l = self.op(inputs_l)
-        if self.mode in [F_FORWARD.name, F_HYBRID.name]:
+        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             output_b_u = self.op(inputs_b_u)
             output_b_l = self.op(inputs_b_l)
 
             output_w_u = self.op(inputs_w_u)
             output_w_l = self.op(inputs_w_l)
 
-        if self.mode == F_IBP.name:
+        if self.mode == ForwardMode.IBP:
             output = [output_u, output_l]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             output = [output_x, output_w_u, output_b_u, output_w_l, output_b_l]
-        elif self.mode == F_HYBRID.name:
+        elif self.mode == ForwardMode.HYBRID:
             output = [output_x, output_u, output_w_u, output_b_u, output_l, output_w_l, output_b_l]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
@@ -193,7 +160,7 @@ class DecomonSubtract(DecomonLayer):
 
     """
 
-    def __init__(self, mode=F_HYBRID.name, **kwargs):
+    def __init__(self, mode=ForwardMode.HYBRID, **kwargs):
         super().__init__(mode=mode, **kwargs)
 
     def compute_output_shape(self, input_shape):
@@ -221,7 +188,7 @@ class DecomonMinimum(DecomonLayer):
 
     """
 
-    def __init__(self, mode=F_HYBRID.name, **kwargs):
+    def __init__(self, mode=ForwardMode.HYBRID, **kwargs):
         super().__init__(mode=mode, **kwargs)
 
     def compute_output_shape(self, input_shape):
@@ -261,7 +228,7 @@ class DecomonMaximum(DecomonLayer):
 
     """
 
-    def __init__(self, mode=F_HYBRID.name, **kwargs):
+    def __init__(self, mode=ForwardMode.HYBRID, **kwargs):
         super().__init__(mode=mode, **kwargs)
 
     def compute_output_shape(self, input_shape):
@@ -297,7 +264,7 @@ class DecomonConcatenate(Concatenate, DecomonLayer):
 
     """
 
-    def __init__(self, axis=-1, mode=F_HYBRID.name, **kwargs):
+    def __init__(self, axis=-1, mode=ForwardMode.HYBRID, **kwargs):
         super().__init__(axis=axis, mode=mode, **kwargs)
 
         self.op = super().call
@@ -312,11 +279,11 @@ class DecomonConcatenate(Concatenate, DecomonLayer):
 
     def build(self, input_shape):
         n_comp = self.nb_tensors
-        if self.mode == F_IBP.name:
+        if self.mode == ForwardMode.IBP:
             input_shape_y = input_shape[::n_comp]
-        elif self.mode == F_HYBRID.name:
+        elif self.mode == ForwardMode.HYBRID:
             input_shape_y = input_shape[1::n_comp]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             input_shape_y = input_shape[2::n_comp]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
@@ -329,20 +296,20 @@ class DecomonConcatenate(Concatenate, DecomonLayer):
         n_comp = self.nb_tensors
 
         # splits the inputs
-        if self.mode in [F_FORWARD.name, F_HYBRID.name]:
+        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             inputs_x = inputs[::n_comp]
             output_x = inputs_x[0]
-        if self.mode == F_IBP.name:
+        if self.mode == ForwardMode.IBP:
             inputs_u = inputs[::n_comp]
             inputs_l = inputs[1::n_comp]
-        elif self.mode == F_HYBRID.name:
+        elif self.mode == ForwardMode.HYBRID:
             inputs_u = inputs[1::n_comp]
             inputs_w_u = inputs[2::n_comp]
             inputs_b_u = inputs[3::n_comp]
             inputs_l = inputs[4::n_comp]
             inputs_w_l = inputs[5::n_comp]
             inputs_b_l = inputs[6::n_comp]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             inputs_w_u = inputs[1::n_comp]
             inputs_b_u = inputs[2::n_comp]
             inputs_w_l = inputs[3::n_comp]
@@ -350,21 +317,21 @@ class DecomonConcatenate(Concatenate, DecomonLayer):
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
-        if self.mode in [F_IBP.name, F_HYBRID.name]:
+        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
             output_u = self.op(inputs_u)
             output_l = self.op(inputs_l)
-        if self.mode in [F_FORWARD.name, F_HYBRID.name]:
+        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             output_b_u = self.op(inputs_b_u)
             output_b_l = self.op(inputs_b_l)
 
             output_w_u = self.op_w(inputs_w_u)
             output_w_l = self.op_w(inputs_w_l)
 
-        if self.mode == F_IBP.name:
+        if self.mode == ForwardMode.IBP:
             output = [output_u, output_l]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             output = [output_x, output_w_u, output_b_u, output_w_l, output_b_l]
-        elif self.mode == F_HYBRID.name:
+        elif self.mode == ForwardMode.HYBRID:
             output = [output_x, output_u, output_w_u, output_b_u, output_l, output_w_l, output_b_l]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
@@ -377,17 +344,17 @@ class DecomonMultiply(Multiply, DecomonLayer):
 
     """
 
-    def __init__(self, mode=F_HYBRID.name, **kwargs):
+    def __init__(self, mode=ForwardMode.HYBRID, **kwargs):
         super().__init__(mode=mode, **kwargs)
 
     def build(self, input_shape):
 
         n_comp = self.nb_tensors
-        if self.mode == F_IBP.name:
+        if self.mode == ForwardMode.IBP:
             input_shape_ = input_shape[::n_comp]
-        elif self.mode == F_HYBRID.name:
+        elif self.mode == ForwardMode.HYBRID:
             input_shape_ = input_shape[1::n_comp]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             input_shape_ = input_shape[2::n_comp]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
@@ -420,18 +387,18 @@ class DecomonDot(Dot, DecomonLayer):
 
     """
 
-    def __init__(self, axes=(-1, -1), mode=F_HYBRID.name, **kwargs):
+    def __init__(self, axes=(-1, -1), mode=ForwardMode.HYBRID, **kwargs):
         super().__init__(axes=axes, mode=mode, **kwargs)
         self.axes = axes
 
     def build(self, input_shape):
 
         n_comp = self.nb_tensors
-        if self.mode == F_IBP.name:
+        if self.mode == ForwardMode.IBP:
             input_shape_ = input_shape[::n_comp]
-        elif self.mode == F_HYBRID.name:
+        elif self.mode == ForwardMode.HYBRID:
             input_shape_ = input_shape[1::n_comp]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             input_shape_ = input_shape[2::n_comp]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
@@ -448,10 +415,10 @@ class DecomonDot(Dot, DecomonLayer):
         inputs_0 = inputs[:n_comp]
         inputs_1 = inputs[n_comp:]
 
-        if self.mode == F_IBP.name:
+        if self.mode == ForwardMode.IBP:
             n_0 = len(inputs_0[0].shape) - 2
             n_1 = len(inputs_1[0].shape) - 2
-        elif self.mode in [F_FORWARD.name, F_HYBRID.name]:
+        elif self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             n_0 = len(inputs_0[-1].shape) - 2
             n_1 = len(inputs_1[-1].shape) - 2
         else:
@@ -467,30 +434,30 @@ class DecomonDot(Dot, DecomonLayer):
             inputs_0_, inputs_1_, dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
         )
 
-        if self.mode == F_IBP.name:
+        if self.mode == ForwardMode.IBP:
             u, l = inputs_[: self.nb_tensors]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             x, w_u, b_u, w_l, b_l = inputs_[: self.nb_tensors]
-        elif self.mode == F_HYBRID.name:
+        elif self.mode == ForwardMode.HYBRID:
             x, u, w_u, b_u, l, w_l, b_l = inputs_[: self.nb_tensors]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
-        if self.mode in [F_IBP.name, F_HYBRID.name]:
+        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
             u_ = K.sum(u, 1)
             l_ = K.sum(l, 1)
 
-        if self.mode in [F_FORWARD.name, F_HYBRID.name]:
+        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             w_u_ = K.sum(w_u, 2)
             b_u_ = K.sum(b_u, 1)
             w_l_ = K.sum(w_l, 2)
             b_l_ = K.sum(b_l, 1)
 
-        if self.mode == F_IBP.name:
+        if self.mode == ForwardMode.IBP:
             outputs = [u_, l_]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             outputs = [x, w_u_, b_u_, w_l_, b_l_]
-        elif self.mode == F_HYBRID.name:
+        elif self.mode == ForwardMode.HYBRID:
             outputs = [x, u_, w_u_, b_u_, l_, w_l_, b_l_]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
@@ -498,7 +465,7 @@ class DecomonDot(Dot, DecomonLayer):
         return outputs
 
 
-def to_monotonic_merge(
+def to_decomon_merge(
     layer,
     input_dim,
     dc_decomp=False,
@@ -542,11 +509,11 @@ def to_monotonic_merge(
     config_layer["dc_decomp"] = dc_decomp
     config_layer["convex_domain"] = convex_domain
 
-    mode = F_HYBRID.name
+    mode = ForwardMode.HYBRID
     if IBP and not forward:
-        mode = F_IBP.name
+        mode = ForwardMode.IBP
     if not IBP and forward:
-        mode = F_FORWARD.name
+        mode = ForwardMode.AFFINE
 
     config_layer["mode"] = mode
     config_layer["finetune"] = finetune
@@ -568,13 +535,13 @@ def to_monotonic_merge(
     w_shape = [Input(tuple([input_dim] + input_shape[i])) for i in range(n_input)]
     y_shape = [Input(tuple(input_shape[i])) for i in range(n_input)]
 
-    if mode == F_HYBRID.name:
+    if mode == ForwardMode.HYBRID:
         input_ = [
             [x_shape, y_shape[i], w_shape[i], y_shape[i], y_shape[i], w_shape[i], y_shape[i]] for i in range(n_input)
         ]
-    elif mode == F_IBP.name:
+    elif mode == ForwardMode.IBP:
         input_ = [[y_shape[i], y_shape[i]] for i in range(n_input)]
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         input_ = [[x_shape, w_shape[i], y_shape[i], w_shape[i], y_shape[i]] for i in range(n_input)]
     else:
         raise ValueError(f"Unknown mode {mode}")

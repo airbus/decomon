@@ -6,7 +6,8 @@ import pytest
 import tensorflow.python.keras.backend as K
 from tensorflow.keras.layers import Conv2D
 
-from decomon.layers.decomon_layers import DecomonConv2D, to_monotonic
+from decomon.layers.core import ForwardMode
+from decomon.layers.decomon_layers import DecomonConv2D, to_decomon
 
 
 def test_Decomon_conv_box(data_format, mode, floatx, helpers):
@@ -33,25 +34,30 @@ def test_Decomon_conv_box(data_format, mode, floatx, helpers):
     x_ = inputs_[0]
     z_ = inputs_[2]
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         output = monotonic_layer(inputs[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output = monotonic_layer([z, W_u, b_u, W_l, b_l, h, g])
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output = monotonic_layer([u_c, l_c, h, g])
+    else:
+        raise ValueError("Unknown mode.")
 
     W_, bias = monotonic_layer.get_weights()
     monotonic_layer.set_weights([np.maximum(0.0, W_), bias])
     f_conv = K.function(inputs[2:], output)
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_conv(inputs_[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_conv(inputs_[2:])
         u_c_ = None
         l_c_ = None
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_conv(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
+    else:
+        raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
         x_,
@@ -71,15 +77,17 @@ def test_Decomon_conv_box(data_format, mode, floatx, helpers):
     )
     monotonic_layer.set_weights([np.minimum(0.0, W_), bias])
 
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_conv(inputs_[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_conv(inputs_[2:])
         u_c_ = None
         l_c_ = None
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_conv(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
+    else:
+        raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
         x_,
@@ -161,7 +169,7 @@ def test_Decomon_conv_to_monotonic_box(shared, floatx, helpers):
     output_ref = conv_ref(inputs[1])
 
     input_dim = x.shape[-1]
-    monotonic_layer = to_monotonic(conv_ref, input_dim, dc_decomp=True, shared=shared)
+    monotonic_layer = to_decomon(conv_ref, input_dim, dc_decomp=True, shared=shared)
 
     output = monotonic_layer[0](inputs[2:])
     if len(monotonic_layer) > 1:
@@ -207,7 +215,7 @@ def test_Decomon_conv_to_monotonic_box_nodc(helpers):
     output_ref = conv_ref(inputs[1])
 
     input_dim = x.shape[-1]
-    monotonic_layer = to_monotonic(conv_ref, input_dim, dc_decomp=False)
+    monotonic_layer = to_decomon(conv_ref, input_dim, dc_decomp=False)
 
     output = monotonic_layer[0](inputs[2:])
     if len(monotonic_layer) > 1:

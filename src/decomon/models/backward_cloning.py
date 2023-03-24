@@ -9,20 +9,23 @@ from tensorflow.keras.layers import Dense, Dropout, Lambda, Permute, Reshape
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
 
+from decomon.backward_layers.backward_layers import get_backward as get_backward_
+from decomon.backward_layers.backward_merge import BackwardMerge
 from decomon.backward_layers.crown import (
     Convert_2_backward_mode,
     Convert_2_mode,
     Fuse,
     MergeWithPrevious,
 )
-from decomon.layers.utils import get_lower, get_upper
+from decomon.backward_layers.utils import merge_with_previous
+from decomon.layers.core import ForwardMode
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
-
-from ..backward_layers.backward_layers import get_backward as get_backward_
-from ..backward_layers.backward_merge import BackwardMerge
-from ..backward_layers.utils import merge_with_previous
-from ..utils import F_FORWARD, F_HYBRID, F_IBP, get_lower, get_upper
-from .utils import check_input_tensors_sequential, get_depth_dict, get_mode
+from decomon.models.utils import (
+    check_input_tensors_sequential,
+    get_depth_dict,
+    get_mode,
+)
+from decomon.utils import get_lower, get_upper
 
 
 def is_purely_linear(layer):
@@ -179,9 +182,9 @@ def get_fuse(mode):
        w_out_u, b_out_u, w_out_l, b_out_l = backward_bounds
 
 
-       if mode == F_FORWARD.name:
+       if mode == ForwardMode.F_FORWARD:
            x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs
-       elif mode == F_HYBRID.name:
+       elif mode == ForwardMode.F_HYBRID:
            x_0, u_c, w_f_u, b_f_u, l_c, w_f_l, b_f_l = inputs
        else:
            u_c, l_c = inputs
@@ -189,24 +192,24 @@ def get_fuse(mode):
 
 
 
-       if mode in [F_HYBRID.name, F_IBP.name]:
+       if mode in [ForwardMode.F_HYBRID, ForwardMode.F_IBP]:
            u_c_ = get_upper_box(l_c, u_c, w_out_u, b_out_u)
            l_c_ = get_lower_box(l_c, u_c, w_out_l, b_out_l)
 
 
-       if mode in [F_HYBRID.name, F_FORWARD.name]:
+       if mode in [ForwardMode.F_HYBRID, ForwardMode.F_FORWARD]:
 
 
            w_u, b_u, w_l, b_l = merge_with_previous([w_f_u, b_f_u, w_f_l, b_f_l]+backward_bounds)
 
 
-       if mode == F_IBP.name:
+       if mode == ForwardMode.F_IBP:
            return [u_c_, l_c_]
-       if mode == F_FORWARD.name:
+       if mode == ForwardMode.F_FORWARD:
            return [x_0, w_u, b_u, w_l, b_l]
 
 
-       if mode == F_HYBRID.name:
+       if mode == ForwardMode.F_HYBRID:
            return [x_0, u_c_, w_u, b_u, l_c_, w_l, b_l]
 
 
@@ -226,11 +229,11 @@ def get_no_fuse(mode, convex_domain):
        w_out_u, b_out_u, w_out_l, b_out_l = backward_bounds
 
 
-       if mode == F_FORWARD.name:
+       if mode == ForwardMode.F_FORWARD:
            x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs
            u_c_ = get_upper(x_0, w_f_u, b_f_u, convex_domain)
            l_c_ = get_lower(x_0, w_f_l, b_f_l, convex_domain)
-       elif mode == F_HYBRID.name:
+       elif mode == ForwardMode.F_HYBRID:
            _, u_c, _, _, l_c, _, _ = inputs
        else:
            u_c, l_c = inputs
@@ -245,24 +248,24 @@ def get_no_fuse(mode, convex_domain):
 
 
 
-       if mode in [F_HYBRID.name, F_IBP.name]:
+       if mode in [ForwardMode.F_HYBRID, ForwardMode.F_IBP]:
            u_c_ = get_upper_box(l_c, u_c, w_out_u, b_out_u)
            l_c_ = get_lower_box(l_c, u_c, w_out_l, b_out_l)
 
 
-       if mode in [F_HYBRID.name, F_FORWARD.name]:
+       if mode in [ForwardMode.F_HYBRID, ForwardMode.F_FORWARD]:
 
 
            w_u, b_u, w_l, b_l = merge_with_previous([w_f_u, b_f_u, w_f_l, b_f_l]+backward_bounds)
 
 
-       if mode == F_IBP.name:
+       if mode == ForwardMode.F_IBP:
            return [u_c_, l_c_]
-       if mode == F_FORWARD.name:
+       if mode == ForwardMode.F_FORWARD:
            return [x_0, w_u, b_u, w_l, b_l]
 
 
-       if mode == F_HYBRID.name:
+       if mode == ForwardMode.F_HYBRID:
            return [x_0, u_c_, w_u, b_u, l_c_, w_l, b_l]
 
 
@@ -271,14 +274,15 @@ def get_no_fuse(mode, convex_domain):
 
 
 def get_fuse(mode, dtype=K.floatx()):
+    mode = ForwardMode(mode)
+
     def get_fuse_priv(inputs_):
 
         inputs = inputs_[:-4]
         backward_bounds = inputs_[-4:]
-
-        if mode == F_FORWARD.name:
+        if mode == ForwardMode.AFFINE:
             x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs
-        elif mode == F_HYBRID.name:
+        elif mode == ForwardMode.HYBRID:
             x_0, u_c, w_f_u, b_f_u, l_c, w_f_l, b_f_l = inputs
         else:
             return backward_bounds
@@ -289,47 +293,51 @@ def get_fuse(mode, dtype=K.floatx()):
 
 
 def convert_backward_2_mode(mode, convex_domain, dtype=K.floatx()):
+    mode = ForwardMode(mode)
+
     def get_2_mode_priv(inputs_):
 
         inputs = inputs_[:-4]
         backward_bounds = inputs_[-4:]
         w_out_u, b_out_u, w_out_l, b_out_l = backward_bounds
 
-        if mode in [F_FORWARD.name, F_HYBRID.name]:
+        if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             x_0 = inputs[0]
         else:
             u_c, l_c = inputs
             x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
 
-        if mode == F_FORWARD.name:
+        if mode == ForwardMode.AFFINE:
             return [x_0] + backward_bounds
 
-        if mode == F_IBP.name:
+        if mode == ForwardMode.IBP:
             u_c_ = get_upper(x_0, w_out_u, b_out_u, convex_domain={})
             l_c_ = get_lower(x_0, w_out_l, b_out_l, convex_domain={})
             return [u_c_, l_c_]
 
-        if mode == F_HYBRID.name:
+        if mode == ForwardMode.HYBRID:
             u_c_ = get_upper(x_0, w_out_u, b_out_u, convex_domain=convex_domain)
             l_c_ = get_lower(x_0, w_out_l, b_out_l, convex_domain=convex_domain)
             return [x_0, u_c_, w_out_u, b_out_u, l_c_, w_out_l, b_out_l]
 
     return Lambda(get_2_mode_priv, dtype=dtype)
 
-    # return convert_2_mode(mode_from=F_FORWARD.name, mode_to=mode, convex_domain=convex_domain)
+    # return convert_2_mode(mode_from=ForwardMode.F_FORWARD, mode_to=mode, convex_domain=convex_domain)
 
 
 def get_disconnected_input(mode, convex_domain, dtype=K.floatx()):
+    mode = ForwardMode(mode)
+
     def disco_priv(inputs_):
 
-        if mode == F_IBP.name:
+        if mode == ForwardMode.IBP:
             return inputs_
-        if mode == F_FORWARD.name:
+        if mode == ForwardMode.AFFINE:
             x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs_
             u_c = get_upper(x_0, w_f_u, b_f_u, convex_domain=convex_domain)
             l_c = get_lower(x_0, w_f_l, b_f_l, convex_domain=convex_domain)
 
-        if mode == F_HYBRID.name:
+        if mode == ForwardMode.HYBRID:
             _, u_c, _, _, l_c, _, _ = inputs_
 
         x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
@@ -337,9 +345,9 @@ def get_disconnected_input(mode, convex_domain, dtype=K.floatx()):
         b_u_ = K.cast(0.0, x_0.dtype) * u_c
         # w_u_ = tf.linalg.diag(K.cast(0., x_0.dtype)*u_c)
 
-        if mode == F_FORWARD.name:
+        if mode == ForwardMode.AFFINE:
             return [x_0, w_u_, b_u_, w_u_, b_u_]
-        if mode == F_HYBRID.name:
+        if mode == ForwardMode.HYBRID:
             return [x_0, u_c, w_u_, b_u_, l_c, w_u_, b_u_]
 
     return Lambda(disco_priv, dtype=dtype)
@@ -695,7 +703,7 @@ def crown_model(
         has_iter = True
 
     if not has_iter:
-        # layer, slope = V_slope.name, previous = True, mode = F_HYBRID.name, convex_domain = {}, finetune = False, rec = 1, ** kwargs
+        # layer, slope = V_slope.name, previous = True, mode = ForwardMode.F_HYBRID, convex_domain = {}, finetune = False, rec = 1, ** kwargs
         def func(layer):
             return get_backward_(layer, mode=get_mode(IBP, forward), finetune=finetune)
 
@@ -821,7 +829,7 @@ def get_backward_model(
         convex_domain=convex_domain,
         dtype=model.layers[0].dtype,
     )(output)
-    if mode_to != mode_from and mode_from == F_IBP.name:
+    if mode_to != mode_from and mode_from == ForwardMode.IBP:
 
         f_input = Lambda(lambda z: Concatenate(1)([z[0][:, None], z[1][:, None]]))
         output[0] = f_input([input_tensors[1], input_tensors[0]])
@@ -884,9 +892,9 @@ def get_fuse(mode, dtype=K.floatx()):
         inputs = inputs_[:-4]
         backward_bounds = inputs_[-4:]
 
-        if mode == F_FORWARD.name:
+        if mode == ForwardMode.F_FORWARD:
             x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs
-        elif mode == F_HYBRID.name:
+        elif mode == ForwardMode.F_HYBRID:
             x_0, u_c, w_f_u, b_f_u, l_c, w_f_l, b_f_l = inputs
         else:
             return backward_bounds
@@ -903,21 +911,21 @@ def convert_backward_2_mode(mode, convex_domain, dtype=K.floatx()):
         backward_bounds = inputs_[-4:]
         w_out_u, b_out_u, w_out_l, b_out_l = backward_bounds
 
-        if mode in [F_FORWARD.name, F_HYBRID.name]:
+        if mode in [ForwardMode.F_FORWARD, ForwardMode.F_HYBRID]:
             x_0 = inputs[0]
         else:
             u_c, l_c = inputs
             x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
 
-        if mode == F_FORWARD.name:
+        if mode == ForwardMode.F_FORWARD:
             return [x_0] + backward_bounds
 
-        if mode == F_IBP.name:
+        if mode == ForwardMode.F_IBP:
             u_c_ = get_upper(x_0, w_out_u, b_out_u, convex_domain={})
             l_c_ = get_lower(x_0, w_out_l, b_out_l, convex_domain={})
             return [u_c_, l_c_]
 
-        if mode == F_HYBRID.name:
+        if mode == ForwardMode.F_HYBRID:
             u_c_ = get_upper(x_0, w_out_u, b_out_u, convex_domain=convex_domain)
             l_c_ = get_lower(x_0, w_out_l, b_out_l, convex_domain=convex_domain)
             return [x_0, u_c_, w_out_u, b_out_u, l_c_, w_out_l, b_out_l]
@@ -928,10 +936,10 @@ def convert_backward_2_mode(mode, convex_domain, dtype=K.floatx()):
 def get_disconnected_input(mode, convex_domain, dtype=K.floatx()):
     def disco_priv(inputs_):
 
-        if mode == F_IBP.name:
+        if mode == ForwardMode.F_IBP:
             return inputs_
-        elif mode in {F_FORWARD.name, F_HYBRID.name}:
-            if mode == F_FORWARD.name:
+        elif mode in {ForwardMode.F_FORWARD, ForwardMode.F_HYBRID}:
+            if mode == ForwardMode.F_FORWARD:
                 x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs_
                 u_c = get_upper(x_0, w_f_u, b_f_u, convex_domain=convex_domain)
                 l_c = get_lower(x_0, w_f_l, b_f_l, convex_domain=convex_domain)
@@ -942,7 +950,7 @@ def get_disconnected_input(mode, convex_domain, dtype=K.floatx()):
             w_u_ = tf.linalg.diag(K.cast(0.0, x_0.dtype) * u_c + K.cast(1.0, x_0.dtype))
             b_u_ = K.cast(0.0, x_0.dtype) * u_c
 
-            if mode == F_FORWARD.name:
+            if mode == ForwardMode.F_FORWARD:
                 return [x_0, w_u_, b_u_, w_u_, b_u_]
             else:
                 return [x_0, u_c, w_u_, b_u_, l_c, w_u_, b_u_]

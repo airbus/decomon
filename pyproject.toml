@@ -9,11 +9,11 @@ readme = "README.md"
 authors = [
     {email ="ai.decomon@gmail.com"},
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 dependencies =[
-    "importlib-metadata; python_version<'3.8'",
     "tensorflow >=2.6.0",
     "matplotlib",
+    "numpy >=1.21",
 ]
 dynamic = ["version"]
 
@@ -61,3 +61,11 @@ exclude = '''
                      # the root of the project
 )
 '''
+
+[tool.mypy]
+ignore_missing_imports = true
+strict_optional = true
+implicit_optional = false
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true

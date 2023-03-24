@@ -1,30 +1,31 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Flatten, Layer
+from tensorflow.keras.layers import Flatten, Wrapper
 
 from decomon.backward_layers.utils import backward_max_
-from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP
-from decomon.utils import V_slope, get_lower, get_upper
+from decomon.layers.core import ForwardMode
+from decomon.utils import Slope, get_lower, get_upper
 
 
-class BackwardMaxPooling2D(Layer):
+class BackwardMaxPooling2D(Wrapper):
     """Backward  LiRPA of MaxPooling2D"""
 
     def __init__(
         self,
         layer,
-        slope=V_slope.name,
+        slope=Slope.V_SLOPE,
         previous=True,
-        mode=F_HYBRID.name,
+        mode=ForwardMode.HYBRID,
         convex_domain=None,
         finetune=False,
         input_dim=-1,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(layer, **kwargs)
         if convex_domain is None:
             convex_domain = {}
+        self.mode = ForwardMode(mode)
         raise NotImplementedError()
 
     def _pooling_function(
@@ -39,7 +40,7 @@ class BackwardMaxPooling2D(Layer):
         padding,
         data_format,
         convex_domain=None,
-        slope=V_slope.name,
+        slope=Slope.V_SLOPE,
     ):
 
         if convex_domain is None:
@@ -85,18 +86,18 @@ class BackwardMaxPooling2D(Layer):
         padding,
         data_format,
         convex_domain=None,
-        slope=V_slope.name,
+        slope=Slope.V_SLOPE,
     ):
 
         if convex_domain is None:
             convex_domain = {}
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:7]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             x_0, w_u, b_u, w_l, b_l = inputs[:5]
             u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
             l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
-        elif self.mode == F_IBP.name:
+        elif self.mode == ForwardMode.IBP:
             u_c, l_c = inputs[:2]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
@@ -132,7 +133,7 @@ class BackwardMaxPooling2D(Layer):
         padding,
         data_format,
         convex_domain=None,
-        slope=V_slope.name,
+        slope=Slope.V_SLOPE,
     ):
         """
         Args:
@@ -148,12 +149,12 @@ class BackwardMaxPooling2D(Layer):
 
         if convex_domain is None:
             convex_domain = {}
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:7]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             x_0, w_u, b_u, w_l, b_l = inputs[:5]
             u_c, l_c = 0, 0
-        elif self.mode == F_IBP.name:
+        elif self.mode == ForwardMode.IBP:
             u_c, l_c = inputs[:2]
             b_u, w_l, b_l, w_u = 0, 0, 0, 0
         else:
@@ -171,23 +172,23 @@ class BackwardMaxPooling2D(Layer):
         # initialize vars
         x_0, u_c_list, w_u_list, b_u_list, l_c_list, w_l_list, b_l_list = None, None, None, None, None, None, None
 
-        if self.mode in [F_IBP.name, F_HYBRID.name]:
+        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
             u_c_list = K.concatenate([self.internal_op(elem) for elem in tf.split(u_c, input_shape[-1], -1)], -2)
             l_c_list = K.concatenate([self.internal_op(elem) for elem in tf.split(l_c, input_shape[-1], -1)], -2)
 
-        if self.mode in [F_FORWARD.name, F_HYBRID.name]:
+        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
 
             b_u_list = K.concatenate([self.internal_op(elem) for elem in tf.split(b_u, input_shape[-1], -1)], -2)
             b_l_list = K.concatenate([self.internal_op(elem) for elem in tf.split(b_l, input_shape[-1], -1)], -2)
             w_u_list = K.concatenate([self.internal_op(elem) for elem in tf.split(w_u, input_shape[-1], -1)], -2)
             w_l_list = K.concatenate([self.internal_op(elem) for elem in tf.split(w_l, input_shape[-1], -1)], -2)
 
-        if self.mode == F_IBP.name:
+        if self.mode == ForwardMode.IBP:
             output_list = [
                 u_c_list,
                 l_c_list,
             ]
-        elif self.mode == F_HYBRID.name:
+        elif self.mode == ForwardMode.HYBRID:
             output_list = [
                 x_0,
                 u_c_list,
@@ -197,7 +198,7 @@ class BackwardMaxPooling2D(Layer):
                 w_l_list,
                 b_l_list,
             ]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             output_list = [
                 x_0,
                 u_c_list,

@@ -4,10 +4,10 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Lambda
 
 from decomon.layers.activations import softmax as softmax_
-from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
+from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.models.models import DecomonModel
 from decomon.models.utils import get_mode
-from decomon.utils import get_lower, get_upper, set_mode
+from decomon.utils import ConvexDomainType, get_lower, get_upper, set_mode
 
 
 def get_model(model):
@@ -20,7 +20,7 @@ def get_model(model):
     inputs = model.input
     output = model.output
 
-    if mode == F_IBP.name:
+    if mode == ForwardMode.IBP:
 
         def func(output_):
             u_c, l_c = output_
@@ -28,7 +28,7 @@ def get_model(model):
 
         output_ = Lambda(func)(output)
 
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
 
         def func(output_):
             x_0, w_u, b_u, w_l, b_l = output_
@@ -47,7 +47,7 @@ def get_model(model):
 
         output_ = Lambda(func)(output)
 
-    elif mode == F_HYBRID.name:
+    elif mode == ForwardMode.HYBRID:
 
         def func(output_):
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = output_
@@ -94,7 +94,7 @@ def get_upper_loss(model):
     convex_domain = model.convex_domain
 
     if forward:
-        if len(convex_domain) == 0 or convex_domain["name"] == "ball":
+        if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BALL:
             n_comp = 2
         else:
             n_comp = 1
@@ -113,10 +113,10 @@ def get_upper_loss(model):
 
     def loss_upper(y_true, y_pred):
 
-        if mode == F_IBP.name:
+        if mode == ForwardMode.IBP:
             u_c = y_pred[:, :, 0]
 
-        elif mode == F_FORWARD.name:
+        elif mode == ForwardMode.AFFINE:
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-1, :n_comp], (0, 2, 1))
             else:
@@ -125,7 +125,7 @@ def get_upper_loss(model):
             w_u = y_pred[:, :-1, n_comp : n_comp + n_out]
             b_u = y_pred[:, -1, n_comp : n_comp + n_out]
 
-        elif mode == F_HYBRID.name:
+        elif mode == ForwardMode.HYBRID:
 
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-2, :n_comp], (0, 2, 1))
@@ -144,11 +144,11 @@ def get_upper_loss(model):
         if forward:
             score_forward = upper_forward(x_0, w_u, b_u, y_true)
 
-        if mode == F_IBP.name:
+        if mode == ForwardMode.IBP:
             return K.mean(score_ibp)
-        elif mode == F_FORWARD.name:
+        elif mode == ForwardMode.AFFINE:
             return K.mean(score_forward)
-        elif mode == F_HYBRID.name:
+        elif mode == ForwardMode.HYBRID:
             return K.mean(K.minimum(score_ibp, score_forward))
 
         raise NotImplementedError()
@@ -165,7 +165,7 @@ def get_lower_loss(model):
     convex_domain = model.convex_domain
 
     if forward:
-        if len(convex_domain) == 0 or convex_domain["name"] == "ball":
+        if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BALL:
             n_comp = 2
         else:
             n_comp = 1
@@ -184,10 +184,10 @@ def get_lower_loss(model):
 
     def loss_lower(y_true, y_pred):
 
-        if mode == F_IBP.name:
+        if mode == ForwardMode.IBP:
             l_c = y_pred[:, :, 1]
 
-        elif mode == F_FORWARD.name:
+        elif mode == ForwardMode.AFFINE:
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-1, :n_comp], (0, 2, 1))
             else:
@@ -196,7 +196,7 @@ def get_lower_loss(model):
             w_l = y_pred[:, :-1, n_comp + n_out :]
             b_l = y_pred[:, -1, n_comp + n_out :]
 
-        elif mode == F_HYBRID.name:
+        elif mode == ForwardMode.HYBRID:
 
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-2, :n_comp], (0, 2, 1))
@@ -215,11 +215,11 @@ def get_lower_loss(model):
         if forward:
             score_forward = lower_forward(x_0, w_l, b_l, y_true)
 
-        if mode == F_IBP.name:
+        if mode == ForwardMode.IBP:
             return K.mean(score_ibp)
-        elif mode == F_FORWARD.name:
+        elif mode == ForwardMode.AFFINE:
             return K.mean(score_forward)
-        elif mode == F_HYBRID.name:
+        elif mode == ForwardMode.HYBRID:
             return K.mean(K.minimum(score_ibp, score_forward))
 
         raise NotImplementedError()
@@ -236,7 +236,7 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
     convex_domain = model.convex_domain
 
     if forward:
-        if len(convex_domain) == 0 or convex_domain["name"] == "ball":
+        if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BALL:
             n_comp = 2
         else:
             n_comp = 1
@@ -279,14 +279,14 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
 
     def loss_adv(y_true, y_pred):
 
-        if mode == F_IBP.name:
+        if mode == ForwardMode.IBP:
             u_c = y_pred[:, :, 0]
             l_c = y_pred[:, :, 1]
 
             if softmax:
                 u_c, l_c = softmax_([u_c, l_c], mode=mode, convex_domain=convex_domain, clip=False)
 
-        elif mode == F_FORWARD.name:
+        elif mode == ForwardMode.AFFINE:
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-1, :n_comp], (0, 2, 1))
             else:
@@ -302,7 +302,7 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
                     [x_0, w_u, b_u, w_l, b_l], mode=mode, convex_domain=convex_domain, clip=False
                 )
 
-        elif mode == F_HYBRID.name:
+        elif mode == ForwardMode.HYBRID:
 
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-2, :n_comp], (0, 2, 1))
@@ -332,17 +332,17 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
             if clip_value is not None:
                 score_forward = K.maximum(score_forward, clip_value)
 
-        if mode == F_IBP.name:
+        if mode == ForwardMode.IBP:
             if sigmoid:
                 return K.mean(K.sigmoid(score_ibp))
             else:
                 return K.mean(score_ibp)
-        elif mode == F_FORWARD.name:
+        elif mode == ForwardMode.AFFINE:
             if sigmoid:
                 return K.mean(K.sigmoid(score_forward))
             else:
                 return K.mean(score_forward)
-        elif mode == F_HYBRID.name:
+        elif mode == ForwardMode.HYBRID:
             if sigmoid:
                 return K.mean(K.sigmoid(K.minimum(score_ibp, score_forward)))
             else:
@@ -355,11 +355,21 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
 
 # create a layer
 class DecomonLossFusion(DecomonLayer):
-    def __init__(self, mode=F_HYBRID.name, asymptotic=False, backward=False, **kwargs):
+    def __init__(self, mode=ForwardMode.HYBRID, asymptotic=False, backward=False, **kwargs):
         super().__init__(mode=mode, **kwargs)
-        self.final_mode = F_IBP.name
+        self.final_mode = ForwardMode.IBP
         self.asymptotic = asymptotic
         self.backward = backward
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "asymptotic": self.asymptotic,
+                "backward": self.backward,
+            }
+        )
+        return config
 
     def call_no_backward(self, inputs, **kwargs):
 
@@ -414,10 +424,10 @@ class DecomonLossFusion(DecomonLayer):
 
 # new layer for new loss functions
 class DecomonRadiusRobust(DecomonLayer):
-    def __init__(self, mode=F_HYBRID.name, backward=False, **kwargs):
+    def __init__(self, mode=ForwardMode.HYBRID, backward=False, **kwargs):
         super().__init__(mode=mode, **kwargs)
 
-        if self.mode == F_IBP.name:
+        if self.mode == ForwardMode.IBP:
             raise NotImplementedError
 
         if len(self.convex_domain):
@@ -425,9 +435,18 @@ class DecomonRadiusRobust(DecomonLayer):
 
         self.backward = backward
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "backward": self.backward,
+            }
+        )
+        return config
+
     def call_no_backward(self, inputs, **kwargs):
 
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             x, _, w_u, b_u, _, w_l, b_l = inputs
         else:
             x, w_u, b_u, w_l, b_l = inputs
@@ -463,7 +482,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
     def call_backward(self, inputs, **kwargs):
 
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             x, _, w_u, b_u, _, w_l, b_l = inputs
         else:
             x, w_u, b_u, w_l, b_l = inputs

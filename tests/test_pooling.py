@@ -5,6 +5,7 @@ import pytest
 import tensorflow.python.keras.backend as K
 from tensorflow.keras.layers import MaxPooling2D
 
+from decomon.layers.core import ForwardMode
 from decomon.layers.maxpooling import DecomonMaxPooling2D
 
 
@@ -31,24 +32,29 @@ def test_MaxPooling2D_box(mode, floatx, helpers):
         pool_size=(2, 2), strides=(2, 2), padding="valid", dc_decomp=True, fast=fast, mode=mode, dtype=K.floatx()
     )
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         output = layer(inputs[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output = layer([inputs[2], inputs[4], inputs[5], inputs[7], inputs[8], inputs[9], inputs[10]])
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output = layer([inputs[3], inputs[6], inputs[9], inputs[10]])
+    else:
+        raise ValueError("Unknown mode.")
 
     f_pooling = K.function(inputs, output)
 
     y_ = f_ref(inputs_)
     z_ = z
     u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = [None] * 6
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_pooling(inputs_)
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_pooling(inputs_)
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_pooling(inputs_)
+    else:
+        raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
         x,

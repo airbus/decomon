@@ -9,7 +9,7 @@ import numpy as np
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.utils.generic_utils import to_list
 
-from decomon.layers.decomon_layers import to_monotonic
+from decomon.layers.decomon_layers import to_decomon
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.utils import (
     check_input_tensors_sequential,
@@ -22,7 +22,7 @@ from decomon.models.utils import (
 def convert_forward(
     model,
     input_tensors=None,
-    layer_fn=to_monotonic,
+    layer_fn=to_decomon,
     input_dim=-1,
     dc_decomp=False,
     convex_domain=None,
@@ -62,7 +62,7 @@ def convert_forward(
 def convert_forward_functional_model(
     model,
     input_tensors=None,
-    layer_fn=to_monotonic,
+    layer_fn=to_decomon,
     input_dim=1,
     convex_domain=None,
     IBP=True,

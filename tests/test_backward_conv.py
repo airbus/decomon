@@ -7,6 +7,7 @@ import tensorflow.python.keras.backend as K
 from tensorflow.keras.layers import Input
 
 from decomon.backward_layers.backward_layers import get_backward
+from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonConv2D
 
 
@@ -39,18 +40,21 @@ def test_Decomon_conv_box(data_format, activation, padding, use_bias, mode, floa
     inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
-    if mode == "hybrid":
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
         output = layer(input_mode)
         z_0, u_c_0, _, _, l_c_0, _, _ = output
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
         output = layer(input_mode)
         z_0, _, _, _, _ = output
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         input_mode = [inputs[3], inputs[6]]
         output = layer(input_mode)
         u_c_0, l_c_0 = output
+    else:
+        raise ValueError("Unknown mode.")
 
     output_shape = np.prod(output[-1].shape[1:])
 

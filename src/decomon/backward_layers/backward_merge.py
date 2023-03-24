@@ -4,7 +4,6 @@ import tensorflow.keras.backend as K
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import (
-    V_slope,
     backward_add,
     backward_maximum,
     backward_minimum,
@@ -12,7 +11,7 @@ from decomon.backward_layers.utils import (
     backward_substract,
     get_identity_lirpa,
 )
-from decomon.layers.core import F_FORWARD, F_HYBRID
+from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_merge_layers import (
     DecomonAdd,
     DecomonConcatenate,
@@ -23,11 +22,12 @@ from decomon.layers.decomon_merge_layers import (
     DecomonSubtract,
 )
 from decomon.layers.utils import broadcast, multiply, permute_dimensions, split
+from decomon.utils import Slope
 
 
 class BackwardMerge(BackwardLayer):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, layer, **kwargs):
+        super().__init__(layer, **kwargs)
 
 
 class BackwardAdd(BackwardMerge):
@@ -36,25 +36,24 @@ class BackwardAdd(BackwardMerge):
     def __init__(
         self,
         layer,
-        slope=V_slope.name,
+        slope=Slope.V_SLOPE,
         previous=True,
-        mode=F_HYBRID.name,
+        mode=ForwardMode.HYBRID,
         convex_domain=None,
         finetune=False,
         input_dim=-1,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(layer, **kwargs)
         if convex_domain is None:
             convex_domain = {}
-        self.layer = layer
         self.slope = slope
         if hasattr(self.layer, "mode"):
             self.mode = self.layer.mode
             self.convex_domain = self.layer.convex_domain
             self.dc_decomp = self.layer.dc_decomp
         else:
-            self.mode = mode
+            self.mode = ForwardMode(mode)
             self.convex_domain = convex_domain
             self.dc_decomp = False
         self.finetune = False
@@ -62,15 +61,26 @@ class BackwardAdd(BackwardMerge):
 
         self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp).call
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+                "previous": self.previous,
+                "finetune": self.finetune,
+            }
+        )
+        return config
+
     def call_previous(self, inputs):
 
         x_ = inputs[:-4]
 
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
         n_comp = 2
-        if self.mode == F_FORWARD.name:
+        if self.mode == ForwardMode.AFFINE:
             n_comp = 5
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             n_comp = 7
 
         n_elem = len(x_) // n_comp
@@ -115,20 +125,19 @@ class BackwardAverage(BackwardMerge):
     def __init__(
         self,
         layer,
-        slope=V_slope.name,
+        slope=Slope.V_SLOPE,
         previous=True,
-        mode=F_HYBRID.name,
+        mode=ForwardMode.HYBRID,
         convex_domain=None,
         finetune=False,
         input_dim=-1,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(layer, **kwargs)
 
         if convex_domain is None:
             convex_domain = {}
-        self.layer = layer
-        self.slope = slope
+        self.slope = Slope(slope)
         if hasattr(self.layer, "mode"):
             self.mode = self.layer.mode
             self.convex_domain = self.layer.convex_domain
@@ -139,15 +148,26 @@ class BackwardAverage(BackwardMerge):
         self.previous = previous
         self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=False).call
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+                "previous": self.previous,
+                "finetune": self.finetune,
+            }
+        )
+        return config
+
     def call_previous(self, inputs):
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
         n_comp = 2
-        if self.mode == F_FORWARD.name:
+        if self.mode == ForwardMode.AFFINE:
             n_comp = 5
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             n_comp = 7
 
         n_elem = len(x_) // n_comp
@@ -210,14 +230,22 @@ class BackwardAverage(BackwardMerge):
 class BackwardSubtract(BackwardMerge):
     """Backward  LiRPA of Subtract"""
 
-    def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, layer, slope=Slope.V_SLOPE, **kwargs):
+        super().__init__(layer, **kwargs)
         if not isinstance(layer, DecomonSubtract):
             raise KeyError()
 
-        self.layer = layer
-        self.slope = slope
+        self.slope = Slope(slope)
         self.mode = self.layer.mode
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+            }
+        )
+        return config
 
     def call(self, inputs, **kwargs):
 
@@ -225,9 +253,9 @@ class BackwardSubtract(BackwardMerge):
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
         n_comp = 4
-        if self.mode == F_FORWARD.name:
+        if self.mode == ForwardMode.AFFINE:
             n_comp = 6
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             n_comp = 8
 
         n_elem = len(x_) // n_comp
@@ -250,14 +278,22 @@ class BackwardSubtract(BackwardMerge):
 class BackwardMaximum(BackwardMerge):
     """Backward  LiRPA of Maximum"""
 
-    def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, layer, slope=Slope.V_SLOPE, **kwargs):
+        super().__init__(layer, **kwargs)
         if not isinstance(layer, DecomonMaximum):
             raise KeyError()
 
-        self.layer = layer
-        self.slope = slope
+        self.slope = Slope(slope)
         self.mode = self.layer.mode
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+            }
+        )
+        return config
 
     def call(self, inputs, **kwargs):
 
@@ -265,9 +301,9 @@ class BackwardMaximum(BackwardMerge):
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
         n_comp = 4
-        if self.mode == F_FORWARD.name:
+        if self.mode == ForwardMode.AFFINE:
             n_comp = 6
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             n_comp = 8
 
         n_elem = len(x_) // n_comp
@@ -290,14 +326,22 @@ class BackwardMaximum(BackwardMerge):
 class BackwardMinimum(BackwardMerge):
     """Backward  LiRPA of Minimum"""
 
-    def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, layer, slope=Slope.V_SLOPE, **kwargs):
+        super().__init__(layer, **kwargs)
         if not isinstance(layer, DecomonMinimum):
             raise KeyError()
 
-        self.layer = layer
-        self.slope = slope
+        self.slope = Slope(slope)
         self.mode = self.layer.mode
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+            }
+        )
+        return config
 
     def call(self, inputs, **kwargs):
 
@@ -305,9 +349,9 @@ class BackwardMinimum(BackwardMerge):
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
         n_comp = 4
-        if self.mode == F_FORWARD.name:
+        if self.mode == ForwardMode.AFFINE:
             n_comp = 6
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             n_comp = 8
 
         n_elem = len(x_) // n_comp
@@ -330,24 +374,32 @@ class BackwardMinimum(BackwardMerge):
 class BackwardConcatenate(BackwardMerge):
     """Backward  LiRPA of Concatenate"""
 
-    def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, layer, slope=Slope.V_SLOPE, **kwargs):
+        super().__init__(layer, **kwargs)
         if not isinstance(layer, DecomonConcatenate):
             raise KeyError()
 
-        self.layer = layer
-        self.slope = slope
+        self.slope = Slope(slope)
         self.mode = self.layer.mode
         self.axis = self.layer.axis
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+            }
+        )
+        return config
 
     def call(self, inputs, **kwargs):
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
         n_comp = 4
-        if self.mode == F_FORWARD.name:
+        if self.mode == ForwardMode.AFFINE:
             n_comp = 6
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             n_comp = 8
 
         n_elem = len(x_) // n_comp
@@ -368,14 +420,22 @@ class BackwardConcatenate(BackwardMerge):
 class BackwardMultiply(BackwardMerge):
     """Backward  LiRPA of Multiply"""
 
-    def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, layer, slope=Slope.V_SLOPE, **kwargs):
+        super().__init__(layer, **kwargs)
         if not isinstance(layer, DecomonMultiply):
             raise KeyError()
 
-        self.layer = layer
-        self.slope = slope
+        self.slope = Slope(slope)
         self.mode = self.layer.mode
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+            }
+        )
+        return config
 
     def call(self, inputs, **kwargs):
 
@@ -383,9 +443,9 @@ class BackwardMultiply(BackwardMerge):
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
         n_comp = 4
-        if self.mode == F_FORWARD.name:
+        if self.mode == ForwardMode.AFFINE:
             n_comp = 6
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             n_comp = 8
 
         n_elem = len(x_) // n_comp
@@ -408,13 +468,12 @@ class BackwardMultiply(BackwardMerge):
 class BackwardDot(BackwardMerge):
     """Backward  LiRPA of Dot"""
 
-    def __init__(self, layer, slope=V_slope.name, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, layer, slope=Slope.V_SLOPE, **kwargs):
+        super().__init__(layer, **kwargs)
         if not isinstance(layer, DecomonDot):
             raise KeyError()
 
-        self.layer = layer
-        self.slope = slope
+        self.slope = Slope(slope)
         self.mode = self.layer.mode
         self.axes = [i for i in self.layer.axes]
         self.op = BackwardAdd(self.layer)
@@ -422,15 +481,24 @@ class BackwardDot(BackwardMerge):
 
         raise NotImplementedError()
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "slope": self.slope,
+            }
+        )
+        return config
+
     def call(self, inputs, **kwargs):
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
         n_comp = 4
-        if self.mode == F_FORWARD.name:
+        if self.mode == ForwardMode.AFFINE:
             n_comp = 6
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             n_comp = 8
 
         n_elem = len(x_) // n_comp

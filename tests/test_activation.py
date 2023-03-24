@@ -5,6 +5,7 @@ import pytest
 import tensorflow.python.keras.backend as K
 
 from decomon.layers.activations import sigmoid, softmax, softsign, tanh
+from decomon.layers.core import ForwardMode
 
 
 @pytest.mark.parametrize(
@@ -16,13 +17,13 @@ from decomon.layers.activations import sigmoid, softmax, softsign, tanh
         (softmax, K.softmax, "softmax", 4),
     ],
 )
-@pytest.mark.parametrize("n,mode,floatx", [(0, "forward", 32)])
 def test_activation_1D_box(n, mode, floatx, helpers, activation_func, tensor_func, funcname, decimal):
     # softmax: test only n=0,3
     if funcname == "softmax":
         if n not in {0, 3}:
             return
 
+    mode = ForwardMode(mode)
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     if floatx == 16:
@@ -44,25 +45,29 @@ def test_activation_1D_box(n, mode, floatx, helpers, activation_func, tensor_fun
         b_l_0,
     ) = inputs_  # numpy values
 
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         output = activation_func(inputs[2:], dc_decomp=False, mode=mode)
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         output = activation_func([z, W_u, b_u, W_l, b_l], dc_decomp=False, mode=mode)
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         output = activation_func([u_c, l_c], dc_decomp=False, mode=mode)
+    else:
+        raise ValueError("Unknown mode.")
 
     f_func = K.function(inputs[2:], output)
     f_ref = K.function(inputs, tensor_func(y))
     y_ = f_ref(inputs_)
     z_ = z_0
-    if mode == "hybrid":
+    if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_func(inputs_[2:])
-    if mode == "forward":
+    elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_ = f_func(inputs_[2:])
         u_c_, l_c_ = [None] * 2
-    if mode == "ibp":
+    elif mode == ForwardMode.IBP:
         u_c_, l_c_ = f_func(inputs_[2:])
         w_u_, b_u_, w_l_, b_l_ = [None] * 4
+    else:
+        raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
         x_0,

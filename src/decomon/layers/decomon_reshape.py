@@ -1,7 +1,7 @@
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import InputSpec, Permute, Reshape
 
-from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, DecomonLayer
+from decomon.layers.core import DecomonLayer, ForwardMode
 
 
 class DecomonReshape(Reshape, DecomonLayer):
@@ -9,7 +9,7 @@ class DecomonReshape(Reshape, DecomonLayer):
     See Keras official documentation for further details on the Reshape operator
     """
 
-    def __init__(self, target_shape, mode=F_HYBRID.name, **kwargs):
+    def __init__(self, target_shape, mode=ForwardMode.HYBRID, **kwargs):
         """
         Args:
             data_format
@@ -17,7 +17,7 @@ class DecomonReshape(Reshape, DecomonLayer):
         """
         super().__init__(target_shape=target_shape, mode=mode, **kwargs)
 
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             self.input_spec = [
                 InputSpec(min_ndim=1),  # z
                 InputSpec(min_ndim=1),  # u_c
@@ -27,12 +27,12 @@ class DecomonReshape(Reshape, DecomonLayer):
                 InputSpec(min_ndim=1),  # w_l
                 InputSpec(min_ndim=1),  # b_l
             ]
-        elif self.mode == F_IBP.name:
+        elif self.mode == ForwardMode.IBP:
             self.input_spec = [
                 InputSpec(min_ndim=1),  # u_c
                 InputSpec(min_ndim=1),  # l_c
             ]
-        if self.mode == F_FORWARD.name:
+        if self.mode == ForwardMode.AFFINE:
             self.input_spec = [
                 InputSpec(min_ndim=1),  # z
                 InputSpec(min_ndim=1),  # w_u
@@ -67,20 +67,20 @@ class DecomonReshape(Reshape, DecomonLayer):
             g_ = op(g)
             nb_tensors -= 2
 
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
-        elif self.mode == F_IBP.name:
+        elif self.mode == ForwardMode.IBP:
             u_c, l_c = inputs[:nb_tensors]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
-        if self.mode in [F_IBP.name, F_HYBRID.name]:
+        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
             u_c_ = op(u_c)
             l_c_ = op(l_c)
 
-        if self.mode in [F_HYBRID.name, F_FORWARD.name]:
+        if self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
             b_u_ = op(b_u)
             b_l_ = op(b_l)
 
@@ -96,11 +96,11 @@ class DecomonReshape(Reshape, DecomonLayer):
                 w_u_ = K.rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]
                 w_l_ = K.rnn(step_function=step_func, inputs=w_l, initial_states=[], unroll=False)[1]
 
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             output = [x_0, w_u_, b_u_, w_l_, b_l_]
-        elif self.mode == F_IBP.name:
+        elif self.mode == ForwardMode.IBP:
             output = [u_c_, l_c_]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
@@ -116,7 +116,7 @@ class DecomonPermute(Permute, DecomonLayer):
     See Keras official documentation for further details on the Reshape operator
     """
 
-    def __init__(self, dims, mode=F_HYBRID.name, **kwargs):
+    def __init__(self, dims, mode=ForwardMode.HYBRID, **kwargs):
         """
         Args:
             data_format
@@ -124,7 +124,7 @@ class DecomonPermute(Permute, DecomonLayer):
         """
         super().__init__(dims=dims, mode=mode, **kwargs)
 
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             self.input_spec = [
                 InputSpec(min_ndim=1),  # z
                 InputSpec(min_ndim=1),  # u_c
@@ -134,12 +134,12 @@ class DecomonPermute(Permute, DecomonLayer):
                 InputSpec(min_ndim=1),  # w_l
                 InputSpec(min_ndim=1),  # b_l
             ]
-        elif self.mode == F_IBP.name:
+        elif self.mode == ForwardMode.IBP:
             self.input_spec = [
                 InputSpec(min_ndim=1),  # u_c
                 InputSpec(min_ndim=1),  # l_c
             ]
-        if self.mode == F_FORWARD.name:
+        if self.mode == ForwardMode.AFFINE:
             self.input_spec = [
                 InputSpec(min_ndim=1),  # z
                 InputSpec(min_ndim=1),  # w_u
@@ -174,20 +174,20 @@ class DecomonPermute(Permute, DecomonLayer):
             g_ = op(g)
             nb_tensors -= 2
 
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
-        elif self.mode == F_IBP.name:
+        elif self.mode == ForwardMode.IBP:
             u_c, l_c = inputs[:nb_tensors]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
-        if self.mode in [F_IBP.name, F_HYBRID.name]:
+        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
             u_c_ = op(u_c)
             l_c_ = op(l_c)
 
-        if self.mode in [F_HYBRID.name, F_FORWARD.name]:
+        if self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
             b_u_ = op(b_u)
             b_l_ = op(b_l)
 
@@ -202,11 +202,11 @@ class DecomonPermute(Permute, DecomonLayer):
                 w_u_ = K.rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]
                 w_l_ = K.rnn(step_function=step_func, inputs=w_l, initial_states=[], unroll=False)[1]
 
-        if self.mode == F_HYBRID.name:
+        if self.mode == ForwardMode.HYBRID:
             output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
-        elif self.mode == F_FORWARD.name:
+        elif self.mode == ForwardMode.AFFINE:
             output = [x_0, w_u_, b_u_, w_l_, b_l_]
-        elif self.mode == F_IBP.name:
+        elif self.mode == ForwardMode.IBP:
             output = [u_c_, l_c_]
         else:
             raise ValueError(f"Unknown mode {self.mode}")

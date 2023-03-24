@@ -1,5 +1,6 @@
 import inspect
 from copy import deepcopy
+from enum import Enum
 
 import numpy as np
 import tensorflow as tf
@@ -14,8 +15,24 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model
 
-from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, Box
-from decomon.utils import get_lower, get_lower_layer, get_upper, get_upper_layer
+from decomon.layers.core import ForwardMode
+from decomon.utils import (
+    ConvexDomainType,
+    get_lower,
+    get_lower_layer,
+    get_upper,
+    get_upper_layer,
+)
+
+
+class ConvertMethod(Enum):
+    CROWN = "crown"
+    CROWN_FORWARD_IBP = "crown-forward-ibp"
+    CROWN_FORWARD_AFFINE = "crown-forward-affine"
+    CROWN_FORWARD_HYBRID = "crown-forward-hybrid"
+    FORWARD_IBP = "forward-ibp"
+    FORWARD_AFFINE = "forward-affine"
+    FORWARD_HYBRID = "forward-hybrid"
 
 
 def include_dim_layer_fn(
@@ -43,7 +60,7 @@ def include_dim_layer_fn(
             if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
                 input_dim = (2, input_dim)
             else:
-                if convex_domain["name"] == Box.name and not isinstance(input_dim, tuple):
+                if convex_domain["name"] == ConvexDomainType.BOX and not isinstance(input_dim, tuple):
                     input_dim = (2, input_dim)
 
             def func(x):
@@ -79,7 +96,7 @@ def check_input_tensors_sequential(
         if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
             input_dim_ = (2, input_dim)
             z_tensor = Input(input_dim_, dtype=model.layers[0].dtype)
-        elif convex_domain["name"] == Box.name and not isinstance(input_dim, tuple):
+        elif convex_domain["name"] == ConvexDomainType.BOX and not isinstance(input_dim, tuple):
             input_dim_ = (2, input_dim)
             z_tensor = Input(input_dim_, dtype=model.layers[0].dtype)
         else:
@@ -178,7 +195,7 @@ def get_input_tensor_x(model, input_tensors, input_dim, input_dim_init, convex_d
     if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
         input_dim_ = (2, input_dim)
         z_tensor = Input(input_dim_, dtype=model.layers[0].dtype)
-    elif convex_domain["name"] == Box.name and not isinstance(input_dim, tuple):
+    elif convex_domain["name"] == ConvexDomainType.BOX and not isinstance(input_dim, tuple):
         input_dim_ = (2, input_dim)
         z_tensor = Input(input_dim_, dtype=model.layers[0].dtype)
     else:
@@ -201,28 +218,11 @@ def get_mode(IBP=True, forward=True):
 
     if IBP:
         if forward:
-            return F_HYBRID.name
+            return ForwardMode.HYBRID
         else:
-            return F_IBP.name
+            return ForwardMode.IBP
     else:
-        return F_FORWARD.name
-
-
-def get_IBP(mode=F_HYBRID.name):
-    if mode in [F_HYBRID.name, F_IBP.name]:
-        return True
-    return False
-
-
-def get_FORWARD(mode=F_HYBRID.name):
-    if mode in [F_HYBRID.name, F_FORWARD.name]:
-        return True
-    return False
-
-
-def get_node_by_id_(node):
-
-    return f"NODE_{node.flat_output_ids}_{node.flat_input_ids}"
+        return ForwardMode.AFFINE
 
 
 def get_node_by_id(node, outbound=False, model=None):
@@ -251,12 +251,12 @@ def get_inputs(node, tensor_map):
 
 
 def convert_to_backward_bounds(mode, inputs, input_dim):
-
-    if mode == F_HYBRID.name:
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.HYBRID:
         _, _, w_u, b_u, _, w_l, b_l = inputs
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         _, w_u, b_u, w_l, b_l = inputs
-    elif mode == F_IBP.name:
+    elif mode == ForwardMode.IBP:
         u_c, l_c = inputs
         z_value = K.cast(0.0, u_c.dtype)
         n_out = np.prod(u_c.shape[1:])
@@ -311,14 +311,15 @@ def fuse_forward_backward(
 
     if convex_domain is None:
         convex_domain = {}
-    if mode in [F_IBP.name, F_HYBRID.name]:
+    mode = ForwardMode(mode)
+    if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
 
         if upper_layer is None:
             upper_layer = get_upper_layer(convex_domain)
         if lower_layer is None:
             lower_layer = get_lower_layer(convex_domain)
 
-    if mode == F_IBP.name:
+    if mode == ForwardMode.IBP:
         w_out_u, b_out_u, w_out_l, b_out_l = back_bounds
 
         if x_tensor is None:
@@ -327,8 +328,8 @@ def fuse_forward_backward(
         l_out_c = lower_layer([x_tensor, w_out_l, b_out_l])
 
         return [u_out_c, l_out_c]
-    elif mode in {F_FORWARD.name, F_HYBRID.name}:
-        if mode == F_FORWARD.name:
+    elif mode in {ForwardMode.AFFINE, ForwardMode.HYBRID}:
+        if mode == ForwardMode.AFFINE:
             _, w_u, b_u, w_l, b_l = inputs
         else:
             _, _, w_u, b_u, _, w_l, b_l = inputs
@@ -368,7 +369,7 @@ def fuse_forward_backward(
 
         w_out_u_, b_out_u_, w_out_l_, b_out_l_ = lambda_([w_u, b_u, w_l, b_l] + back_bounds)
 
-        if mode == F_FORWARD.name:
+        if mode == ForwardMode.AFFINE:
             return [inputs[0], w_out_u_, b_out_u_, w_out_l_, b_out_l_]
         else:
             u_out_c = upper_layer([x_tensor, w_out_u_, b_out_u_])
@@ -380,11 +381,11 @@ def fuse_forward_backward(
 
 
 def pre_process_inputs(input_layer_, mode, **kwargs):
-
-    if mode == F_IBP.name:
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.IBP:
         return input_layer_
     # convert input_layer_ according
-    elif mode in {F_HYBRID.name, F_FORWARD.name}:
+    elif mode in {ForwardMode.HYBRID, ForwardMode.AFFINE}:
         if "upper_layer" in kwargs:
             upper_layer = kwargs["upper_layer"]
             lower_layer = kwargs["lower_layer"]
@@ -397,7 +398,7 @@ def pre_process_inputs(input_layer_, mode, **kwargs):
             upper_layer = get_upper_layer(convex_domain)
             lower_layer = get_lower_layer(convex_domain)
 
-        if mode == F_FORWARD.name:
+        if mode == ForwardMode.AFFINE:
             x, w_u, b_u, w_l, b_l = input_layer_
             u_c_out, l_c_out = [upper_layer([x, w_u, b_u]), lower_layer([x, w_u, b_u])]
 
@@ -429,7 +430,7 @@ def pre_process_inputs(input_layer_, mode, **kwargs):
 
         init_weights = Lambda(func_create_weights, dtype=u_c_out.dtype)
 
-        if mode == F_FORWARD.name:
+        if mode == ForwardMode.AFFINE:
             input_model = [x_, init_weights(u_c_out), u_c_out, init_weights(l_c_out), l_c_out]
         else:
             input_model = [x_, u_c_out, init_weights(u_c_out), u_c_out, l_c_out, init_weights(l_c_out), l_c_out]
@@ -498,16 +499,19 @@ def get_inner_layers(model):
 
 
 def convert_2_mode(mode_from, mode_to, convex_domain, dtype=K.floatx()):
+    mode_from = ForwardMode(mode_from)
+    mode_to = ForwardMode(mode_to)
+
     def get_2_mode_priv(inputs_):
 
         if mode_from == mode_to:
             return inputs_
 
-        if mode_from in [F_FORWARD.name, F_HYBRID.name]:
+        if mode_from in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             x_0 = inputs_[0]
-        elif mode_from == F_IBP.name:
+        elif mode_from == ForwardMode.IBP:
             u_c, l_c = inputs_
-            if mode_to in [F_FORWARD.name, F_HYBRID.name]:
+            if mode_to in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
                 x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
                 z_value = K.cast(0.0, u_c.dtype)
                 o_value = K.cast(1.0, u_c.dtype)
@@ -522,23 +526,23 @@ def convert_2_mode(mode_from, mode_to, convex_domain, dtype=K.floatx()):
         else:
             raise ValueError(f"Unknown mode {mode_from}")
 
-        if mode_from == F_FORWARD.name:
+        if mode_from == ForwardMode.AFFINE:
             _, w_u, b_u, w_l, b_l = inputs_
-            if mode_to in [F_IBP.name, F_HYBRID.name]:
+            if mode_to in [ForwardMode.IBP, ForwardMode.HYBRID]:
                 u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
                 l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
-        elif mode_from == F_IBP.name:
+        elif mode_from == ForwardMode.IBP:
             u_c, l_c = inputs_
-        elif mode_from == F_HYBRID.name:
+        elif mode_from == ForwardMode.HYBRID:
             _, u_c, w_u, b_u, l_c, w_l, b_l = inputs_
         else:
             raise ValueError(f"Unknown mode {mode_from}")
 
-        if mode_to == F_IBP.name:
+        if mode_to == ForwardMode.IBP:
             return [u_c, l_c]
-        elif mode_to == F_FORWARD.name:
+        elif mode_to == ForwardMode.AFFINE:
             return [x_0, w_u, b_u, w_l, b_l]
-        elif mode_to == F_HYBRID.name:
+        elif mode_to == ForwardMode.HYBRID:
             return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
         raise ValueError(f"Unknown mode {mode_to}")
 

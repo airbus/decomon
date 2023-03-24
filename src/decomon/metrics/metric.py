@@ -28,6 +28,18 @@ class Adversarial_score(Layer):
         self.mode = mode
         self.convex_domain = convex_domain
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "ibp": self.ibp,
+                "forward": self.forward,
+                "mode": self.mode,
+                "convex_domain": self.convex_domain,
+            }
+        )
+        return config
+
     def linear_adv(self, z_tensor, y_tensor, w_u, b_u, w_l, b_l):
 
         t_tensor = 1 - y_tensor
@@ -139,6 +151,18 @@ class Adversarial_check(Layer):
         self.forward = forward
         self.mode = mode
         self.convex_domain = convex_domain
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "ibp": self.ibp,
+                "forward": self.forward,
+                "mode": self.mode,
+                "convex_domain": self.convex_domain,
+            }
+        )
+        return config
 
     def linear_adv(self, z_tensor, y_tensor, w_u, b_u, w_l, b_l):
         w_upper = w_u * (1 - y_tensor[:, None]) - K.expand_dims(K.sum(w_l * y_tensor[:, None], -1), -1)
@@ -287,6 +311,18 @@ class Upper_score(Layer):
         self.forward = forward
         self.mode = mode
         self.convex_domain = convex_domain
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "ibp": self.ibp,
+                "forward": self.forward,
+                "mode": self.mode,
+                "convex_domain": self.convex_domain,
+            }
+        )
+        return config
 
     def linear_upper(self, z_tensor, y_tensor, w_u, b_u):
         w_upper = w_u * y_tensor[:, None]

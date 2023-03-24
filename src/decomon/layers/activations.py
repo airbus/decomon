@@ -4,13 +4,7 @@ import numpy as np
 import six
 import tensorflow.keras.backend as K
 
-from decomon.layers.core import (
-    F_FORWARD,
-    F_HYBRID,
-    F_IBP,
-    DecomonLayer,
-    StaticVariables,
-)
+from decomon.layers.core import DecomonLayer, ForwardMode, StaticVariables
 from decomon.layers.utils import exp, expand_dims, frac_pos, multiply, softplus_, sum
 from decomon.utils import (
     get_linear_hull_s_shape,
@@ -38,7 +32,14 @@ GROUP_SORT_2 = "GroupSort2"
 
 
 def relu(
-    x, dc_decomp=False, convex_domain=None, alpha=0.0, max_value=None, threshold=0.0, mode=F_HYBRID.name, **kwargs
+    x,
+    dc_decomp=False,
+    convex_domain=None,
+    alpha=0.0,
+    max_value=None,
+    threshold=0.0,
+    mode=ForwardMode.HYBRID,
+    **kwargs,
 ):
     """
     Args:
@@ -74,7 +75,7 @@ def linear_hull_s_shape(
     f_prime=sigmoid_prime,
     dc_decomp=False,
     convex_domain=None,
-    mode=F_HYBRID.name,
+    mode=ForwardMode.HYBRID,
 ):
     """Computing the linear hull of s-shape functions
 
@@ -95,23 +96,23 @@ def linear_hull_s_shape(
         convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
-
-    if mode == F_IBP.name:
+    mode = ForwardMode(mode)
+    if mode == ForwardMode.IBP:
         u_c, l_c = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
-    elif mode == F_HYBRID.name:
+    elif mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         x_0, w_u, b_u, w_l, b_l = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
         u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
         l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
     else:
         raise ValueError(f"Unknown mode {mode}")
 
-    if mode in [F_IBP.name, F_HYBRID.name]:
+    if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
         u_c_ = func(u_c)
         l_c_ = func(l_c)
 
-    if mode in [F_FORWARD.name, F_HYBRID.name]:
+    if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
 
         w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
             x, func=func, f_prime=f_prime, convex_domain=convex_domain, mode=mode
@@ -134,11 +135,11 @@ def linear_hull_s_shape(
             w_l_ = K.expand_dims(w_l_0, 1) * w_l
             b_l_ = b_l_0 + w_l_0 * b_l
 
-    if mode == F_IBP.name:
+    if mode == ForwardMode.IBP:
         output = [u_c_, l_c_]
-    elif mode == F_HYBRID.name:
+    elif mode == ForwardMode.HYBRID:
         output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         output = [x_0, w_u_, b_u_, w_l_, b_l_]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -146,7 +147,7 @@ def linear_hull_s_shape(
     return output
 
 
-def sigmoid(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
+def sigmoid(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
     """LiRPA for Sigmoid activation function .
     `1 / (1 + exp(-x))`.
 
@@ -169,7 +170,7 @@ def sigmoid(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs
     return linear_hull_s_shape(x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def tanh(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
+def tanh(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
     """LiRPA for Hyperbolic activation function.
     `tanh(x)=2*sigmoid(2*x)+1`
 
@@ -192,7 +193,7 @@ def tanh(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
     return linear_hull_s_shape(x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def hard_sigmoid(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
+def hard_sigmoid(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
     """LiRPA for Hard sigmoid activation function.
        Faster to compute than sigmoid activation.
 
@@ -212,11 +213,11 @@ def hard_sigmoid(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **k
         convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
-
+    mode = ForwardMode(mode)
     raise NotImplementedError()
 
 
-def elu(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
+def elu(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
     """LiRPA for Exponential linear unit.
 
     Args:
@@ -235,11 +236,11 @@ def elu(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
         convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
-
+    mode = ForwardMode(mode)
     raise NotImplementedError()
 
 
-def selu(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
+def selu(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
     """LiRPA for Scaled Exponential Linear Unit (SELU).
 
     SELU is equal to: `scale * elu(x, alpha)`, where alpha and scale
@@ -264,11 +265,11 @@ def selu(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
         convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
-
+    mode = ForwardMode(mode)
     raise NotImplementedError()
 
 
-def linear(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
+def linear(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
     """LiRPA foe Linear (i.e. identity) activation function.
 
     Args:
@@ -287,7 +288,7 @@ def linear(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs)
     return x
 
 
-def exponential(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
+def exponential(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
     """LiRPA for Exponential activation function.
 
     Args:
@@ -307,7 +308,7 @@ def exponential(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kw
     return exp(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, **kwargs)
 
 
-def softplus(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
+def softplus(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
     """LiRPA for Softplus activation function `log(exp(x) + 1)`.
 
     Args:
@@ -329,7 +330,7 @@ def softplus(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwarg
     return softplus_(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def softsign(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwargs):
+def softsign(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
     """LiRPA for Softsign activation function `x / (abs(x) + 1)`.
 
     Args:
@@ -351,7 +352,7 @@ def softsign(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, **kwarg
     return linear_hull_s_shape(x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def softmax(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1, clip=True, **kwargs):
+def softmax(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, axis=-1, clip=True, **kwargs):
     """LiRPA for Softmax activation function.
 
     Args:
@@ -369,6 +370,7 @@ def softmax(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1,
         convex_domain = {}
     if dc_decomp:
         raise NotImplementedError()
+    mode = ForwardMode(mode)
 
     x_ = minus(x, mode=mode)
     x_0 = exponential(x_, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
@@ -379,13 +381,13 @@ def softmax(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1,
 
     x_final = multiply(x_0, x_frac, mode=mode, convex_domain=convex_domain)
 
-    if mode == F_IBP.name:
+    if mode == ForwardMode.IBP:
         u_c, l_c = x_final
         if clip:
             return [K.minimum(u_c, 1.0), K.maximum(l_c, 0.0)]
         else:
             return x_final
-    if mode == F_HYBRID.name:
+    if mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x_final
         if clip:
             u_c = K.minimum(u_c, 1.0)
@@ -395,10 +397,13 @@ def softmax(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, axis=-1,
     return x_final
 
 
-def group_sort_2(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, data_format="channels_last", **kwargs):
+def group_sort_2(
+    x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, data_format="channels_last", **kwargs
+):
 
     if convex_domain is None:
         convex_domain = {}
+    mode = ForwardMode(mode)
     raise NotImplementedError()
 
 
@@ -429,7 +434,7 @@ def deserialize(name):
     elif name == TANH:
         return tanh
     elif name == RELU:
-        return relu_
+        return relu
     elif name == EXPONENTIAL:
         return exponential
     elif name == LINEAR:

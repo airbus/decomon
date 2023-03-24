@@ -10,6 +10,7 @@ from onnx2keras import onnx_to_keras
 from onnx2torch import convert
 
 from decomon.models.convert import clone as convert
+from decomon.models.utils import ConvertMethod
 
 
 @pytest.mark.parametrize(
@@ -25,7 +26,11 @@ from decomon.models.convert import clone as convert
 )
 def test_with_lirpa(path, onnx_filename, method, eps, N):
 
-    equ_method = {"IBP": "IBP", "backward": "crown", "IBP+backward": "CROWN-IBP"}
+    equ_method = {
+        "IBP": ConvertMethod.FORWARD_IBP,
+        "backward": ConvertMethod.CROWN,
+        "IBP+backward": ConvertMethod.CROWN_FORWARD_IBP,
+    }
 
     # use use onnx2torch to load the network in torch
     onnx_model = onnx.load(onnx_filename)

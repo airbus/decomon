@@ -1,63 +1,28 @@
+from enum import Enum
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Lambda
 from tensorflow.math import greater_equal
 from tensorflow.python.keras import backend as K
 
-from decomon.layers.core import F_FORWARD, F_HYBRID, F_IBP, StaticVariables
+from decomon.layers.core import ForwardMode, StaticVariables
 
 
-# create static variables for varying convex domain
-class Ball:
-    name = "ball"  # Lp Ball around an example
-
-
-class Box:
-    name = "box"  # Hypercube
-
-
-class Grid:
-    name = "grid"  # Hypercube
-    stable_coeff = 0.0
-
-
-class Vertex:
-    name = "vertex"  # convex set represented by its vertices
+class ConvexDomainType(Enum):
+    BALL = "ball"  # Lp Ball around an example
+    GRID = "grid"  # Hypercube
+    BOX = "box"  # Hypercube
+    VERTEX = "vertex"  # convex set represented by its vertices
     # (no verification is proceeded to assess that the set is convex)
 
 
-# create static variables for varying convex domain
-class V_slope:
-    name = "volume-slope"
-
-
-class A_slope:
-    name = "adaptative-slope"
-
-
-class S_slope:
-    name = "same-slope"
-
-
-class Z_slope:
-    name = "zero-lb"
-
-
-class O_slope:
-    name = "one-lb"
-
-
-# propagation of constant and affines bounds from input to output
-class M_BACKWARD:
-    name = "backward"
-
-
-class M_FORWARD:
-    name = "forward"
-
-
-class M_REC_BACKWARD:
-    name = "crown"
+class Slope(Enum):
+    V_SLOPE = "volume-slope"
+    A_SLOPE = "adaptative-slope"
+    S_SLOPE = "same-slope"
+    Z_SLOPE = "zero-lb"
+    O_SLOPE = "one-lb"
 
 
 # linear hull for activation function
@@ -404,18 +369,18 @@ def get_upper(x, w, b, convex_domain=None, **kwargs):
         x_max = x[:, 1]
         return get_upper_box(x_min, x_max, w, b, **kwargs)
 
-    elif convex_domain["name"] in {Box.name, Grid.name}:
+    elif convex_domain["name"] in {ConvexDomainType.BOX, ConvexDomainType.GRID}:
         x_min = x[:, 0]
         x_max = x[:, 1]
         return get_upper_box(x_min, x_max, w, b, **kwargs)
 
-    elif convex_domain["name"] == Ball.name:
+    elif convex_domain["name"] == ConvexDomainType.BALL:
 
         eps = convex_domain["eps"]
         p = convex_domain["p"]
         return get_upper_ball(x, eps, p, w, b, **kwargs)
 
-    elif convex_domain["name"] == Vertex.name:
+    elif convex_domain["name"] == ConvexDomainType.VERTEX:
         raise NotImplementedError()
 
     else:
@@ -437,17 +402,17 @@ def get_lower(x, w, b, convex_domain=None, **kwargs):
         x_max = x[:, 1]
         return get_lower_box(x_min, x_max, w, b, **kwargs)
 
-    elif convex_domain["name"] in {Box.name, Grid.name}:
+    elif convex_domain["name"] in {ConvexDomainType.BOX, ConvexDomainType.GRID}:
         x_min = x[:, 0]
         x_max = x[:, 1]
         return get_lower_box(x_min, x_max, w, b, **kwargs)
 
-    elif convex_domain["name"] == Ball.name:
+    elif convex_domain["name"] == ConvexDomainType.BALL:
         eps = convex_domain["eps"]
         p = convex_domain["p"]
         return get_lower_ball(x, eps, p, w, b, **kwargs)
 
-    elif convex_domain["name"] == Vertex.name:
+    elif convex_domain["name"] == ConvexDomainType.VERTEX:
         raise NotImplementedError()
 
     else:
@@ -500,7 +465,7 @@ def backward_maximum(inputs_, convex_domain):
             inputs_[:2] + back_bounds[4 * i : 4 * (i + 1)],
             dc_decomp=False,
             convex_domain=convex_domain,
-            mode=F_FORWARD.name,
+            mode=ForwardMode.AFFINE,
         )
 
     return output[-2:]
@@ -518,7 +483,7 @@ def backward_minimum(inputs_, convex_domain):
             inputs_[:2] + back_bounds[4 * i : 4 * (i + 1)],
             dc_decomp=False,
             convex_domain=convex_domain,
-            mode=F_FORWARD.name,
+            mode=ForwardMode.AFFINE,
         )
 
     return output[2:4]
@@ -591,7 +556,7 @@ def subset_sum_lower(W, b, repeat=1):
 
 # define routines to get linear relaxations useful both for forward and backward
 def get_linear_hull_relu(upper, lower, slope, upper_g=0, lower_g=0, **kwargs):
-
+    slope = Slope(slope)
     # in case upper=lower, this cases are
     # considered with index_dead and index_linear
     alpha = (K.relu(upper) - K.relu(lower)) / K.maximum(K.cast(K.epsilon(), dtype=upper.dtype), upper - lower)
@@ -604,7 +569,7 @@ def get_linear_hull_relu(upper, lower, slope, upper_g=0, lower_g=0, **kwargs):
     z_value = K.cast(0.0, dtype=upper.dtype)
     o_value = K.cast(1.0, dtype=upper.dtype)
 
-    if slope == V_slope.name:
+    if slope == Slope.V_SLOPE:
         # 1 if upper<=-lower else 0
         index_a = -K.clip(K.sign(upper + lower) - o_value, -o_value, z_value)
 
@@ -613,19 +578,19 @@ def get_linear_hull_relu(upper, lower, slope, upper_g=0, lower_g=0, **kwargs):
         w_l_ = index_b
         b_l_ = z_value * b_u_
 
-    if slope == A_slope.name:
+    if slope == Slope.A_SLOPE:
         w_l_ = K.clip(K.sign(w_u_ - 0.5), 0, 1)
         b_l_ = z_value * b_u_
 
-    if slope == Z_slope.name:
+    if slope == Slope.Z_SLOPE:
         w_l_ = z_value * w_u_
         b_l_ = z_value * b_u_
 
-    if slope == O_slope.name:
+    if slope == Slope.O_SLOPE:
         w_l_ = z_value * w_u_ + o_value
         b_l_ = z_value * b_u_
 
-    if slope == S_slope.name:
+    if slope == Slope.S_SLOPE:
         w_l_ = w_u_
         b_l_ = z_value * b_u_
 
@@ -661,18 +626,18 @@ def get_linear_hull_sigmoid(upper, lower, slope, **kwargs):
 
     x = [upper, lower]
     return get_linear_hull_s_shape(
-        x, func=K.sigmoid, f_prime=sigmoid_prime, convex_domain={}, mode=F_IBP.name, **kwargs
+        x, func=K.sigmoid, f_prime=sigmoid_prime, convex_domain={}, mode=ForwardMode.IBP, **kwargs
     )
 
 
 def get_linear_hull_tanh(upper, lower, slope, **kwargs):
 
     x = [upper, lower]
-    return get_linear_hull_s_shape(x, func=K.tanh, f_prime=tanh_prime, convex_domain={}, mode=F_IBP.name, **kwargs)
+    return get_linear_hull_s_shape(x, func=K.tanh, f_prime=tanh_prime, convex_domain={}, mode=ForwardMode.IBP, **kwargs)
 
 
 def get_linear_softplus_hull(upper, lower, slope, **kwargs):
-
+    slope = Slope(slope)
     # in case upper=lower, this cases are
     # considered with index_dead and index_linear
     u_c_ = K.softsign(upper)
@@ -684,20 +649,20 @@ def get_linear_softplus_hull(upper, lower, slope, **kwargs):
     z_value = K.cast(0.0, dtype=upper.dtype)
     o_value = K.cast(1.0, dtype=upper.dtype)
 
-    if slope == V_slope.name:
+    if slope == Slope.V_SLOPE:
         # 1 if upper<=-lower else 0
         index_a = -K.clip(K.sign(upper + lower) - o_value, -o_value, z_value)
         # 1 if upper>-lower else 0
         index_b = o_value - index_a
         w_l_ = index_b
         b_l_ = z_value * b_u_
-    elif slope == Z_slope.name:
+    elif slope == Slope.Z_SLOPE:
         w_l_ = z_value * w_u_
         b_l_ = z_value * b_u_
-    elif slope == O_slope.name:
+    elif slope == Slope.O_SLOPE:
         w_l_ = z_value * w_u_ + o_value
         b_l_ = z_value * b_u_
-    elif slope == S_slope.name:
+    elif slope == Slope.S_SLOPE:
         w_l_ = w_u_
         b_l_ = z_value * b_u_
     else:
@@ -733,7 +698,7 @@ def get_linear_softplus_hull(upper, lower, slope, **kwargs):
     return [w_u_, b_u_, w_l_, b_l_]
 
 
-def substract(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
+def substract(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID):
     """LiRPA implementation of inputs_0-inputs_1
 
     Args:
@@ -754,7 +719,7 @@ def substract(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HY
     return output
 
 
-def add(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name):
+def add(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID):
     """LiRPA implementation of inputs_0+inputs_1
 
     Args:
@@ -769,6 +734,7 @@ def add(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.n
     """
     if convex_domain is None:
         convex_domain = {}
+    mode = ForwardMode(mode)
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if dc_decomp:
         h_0, g_0 = inputs_0[-2:]
@@ -776,22 +742,22 @@ def add(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.n
         h_ = h_0 + h_1
         g_ = g_0 + g_1
 
-    if mode == F_HYBRID.name:
+    if mode == ForwardMode.HYBRID:
         x_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0 = inputs_0[:nb_tensor]
         _, u_c_1, w_u_1, b_u_1, l_c_1, w_l_1, b_l_1 = inputs_1[:nb_tensor]
-    elif mode == F_IBP.name:
+    elif mode == ForwardMode.IBP:
         u_c_0, l_c_0 = inputs_0[:nb_tensor]
         u_c_1, l_c_1 = inputs_1[:nb_tensor]
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         x_0, w_u_0, b_u_0, w_l_0, b_l_0 = inputs_0[:nb_tensor]
         _, w_u_1, b_u_1, w_l_1, b_l_1 = inputs_1[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
-    if mode in [F_HYBRID.name, F_IBP.name]:
+    if mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
         u_c_ = u_c_0 + u_c_1
         l_c_ = l_c_0 + l_c_1
-    if mode in [F_HYBRID.name, F_FORWARD.name]:
+    if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
 
         w_u_ = w_u_0 + w_u_1
         w_l_ = w_l_0 + w_l_1
@@ -799,18 +765,18 @@ def add(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.n
         b_u_ = b_u_0 + b_u_1
         b_l_ = b_l_0 + b_l_1
 
-    if mode == F_HYBRID.name:
+    if mode == ForwardMode.HYBRID:
         upper_ = get_upper(x_0, w_u_, b_u_, convex_domain)
         u_c_ = K.minimum(upper_, u_c_)
 
         lower_ = get_lower(x_0, w_l_, b_l_, convex_domain)
         l_c_ = K.maximum(lower_, l_c_)
 
-    if mode == F_HYBRID.name:
+    if mode == ForwardMode.HYBRID:
         output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
-    elif mode == F_IBP.name:
+    elif mode == ForwardMode.IBP:
         output = [u_c_, l_c_]
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         output = [x_0, w_u_, b_u_, w_l_, b_l_]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -821,30 +787,29 @@ def add(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.n
     return output
 
 
-def relu_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, slope=V_slope.name, **kwargs):
+def relu_(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, slope=Slope.V_SLOPE, **kwargs):
 
     if convex_domain is None:
         convex_domain = {}
-    if mode not in [F_HYBRID.name, F_IBP.name, F_FORWARD.name]:
-        raise ValueError(f"unknown mode {mode}")
+    mode = ForwardMode(mode)
 
     z_value = K.cast(0.0, dtype=x[0].dtype)
     o_value = K.cast(1.0, dtype=x[0].dtype)
 
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
-    if mode == F_HYBRID.name:
+    if mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensors]
-    elif mode == F_IBP.name:
+    elif mode == ForwardMode.IBP:
         u_c, l_c = x[:nb_tensors]
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         x_0, w_u, b_u, w_l, b_l = x[:nb_tensors]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
-    if mode == F_FORWARD.name:
+    if mode == ForwardMode.AFFINE:
         upper = get_upper(x_0, w_u, b_u, convex_domain)
         lower = get_lower(x_0, w_l, b_l, convex_domain)
-    elif mode in [F_IBP.name, F_HYBRID.name]:
+    elif mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
         upper = u_c
         lower = l_c
     else:
@@ -865,9 +830,9 @@ def relu_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, slope=V_sl
     u_c_ = K.relu(upper)
     l_c_ = K.relu(lower)
 
-    if mode in [F_FORWARD.name, F_HYBRID.name]:
+    if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
 
-        if len(convex_domain) and convex_domain["name"] == Grid.name:
+        if len(convex_domain) and convex_domain["name"] == ConvexDomainType.GRID:
             upper_g, lower_g = get_bound_grid(x_0, w_u, b_u, w_l, b_l, 1)
             kwargs.update({"upper_grid": upper_g, "lower_grid": lower_g})
 
@@ -878,11 +843,11 @@ def relu_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, slope=V_sl
         w_l_ = K.expand_dims(w_l_, 1) * w_l
 
     output = []
-    if mode == F_IBP.name:
+    if mode == ForwardMode.IBP:
         output += [u_c_, l_c_]
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         output += [x_0, w_u_, b_u_, w_l_, b_l_]
-    elif mode == F_HYBRID.name:
+    elif mode == ForwardMode.HYBRID:
         output += [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -892,7 +857,7 @@ def relu_(x, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, slope=V_sl
     return output
 
 
-def minus(inputs, mode=F_HYBRID.name, dc_decomp=False, **kwargs):
+def minus(inputs, mode=ForwardMode.HYBRID, dc_decomp=False, **kwargs):
     """LiRPA implementation of minus(x)=-x.
 
     Args:
@@ -902,12 +867,13 @@ def minus(inputs, mode=F_HYBRID.name, dc_decomp=False, **kwargs):
     Returns:
 
     """
+    mode = ForwardMode(mode)
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
-    if mode == F_IBP.name:
+    if mode == ForwardMode.IBP:
         u, l = inputs[:nb_tensor]
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         x, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
-    elif mode == F_HYBRID.name:
+    elif mode == ForwardMode.HYBRID:
         x, u, w_u, b_u, l, w_l, b_l = inputs[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -915,21 +881,21 @@ def minus(inputs, mode=F_HYBRID.name, dc_decomp=False, **kwargs):
     if dc_decomp:
         h, g = inputs[-2:]
 
-    if mode in [F_IBP.name, F_HYBRID.name]:
+    if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
         u_ = -l
         l_ = -u
 
-    if mode in [F_FORWARD.name, F_HYBRID.name]:
+    if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
         w_u_ = -w_l
         b_u_ = -b_l
         w_l_ = -w_u
         b_l_ = -b_u
 
-    if mode == F_IBP.name:
+    if mode == ForwardMode.IBP:
         output = [u_, l_]
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         output = [x, w_u_, b_u_, w_l_, b_l_]
-    elif mode == F_HYBRID.name:
+    elif mode == ForwardMode.HYBRID:
         output = [x, u_, w_u_, b_u_, l_, w_l_, b_l_]
     else:
         raise ValueError(f"Unknown mode {mode}")
@@ -940,7 +906,7 @@ def minus(inputs, mode=F_HYBRID.name, dc_decomp=False, **kwargs):
     return output
 
 
-def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, finetune=False, **kwargs):
+def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, finetune=False, **kwargs):
     """LiRPA implementation of element-wise max
 
     Args:
@@ -971,7 +937,7 @@ def maximum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBR
     )
 
 
-def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBRID.name, finetune=False, **kwargs):
+def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, finetune=False, **kwargs):
     """LiRPA implementation of element-wise min
 
     Args:
@@ -1002,7 +968,9 @@ def minimum(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=F_HYBR
     )
 
 
-def get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, convex_domain=None, mode=F_HYBRID.name, **kwargs):
+def get_linear_hull_s_shape(
+    x, func=K.sigmoid, f_prime=sigmoid_prime, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs
+):
     """Computing the linear hull of shape functions  given the pre activation neurons
 
     Args:
@@ -1018,16 +986,17 @@ def get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, convex_dom
 
     if convex_domain is None:
         convex_domain = {}
+    mode = ForwardMode(mode)
     z_value = K.cast(0.0, dtype=x[0].dtype)
     o_value = K.cast(1.0, dtype=x[0].dtype)
     t_value = K.cast(2.0, dtype=x[0].dtype)
 
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
-    if mode == F_IBP.name:
+    if mode == ForwardMode.IBP:
         u_c, l_c = x[:nb_tensor]
-    elif mode == F_HYBRID.name:
+    elif mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensor]
-    elif mode == F_FORWARD.name:
+    elif mode == ForwardMode.AFFINE:
         x_0, w_u, b_u, w_l, b_l = x[:nb_tensor]
         u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
         l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
@@ -1188,30 +1157,32 @@ def set_mode(x, final_mode, mode, convex_domain=None):
     if convex_domain is None:
         convex_domain = {}
 
+    final_mode = ForwardMode(final_mode)
+    mode = ForwardMode(mode)
     if final_mode == mode:
         return x
 
     x_0, u_c, w_u, b_u, l_c, w_l, b_l = None, None, None, None, None, None, None
-    if mode == F_IBP.name:
+    if mode == ForwardMode.IBP:
         u_c, l_c = x
         if final_mode != mode:
-            raise NotImplementedError(f"If mode if {F_IBP}, final_mode must be also {F_IBP}.")
-    elif mode == F_FORWARD.name:
+            raise NotImplementedError(f"If mode is {ForwardMode.IBP}, final_mode must be also {ForwardMode.IBP}.")
+    elif mode == ForwardMode.AFFINE:
         x_0, w_u, b_u, w_l, b_l = x
-        if final_mode in [F_IBP.name, F_HYBRID.name]:
+        if final_mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
             # compute constant bounds
             u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
             l_c = get_lower(x_0, w_u, b_u, convex_domain=convex_domain)
-    elif mode == F_HYBRID.name:
+    elif mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
     else:
         raise ValueError(f"Unknown mode {mode}")
 
-    if final_mode == F_IBP.name:
+    if final_mode == ForwardMode.IBP:
         return [u_c, l_c]
-    elif final_mode == F_FORWARD.name:
+    elif final_mode == ForwardMode.AFFINE:
         return [x_0, w_u, b_u, w_l, b_l]
-    elif final_mode == F_HYBRID.name:
+    elif final_mode == ForwardMode.HYBRID:
         return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
     else:
         raise ValueError(f"Unknown final_mode {final_mode}")
@@ -1220,7 +1191,9 @@ def set_mode(x, final_mode, mode, convex_domain=None):
 def get_AB(model_):
     dico_AB = {}
     convex_domain = model_.convex_domain
-    if not (len(convex_domain) and convex_domain["name"] == "grid" and convex_domain["option"] == "milp"):
+    if not (
+        len(convex_domain) and convex_domain["name"] == ConvexDomainType.GRID and convex_domain["option"] == "milp"
+    ):
         return dico_AB
 
     for layer in model_.layers:
@@ -1236,7 +1209,9 @@ def get_AB(model_):
 def get_AB_finetune(model_):
     dico_AB = {}
     convex_domain = model_.convex_domain
-    if not (len(convex_domain) and convex_domain["name"] == "grid" and convex_domain["option"] == "milp"):
+    if not (
+        len(convex_domain) and convex_domain["name"] == ConvexDomainType.GRID and convex_domain["option"] == "milp"
+    ):
         return dico_AB
 
     if not model_.finetune:
