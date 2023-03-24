@@ -67,44 +67,43 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
             self.input_spec += [InputSpec(ndim=4), InputSpec(ndim=4)]
 
         # express maxpooling with convolutions
-        if not self.fast or self.fast:
-            self.filters = np.zeros((pool_size[0], pool_size[1], 1, np.prod(pool_size)), dtype=self.dtype)
-            for i in range(pool_size[0]):
-                for j in range(pool_size[1]):
-                    self.filters[i, j, 0, i * pool_size[0] + j] = 1
+        self.filters = np.zeros((pool_size[0], pool_size[1], 1, np.prod(pool_size)), dtype=self.dtype)
+        for i in range(pool_size[0]):
+            for j in range(pool_size[1]):
+                self.filters[i, j, 0, i * pool_size[0] + j] = 1
 
-            def conv_(x):
+        def conv_(x):
 
-                if self.data_format in [None, "channels_last"]:
-                    return K.cast(
-                        K.expand_dims(
-                            conv2d(
-                                x,
-                                self.filters,
-                                strides=strides,
-                                padding=padding,
-                                data_format=data_format,
-                            ),
-                            -2,
+            if self.data_format in [None, "channels_last"]:
+                return K.cast(
+                    K.expand_dims(
+                        conv2d(
+                            x,
+                            self.filters,
+                            strides=strides,
+                            padding=padding,
+                            data_format=data_format,
                         ),
-                        self.dtype,
-                    )
-                else:
-                    return K.cast(
-                        K.expand_dims(
-                            conv2d(
-                                x,
-                                self.filters,
-                                strides=strides,
-                                padding=padding,
-                                data_format=data_format,
-                            ),
-                            1,
+                        -2,
+                    ),
+                    self.dtype,
+                )
+            else:
+                return K.cast(
+                    K.expand_dims(
+                        conv2d(
+                            x,
+                            self.filters,
+                            strides=strides,
+                            padding=padding,
+                            data_format=data_format,
                         ),
-                        self.dtype,
-                    )
+                        1,
+                    ),
+                    self.dtype,
+                )
 
-            self.internal_op = conv_
+        self.internal_op = conv_
 
     def compute_output_shape(self, input_shape):
         """
