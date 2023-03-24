@@ -239,9 +239,9 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             b_ = K.cast(0.0, self.dtype) * w_[1][None]
         return w_, b_
 
-    def shared_weights(self, layer: Layer) -> None:
+    def share_weights(self, layer: Layer) -> None:
         if not self.shared:
-            pass
+            return
         self.kernel = layer.kernel
         self.bias = layer.bias
 
@@ -766,9 +766,9 @@ class DecomonDense(Dense, DecomonLayer):
         self.built = True
         self.input_shape_build = input_shape
 
-    def shared_weights(self, layer: Layer) -> None:
+    def share_weights(self, layer: Layer) -> None:
         if not self.shared:
-            pass
+            return
         self.kernel = layer.kernel
         if self.use_bias:
             self.bias = layer.bias
@@ -1614,7 +1614,7 @@ def to_decomon(
                     config_layer["activation"] = "linear"
 
             layer_monotonic = globals()[monotonic_class_name].from_config(config_layer)
-            layer_monotonic.shared_weights(layer)
+            layer_monotonic.share_weights(layer)
             layer_list.append(layer_monotonic)
             if not activation is None and not isinstance(layer, Activation) and not isinstance(activation, dict):
                 layer_next = DecomonActivation(

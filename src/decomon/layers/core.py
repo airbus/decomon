@@ -178,7 +178,7 @@ class DecomonLayer(ABC, Layer):
     def reset_finetuning(self) -> None:
         pass
 
-    def shared_weights(self, layer: Layer) -> None:
+    def share_weights(self, layer: Layer) -> None:
         pass
 
     def split_kwargs(self, **kwargs: Any) -> None:
