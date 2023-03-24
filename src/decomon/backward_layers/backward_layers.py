@@ -1123,7 +1123,7 @@ class BackwardInputLayer(BackwardLayer):
 
 def to_backward(
     layer, slope=Slope.V_SLOPE, previous=True, mode=ForwardMode.HYBRID, convex_domain=None, finetune=False, **kwargs
-):
+) -> BackwardLayer:
     if convex_domain is None:
         convex_domain = {}
     class_name = layer.__class__.__name__
@@ -1132,19 +1132,16 @@ def to_backward(
 
     backward_class_name = f"Backward{class_name}"
     class_ = globals()[backward_class_name]
-    try:
-        return class_(
-            layer,
-            slope=slope,
-            previous=previous,
-            mode=mode,
-            convex_domain=convex_domain,
-            finetune=finetune,
-            dtype=layer.dtype,
-            **kwargs,
-        )
-    except KeyError:
-        pass
+    return class_(
+        layer,
+        slope=slope,
+        previous=previous,
+        mode=mode,
+        convex_domain=convex_domain,
+        finetune=finetune,
+        dtype=layer.dtype,
+        **kwargs,
+    )
 
 
 def join(layer):
