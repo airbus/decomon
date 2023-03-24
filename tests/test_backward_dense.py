@@ -7,7 +7,7 @@ import tensorflow.python.keras.backend as K
 from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.models import Model
 
-from decomon.backward_layers.backward_layers import get_backward
+from decomon.backward_layers.backward_layers import to_backward
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonDense, to_decomon
 from decomon.utils import Slope
@@ -64,7 +64,7 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, previous, mode, floatx, 
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
     # get backward layer
-    layer_backward = get_backward(
+    layer_backward = to_backward(
         layer_, input_dim=input_dim, slope=slope, previous=previous, mode=mode, convex_domain={}
     )
 
@@ -203,7 +203,7 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, previou
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
     # get backward layer
-    layer_backward = get_backward(layer_, input_dim=input_dim, previous=previous, mode=mode, convex_domain={})
+    layer_backward = to_backward(layer_, input_dim=input_dim, previous=previous, mode=mode, convex_domain={})
     if previous:
         w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
         f_dense = K.function(inputs + [w_out, b_out], [w_out_u, b_out_u, w_out_l, b_out_l])
@@ -261,7 +261,7 @@ def test_Backward_DecomonDense_1D_box_model(n, activation, helpers):
     w_out = Input((1, 1))
     b_out = Input((1,))
     # get backward layer
-    layer_backward = get_backward(layer, input_dim=1)
+    layer_backward = to_backward(layer, input_dim=1)
     w_out_u_, b_out_u_, w_out_l_, b_out_l_ = layer_backward(inputs[2:] + [w_out, b_out, w_out, b_out])
 
     Model(inputs[2:] + [w_out, b_out], [w_out_u_, b_out_u_, w_out_l_, b_out_l_])
