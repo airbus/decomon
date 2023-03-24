@@ -6,7 +6,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Conv2D, Input
 
 
-def get_toeplitz(conv_layer, flatten=True):
+def get_toeplitz(conv_layer: Conv2D, flatten: bool = True) -> tf.Tensor:
     """Express formally the affine component of the convolution
     Conv is a linear operator but its affine component is implicit
     we use im2col and extract_patches to express the affine matrix
@@ -27,7 +27,7 @@ def get_toeplitz(conv_layer, flatten=True):
         return get_toeplitz_channels_first(conv_layer, flatten)
 
 
-def get_toeplitz_channels_last(conv_layer, flatten=True):
+def get_toeplitz_channels_last(conv_layer: Conv2D, flatten: bool = True) -> tf.Tensor:
     """Express formally the affine component of the convolution for data_format=channels_last
     Conv is a linear operator but its affine component is implicit
     we use im2col and extract_patches to express the affine matrix
@@ -97,7 +97,7 @@ def get_toeplitz_channels_last(conv_layer, flatten=True):
         return w
 
 
-def get_toeplitz_channels_first(conv_layer, flatten=True):
+def get_toeplitz_channels_first(conv_layer: Conv2D, flatten: bool = True) -> tf.Tensor:
     """Express formally the affine component of the convolution for data_format=channels_first
     Conv is a linear operator but its affine component is implicit
     we use im2col and extract_patches to express the affine matrix
