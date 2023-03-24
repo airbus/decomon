@@ -1,3 +1,6 @@
+from typing import Any, List, Tuple, Union
+
+import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import InputSpec, Permute, Reshape
 
@@ -9,7 +12,9 @@ class DecomonReshape(Reshape, DecomonLayer):
     See Keras official documentation for further details on the Reshape operator
     """
 
-    def __init__(self, target_shape, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(
+        self, target_shape: Tuple[int, ...], mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any
+    ):
         """
         Args:
             data_format
@@ -44,7 +49,7 @@ class DecomonReshape(Reshape, DecomonLayer):
         if self.dc_decomp:
             self.input_spec += [InputSpec(min_ndim=1), InputSpec(min_ndim=1)]
 
-    def build(self, input_shape):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
         """
         Args:
             self
@@ -55,11 +60,12 @@ class DecomonReshape(Reshape, DecomonLayer):
         """
 
         y_input_shape = input_shape[0]
-        super().build(y_input_shape)
+        Reshape.build(self, y_input_shape)
 
-    def call(self, inputs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+        def op(x: tf.Tensor) -> tf.Tensor:
+            return Reshape.call(self, x)
 
-        op = super().call
         nb_tensors = self.nb_tensors
         if self.dc_decomp:
             h, g = inputs[-2:]
@@ -90,7 +96,7 @@ class DecomonReshape(Reshape, DecomonLayer):
 
             else:
 
-                def step_func(x, _):
+                def step_func(x: tf.Tensor, _: List[tf.Tensor]) -> Tuple[tf.Tensor, List[tf.Tensor]]:
                     return op(x), _
 
                 w_u_ = K.rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]
@@ -116,7 +122,7 @@ class DecomonPermute(Permute, DecomonLayer):
     See Keras official documentation for further details on the Reshape operator
     """
 
-    def __init__(self, dims, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(self, dims: Tuple[int, ...], mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
         """
         Args:
             data_format
@@ -139,7 +145,7 @@ class DecomonPermute(Permute, DecomonLayer):
                 InputSpec(min_ndim=1),  # u_c
                 InputSpec(min_ndim=1),  # l_c
             ]
-        if self.mode == ForwardMode.AFFINE:
+        elif self.mode == ForwardMode.AFFINE:
             self.input_spec = [
                 InputSpec(min_ndim=1),  # z
                 InputSpec(min_ndim=1),  # w_u
@@ -147,11 +153,13 @@ class DecomonPermute(Permute, DecomonLayer):
                 InputSpec(min_ndim=1),  # w_l
                 InputSpec(min_ndim=1),  # b_l
             ]
+        else:
+            raise ValueError(f"Unknown mode {mode}")
 
         if self.dc_decomp:
             self.input_spec += [InputSpec(min_ndim=1), InputSpec(min_ndim=1)]
 
-    def build(self, input_shape):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
         """
         Args:
             self
@@ -164,9 +172,10 @@ class DecomonPermute(Permute, DecomonLayer):
         y_input_shape = input_shape[-1]
         super().build(y_input_shape)
 
-    def call(self, inputs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+        def op(x: tf.Tensor) -> tf.Tensor:
+            return Permute.call(self, x)
 
-        op = super().call
         nb_tensors = self.nb_tensors
         if self.dc_decomp:
             h, g = inputs[-2:]
@@ -196,7 +205,7 @@ class DecomonPermute(Permute, DecomonLayer):
                 w_l_ = op(w_l)
             else:
 
-                def step_func(x, _):
+                def step_func(x: tf.Tensor, _: List[tf.Tensor]) -> Tuple[tf.Tensor, List[tf.Tensor]]:
                     return op(x), _
 
                 w_u_ = K.rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]

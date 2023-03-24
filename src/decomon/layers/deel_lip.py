@@ -1,4 +1,8 @@
 import logging
+from typing import Any, Dict, List, Optional, Union
+
+import tensorflow as tf
+from tensorflow.keras.layers import Layer
 
 from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.decomon_merge_layers import DecomonConcatenate
@@ -17,7 +21,14 @@ except ImportError:
 
 
 class DecomonGroupSort(DecomonLayer):
-    def __init__(self, n=None, data_format="channels_last", k_coef_lip=1.0, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(
+        self,
+        n: Optional[int] = None,
+        data_format: str = "channels_last",
+        k_coef_lip: float = 1.0,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        **kwargs: Any,
+    ):
         super().__init__(mode=mode, **kwargs)
         self.data_format = data_format
         if data_format == "channels_last":
@@ -27,14 +38,11 @@ class DecomonGroupSort(DecomonLayer):
         else:
             raise RuntimeError("data format not understood")
         self.n = n
-        self.reshape = DecomonReshape(
-            (-1, self.n), mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp
-        ).call
         self.concat = DecomonConcatenate(
             mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp
         ).call
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
         config.update(
             {
@@ -45,10 +53,19 @@ class DecomonGroupSort(DecomonLayer):
         )
         return config
 
-    def call(self, input, **kwargs):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
+        if (self.n is None) or (self.n > input_shape[-1][self.channel_axis]):
+            self.n = input_shape[-1][self.channel_axis]
+            if self.n is None:  # for mypy
+                raise RuntimeError("self.n cannot be None at this point.")
+        self.reshape = DecomonReshape(
+            (-1, self.n), mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp
+        ).call
 
-        shape_in = list(input[0].shape[1:])
-        input_ = self.reshape(input)
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+
+        shape_in = tuple(inputs[-1].shape[1:])
+        input_ = self.reshape(inputs)
         if self.n == 2:
 
             output_max = expand_dims(
@@ -63,7 +80,7 @@ class DecomonGroupSort(DecomonLayer):
                 mode=self.mode,
                 axis=-1,
             )
-            output_ = self.concat([output_min, output_max])
+            output_ = self.concat(output_min + output_max)
 
         else:
 
@@ -73,12 +90,19 @@ class DecomonGroupSort(DecomonLayer):
             shape_in, mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp
         ).call(output_)
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         return input_shape
 
 
 class DecomonGroupSort2(DecomonLayer):
-    def __init__(self, n=2, data_format="channels_last", k_coef_lip=1.0, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(
+        self,
+        n: int = 2,
+        data_format: str = "channels_last",
+        k_coef_lip: float = 1.0,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        **kwargs: Any,
+    ):
         super().__init__(mode=mode, **kwargs)
         self.data_format = data_format
 
@@ -91,10 +115,8 @@ class DecomonGroupSort2(DecomonLayer):
             raise NotImplementedError()
 
         self.op_concat = DecomonConcatenate(self.axis, mode=self.mode, convex_domain=self.convex_domain)
-        self.op_reshape_in = None
-        self.op_reshape_out = None
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
         config.update(
             {
@@ -104,10 +126,10 @@ class DecomonGroupSort2(DecomonLayer):
         )
         return config
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         return input_shape
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         inputs_ = self.op_reshape_in(inputs)
         inputs_max = expand_dims(
@@ -138,17 +160,17 @@ class DecomonGroupSort2(DecomonLayer):
         output_ = self.op_reshape_out(output)
         return output_
 
-    def build(self, input_shape):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
         input_shape = input_shape[-1]
 
         if self.data_format == "channels_last":
             if input_shape[-1] % 2 != 0:
                 raise ValueError()
-            target_shape = input_shape[1:-2] + [int(input_shape[-1] / 2), 2]
+            target_shape = list(input_shape[1:-2]) + [int(input_shape[-1] / 2), 2]
         else:
             if input_shape[1] % 2 != 0:
                 raise ValueError()
-            target_shape = [2, int(input_shape[1] / 2)] + input_shape[2:]
+            target_shape = [2, int(input_shape[1] / 2)] + list(input_shape[2:])
 
         self.params_max = []
         self.params_min = []
@@ -163,8 +185,8 @@ class DecomonGroupSort2(DecomonLayer):
             self.params_max = [self.beta_max_]
             self.params_min = [self.beta_min_]
 
-        self.op_reshape_in = DecomonReshape(target_shape, mode=self.mode)
-        self.op_reshape_out = DecomonReshape(input_shape[1:], mode=self.mode)
+        self.op_reshape_in = DecomonReshape(tuple(target_shape), mode=self.mode)
+        self.op_reshape_out = DecomonReshape(tuple(input_shape[1:]), mode=self.mode)
 
-    def reset_layer(self, layer):
+    def reset_layer(self, layer: Layer) -> None:
         pass

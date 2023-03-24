@@ -1,8 +1,10 @@
 import warnings
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
-import six
+import tensorflow as tf
 import tensorflow.keras.backend as K
+from tensorflow.types.experimental import TensorLike
 
 from decomon.layers.core import DecomonLayer, ForwardMode, StaticVariables
 from decomon.layers.utils import exp, expand_dims, frac_pos, multiply, softplus_, sum
@@ -32,15 +34,15 @@ GROUP_SORT_2 = "GroupSort2"
 
 
 def relu(
-    x,
-    dc_decomp=False,
-    convex_domain=None,
-    alpha=0.0,
-    max_value=None,
-    threshold=0.0,
-    mode=ForwardMode.HYBRID,
-    **kwargs,
-):
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    alpha: float = 0.0,
+    max_value: Optional[float] = None,
+    threshold: float = 0.0,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """
     Args:
         x: list of input tensors
@@ -70,13 +72,13 @@ def relu(
 
 
 def linear_hull_s_shape(
-    x,
-    func=K.sigmoid,
-    f_prime=sigmoid_prime,
-    dc_decomp=False,
-    convex_domain=None,
-    mode=ForwardMode.HYBRID,
-):
+    x: List[tf.Tensor],
+    func: Callable[[TensorLike], tf.Tensor] = K.sigmoid,
+    f_prime: Callable[[TensorLike], tf.Tensor] = sigmoid_prime,
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+) -> List[tf.Tensor]:
     """Computing the linear hull of s-shape functions
 
     Args:
@@ -147,7 +149,13 @@ def linear_hull_s_shape(
     return output
 
 
-def sigmoid(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
+def sigmoid(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """LiRPA for Sigmoid activation function .
     `1 / (1 + exp(-x))`.
 
@@ -170,7 +178,13 @@ def sigmoid(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **k
     return linear_hull_s_shape(x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def tanh(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
+def tanh(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """LiRPA for Hyperbolic activation function.
     `tanh(x)=2*sigmoid(2*x)+1`
 
@@ -193,7 +207,13 @@ def tanh(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwar
     return linear_hull_s_shape(x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def hard_sigmoid(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
+def hard_sigmoid(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """LiRPA for Hard sigmoid activation function.
        Faster to compute than sigmoid activation.
 
@@ -217,7 +237,13 @@ def hard_sigmoid(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID
     raise NotImplementedError()
 
 
-def elu(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
+def elu(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """LiRPA for Exponential linear unit.
 
     Args:
@@ -240,7 +266,13 @@ def elu(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwarg
     raise NotImplementedError()
 
 
-def selu(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
+def selu(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """LiRPA for Scaled Exponential Linear Unit (SELU).
 
     SELU is equal to: `scale * elu(x, alpha)`, where alpha and scale
@@ -269,7 +301,13 @@ def selu(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwar
     raise NotImplementedError()
 
 
-def linear(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
+def linear(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """LiRPA foe Linear (i.e. identity) activation function.
 
     Args:
@@ -288,7 +326,13 @@ def linear(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kw
     return x
 
 
-def exponential(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
+def exponential(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """LiRPA for Exponential activation function.
 
     Args:
@@ -308,7 +352,13 @@ def exponential(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID,
     return exp(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, **kwargs)
 
 
-def softplus(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
+def softplus(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """LiRPA for Softplus activation function `log(exp(x) + 1)`.
 
     Args:
@@ -330,7 +380,13 @@ def softplus(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **
     return softplus_(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def softsign(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
+def softsign(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """LiRPA for Softsign activation function `x / (abs(x) + 1)`.
 
     Args:
@@ -352,7 +408,15 @@ def softsign(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **
     return linear_hull_s_shape(x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def softmax(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, axis=-1, clip=True, **kwargs):
+def softmax(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    axis: int = -1,
+    clip: bool = True,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """LiRPA for Softmax activation function.
 
     Args:
@@ -398,8 +462,13 @@ def softmax(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, axi
 
 
 def group_sort_2(
-    x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, data_format="channels_last", **kwargs
-):
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    data_format: str = "channels_last",
+    **kwargs: Any,
+) -> List[tf.Tensor]:
 
     if convex_domain is None:
         convex_domain = {}
@@ -407,7 +476,7 @@ def group_sort_2(
     raise NotImplementedError()
 
 
-def deserialize(name):
+def deserialize(name: str) -> Callable[..., List[tf.Tensor]]:
     """Get the activation from name.
 
     Args:
@@ -445,7 +514,7 @@ def deserialize(name):
         raise ValueError(f"Could not interpret activation function identifier: {name}")
 
 
-def get(identifier):
+def get(identifier: Any) -> Callable[..., List[tf.Tensor]]:
     """Get the `identifier` activation function.
 
     Args:
@@ -457,8 +526,7 @@ def get(identifier):
     """
     if identifier is None:
         return linear
-    elif isinstance(identifier, six.string_types):
-        identifier = str(identifier)
+    elif isinstance(identifier, str):
         return deserialize(identifier)
     elif callable(identifier):
         if isinstance(identifier, DecomonLayer):
@@ -468,6 +536,6 @@ def get(identifier):
                 "activation layers should be used just like any other "
                 "layer in a model.".format(identifier=identifier.__class__.__name__)
             )
-            return identifier
+        return identifier
     else:
         raise ValueError("Could not interpret " "activation function identifier:", identifier)

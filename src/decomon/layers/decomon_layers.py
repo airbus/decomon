@@ -1,7 +1,8 @@
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.backend import bias_add, conv2d
 from tensorflow.keras.constraints import NonNeg
 from tensorflow.keras.layers import (
     Activation,
@@ -15,6 +16,7 @@ from tensorflow.keras.layers import (
     InputLayer,
     InputSpec,
     Lambda,
+    Layer,
 )
 from tensorflow.python.keras.utils import conv_utils
 from tensorflow.python.keras.utils.generic_utils import to_list
@@ -64,7 +66,13 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
     """
 
-    def __init__(self, filters, kernel_size, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(
+        self,
+        filters: int,
+        kernel_size: Union[int, Tuple[int, int]],
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        **kwargs: Any,
+    ):
 
         activation = kwargs.get("activation", None)
         if "activation" in kwargs:
@@ -110,7 +118,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         self.diag_op = Lambda(tf.linalg.diag)
 
-    def build(self, input_shape):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
         """
         Args:
             input_shape
@@ -195,7 +203,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         self.built = True
 
-    def get_backward_weights(self, inputs, flatten=True):
+    def get_backward_weights(self, inputs: List[tf.Tensor], flatten: bool = True) -> Tuple[tf.Tensor, tf.Tensor]:
 
         z_value = K.cast(0.0, self.dtype)
         o_value = K.cast(1.0, self.dtype)
@@ -204,7 +212,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         n_in = np.prod(b_u.shape[1:])
         id_ = K.cast(self.diag_op(z_value * Flatten(dtype=self.dtype)(b_u[0][None]) + o_value), self.dtype)
         id_ = K.reshape(id_, [-1] + list(b_u.shape[1:]))
-        w_ = conv2d(
+        w_ = K.conv2d(
             id_,
             self.kernel,
             strides=self.strides,
@@ -223,24 +231,26 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         w_ = K.reshape(w_, (n_in, -1))
         if self.use_bias:
+            if self.bias is None:
+                raise RuntimeError("self.bias cannot be None when calling get_backward_weights()")
             n_repeat = int(w_.shape[-1] / self.bias.shape[-1])
             b_ = K.reshape(K.repeat(self.bias[None], n_repeat), (-1,))
         else:
             b_ = K.cast(0.0, self.dtype) * w_[1][None]
         return w_, b_
 
-    def shared_weights(self, layer):
+    def shared_weights(self, layer: Layer) -> None:
         if not self.shared:
             pass
         self.kernel = layer.kernel
         self.bias = layer.bias
 
-    def set_linear(self, bool_init):
+    def set_linear(self, bool_init: bool) -> None:
 
         if self.activation is not None and self.get_config()["activation"] != "linear":
             self.linear_layer = bool_init
 
-    def call_linear(self, inputs, **kwargs):
+    def call_linear(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         """computing the perturbation analysis of the operator without the activation function
 
         Args:
@@ -274,8 +284,8 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         else:
             raise ValueError(f"unknown  forward mode {self.mode}")
 
-        def conv_pos(x):
-            return conv2d(
+        def conv_pos(x: tf.Tensor) -> tf.Tensor:
+            return K.conv2d(
                 x,
                 K.maximum(z_value, self.kernel),
                 strides=self.strides,
@@ -284,8 +294,8 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                 dilation_rate=self.dilation_rate,
             )
 
-        def conv_neg(x):
-            return conv2d(
+        def conv_neg(x: tf.Tensor) -> tf.Tensor:
+            return K.conv2d(
                 x,
                 K.minimum(z_value, self.kernel),
                 strides=self.strides,
@@ -304,7 +314,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
 
-            y_ = conv2d(
+            y_ = K.conv2d(
                 b_u,
                 self.kernel,
                 strides=self.strides,
@@ -318,7 +328,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
                 id_ = K.reshape(id_, [-1] + list(b_u.shape[1:]))
 
-                w_u_ = conv2d(
+                w_u_ = K.conv2d(
                     id_,
                     self.kernel,
                     strides=self.strides,
@@ -342,10 +352,10 @@ class DecomonConv2D(Conv2D, DecomonLayer):
                 mask_b = o_value - K.sign(x_max)
                 mask_a = o_value - mask_b
 
-                def step_pos(x, _):
+                def step_pos(x: tf.Tensor, _: List[tf.Tensor]) -> Tuple[tf.Tensor, List[tf.Tensor]]:
                     return conv_pos(x), []
 
-                def step_neg(x, _):
+                def step_neg(x: tf.Tensor, _: List[tf.Tensor]) -> Tuple[tf.Tensor, List[tf.Tensor]]:
                     return conv_neg(x), []
 
                 if self.mode == ForwardMode.HYBRID and self.finetune:
@@ -450,15 +460,15 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         if self.use_bias:
             if self.dc_decomp:
-                g_ = bias_add(g_, K.minimum(z_value, self.bias), data_format=self.data_format)
-                h_ = bias_add(h_, K.maximum(z_value, self.bias), data_format=self.data_format)
+                g_ = K.bias_add(g_, K.minimum(z_value, self.bias), data_format=self.data_format)
+                h_ = K.bias_add(h_, K.maximum(z_value, self.bias), data_format=self.data_format)
 
             if self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-                b_u_ = bias_add(b_u_, self.bias, data_format=self.data_format)
-                b_l_ = bias_add(b_l_, self.bias, data_format=self.data_format)
+                b_u_ = K.bias_add(b_u_, self.bias, data_format=self.data_format)
+                b_l_ = K.bias_add(b_l_, self.bias, data_format=self.data_format)
             if self.mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
-                u_c_ = bias_add(u_c_, self.bias, data_format=self.data_format)
-                l_c_ = bias_add(l_c_, self.bias, data_format=self.data_format)
+                u_c_ = K.bias_add(u_c_, self.bias, data_format=self.data_format)
+                l_c_ = K.bias_add(l_c_, self.bias, data_format=self.data_format)
 
         if self.mode == ForwardMode.HYBRID:
             upper_ = get_upper(x_0, w_u_, b_u_, self.convex_domain)
@@ -480,7 +490,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         return output
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         """
         Args:
             inputs
@@ -496,7 +506,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         return output
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         """
         Args:
             input_shape
@@ -558,7 +568,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         return output_shape_
 
-    def reset_layer(self, layer):
+    def reset_layer(self, layer: Layer) -> None:
         """
         Args:
             layer
@@ -573,7 +583,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             params += self.get_weights()[2:]
         self.set_weights(params)
 
-    def freeze_weights(self):
+    def freeze_weights(self) -> None:
 
         if not self.frozen_weights:
 
@@ -587,7 +597,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
             self.frozen_weights = True
 
-    def unfreeze_weights(self):
+    def unfreeze_weights(self) -> None:
 
         if self.frozen_weights:
 
@@ -596,19 +606,19 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             self._trainable_weights = [self.kernel] + self._trainable_weights
             self.frozen_weights = False
 
-    def freeze_alpha(self):
+    def freeze_alpha(self) -> None:
         if not self.frozen_alpha:
             if self.finetune and self.mode == ForwardMode.HYBRID:
                 self._trainable_weights = self._trainable_weights[:-4]
                 self.frozen_alpha = True
 
-    def unfreeze_alpha(self):
+    def unfreeze_alpha(self) -> None:
         if self.frozen_alpha:
             if self.finetune and self.mode == ForwardMode.HYBRID:
                 self._trainable_weights += [self.alpha_, self.gamma_, self.alpha_out, self.gamma_out]
             self.frozen_alpha = False
 
-    def reset_finetuning(self):
+    def reset_finetuning(self) -> None:
         if self.finetune and self.mode == ForwardMode.HYBRID:
 
             K.set_value(self.alpha_, np.ones_like(self.alpha_.value()))
@@ -622,7 +632,7 @@ class DecomonDense(Dense, DecomonLayer):
     See Keras official documentation for further details on the Dense operator
     """
 
-    def __init__(self, units, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(self, units: int, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
         if "activation" not in kwargs:
             kwargs["activation"] = None
         activation = kwargs["activation"]
@@ -634,7 +644,7 @@ class DecomonDense(Dense, DecomonLayer):
         self.input_spec = [InputSpec(min_ndim=2) for _ in range(self.nb_tensors)]
         self.kernel_pos = None
         self.kernel_neg = None
-        self.kernel = None
+        self.kernel: Optional[tf.Variable] = None
         self.kernel_constraints_pos = None
         self.kernel_constraints_neg = None
         self.activation = activations.get(activation)
@@ -645,10 +655,10 @@ class DecomonDense(Dense, DecomonLayer):
         else:
             self.activation_name = activation
 
-        self.input_shape_build = None
+        self.input_shape_build: Optional[List[tf.TensorShape]] = None
         self.op_dot = K.dot
 
-    def build(self, input_shape):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
         """
         Args:
             input_shape: list of input shape
@@ -756,35 +766,37 @@ class DecomonDense(Dense, DecomonLayer):
         self.built = True
         self.input_shape_build = input_shape
 
-    def shared_weights(self, layer):
+    def shared_weights(self, layer: Layer) -> None:
         if not self.shared:
             pass
         self.kernel = layer.kernel
         if self.use_bias:
             self.bias = layer.bias
 
-    def set_linear(self, bool_init):
+    def set_linear(self, bool_init: bool) -> None:
         self.linear_layer = bool_init
 
-    def get_linear(self):
+    def get_linear(self) -> bool:
         if self.activation is None and self.activation_name == "linear":
             return self.linear_layer
         else:
             return False
 
-    def set_back_bounds(self, has_backward_bounds):
+    def set_back_bounds(self, has_backward_bounds: bool) -> None:
         # check for activation
         if self.activation is not None and self.activation_name != "linear" and has_backward_bounds:
             raise ValueError()
         self.has_backward_bounds = has_backward_bounds
         if self.built and has_backward_bounds:
+            if self.input_shape_build is None:
+                raise ValueError("self.input_shape_build should not be None when calling set_back_bounds")
             # rebuild with an additional input
             self.build(self.input_shape_build)
         if self.has_backward_bounds:
             op_ = Dot(1)
             self.op_dot = lambda x, y: op_([x, y])
 
-    def call_linear(self, inputs):
+    def call_linear(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
         """
         Args:
             inputs
@@ -792,6 +804,9 @@ class DecomonDense(Dense, DecomonLayer):
         Returns:
 
         """
+        if self.kernel is None:
+            raise RuntimeError("self.kernel cannot be None when calling call_linear()")
+
         z_value = K.cast(0.0, self.dtype)
 
         if not isinstance(inputs, list):
@@ -953,7 +968,7 @@ class DecomonDense(Dense, DecomonLayer):
 
         return output
 
-    def call(self, inputs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         """
         Args:
             inputs: list of tensors
@@ -993,7 +1008,7 @@ class DecomonDense(Dense, DecomonLayer):
 
         return output
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         """
         Args:
             input_shape
@@ -1011,7 +1026,9 @@ class DecomonDense(Dense, DecomonLayer):
         if self.mode == ForwardMode.IBP:
             output_shape[0][-1] = self.units
 
-    def reset_layer(self, dense):
+        return [tf.TensorShape(shape) for shape in output_shape]
+
+    def reset_layer(self, dense: Layer) -> None:
         """
         Args:
             dense
@@ -1030,7 +1047,7 @@ class DecomonDense(Dense, DecomonLayer):
         else:
             raise ValueError(f"the layer {dense.name} has not been built yet")
 
-    def freeze_weights(self):
+    def freeze_weights(self) -> None:
 
         if not self.frozen_weights:
 
@@ -1044,7 +1061,7 @@ class DecomonDense(Dense, DecomonLayer):
 
             self.frozen_weights = True
 
-    def unfreeze_weights(self):
+    def unfreeze_weights(self) -> None:
 
         if self.frozen_weights:
 
@@ -1053,7 +1070,7 @@ class DecomonDense(Dense, DecomonLayer):
             self._trainable_weights = [self.kernel] + self._trainable_weights
             self.frozen_weights = False
 
-    def freeze_alpha(self):
+    def freeze_alpha(self) -> None:
         if not self.frozen_alpha:
             if self.finetune and self.mode == ForwardMode.HYBRID:
                 if self.activation_name == "linear":
@@ -1065,7 +1082,7 @@ class DecomonDense(Dense, DecomonLayer):
                         self._trainable_weights = self._trainable_weights[:-4]
                 self.frozen_alpha = True
 
-    def unfreeze_alpha(self):
+    def unfreeze_alpha(self) -> None:
         if self.frozen_alpha:
             if self.finetune and self.mode == ForwardMode.HYBRID:
                 self._trainable_weights += [self.alpha_, self.gamma_]
@@ -1076,7 +1093,7 @@ class DecomonDense(Dense, DecomonLayer):
                         self._trainable_weights += [self.beta_u_f_, self.beta_l_f_]
             self.frozen_alpha = False
 
-    def reset_finetuning(self):
+    def reset_finetuning(self) -> None:
         if self.finetune and self.mode == ForwardMode.HYBRID:
 
             K.set_value(self.alpha_, np.ones_like(self.alpha_.value()))
@@ -1095,15 +1112,15 @@ class DecomonActivation(Activation, DecomonLayer):
     See Keras official documentation for further details on the Activation operator
     """
 
-    def __init__(self, activation, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(self, activation: str, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
 
-        super().__init__(activation, mode=mode, **kwargs)
+        super().__init__(activation=activation, mode=mode, **kwargs)
 
         self.supports_masking = True
         self.activation = activations.get(activation)
         self.activation_name = activation
 
-    def build(self, input_shape):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
 
         if self.finetune and self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
             shape = input_shape[-1][1:]
@@ -1126,12 +1143,12 @@ class DecomonActivation(Activation, DecomonLayer):
                     constraint=ClipAlpha(),
                 )
 
-    def call(self, input):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         if self.finetune and self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID] and self.activation_name != "linear":
             if self.activation_name[:4] == "relu":
                 return self.activation(
-                    input,
+                    inputs,
                     mode=self.mode,
                     dc_decomp=self.dc_decomp,
                     convex_domain=self.convex_domain,
@@ -1139,17 +1156,17 @@ class DecomonActivation(Activation, DecomonLayer):
                 )
             else:
                 return self.activation(
-                    input,
+                    inputs,
                     mode=self.mode,
                     dc_decomp=self.dc_decomp,
                     convex_domain=self.convex_domain,
                     finetune=[self.beta_u_f, self.beta_l_f],
                 )
         else:
-            output = self.activation(input, mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp)
+            output = self.activation(inputs, mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp)
             return output
 
-    def reset_finetuning(self):
+    def reset_finetuning(self) -> None:
         if self.finetune and self.mode != ForwardMode.IBP:
 
             if self.activation_name != "linear":
@@ -1159,13 +1176,13 @@ class DecomonActivation(Activation, DecomonLayer):
                     K.set_value(self.beta_u_f, np.ones_like(self.beta_u_f.value()))
                     K.set_value(self.beta_l_f, np.ones_like(self.beta_l_f.value()))
 
-    def freeze_alpha(self):
+    def freeze_alpha(self) -> None:
         if not self.frozen_alpha:
             if self.finetune and self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
                 self._trainable_weights = []
                 self.frozen_alpha = True
 
-    def unfreeze_alpha(self):
+    def unfreeze_alpha(self) -> None:
         if self.frozen_alpha:
             if self.finetune and self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
                 if self.activation_name != "linear":
@@ -1181,7 +1198,9 @@ class DecomonFlatten(Flatten, DecomonLayer):
     See Keras official documentation for further details on the Flatten operator
     """
 
-    def __init__(self, data_format=None, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(
+        self, data_format: Optional[str] = None, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any
+    ):
         """
         Args:
             data_format
@@ -1215,7 +1234,7 @@ class DecomonFlatten(Flatten, DecomonLayer):
         if self.dc_decomp:
             self.input_spec += [InputSpec(min_ndim=1), InputSpec(min_ndim=1)]
 
-    def build(self, input_shape):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
         """
         Args:
             self
@@ -1226,9 +1245,9 @@ class DecomonFlatten(Flatten, DecomonLayer):
         """
         return None
 
-    def call(self, inputs):
-
-        op = super().call
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+        def op(x: tf.Tensor) -> tf.Tensor:
+            return Flatten.call(self, x)
 
         if self.dc_decomp:
             h, g = inputs[-2:]
@@ -1279,21 +1298,21 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
 
     def __init__(
         self,
-        axis=-1,
-        momentum=0.99,
-        epsilon=1e-3,
-        center=True,
-        scale=True,
-        beta_initializer="zeros",
-        gamma_initializer="ones",
-        moving_mean_initializer="zeros",
-        moving_variance_initializer="ones",
-        beta_regularizer=None,
-        gamma_regularizer=None,
-        beta_constraint=None,
-        gamma_constraint=None,
-        mode=ForwardMode.HYBRID,
-        **kwargs,
+        axis: int = -1,
+        momentum: float = 0.99,
+        epsilon: float = 1e-3,
+        center: bool = True,
+        scale: bool = True,
+        beta_initializer: str = "zeros",
+        gamma_initializer: str = "ones",
+        moving_mean_initializer: str = "zeros",
+        moving_variance_initializer: str = "ones",
+        beta_regularizer: Optional[str] = None,
+        gamma_regularizer: Optional[str] = None,
+        beta_constraint: Optional[str] = None,
+        gamma_constraint: Optional[str] = None,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        **kwargs: Any,
     ):
         super().__init__(
             axis=axis,
@@ -1313,14 +1332,14 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
             **kwargs,
         )
 
-    def build(self, input_shape):
-        super().build(input_shape[0])
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
+        BatchNormalization.build(self, input_shape[0])
 
         self.input_spec = [InputSpec(min_ndim=len(elem)) for elem in input_shape]
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
 
-        output_shape_ = super().compute_output_shape(input_shape[-1])
+        output_shape_: tf.TensorShape = BatchNormalization.compute_output_shape(self, input_shape[-1])
 
         if self.mode == ForwardMode.IBP:
             output = [output_shape_] * 2
@@ -1328,7 +1347,7 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
         elif self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             x_shape = input_shape[0]
             input_dim = x_shape[-1]
-            w_shape = list(output_shape_)[:, None]
+            w_shape = np.array(output_shape_)[:, None]
             w_shape[:, 0] = input_dim
             if self.mode == ForwardMode.AFFINE:
                 output = [x_shape] + [w_shape, output_shape_] * 2
@@ -1341,7 +1360,7 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
             output += [output_shape_, output_shape_]
         return output
 
-    def call(self, inputs, training=None):
+    def call(self, inputs: List[tf.Tensor], training: Optional[bool] = None, **kwargs: Any) -> List[tf.Tensor]:
 
         if training is None:
             training = K.learning_phase()
@@ -1351,7 +1370,8 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
         if training:
             raise NotImplementedError("not working during training")
 
-        call_op = super().call
+        def call_op(x: tf.Tensor, training: bool) -> tf.Tensor:
+            return BatchNormalization.call(self, x, training=training)
 
         if self.dc_decomp:
             raise NotImplementedError()
@@ -1408,7 +1428,7 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
 
         return output
 
-    def reset_layer(self, layer):
+    def reset_layer(self, layer: Layer) -> None:
         """
         Args:
             layer
@@ -1426,18 +1446,24 @@ class DecomonDropout(Dropout, DecomonLayer):
     See Keras official documentation for further details on the Dropout operator
     """
 
-    def __init__(self, rate, noise_shape=None, seed=None, mode=ForwardMode.HYBRID, **kwargs):
+    def __init__(
+        self,
+        rate: float,
+        noise_shape: Optional[Tuple[int, ...]] = None,
+        seed: Optional[int] = None,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        **kwargs: Any,
+    ):
         super().__init__(rate=rate, noise_shape=noise_shape, seed=seed, mode=mode, **kwargs)
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         return input_shape
 
-    def build(self, input_shape):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
         super().build(input_shape[0])
         self.input_spec = [InputSpec(min_ndim=len(elem)) for elem in input_shape]
 
-    def call(self, inputs, training=None):
-
+    def call(self, inputs: List[tf.Tensor], training: Optional[bool] = None, **kwargs: Any) -> List[tf.Tensor]:
         if training is None:
             training = K.learning_phase()
 
@@ -1455,16 +1481,16 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
 
     def __init__(
         self,
-        input_shape=None,
-        batch_size=None,
-        dtype=None,
-        input_tensor=None,
-        sparse=None,
-        name=None,
-        ragged=None,
-        type_spec=None,
-        mode=ForwardMode.HYBRID,
-        **kwargs,
+        input_shape: Optional[Tuple[int, ...]] = None,
+        batch_size: Optional[int] = None,
+        dtype: Optional[str] = None,
+        input_tensor: Optional[tf.Tensor] = None,
+        sparse: Optional[bool] = None,
+        name: Optional[str] = None,
+        ragged: Optional[bool] = None,
+        type_spec: Optional[tf.TypeSpec] = None,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        **kwargs: Any,
     ):
 
         if type_spec is not None:
@@ -1493,13 +1519,13 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
                 **kwargs,
             )
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         return inputs
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         return input_shape
 
-    def get_linear(self):
+    def get_linear(self) -> bool:
         return self.linear_layer
 
 
@@ -1507,16 +1533,16 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
 
 
 def to_decomon(
-    layer,
-    input_dim,
-    dc_decomp=False,
-    convex_domain=None,
-    finetune=False,
-    IBP=True,
-    forward=True,
-    shared=True,
-    fast=True,
-):
+    layer: Layer,
+    input_dim: Union[int, Tuple[int, ...]],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    finetune: bool = False,
+    IBP: bool = True,
+    forward: bool = True,
+    shared: bool = True,
+    fast: bool = True,
+) -> List[DecomonLayer]:
     """Transform a standard keras layer into a Decomon layer.
 
     Type of layer is tested to know how to transform it into a MonotonicLayer of the good type.
@@ -1578,7 +1604,7 @@ def to_decomon(
             config_layer["finetune"] = finetune
             config_layer["shared"] = shared
             config_layer["fast"] = fast
-            layer_list = []
+            layer_list: List[DecomonLayer] = []
             activation = None
             if "activation" in config_layer.keys():
                 activation = config_layer["activation"]

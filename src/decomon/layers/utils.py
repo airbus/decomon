@@ -1,3 +1,5 @@
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras as keras
@@ -24,7 +26,7 @@ from decomon.utils import (
 # USE SYMBOLIC GRADIENT DESCENT WITH OVERESTIMATION GUARANTEES
 #####
 # first compute gradient of the function
-def get_grad(x, constant, W, b):
+def get_grad(x: tf.Tensor, constant: tf.Tensor, W: tf.Tensor, b: tf.Tensor) -> tf.Tensor:
     """We compute the gradient of the function f at sample x
 
     f = sum_{i<= n_linear} max(constant_i, W_i*x + b_i)
@@ -49,7 +51,7 @@ def get_grad(x, constant, W, b):
     return grad_
 
 
-def compute_L(W):
+def compute_L(W: tf.Tensor) -> tf.Tensor:
     """We compute the largest possible norm of the gradient
 
     Args:
@@ -62,7 +64,7 @@ def compute_L(W):
     return K.sum(K.sqrt(K.sum(W * W, 1)), 1)
 
 
-def compute_R(z, convex_domain):
+def compute_R(z: tf.Tensor, convex_domain: Dict[str, Any]) -> tf.Tensor:
     """We compute the largest L2 distance of the starting point with the global optimum
 
     Args:
@@ -88,7 +90,7 @@ def compute_R(z, convex_domain):
     return dist_
 
 
-def get_start_point(z, convex_domain):
+def get_start_point(z: tf.Tensor, convex_domain: Dict[str, Any]) -> tf.Tensor:
     """Create a warm start for the optimization (the mid point to minimize the largest distance between the
     warm start and the global optimum
 
@@ -112,7 +114,7 @@ def get_start_point(z, convex_domain):
         raise NotImplementedError()
 
 
-def get_coeff_grad(R, k, g):
+def get_coeff_grad(R: tf.Tensor, k: int, g: tf.Tensor) -> tf.Tensor:
     """
     Args:
         R: Keras Tensor that reprends the largest distance to the gloabl
@@ -130,7 +132,14 @@ def get_coeff_grad(R, k, g):
     return alpha
 
 
-def grad_descent_conv(z, concave_upper, convex_lower, op_pos, ops_neg, n_iter):
+def grad_descent_conv(
+    z: tf.Tensor,
+    concave_upper: List[tf.Tensor],
+    convex_lower: List[tf.Tensor],
+    op_pos: List[tf.Tensor],
+    ops_neg: List[tf.Tensor],
+    n_iter: int = 5,
+) -> tf.Tensor:
     """
     Args:
         z
@@ -147,7 +156,9 @@ def grad_descent_conv(z, concave_upper, convex_lower, op_pos, ops_neg, n_iter):
     raise NotImplementedError()
 
 
-def grad_descent(z, convex_0, convex_1, convex_domain, n_iter=5):
+def grad_descent(
+    z: tf.Tensor, convex_0: List[tf.Tensor], convex_1: List[tf.Tensor], convex_domain: Dict[str, Any], n_iter: int = 5
+) -> tf.Tensor:
     """
     Args:
         z: Keras Tensor
@@ -172,7 +183,7 @@ def grad_descent(z, convex_0, convex_1, convex_domain, n_iter=5):
         R = K.expand_dims(R, -1)
         n_dim -= 1
 
-    def step_grad(x_, x_k_):
+    def step_grad(x_: tf.Tensor, x_k_: List[tf.Tensor]) -> Tuple[tf.Tensor, List[tf.Tensor]]:
 
         x_k = x_k_[0]
         g_k_0 = get_grad(x_k, constant_0, W_0, b_0)
@@ -207,28 +218,28 @@ def grad_descent(z, convex_0, convex_1, convex_domain, n_iter=5):
 class NonPos(Constraint):
     """Constrains the weights to be non-negative."""
 
-    def __call__(self, w):
+    def __call__(self, w: tf.Tensor) -> tf.Tensor:
         return K.minimum(w, 0.0)
 
 
 class NonNeg(Constraint):
     """Constrains the weights to be non-negative."""
 
-    def __call__(self, w):
+    def __call__(self, w: tf.Tensor) -> tf.Tensor:
         return K.maximum(w, 0.0)
 
 
 class ClipAlpha(Constraint):
     """Cosntraints the weights to be between 0 and 1."""
 
-    def __call__(self, w):
+    def __call__(self, w: tf.Tensor) -> tf.Tensor:
         return K.clip(w, 0.0, 1.0)
 
 
 class ClipAlphaGrid(Constraint):
     """Cosntraints the weights to be between 0 and 1."""
 
-    def __call__(self, w):
+    def __call__(self, w: tf.Tensor) -> tf.Tensor:
         w = K.clip(w, 0.0, 1.0)
         w /= K.maximum(K.sum(w, 0), 1.0)[None]
         return w
@@ -237,7 +248,7 @@ class ClipAlphaGrid(Constraint):
 class ClipAlphaAndSumtoOne(Constraint):
     """Cosntraints the weights to be between 0 and 1."""
 
-    def __call__(self, w):
+    def __call__(self, w: tf.Tensor) -> tf.Tensor:
         w = K.clip(w, 0.0, 1.0)
         # normalize the first colum to 1
         w_scale = K.maximum(K.sum(w, 0), K.epsilon())
@@ -247,14 +258,14 @@ class ClipAlphaAndSumtoOne(Constraint):
 class MultipleConstraint(Constraint):
     """stacking multiple constraints"""
 
-    def __init__(self, constraint_0, constraint_1, **kwargs):
+    def __init__(self, constraint_0: Optional[Constraint], constraint_1: Constraint, **kwargs: Any):
         super().__init__(**kwargs)
         if constraint_0:
             self.constraints = [constraint_0, constraint_1]
         else:
             self.constraints = [constraint_1]
 
-    def __call__(self, w):
+    def __call__(self, w: tf.Tensor) -> tf.Tensor:
         w_ = w
         for c in self.constraints:
             w_ = c.__call__(w_)
@@ -265,11 +276,11 @@ class MultipleConstraint(Constraint):
 class Project_initializer_pos(Initializer):
     """Initializer that generates tensors initialized to 1."""
 
-    def __init__(self, initializer, **kwargs):
+    def __init__(self, initializer: Initializer, **kwargs: Any):
         super().__init__(**kwargs)
         self.initializer = initializer
 
-    def __call__(self, shape, dtype=None, **kwargs):
+    def __call__(self, shape: tf.TensorShape, dtype: Optional[tf.DType] = None, **kwargs: Any) -> tf.Tensor:
         w_ = self.initializer.__call__(shape, dtype)
         return K.maximum(0.0, w_)
 
@@ -277,16 +288,23 @@ class Project_initializer_pos(Initializer):
 class Project_initializer_neg(Initializer):
     """Initializer that generates tensors initialized to 1."""
 
-    def __init__(self, initializer, **kwargs):
+    def __init__(self, initializer: Initializer, **kwargs: Any):
         super().__init__(**kwargs)
         self.initializer = initializer
 
-    def __call__(self, shape, dtype=None, **kwargs):
+    def __call__(self, shape: tf.TensorShape, dtype: Optional[tf.DType] = None, **kwargs: Any) -> tf.Tensor:
         w_ = self.initializer.__call__(shape, dtype)
         return K.minimum(0.0, w_)
 
 
-def softplus_(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, slope=Slope.V_SLOPE, **kwargs):
+def softplus_(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
 
     if convex_domain is None:
         convex_domain = {}
@@ -338,7 +356,13 @@ def softplus_(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, s
         raise ValueError(f"Unknown mode {mode}")
 
 
-def sum(x, axis=-1, dc_decomp=False, mode=ForwardMode.HYBRID, **kwargs):
+def sum(
+    x: List[tf.Tensor],
+    axis: int = -1,
+    dc_decomp: bool = False,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
 
     if dc_decomp:
         raise NotImplementedError()
@@ -369,7 +393,13 @@ def sum(x, axis=-1, dc_decomp=False, mode=ForwardMode.HYBRID, **kwargs):
         raise ValueError(f"Unknown mode {mode}")
 
 
-def frac_pos(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
+def frac_pos(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
 
     if convex_domain is None:
         convex_domain = {}
@@ -382,37 +412,48 @@ def frac_pos(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **
         u_c_ = 1.0 / l_c
         l_c_ = 1.0 / u_c
         return [u_c_, l_c_]
-    if mode == ForwardMode.AFFINE:
+    elif mode == ForwardMode.AFFINE:
         x_0, w_u, b_u, w_l, b_l = x
         u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
         l_c = get_lower(x_0, w_u, b_u, convex_domain=convex_domain)
     elif mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
+    else:
+        raise ValueError(f"Mode {mode} unknown")
 
-    if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-        u_c_ = 1.0 / l_c
-        l_c_ = 1.0 / u_c
+    u_c_ = 1.0 / l_c
+    l_c_ = 1.0 / u_c
 
-        w_u_0 = (u_c_ - l_c_) / K.maximum(u_c - l_c, K.epsilon())
-        b_u_0 = l_c_ - w_u_0 * l_c
+    w_u_0 = (u_c_ - l_c_) / K.maximum(u_c - l_c, K.epsilon())
+    b_u_0 = l_c_ - w_u_0 * l_c
 
-        y = (u_c + l_c) / 2.0
-        b_l_0 = 2.0 / y
-        w_l_0 = -1 / y**2
+    y = (u_c + l_c) / 2.0
+    b_l_0 = 2.0 / y
+    w_l_0 = -1 / y**2
 
-        w_u_ = w_u_0[:, None] * w_l
-        b_u_ = b_u_0 * b_l + b_u_0
-        w_l_ = w_l_0[:, None] * w_u
-        b_l_ = b_l_0 * b_u + b_l_0
+    w_u_ = w_u_0[:, None] * w_l
+    b_u_ = b_u_0 * b_l + b_u_0
+    w_l_ = w_l_0[:, None] * w_u
+    b_l_ = b_l_0 * b_u + b_l_0
 
-        if mode == ForwardMode.AFFINE:
-            return [x_0, w_u_, b_u_, w_l_, b_l_]
-        if mode == ForwardMode.HYBRID:
-            return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+    if mode == ForwardMode.AFFINE:
+        return [x_0, w_u_, b_u_, w_l_, b_l_]
+    elif mode == ForwardMode.HYBRID:
+        return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+    else:
+        raise ValueError(f"Mode {mode} unknown")
 
 
 # convex hull of the maximum between two functions
-def max_(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, axis=-1, finetune=False, **kwargs):
+def max_(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    axis: int = -1,
+    finetune: bool = False,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """LiRPA implementation of max(x, axis)
 
     Args:
@@ -586,7 +627,7 @@ def max_(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, axis=-
     return output
 
 
-def softmax_to_linear(model):
+def softmax_to_linear(model: keras.Model) -> Tuple[keras.Model, bool]:
     """linearize the softmax layer for verification
 
     Args:
@@ -612,13 +653,19 @@ def softmax_to_linear(model):
     return model, False
 
 
-def linear_to_softmax(model):
+def linear_to_softmax(model: keras.Model) -> Tuple[keras.Model, bool]:
 
     model.layers[-1].activation = keras.activations.get("softmax")
     return model
 
 
-def multiply(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID):
+def multiply(
+    inputs_0: List[tf.Tensor],
+    inputs_1: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+) -> List[tf.Tensor]:
     """LiRPA implementation of (element-wise) multiply(x,y)=-x*y.
 
     Args:
@@ -696,7 +743,9 @@ def multiply(inputs_0, inputs_1, dc_decomp=False, convex_domain=None, mode=Forwa
         raise ValueError(f"Unknown mode {mode}")
 
 
-def permute_dimensions(x, axis, mode=ForwardMode.HYBRID, axis_perm=1):
+def permute_dimensions(
+    x: List[tf.Tensor], axis: int, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, axis_perm: int = 1
+) -> List[tf.Tensor]:
     """LiRPA implementation of (element-wise) permute(x,axis)
 
     Args:
@@ -751,7 +800,7 @@ def permute_dimensions(x, axis, mode=ForwardMode.HYBRID, axis_perm=1):
             raise ValueError(f"Unknown mode {mode}")
 
 
-def broadcast(inputs, n, axis, mode):
+def broadcast(inputs: List[tf.Tensor], n: int, axis: int, mode: Union[str, ForwardMode]) -> List[tf.Tensor]:
     """LiRPA implementation of broadcasting
 
     Args:
@@ -802,7 +851,9 @@ def broadcast(inputs, n, axis, mode):
     return output
 
 
-def split(input_, axis=-1, mode=ForwardMode.HYBRID):
+def split(
+    input_: List[tf.Tensor], axis: int = -1, mode: Union[str, ForwardMode] = ForwardMode.HYBRID
+) -> List[tf.Tensor]:
     """LiRPA implementation of split
 
     Args:
@@ -850,7 +901,13 @@ def split(input_, axis=-1, mode=ForwardMode.HYBRID):
     return outputs
 
 
-def sort(input_, axis=-1, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID):
+def sort(
+    input_: List[tf.Tensor],
+    axis: int = -1,
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+) -> List[tf.Tensor]:
     """LiRPA implementation of sort by selection
 
     Args:
@@ -883,10 +940,10 @@ def sort(input_, axis=-1, dc_decomp=False, convex_domain=None, mode=ForwardMode.
         raise ValueError(f"Unknown mode {mode}")
 
     if axis == -1:
-        n = input_.shape[-1]
-        axis = len(input_.shape) - 1
+        n = input_[-1].shape[-1]
+        axis = len(input_[-1].shape) - 1
     else:
-        n = input_.shape[axis]
+        n = input_[-1].shape[axis]
 
     # what about splitting elements
     op = lambda x: tf.split(x, n, axis=axis)
@@ -900,15 +957,17 @@ def sort(input_, axis=-1, dc_decomp=False, convex_domain=None, mode=ForwardMode.
         w_l_list = tf.split(w_l, n, axis=axis + 1)
         b_l_list = op(b_l)
 
-    def get_input(mode, i):
+    def get_input(mode: ForwardMode, i: int) -> List[tf.Tensor]:
         if mode == ForwardMode.IBP:
             return [u_c_list[i], l_c_list[i]]
-        if mode == ForwardMode.AFFINE:
+        elif mode == ForwardMode.AFFINE:
             return [x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
-        if mode == ForwardMode.HYBRID:
+        elif mode == ForwardMode.HYBRID:
             return [x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
+        else:
+            raise ValueError(f"Unknown mode {mode}")
 
-    def set_input(input_, mode, i):
+    def set_input(input_: List[tf.Tensor], mode: ForwardMode, i: int) -> None:
         if mode == ForwardMode.IBP:
             u_i, l_i = input_
         elif mode == ForwardMode.AFFINE:
@@ -961,7 +1020,12 @@ def sort(input_, axis=-1, dc_decomp=False, convex_domain=None, mode=ForwardMode.
     return output
 
 
-def pow(inputs_, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID):
+def pow(
+    inputs_: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+) -> List[tf.Tensor]:
     """LiRPA implementation of pow(x )=x**2
 
     Args:
@@ -979,7 +1043,12 @@ def pow(inputs_, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID):
     return multiply(inputs_, inputs_, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def abs(inputs_, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID):
+def abs(
+    inputs_: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+) -> List[tf.Tensor]:
     """LiRPA implementation of |x|
 
     Args:
@@ -1002,7 +1071,12 @@ def abs(inputs_, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID):
     return add(inputs_0, inputs_1, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
-def frac_pos_hull(inputs_, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID):
+def frac_pos_hull(
+    inputs_: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+) -> List[tf.Tensor]:
     """LiRPA implementation of 1/x for x>0
 
     Args:
@@ -1052,7 +1126,15 @@ def frac_pos_hull(inputs_, dc_decomp=False, convex_domain=None, mode=ForwardMode
 
 
 # convex hull for min
-def min_(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, axis=-1, finetune=False, **kwargs):
+def min_(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    axis: int = -1,
+    finetune: bool = False,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """LiRPA implementation of min(x, axis=axis)
 
     Args:
@@ -1082,7 +1164,13 @@ def min_(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, axis=-
     )
 
 
-def expand_dims(inputs_, dc_decomp=False, mode=ForwardMode.HYBRID, axis=-1, **kwargs):
+def expand_dims(
+    inputs_: List[tf.Tensor],
+    dc_decomp: bool = False,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    axis: int = -1,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     mode = ForwardMode(mode)
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.IBP:
@@ -1125,7 +1213,13 @@ def expand_dims(inputs_, dc_decomp=False, mode=ForwardMode.HYBRID, axis=-1, **kw
     return output
 
 
-def log(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
+def log(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """Exponential activation function.
 
     Args:
@@ -1180,7 +1274,13 @@ def log(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwarg
         raise ValueError(f"Unknown mode {mode}")
 
 
-def exp(x, dc_decomp=False, convex_domain=None, mode=ForwardMode.HYBRID, **kwargs):
+def exp(
+    x: List[tf.Tensor],
+    dc_decomp: bool = False,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """Exponential activation function.
 
     Args:

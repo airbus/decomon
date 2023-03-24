@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Union
+from typing import Any, Dict, List, Optional, Union
 
+import tensorflow as tf
 from tensorflow.keras.layers import Layer
 
 
@@ -58,15 +59,17 @@ class StaticVariables:
 class DecomonLayer(ABC, Layer):
     """Abstract class that contains the common information of every implemented layers for Forward LiRPA"""
 
+    _trainable_weights: List[tf.Variable]
+
     def __init__(
         self,
-        convex_domain=None,
+        convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
-        mode: str = ForwardMode.HYBRID,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
         shared: bool = False,
         fast: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ):
         """
         Args:
@@ -93,7 +96,7 @@ class DecomonLayer(ABC, Layer):
         self.linear_layer = False
         self.has_backward_bounds = False  # optimizing Forward LiRPA for adversarial perturbation
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
         config.update(
             {
@@ -107,7 +110,7 @@ class DecomonLayer(ABC, Layer):
         )
         return config
 
-    def build(self, input_shape):
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
         """
         Args:
             input_shape
@@ -115,9 +118,11 @@ class DecomonLayer(ABC, Layer):
         Returns:
 
         """
+        # generic case: nothing to do before call
+        pass
 
     @abstractmethod
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         """
         Args:
             inputs
@@ -126,14 +131,11 @@ class DecomonLayer(ABC, Layer):
 
         """
 
-    def set_linear(self, bool_init):
-        self.linear_layer = bool_init
-
-    def get_linear(self):
+    def get_linear(self) -> bool:
         return False
 
     @abstractmethod
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         """
         Args:
             input_shape
@@ -142,7 +144,7 @@ class DecomonLayer(ABC, Layer):
 
         """
 
-    def reset_layer(self, layer):
+    def reset_layer(self, layer: Layer) -> None:
         """
         Args:
             layer
@@ -151,7 +153,7 @@ class DecomonLayer(ABC, Layer):
 
         """
 
-    def join(self, bounds):
+    def join(self, bounds: List[tf.Tensor]) -> List[tf.Tensor]:
         """
         Args:
             bounds
@@ -161,27 +163,27 @@ class DecomonLayer(ABC, Layer):
         """
         raise NotImplementedError()
 
-    def freeze_weights(self):
+    def freeze_weights(self) -> None:
         pass
 
-    def unfreeze_weights(self):
+    def unfreeze_weights(self) -> None:
         pass
 
-    def freeze_alpha(self):
+    def freeze_alpha(self) -> None:
         pass
 
-    def unfreeze_alpha(self):
+    def unfreeze_alpha(self) -> None:
         pass
 
-    def reset_finetuning(self):
+    def reset_finetuning(self) -> None:
         pass
 
-    def shared_weights(self, layer):
+    def shared_weights(self, layer: Layer) -> None:
         pass
 
-    def split_kwargs(self, **kwargs):
+    def split_kwargs(self, **kwargs: Any) -> None:
         # necessary for InputLayer
         pass
 
-    def set_back_bounds(self, has_backward_bounds):
+    def set_back_bounds(self, has_backward_bounds: bool) -> None:
         pass
