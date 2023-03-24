@@ -34,7 +34,7 @@ class BackwardGroupSort2(BackwardLayer):
         input_dim=-1,
         **kwargs,
     ):
-        super().__init__(layer, kwargs)
+        super().__init__(layer, **kwargs)
         if convex_domain is None:
             convex_domain = {}
         self.slope = Slope(slope)
@@ -78,3 +78,5 @@ class BackwardGroupSort2(BackwardLayer):
             shape = int(w_out_u.shape[1] / 2)
             n_out = w_out_u.shape[-1]
             w_out_u_ = K.reshape(w_out_u, [-1, shape, self.layer.n, n_out])
+
+        raise NotImplementedError()
