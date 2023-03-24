@@ -28,10 +28,23 @@ class DecomonAdd(Add, DecomonLayer):
 
     def __init__(
         self,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
         **kwargs: Any,
     ):
-        super().__init__(mode=mode, **kwargs)
+        super().__init__(
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
 
     def build(self, input_shape: List[tf.TensorShape]) -> None:
         n_comp = self.nb_tensors
@@ -99,8 +112,25 @@ class DecomonAverage(Average, DecomonLayer):
 
     """
 
-    def __init__(self, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
-        super().__init__(mode=mode, **kwargs)
+    def __init__(
+        self,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
         self.op = Lambda(lambda x: sum(x) / len(x))
 
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
@@ -168,8 +198,25 @@ class DecomonSubtract(DecomonLayer):
 
     """
 
-    def __init__(self, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
-        super().__init__(mode=mode, **kwargs)
+    def __init__(
+        self,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
 
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
 
@@ -196,8 +243,25 @@ class DecomonMinimum(DecomonLayer):
 
     """
 
-    def __init__(self, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
-        super().__init__(mode=mode, **kwargs)
+    def __init__(
+        self,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
 
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
 
@@ -236,8 +300,25 @@ class DecomonMaximum(DecomonLayer):
 
     """
 
-    def __init__(self, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
-        super().__init__(mode=mode, **kwargs)
+    def __init__(
+        self,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
 
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         return input_shape
@@ -272,8 +353,27 @@ class DecomonConcatenate(Concatenate, DecomonLayer):
 
     """
 
-    def __init__(self, axis: int = -1, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
-        super().__init__(axis=axis, mode=mode, **kwargs)
+    def __init__(
+        self,
+        axis: int = -1,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            axis=axis,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
 
         def func(inputs: List[tf.Tensor]) -> tf.Tensor:
             return Concatenate.call(self, inputs)
@@ -355,8 +455,25 @@ class DecomonMultiply(Multiply, DecomonLayer):
 
     """
 
-    def __init__(self, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
-        super().__init__(mode=mode, **kwargs)
+    def __init__(
+        self,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
 
     def build(self, input_shape: List[tf.TensorShape]) -> None:
 
@@ -401,10 +518,24 @@ class DecomonDot(Dot, DecomonLayer):
     def __init__(
         self,
         axes: Union[int, Tuple[int, int]] = (-1, -1),
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
         **kwargs: Any,
     ):
-        super().__init__(axes=axes, mode=mode, **kwargs)
+        super().__init__(
+            axes=axes,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
         if isinstance(axes, int):
             self.axes = (axes, axes)
         else:

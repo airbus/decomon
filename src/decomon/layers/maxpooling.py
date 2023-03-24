@@ -29,7 +29,11 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
         strides: Optional[Union[int, Tuple[int, int]]] = None,
         padding: str = "valid",
         data_format: Optional[str] = None,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
         fast: bool = True,
         **kwargs: Any,
     ):
@@ -39,7 +43,11 @@ class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
             strides=strides,
             padding=padding,
             data_format=data_format,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
             mode=mode,
+            finetune=finetune,
+            shared=shared,
             fast=fast,
             **kwargs,
         )

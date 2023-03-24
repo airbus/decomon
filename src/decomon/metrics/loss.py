@@ -1,3 +1,5 @@
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
@@ -355,8 +357,27 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
 
 # create a layer
 class DecomonLossFusion(DecomonLayer):
-    def __init__(self, mode=ForwardMode.HYBRID, asymptotic=False, backward=False, **kwargs):
-        super().__init__(mode=mode, **kwargs)
+    def __init__(
+        self,
+        asymptotic=False,
+        backward=False,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
         self.final_mode = ForwardMode.IBP
         self.asymptotic = asymptotic
         self.backward = backward
@@ -424,8 +445,26 @@ class DecomonLossFusion(DecomonLayer):
 
 # new layer for new loss functions
 class DecomonRadiusRobust(DecomonLayer):
-    def __init__(self, mode=ForwardMode.HYBRID, backward=False, **kwargs):
-        super().__init__(mode=mode, **kwargs)
+    def __init__(
+        self,
+        backward=False,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
 
         if self.mode == ForwardMode.IBP:
             raise NotImplementedError

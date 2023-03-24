@@ -70,14 +70,29 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         self,
         filters: int,
         kernel_size: Union[int, Tuple[int, int]],
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
         **kwargs: Any,
     ):
 
         activation = kwargs.get("activation", None)
         if "activation" in kwargs:
             kwargs["activation"] = None
-        super().__init__(filters=filters, kernel_size=kernel_size, mode=mode, **kwargs)
+        super().__init__(
+            filters=filters,
+            kernel_size=kernel_size,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
         self.kernel_constraint_pos_ = NonNeg()
         self.kernel_constraint_neg_ = NonPos()
 
@@ -632,13 +647,31 @@ class DecomonDense(Dense, DecomonLayer):
     See Keras official documentation for further details on the Dense operator
     """
 
-    def __init__(self, units: int, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
+    def __init__(
+        self,
+        units: int,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
+        **kwargs: Any,
+    ):
         if "activation" not in kwargs:
             kwargs["activation"] = None
         activation = kwargs["activation"]
         kwargs["units"] = units
         kwargs["kernel_constraint"] = None
-        super().__init__(mode=mode, **kwargs)
+        super().__init__(
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
         self.kernel_constraint_pos_ = NonNeg()
         self.kernel_constraint_neg_ = NonPos()
         self.input_spec = [InputSpec(min_ndim=2) for _ in range(self.nb_tensors)]
@@ -1112,9 +1145,28 @@ class DecomonActivation(Activation, DecomonLayer):
     See Keras official documentation for further details on the Activation operator
     """
 
-    def __init__(self, activation: str, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any):
+    def __init__(
+        self,
+        activation: str,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
+        **kwargs: Any,
+    ):
 
-        super().__init__(activation=activation, mode=mode, **kwargs)
+        super().__init__(
+            activation=activation,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
 
         self.supports_masking = True
         self.activation = activations.get(activation)
@@ -1199,14 +1251,31 @@ class DecomonFlatten(Flatten, DecomonLayer):
     """
 
     def __init__(
-        self, data_format: Optional[str] = None, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, **kwargs: Any
+        self,
+        data_format: Optional[str] = None,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
+        **kwargs: Any,
     ):
         """
         Args:
             data_format
             **kwargs
         """
-        super().__init__(data_format=data_format, mode=mode, **kwargs)
+        super().__init__(
+            data_format=data_format,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
 
         if self.mode == ForwardMode.HYBRID:
             self.input_spec = [
@@ -1311,7 +1380,12 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
         gamma_regularizer: Optional[str] = None,
         beta_constraint: Optional[str] = None,
         gamma_constraint: Optional[str] = None,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
         **kwargs: Any,
     ):
         super().__init__(
@@ -1328,7 +1402,12 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
             gamma_regularizer=gamma_regularizer,
             beta_constraint=beta_constraint,
             gamma_constraint=gamma_constraint,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
             mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
             **kwargs,
         )
 
@@ -1451,10 +1530,26 @@ class DecomonDropout(Dropout, DecomonLayer):
         rate: float,
         noise_shape: Optional[Tuple[int, ...]] = None,
         seed: Optional[int] = None,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
         **kwargs: Any,
     ):
-        super().__init__(rate=rate, noise_shape=noise_shape, seed=seed, mode=mode, **kwargs)
+        super().__init__(
+            rate=rate,
+            noise_shape=noise_shape,
+            seed=seed,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
 
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         return input_shape
@@ -1489,7 +1584,12 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
         name: Optional[str] = None,
         ragged: Optional[bool] = None,
         type_spec: Optional[tf.TypeSpec] = None,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        finetune: bool = False,
+        shared: bool = False,
+        fast: bool = True,
         **kwargs: Any,
     ):
 
@@ -1503,7 +1603,12 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
                 sparse=sparse,
                 name=name,
                 ragged=ragged,
+                convex_domain=convex_domain,
+                dc_decomp=dc_decomp,
                 mode=mode,
+                finetune=finetune,
+                shared=shared,
+                fast=fast,
                 **kwargs,
             )
         else:
