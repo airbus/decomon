@@ -32,7 +32,7 @@ class Fuse(Layer):
         return config
 
 
-class Convert_2_backward_mode(Layer):
+class Convert2BackwardMode(Layer):
     def __init__(self, mode, convex_domain, **kwargs):
         super().__init__(**kwargs)
         self.mode = ForwardMode(mode)
@@ -97,9 +97,9 @@ class MergeWithPrevious(Layer):
         return config
 
 
-class Convert_2_mode(Layer):
+class Convert2Mode(Layer):
     def __init__(self, mode_from, mode_to, convex_domain, **kwargs):
-        super(Convert_2_mode, self).__init__(**kwargs)
+        super(Convert2Mode, self).__init__(**kwargs)
         self.mode_from = ForwardMode(mode_from)
         self.mode_to = ForwardMode(mode_to)
         self.convex_domain = convex_domain
