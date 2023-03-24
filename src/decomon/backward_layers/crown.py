@@ -10,7 +10,7 @@ from decomon.utils import get_lower, get_upper
 
 class Fuse(Layer):
     def __init__(self, mode, **kwargs):
-        super(Fuse, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.mode = ForwardMode(mode)
 
     def call(self, inputs_):
@@ -70,7 +70,7 @@ class Convert2BackwardMode(Layer):
 
 class MergeWithPrevious(Layer):
     def __init__(self, input_shape_layer=None, backward_shape_layer=None, **kwargs):
-        super(MergeWithPrevious, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.input_shape_layer = input_shape_layer
         self.backward_shape_layer = backward_shape_layer
         if not (input_shape_layer is None) and not (backward_shape_layer is None):
@@ -99,7 +99,7 @@ class MergeWithPrevious(Layer):
 
 class Convert2Mode(Layer):
     def __init__(self, mode_from, mode_to, convex_domain, **kwargs):
-        super(Convert2Mode, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.mode_from = ForwardMode(mode_from)
         self.mode_to = ForwardMode(mode_to)
         self.convex_domain = convex_domain
