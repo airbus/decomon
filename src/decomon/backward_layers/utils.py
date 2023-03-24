@@ -1,3 +1,5 @@
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Flatten
@@ -21,8 +23,15 @@ from decomon.utils import (
 
 
 def backward_add(
-    inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain=None, mode=ForwardMode.HYBRID
-):
+    inputs_0: List[tf.Tensor],
+    inputs_1: List[tf.Tensor],
+    w_out_u_: tf.Tensor,
+    b_out_u_: tf.Tensor,
+    w_out_l_: tf.Tensor,
+    b_out_l_: tf.Tensor,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+) -> Tuple[List[tf.Tensor], List[tf.Tensor]]:
     """Backward  LiRPA of inputs_0+inputs_1
 
     Args:
@@ -90,7 +99,7 @@ def backward_add(
     return [w_out_u_0, b_out_u_0, w_out_l_0, b_out_l_0], [w_out_u_1, b_out_u_1, w_out_l_1, b_out_l_1]
 
 
-def merge_with_previous(inputs):
+def merge_with_previous(inputs: List[tf.Tensor]) -> List[tf.Tensor]:
     w_out_u, b_out_u, w_out_l, b_out_l, w_b_u, b_b_u, w_b_l, b_b_l = inputs
 
     # w_out_u (None, n_h_in, n_h_out)
@@ -131,17 +140,16 @@ def merge_with_previous(inputs):
 
 
 def backward_relu_(
-    x,
-    w_out_u,
-    b_out_u,
-    w_out_l,
-    b_out_l,
-    convex_domain=None,
-    slope=Slope.V_SLOPE,
-    mode=ForwardMode.HYBRID,
-    fast=True,
-    **kwargs,
-):
+    x: List[tf.Tensor],
+    w_out_u: tf.Tensor,
+    b_out_u: tf.Tensor,
+    w_out_l: tf.Tensor,
+    b_out_l: tf.Tensor,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """Backward  LiRPA of relu
 
     Args:
@@ -204,21 +212,20 @@ def backward_relu_(
     b_out_u_ = K.sum(K.maximum(w_out_u, z_value) * b_u_ + K.minimum(w_out_u, z_value) * b_l_, 1) + b_out_u
     b_out_l_ = K.sum(K.maximum(w_out_l, z_value) * b_l_ + K.minimum(w_out_l, z_value) * b_u_, 1) + b_out_l
 
-    return w_out_u_, b_out_u_, w_out_l_, b_out_l_
+    return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
 
 
 def backward_softplus_(
-    x,
-    w_out_u,
-    b_out_u,
-    w_out_l,
-    b_out_l,
-    convex_domain=None,
-    slope=Slope.V_SLOPE,
-    mode=ForwardMode.HYBRID,
-    fast=True,
-    **kwargs,
-):
+    x: List[tf.Tensor],
+    w_out_u: tf.Tensor,
+    b_out_u: tf.Tensor,
+    w_out_l: tf.Tensor,
+    b_out_l: tf.Tensor,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """Backward  LiRPA of relu
 
     Args:
@@ -257,9 +264,15 @@ def backward_softplus_(
 
     shape = np.prod(upper.shape[1:])
     upper = K.reshape(upper, [-1, shape])
+    raise NotImplementedError()
 
 
-def backward_linear_prod(x_0, bounds_x, back_bounds, convex_domain):
+def backward_linear_prod(
+    x_0: tf.Tensor,
+    bounds_x: List[tf.Tensor],
+    back_bounds: List[tf.Tensor],
+    convex_domain: Optional[Dict[str, Any]] = None,
+) -> List[tf.Tensor]:
     """Backward  LiRPA of a subroutine prod
 
     Args:
@@ -320,17 +333,17 @@ def backward_linear_prod(x_0, bounds_x, back_bounds, convex_domain):
 
 
 def backward_maximum(
-    inputs_0,
-    inputs_1,
-    w_out_u,
-    b_out_u,
-    w_out_l,
-    b_out_l,
-    convex_domain=None,
-    slope=Slope.V_SLOPE,
-    mode=ForwardMode.HYBRID,
-    **kwargs,
-):
+    inputs_0: List[tf.Tensor],
+    inputs_1: List[tf.Tensor],
+    w_out_u: tf.Tensor,
+    b_out_u: tf.Tensor,
+    w_out_l: tf.Tensor,
+    b_out_l: tf.Tensor,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> Tuple[List[tf.Tensor], List[tf.Tensor]]:
     """Backward  LiRPA of maximum(inputs_0, inputs_1)
 
     Args:
@@ -370,17 +383,17 @@ def backward_maximum(
 
 # convex hull of the maximum between two functions
 def backward_max_(
-    x,
-    w_out_u,
-    b_out_u,
-    w_out_l,
-    b_out_l,
-    convex_domain=None,
-    slope=Slope.V_SLOPE,
-    mode=ForwardMode.HYBRID,
-    axis=-1,
-    **kwargs,
-):
+    x: List[tf.Tensor],
+    w_out_u: tf.Tensor,
+    b_out_u: tf.Tensor,
+    w_out_l: tf.Tensor,
+    b_out_l: tf.Tensor,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    axis: int = -1,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """Backward  LiRPA of max
 
     Args:
@@ -399,10 +412,8 @@ def backward_max_(
         convex_domain = {}
     mode = ForwardMode(mode)
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
-    z_value = K.cast(0.0, x.dtype)
-    x_0, b_u, b_l, w_u, w_l, u_c, l_c = None, None, None, None, None, None, None
-    u_c_tmp, w_u_tmp, b_u_tmp, l_c_tmp, w_l_tmp, b_l_tmp = None, None, None, None, None, None
-    u_c_list, w_u_list, b_u_list, l_c_list, w_l_list, b_l_list = None, None, None, None, None, None
+    z_value = K.cast(0.0, x[0].dtype)
+
     if mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensor]
         y = u_c
@@ -490,7 +501,6 @@ def backward_max_(
     w_u_, b_u_, w_l_, b_l_ = (w_out_u, b_out_u, w_out_l, b_out_l)
 
     if len(outputs) > 0:
-        bounds_0 = None
         for (input_0, input_1) in outputs:
             bounds_0, bounds_1 = backward_maximum(input_0, input_1, w_u_, b_u_, w_l_, b_l_, mode=mode, **kwargs)
             bounds.append(bounds_1)
@@ -513,17 +523,17 @@ def backward_max_(
 
 
 def backward_minimum(
-    inputs_0,
-    inputs_1,
-    w_out_u,
-    b_out_u,
-    w_out_l,
-    b_out_l,
-    convex_domain=None,
-    slope=Slope.V_SLOPE,
-    mode=ForwardMode.HYBRID,
-    **kwargs,
-):
+    inputs_0: List[tf.Tensor],
+    inputs_1: List[tf.Tensor],
+    w_out_u: tf.Tensor,
+    b_out_u: tf.Tensor,
+    w_out_l: tf.Tensor,
+    b_out_l: tf.Tensor,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> Tuple[List[tf.Tensor], List[tf.Tensor]]:
     """Backward  LiRPA of minimum(inputs_0, inputs_1)
 
     Args:
@@ -573,8 +583,14 @@ def backward_minimum(
 
 
 def backward_minus(
-    w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=None, slope=Slope.V_SLOPE, mode=ForwardMode.HYBRID
-):
+    w_out_u: tf.Tensor,
+    b_out_u: tf.Tensor,
+    w_out_l: tf.Tensor,
+    b_out_l: tf.Tensor,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+) -> List[tf.Tensor]:
     """Backward  LiRPA of -x
 
     Args:
@@ -599,7 +615,13 @@ def backward_minus(
     return [w_u_, b_u_, w_l_, b_l_]
 
 
-def backward_scale(scale_factor, w_out_u, b_out_u, w_out_l, b_out_l):
+def backward_scale(
+    scale_factor: float,
+    w_out_u: tf.Tensor,
+    b_out_u: tf.Tensor,
+    w_out_l: tf.Tensor,
+    b_out_l: tf.Tensor,
+) -> List[tf.Tensor]:
     """Backward  LiRPA of scale_factor*x
 
     Args:
@@ -622,8 +644,15 @@ def backward_scale(scale_factor, w_out_u, b_out_u, w_out_l, b_out_l):
 
 
 def backward_substract(
-    inputs_0, inputs_1, w_out_u_, b_out_u_, w_out_l_, b_out_l_, convex_domain=None, mode=ForwardMode.HYBRID
-):
+    inputs_0: List[tf.Tensor],
+    inputs_1: List[tf.Tensor],
+    w_out_u_: tf.Tensor,
+    b_out_u_: tf.Tensor,
+    w_out_l_: tf.Tensor,
+    b_out_l_: tf.Tensor,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+) -> Tuple[List[tf.Tensor], List[tf.Tensor]]:
     """Backward  LiRPA of inputs_0 - inputs_1
 
     Args:
@@ -652,16 +681,16 @@ def backward_substract(
 
 
 def backward_multiply(
-    inputs_0,
-    inputs_1,
-    w_out_u,
-    b_out_u,
-    w_out_l,
-    b_out_l,
-    convex_domain=None,
-    slope=Slope.V_SLOPE,
-    mode=ForwardMode.HYBRID,
-):
+    inputs_0: List[tf.Tensor],
+    inputs_1: List[tf.Tensor],
+    w_out_u: tf.Tensor,
+    b_out_u: tf.Tensor,
+    w_out_l: tf.Tensor,
+    b_out_l: tf.Tensor,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+) -> Tuple[List[tf.Tensor], List[tf.Tensor]]:
     """Backward  LiRPA of element-wise multiply inputs_0*inputs_1
 
     Args:
@@ -744,17 +773,17 @@ def backward_multiply(
 
 
 def backward_sort(
-    inputs_,
-    w_out_u,
-    b_out_u,
-    w_out_l,
-    b_out_l,
-    axis=-1,
-    convex_domain=None,
-    slope=Slope.V_SLOPE,
-    mode=ForwardMode.HYBRID,
-    **kwargs,
-):
+    inputs_: List[tf.Tensor],
+    w_out_u: tf.Tensor,
+    b_out_u: tf.Tensor,
+    w_out_l: tf.Tensor,
+    b_out_l: tf.Tensor,
+    axis: int = -1,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
     """Backward  LiRPA of sort
 
     Args:
@@ -826,7 +855,7 @@ def backward_sort(
     return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
 
 
-def get_identity_lirpa(inputs):
+def get_identity_lirpa(inputs: List[tf.Tensor]) -> List[tf.Tensor]:
     y_ = inputs[-1]
     shape = np.prod(y_.shape[1:])
 
@@ -839,17 +868,17 @@ def get_identity_lirpa(inputs):
     w_out_u = tf.linalg.diag(w_out_u)
     w_out_l = tf.linalg.diag(w_out_l)
 
-    return w_out_u, b_out_u, w_out_l, b_out_l
+    return [w_out_u, b_out_u, w_out_l, b_out_l]
 
 
-def get_IBP(mode=ForwardMode.HYBRID):
+def get_IBP(mode: Union[str, ForwardMode] = ForwardMode.HYBRID) -> bool:
     mode = ForwardMode(mode)
     if mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
         return True
     return False
 
 
-def get_FORWARD(mode=ForwardMode.HYBRID):
+def get_FORWARD(mode: Union[str, ForwardMode] = ForwardMode.HYBRID) -> bool:
     mode = ForwardMode(mode)
     if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
         return True
