@@ -10,7 +10,7 @@ from tensorflow.keras.models import Model
 
 from decomon.backward_layers.backward_layers import get_backward
 from decomon.backward_layers.utils_conv import get_toeplitz
-from decomon.layers.decomon_layers import DecomonDense, to_monotonic
+from decomon.layers.decomon_layers import DecomonDense, to_decomon
 
 
 def test_toeplitz_from_Keras(channels, filter_size, strides, flatten, data_format, padding, floatx, helpers):
@@ -94,7 +94,7 @@ def test_toeplitz_from_Decomon(channels, filter_size, strides, flatten, data_for
     result_ref = layer(y)
     # toeplitz matrix should be compatible with a DecomonLayer
     input_dim = inputs[0].shape[-1]
-    decomon_layer = to_monotonic(layer, input_dim)[0]
+    decomon_layer = to_decomon(layer, input_dim)[0]
 
     W = get_toeplitz(decomon_layer, flatten)
 
