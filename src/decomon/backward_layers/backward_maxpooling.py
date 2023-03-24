@@ -1,14 +1,15 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Flatten, Wrapper
+from tensorflow.keras.layers import Flatten, Layer
 
+from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import backward_max_
 from decomon.layers.core import ForwardMode
 from decomon.utils import Slope, get_lower, get_upper
 
 
-class BackwardMaxPooling2D(Wrapper):
+class BackwardMaxPooling2D(BackwardLayer):
     """Backward  LiRPA of MaxPooling2D"""
 
     def __init__(

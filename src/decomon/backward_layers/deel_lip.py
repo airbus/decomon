@@ -1,9 +1,9 @@
 import logging
 
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Wrapper
+from tensorflow.keras.layers import Layer
 
-from decomon.backward_layers.activations import get
+from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import get_FORWARD, get_IBP
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import to_decomon
@@ -20,7 +20,7 @@ except ImportError:
     )
 
 
-class BackwardGroupSort2(Wrapper):
+class BackwardGroupSort2(BackwardLayer):
     """Backward LiRPA of GroupSort2"""
 
     def __init__(
