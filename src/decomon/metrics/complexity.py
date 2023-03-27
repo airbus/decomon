@@ -1,7 +1,8 @@
+import tensorflow as tf
 from tensorflow.keras.layers import InputLayer, Lambda
 
 
-def get_graph_complexity(model):
+def get_graph_complexity(model: tf.keras.Model) -> int:
 
     # do not consider Input nodes or Lambda nodes
     # enumerate the number of
