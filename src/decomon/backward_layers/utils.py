@@ -31,7 +31,7 @@ def backward_add(
     b_out_l_: tf.Tensor,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-) -> Tuple[List[tf.Tensor], List[tf.Tensor]]:
+) -> List[List[tf.Tensor]]:
     """Backward  LiRPA of inputs_0+inputs_1
 
     Args:
@@ -96,7 +96,7 @@ def backward_add(
     w_out_l_1 = w_out_l_
     b_out_l_1 = lower_0
 
-    return [w_out_u_0, b_out_u_0, w_out_l_0, b_out_l_0], [w_out_u_1, b_out_u_1, w_out_l_1, b_out_l_1]
+    return [[w_out_u_0, b_out_u_0, w_out_l_0, b_out_l_0], [w_out_u_1, b_out_u_1, w_out_l_1, b_out_l_1]]
 
 
 def merge_with_previous(inputs: List[tf.Tensor]) -> List[tf.Tensor]:
@@ -340,7 +340,7 @@ def backward_maximum(
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
-) -> Tuple[List[tf.Tensor], List[tf.Tensor]]:
+) -> List[List[tf.Tensor]]:
     """Backward  LiRPA of maximum(inputs_0, inputs_1)
 
     Args:
@@ -374,7 +374,7 @@ def backward_maximum(
         input_step_1_, inputs_0, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, mode=mode
     )
 
-    return bounds_0_, bounds_1_
+    return [bounds_0_, bounds_1_]
 
 
 # convex hull of the maximum between two functions
@@ -527,7 +527,7 @@ def backward_minimum(
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
-) -> Tuple[List[tf.Tensor], List[tf.Tensor]]:
+) -> List[List[tf.Tensor]]:
     """Backward  LiRPA of minimum(inputs_0, inputs_1)
 
     Args:
@@ -565,7 +565,7 @@ def backward_minimum(
     bounds_0_ = backward_minus(w_out_u_0, b_out_u_0, w_out_l_0, b_out_l_0)
     bounds_1_ = backward_minus(w_out_u_1, b_out_u_1, w_out_l_1, b_out_l_1)
 
-    return bounds_0_, bounds_1_
+    return [bounds_0_, bounds_1_]
 
 
 def backward_minus(
@@ -632,7 +632,7 @@ def backward_substract(
     b_out_l_: tf.Tensor,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-) -> Tuple[List[tf.Tensor], List[tf.Tensor]]:
+) -> List[List[tf.Tensor]]:
     """Backward  LiRPA of inputs_0 - inputs_1
 
     Args:
@@ -657,7 +657,7 @@ def backward_substract(
     )
 
     bounds_1_ = [-bounds_1[0], bounds_1[1], -bounds_1[2], bounds_1[3]]
-    return bounds_0, bounds_1_
+    return [bounds_0, bounds_1_]
 
 
 def backward_multiply(
@@ -669,7 +669,7 @@ def backward_multiply(
     b_out_l: tf.Tensor,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-) -> Tuple[List[tf.Tensor], List[tf.Tensor]]:
+) -> List[List[tf.Tensor]]:
     """Backward  LiRPA of element-wise multiply inputs_0*inputs_1
 
     Args:
@@ -747,7 +747,7 @@ def backward_multiply(
     bounds_0 = [w_out_u_0, b_out_u_0, w_out_l_0, b_out_l_0]
     bounds_1 = [w_out_u_1, b_out_u_1, w_out_l_1, b_out_l_1]
 
-    return bounds_0, bounds_1
+    return [bounds_0, bounds_1]
 
 
 def backward_sort(

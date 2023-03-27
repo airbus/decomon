@@ -14,10 +14,16 @@ from decomon.utils import Slope, get_lower, get_upper
 class BackwardMaxPooling2D(BackwardLayer):
     """Backward  LiRPA of MaxPooling2D"""
 
+    pool_size: Tuple[int, int]
+    strides: Tuple[int, int]
+    padding: str
+    data_format: str
+    fast: bool
+
     def __init__(
         self,
         layer: Layer,
-        previous=True,
+        previous: bool = True,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -37,63 +43,58 @@ class BackwardMaxPooling2D(BackwardLayer):
 
     def _pooling_function(
         self,
-        inputs,
-        w_out_u,
-        b_out_u,
-        w_out_l,
-        b_out_l,
-        pool_size,
-        strides,
-        padding,
-        data_format,
-        convex_domain=None,
-    ):
-
-        if convex_domain is None:
-            convex_domain = {}
+        inputs: List[tf.Tensor],
+        w_out_u: tf.Tensor,
+        b_out_u: tf.Tensor,
+        w_out_l: tf.Tensor,
+        b_out_l: tf.Tensor,
+        pool_size: Tuple[int, int],
+        strides: Tuple[int, int],
+        padding: str,
+        data_format: str,
+        convex_domain: Dict[str, Any],
+    ) -> List[tf.Tensor]:
         if self.fast:
             return self._pooling_function_fast(
-                inputs,
-                w_out_u,
-                b_out_u,
-                w_out_l,
-                b_out_l,
-                pool_size,
-                strides,
-                padding,
-                data_format,
-                convex_domain,
+                inputs=inputs,
+                w_out_u=w_out_u,
+                b_out_u=b_out_u,
+                w_out_l=w_out_l,
+                b_out_l=b_out_l,
+                pool_size=pool_size,
+                strides=strides,
+                padding=padding,
+                data_format=data_format,
+                convex_domain=convex_domain,
             )
         else:
             return self._pooling_function_not_fast(
-                inputs,
-                w_out_u,
-                b_out_u,
-                w_out_l,
-                b_out_l,
-                pool_size,
-                strides,
-                padding,
-                data_format,
-                convex_domain,
+                inputs=inputs,
+                w_out_u=w_out_u,
+                b_out_u=b_out_u,
+                w_out_l=w_out_l,
+                b_out_l=b_out_l,
+                pool_size=pool_size,
+                strides=strides,
+                padding=padding,
+                data_format=data_format,
+                convex_domain=convex_domain,
             )
 
     def _pooling_function_fast(
         self,
-        inputs,
-        w_out_u,
-        b_out_u,
-        w_out_l,
-        b_out_l,
-        pool_size,
-        strides,
-        padding,
-        data_format,
-        convex_domain=None,
-    ):
+        inputs: List[tf.Tensor],
+        w_out_u: tf.Tensor,
+        b_out_u: tf.Tensor,
+        w_out_l: tf.Tensor,
+        b_out_l: tf.Tensor,
+        pool_size: Tuple[int, int],
+        strides: Tuple[int, int],
+        padding: str,
+        data_format: str,
+        convex_domain: Dict[str, Any],
+    ) -> List[tf.Tensor]:
 
-        if convex_domain is None:
-            convex_domain = {}
         if self.mode == ForwardMode.HYBRID:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:7]
         elif self.mode == ForwardMode.AFFINE:
@@ -122,21 +123,21 @@ class BackwardMaxPooling2D(BackwardLayer):
         b_out_u_ = K.sum(K.maximum(w_out_u, 0) * b_u_, 2) + K.sum(K.minimum(w_out_u, 0) * b_l_, 2) + b_out_u
         b_out_l_ = K.sum(K.maximum(w_out_l, 0) * b_l_, 2) + K.sum(K.minimum(w_out_l, 0) * b_u_, 2) + b_out_l
 
-        return w_out_u_, b_out_u_, w_out_l_, b_out_l_
+        return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
 
     def _pooling_function_not_fast(
         self,
-        inputs,
-        w_out_u,
-        b_out_u,
-        w_out_l,
-        b_out_l,
-        pool_size,
-        strides,
-        padding,
-        data_format,
-        convex_domain=None,
-    ):
+        inputs: List[tf.Tensor],
+        w_out_u: tf.Tensor,
+        b_out_u: tf.Tensor,
+        w_out_l: tf.Tensor,
+        b_out_l: tf.Tensor,
+        pool_size: Tuple[int, int],
+        strides: Tuple[int, int],
+        padding: str,
+        data_format: str,
+        convex_domain: Dict[str, Any],
+    ) -> List[tf.Tensor]:
         """
         Args:
             inputs
@@ -149,8 +150,6 @@ class BackwardMaxPooling2D(BackwardLayer):
 
         """
 
-        if convex_domain is None:
-            convex_domain = {}
         if self.mode == ForwardMode.HYBRID:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:7]
         elif self.mode == ForwardMode.AFFINE:
@@ -260,12 +259,21 @@ class BackwardMaxPooling2D(BackwardLayer):
             K.sum(K.expand_dims(w_out_l, 1) * weights, (3, -1)), (-1, 1, n_dim * n_axis, w_out_l.shape[-2])
         )
 
-        return w_out_u_, b_out_u, w_out_l_, b_out_l
+        return [w_out_u_, b_out_u, w_out_l_, b_out_l]
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         x = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
         return self._pooling_function(
-            x, w_out_u, b_out_u, w_out_l, b_out_l, self.pool_size, self.strides, self.padding, self.data_format
+            inputs=x,
+            w_out_u=w_out_u,
+            b_out_u=b_out_u,
+            w_out_l=w_out_l,
+            b_out_l=b_out_l,
+            pool_size=self.pool_size,
+            strides=self.strides,
+            padding=self.padding,
+            data_format=self.data_format,
+            convex_domain=self.convex_domain,
         )

@@ -1,6 +1,7 @@
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
+import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Layer
 
@@ -27,8 +28,8 @@ class BackwardGroupSort2(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        previous=True,
-        input_dim=-1,
+        previous: bool = True,
+        input_dim: int = -1,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -60,7 +61,7 @@ class BackwardGroupSort2(BackwardLayer):
 
         self.frozen_weights = False
 
-    def call_previous(self, inputs):
+    def call_previous(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
 
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
