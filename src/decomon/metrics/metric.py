@@ -67,121 +67,6 @@ class MetricLayer(ABC, Layer):
         pass
 
 
-class AdversarialScore(MetricLayer):
-    """Training with symbolic LiRPA bounds for promoting adversarial robustness"""
-
-    def __init__(
-        self,
-        ibp: bool,
-        affine: bool,
-        mode: Union[str, MetricMode],
-        convex_domain: Optional[Dict[str, Any]],
-        **kwargs: Any,
-    ):
-        """
-        Args:
-            ibp: boolean that indicates whether we propagate constant
-                bounds
-            forward: boolean that indicates whether we propagate affine
-                bounds
-            mode: str: 'backward' or 'forward' whether we doforward or
-                backward linear relaxation
-            convex_domain: the type of input convex domain for the
-                linear relaxation
-            **kwargs
-        """
-        super().__init__(ibp=ibp, affine=affine, mode=mode, convex_domain=convex_domain, **kwargs)
-
-    def linear_adv(self, z_tensor, y_tensor, w_u, b_u, w_l, b_l):
-
-        t_tensor = 1 - y_tensor
-        w_upper = w_u * (1 - y_tensor[:, None]) - K.expand_dims(K.sum(w_l * y_tensor[:, None], -1), -1)
-        b_upper = b_u * (1 - y_tensor) - b_l * y_tensor
-
-        adv_score = get_upper(z_tensor, w_upper, b_upper) - 1e6 * y_tensor
-
-        return K.max(adv_score, -1)
-
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
-        """
-        Args:
-            inputs
-
-        Returns:
-            adv_score <0 if the predictionis robust on the input convex
-            domain
-        """
-
-        y_tensor = inputs[-1]
-
-        def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
-
-            if target_tensor is None:
-                target_tensor = 1.0 - source_tensor
-
-            score_u = (
-                u_c * target_tensor - K.expand_dims(K.min(l_c * source_tensor, -1), -1) - 1e6 * (1 - target_tensor)
-            )
-
-            return K.max(score_u, -1)
-
-        def get_forward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None):
-
-            if target_tensor is None:
-                target_tensor = 1.0 - source_tensor
-
-            n_dim = w_u.shape[1]
-            shape = np.prod(b_u.shape[1:])
-            w_u_ = K.reshape(w_u, (-1, n_dim, shape, 1))
-            w_l_ = K.reshape(w_l, (-1, n_dim, 1, shape))
-            b_u_ = K.reshape(b_u, (-1, shape, 1))
-            b_l_ = K.reshape(b_l, (-1, 1, shape))
-
-            w_u_f = w_u_ - w_l_
-            b_u_f = b_u_ - b_l_
-
-            # add penalties on biases
-            b_u_f = b_u_f - 1e6 * (1 - source_tensor)[:, None, :]
-            b_u_f = b_u_f - 1e6 * (1 - target_tensor)[:, :, None]
-
-            upper = get_upper(z_tensor, w_u_f, b_u_f)
-            return K.max(upper, (-1, -2))
-
-        def get_backward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None):
-
-            return get_forward_score(z_tensor, w_u[:, 0], b_u[:, 0], w_l[:, 0], b_l[:, 0], source_tensor, target_tensor)
-
-        if self.ibp and self.affine:
-            _, z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = inputs[:8]
-        elif not self.ibp and self.affine:
-            _, z, w_u_f, b_u_f, w_l_f, b_l_f = inputs[:6]
-        elif self.ibp and not self.affine:
-            _, z, u_c, l_c = inputs[:4]
-        else:
-            raise NotImplementedError("not IBP and not forward not implemented")
-
-        if self.ibp:
-            adv_ibp = get_ibp_score(u_c, l_c, y_tensor)
-        if self.affine:
-            adv_f = get_forward_score(z, w_u_f, b_u_f, w_l_f, b_l_f, y_tensor)
-
-        if self.ibp and not self.affine:
-            adv_score = adv_ibp
-        elif self.ibp and self.affine:
-            adv_score = K.minimum(adv_ibp, adv_f)
-        elif not self.ibp and self.affine:
-            adv_score = adv_f
-        else:
-            raise NotImplementedError("not IBP and not forward not implemented")
-
-        if self.mode == MetricMode.BACKWARD:
-            w_u_b, b_u_b, w_l_b, b_l_b, _ = inputs[-5:]
-            adv_b = get_backward_score(z, w_u_b, b_u_b, w_l_b, b_l_b, y_tensor)
-            adv_score = K.minimum(adv_score, adv_b)
-
-        return adv_score
-
-
 class AdversarialCheck(MetricLayer):
     """Training with symbolic LiRPA bounds for promoting adversarial robustness"""
 
@@ -227,47 +112,6 @@ class AdversarialCheck(MetricLayer):
 
         y_tensor = inputs[-1]
 
-        def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
-
-            if target_tensor is None:
-                target_tensor = 1.0 - source_tensor
-
-            shape = np.prod(u_c.shape[1:])
-            u_c_ = K.reshape(u_c, (-1, shape))
-            l_c_ = K.reshape(l_c, (-1, shape))
-
-            score_u = (
-                l_c_ * target_tensor - K.expand_dims(K.min(u_c_ * source_tensor, -1), -1) - 1e6 * (1 - target_tensor)
-            )
-
-            return K.max(score_u, -1)
-
-        def get_forward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None):
-
-            if target_tensor is None:
-                target_tensor = 1.0 - source_tensor
-
-            n_dim = w_u.shape[1]
-            shape = np.prod(b_u.shape[1:])
-            w_u_ = K.reshape(w_u, (-1, n_dim, shape, 1))
-            w_l_ = K.reshape(w_l, (-1, n_dim, 1, shape))
-            b_u_ = K.reshape(b_u, (-1, shape, 1))
-            b_l_ = K.reshape(b_l, (-1, 1, shape))
-
-            w_u_f = w_l_ - w_u_
-            b_u_f = b_l_ - b_u_
-
-            # add penalties on biases
-            b_u_f = b_u_f - 1e6 * (1 - target_tensor)[:, None, :]
-            b_u_f = b_u_f - 1e6 * (1 - source_tensor)[:, :, None]
-
-            upper = get_upper(z_tensor, w_u_f, b_u_f)
-            return K.max(upper, (-1, -2))
-
-        def get_backward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None):
-
-            return get_forward_score(z_tensor, w_u[:, 0], b_u[:, 0], w_l[:, 0], b_l[:, 0], source_tensor, target_tensor)
-
         if self.ibp and self.affine:
             _, z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = inputs[:8]
         elif not self.ibp and self.affine:
@@ -278,9 +122,9 @@ class AdversarialCheck(MetricLayer):
             raise NotImplementedError("not IBP and not forward not implemented")
 
         if self.ibp:
-            adv_ibp = get_ibp_score(u_c, l_c, y_tensor)
+            adv_ibp = _get_ibp_score(u_c, l_c, y_tensor)
         if self.affine:
-            adv_f = get_forward_score(z, w_u_f, b_u_f, w_l_f, b_l_f, y_tensor)
+            adv_f = _get_forward_score(z, w_u_f, b_u_f, w_l_f, b_l_f, y_tensor)
 
         if self.ibp and not self.affine:
             adv_score = adv_ibp
@@ -293,7 +137,75 @@ class AdversarialCheck(MetricLayer):
 
         if self.mode == MetricMode.BACKWARD:
             w_u_b, b_u_b, w_l_b, b_l_b, _ = inputs[-5:]
-            adv_b = get_backward_score(z, w_u_b, b_u_b, w_l_b, b_l_b, y_tensor)
+            adv_b = _get_backward_score(z, w_u_b, b_u_b, w_l_b, b_l_b, y_tensor)
+            adv_score = K.minimum(adv_score, adv_b)
+
+        return adv_score
+
+
+class AdversarialScore(AdversarialCheck):
+    """Training with symbolic LiRPA bounds for promoting adversarial robustness"""
+
+    def __init__(
+        self,
+        ibp: bool,
+        affine: bool,
+        mode: Union[str, MetricMode],
+        convex_domain: Optional[Dict[str, Any]],
+        **kwargs: Any,
+    ):
+        """
+        Args:
+            ibp: boolean that indicates whether we propagate constant
+                bounds
+            forward: boolean that indicates whether we propagate affine
+                bounds
+            mode: str: 'backward' or 'forward' whether we doforward or
+                backward linear relaxation
+            convex_domain: the type of input convex domain for the
+                linear relaxation
+            **kwargs
+        """
+        super().__init__(ibp=ibp, affine=affine, mode=mode, convex_domain=convex_domain, **kwargs)
+
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
+        """
+        Args:
+            inputs
+
+        Returns:
+            adv_score <0 if the predictionis robust on the input convex
+            domain
+        """
+
+        y_tensor = inputs[-1]
+
+        if self.ibp and self.affine:
+            _, z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = inputs[:8]
+        elif not self.ibp and self.affine:
+            _, z, w_u_f, b_u_f, w_l_f, b_l_f = inputs[:6]
+        elif self.ibp and not self.affine:
+            _, z, u_c, l_c = inputs[:4]
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
+
+        if self.ibp:
+            adv_ibp = _get_ibp_score(u_c=l_c, l_c=u_c, source_tensor=y_tensor)
+        if self.affine:
+            adv_f = _get_forward_score(z, w_u=w_l_f, b_u=b_l_f, w_l=w_u_f, b_l=b_u_f, source_tensor=y_tensor)
+
+        if self.ibp and not self.affine:
+            adv_score = adv_ibp
+        elif self.ibp and self.affine:
+            adv_score = K.minimum(adv_ibp, adv_f)
+        elif not self.ibp and self.affine:
+            adv_score = adv_f
+        else:
+            raise NotImplementedError("not IBP and not forward not implemented")
+
+        if self.mode == MetricMode.BACKWARD:
+            w_u_b, b_u_b, w_l_b, b_l_b, _ = inputs[-5:]
+            adv_b = _get_backward_score(z, w_u_b, b_u_b, w_l_b, b_l_b, y_tensor)
             adv_score = K.minimum(adv_score, adv_b)
 
         return adv_score
@@ -435,3 +347,42 @@ def build_formal_upper_model(decomon_model):
     upper_score = layer(output + [y_out])
     upper_model = Model(input + [y_out], upper_score)
     return upper_model
+
+
+def _get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
+    if target_tensor is None:
+        target_tensor = 1.0 - source_tensor
+
+    shape = np.prod(u_c.shape[1:])
+    u_c_ = K.reshape(u_c, (-1, shape))
+    l_c_ = K.reshape(l_c, (-1, shape))
+
+    score_u = l_c_ * target_tensor - K.expand_dims(K.min(u_c_ * source_tensor, -1), -1) - 1e6 * (1 - target_tensor)
+
+    return K.max(score_u, -1)
+
+
+def _get_forward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None):
+    if target_tensor is None:
+        target_tensor = 1.0 - source_tensor
+
+    n_dim = w_u.shape[1]
+    shape = np.prod(b_u.shape[1:])
+    w_u_ = K.reshape(w_u, (-1, n_dim, shape, 1))
+    w_l_ = K.reshape(w_l, (-1, n_dim, 1, shape))
+    b_u_ = K.reshape(b_u, (-1, shape, 1))
+    b_l_ = K.reshape(b_l, (-1, 1, shape))
+
+    w_u_f = w_l_ - w_u_
+    b_u_f = b_l_ - b_u_
+
+    # add penalties on biases
+    b_u_f = b_u_f - 1e6 * (1 - target_tensor)[:, None, :]
+    b_u_f = b_u_f - 1e6 * (1 - source_tensor)[:, :, None]
+
+    upper = get_upper(z_tensor, w_u_f, b_u_f)
+    return K.max(upper, (-1, -2))
+
+
+def _get_backward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None):
+    return _get_forward_score(z_tensor, w_u[:, 0], b_u[:, 0], w_l[:, 0], b_l[:, 0], source_tensor, target_tensor)
