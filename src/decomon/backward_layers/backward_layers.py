@@ -817,9 +817,7 @@ class BackwardFlatten(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        slope=Slope.V_SLOPE,
         previous=True,
-        finetune=False,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -836,7 +834,7 @@ class BackwardFlatten(BackwardLayer):
             **kwargs,
         )
 
-    def call(self, inputs, slope=Slope.V_SLOPE, **kwargs):
+    def call(self, inputs, **kwargs):
         if self.previous:
             return inputs[-4:]
         else:
@@ -861,9 +859,7 @@ class BackwardReshape(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        slope=Slope.V_SLOPE,
         previous=True,
-        finetune=False,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -914,9 +910,7 @@ class BackwardPermute(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        slope=Slope.V_SLOPE,
         previous=True,
-        finetune=False,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -935,7 +929,7 @@ class BackwardPermute(BackwardLayer):
         self.dims = layer.dims
         self.op = layer.call
 
-    def call(self, inputs, slope=Slope.V_SLOPE, **kwargs):
+    def call(self, inputs, **kwargs):
 
         if self.previous:
             w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -975,9 +969,7 @@ class BackwardDropout(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        slope=Slope.V_SLOPE,
         previous=True,
-        finetune=False,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -994,7 +986,7 @@ class BackwardDropout(BackwardLayer):
             **kwargs,
         )
 
-    def call(self, inputs, slope=Slope.V_SLOPE, **kwargs):
+    def call(self, inputs, **kwargs):
 
         if self.previous:
             w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -1020,8 +1012,6 @@ class BackwardBatchNormalization(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        slope=Slope.V_SLOPE,
-        finetune=False,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -1044,7 +1034,7 @@ class BackwardBatchNormalization(BackwardLayer):
         self.axis = self.layer.axis
         self.op_flat = Flatten()
 
-    def call(self, inputs, slope=Slope.V_SLOPE, **kwargs):
+    def call(self, inputs, **kwargs):
 
         y = inputs[0]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -1086,9 +1076,7 @@ class BackwardInputLayer(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        slope=Slope.V_SLOPE,
         previous=True,
-        finetune=False,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -1104,18 +1092,6 @@ class BackwardInputLayer(BackwardLayer):
             previous=previous,
             **kwargs,
         )
-        self.slope = Slope(slope)
-        self.finetune = finetune
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "slope": self.slope,
-                "previous": self.previous,
-            }
-        )
-        return config
 
     def call_previous(self, inputs):
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]

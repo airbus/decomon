@@ -115,9 +115,6 @@ class BackwardAdd(BackwardMerge):
     def __init__(
         self,
         layer,
-        slope=Slope.V_SLOPE,
-        finetune=False,
-        input_dim=-1,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -134,19 +131,7 @@ class BackwardAdd(BackwardMerge):
             previous=previous,
             **kwargs,
         )
-        self.slope = slope
-        self.finetune = False
         self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp).call
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "slope": self.slope,
-                "finetune": self.finetune,
-            }
-        )
-        return config
 
     def call_previous(self, inputs):
 
@@ -201,9 +186,6 @@ class BackwardAverage(BackwardMerge):
     def __init__(
         self,
         layer,
-        slope=Slope.V_SLOPE,
-        finetune=False,
-        input_dim=-1,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -220,19 +202,7 @@ class BackwardAverage(BackwardMerge):
             previous=previous,
             **kwargs,
         )
-        self.slope = Slope(slope)
-        self.finetune = False
         self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=False).call
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "slope": self.slope,
-                "finetune": self.finetune,
-            }
-        )
-        return config
 
     def call_previous(self, inputs):
 
@@ -308,7 +278,6 @@ class BackwardSubtract(BackwardMerge):
     def __init__(
         self,
         layer,
-        slope=Slope.V_SLOPE,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -327,17 +296,6 @@ class BackwardSubtract(BackwardMerge):
         )
         if not isinstance(layer, DecomonSubtract):
             raise KeyError()
-
-        self.slope = Slope(slope)
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "slope": self.slope,
-            }
-        )
-        return config
 
     def call(self, inputs, **kwargs):
 
@@ -373,7 +331,6 @@ class BackwardMaximum(BackwardMerge):
     def __init__(
         self,
         layer,
-        slope=Slope.V_SLOPE,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -392,17 +349,6 @@ class BackwardMaximum(BackwardMerge):
         )
         if not isinstance(layer, DecomonMaximum):
             raise KeyError()
-
-        self.slope = Slope(slope)
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "slope": self.slope,
-            }
-        )
-        return config
 
     def call(self, inputs, **kwargs):
 
@@ -438,7 +384,6 @@ class BackwardMinimum(BackwardMerge):
     def __init__(
         self,
         layer,
-        slope=Slope.V_SLOPE,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -457,17 +402,6 @@ class BackwardMinimum(BackwardMerge):
         )
         if not isinstance(layer, DecomonMinimum):
             raise KeyError()
-
-        self.slope = Slope(slope)
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "slope": self.slope,
-            }
-        )
-        return config
 
     def call(self, inputs, **kwargs):
 
@@ -503,7 +437,6 @@ class BackwardConcatenate(BackwardMerge):
     def __init__(
         self,
         layer,
-        slope=Slope.V_SLOPE,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -523,17 +456,7 @@ class BackwardConcatenate(BackwardMerge):
         if not isinstance(layer, DecomonConcatenate):
             raise KeyError()
 
-        self.slope = Slope(slope)
         self.axis = self.layer.axis
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "slope": self.slope,
-            }
-        )
-        return config
 
     def call(self, inputs, **kwargs):
         x_ = inputs[:-4]
@@ -566,7 +489,6 @@ class BackwardMultiply(BackwardMerge):
     def __init__(
         self,
         layer,
-        slope=Slope.V_SLOPE,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -585,17 +507,6 @@ class BackwardMultiply(BackwardMerge):
         )
         if not isinstance(layer, DecomonMultiply):
             raise KeyError()
-
-        self.slope = Slope(slope)
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "slope": self.slope,
-            }
-        )
-        return config
 
     def call(self, inputs, **kwargs):
 
@@ -631,7 +542,6 @@ class BackwardDot(BackwardMerge):
     def __init__(
         self,
         layer,
-        slope=Slope.V_SLOPE,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -651,20 +561,10 @@ class BackwardDot(BackwardMerge):
         if not isinstance(layer, DecomonDot):
             raise KeyError()
 
-        self.slope = Slope(slope)
         self.axes = [i for i in self.layer.axes]
         self.op = BackwardAdd(self.layer)
 
         raise NotImplementedError()
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "slope": self.slope,
-            }
-        )
-        return config
 
     def call(self, inputs, **kwargs):
 
@@ -731,7 +631,6 @@ class BackwardDot(BackwardMerge):
             w_l_,
             b_l_,
             convex_domain=self.convex_domain,
-            slope=self.slope,
             mode=self.mode,
         )
 
