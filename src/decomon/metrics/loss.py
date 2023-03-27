@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
 import tensorflow as tf
@@ -12,7 +12,7 @@ from decomon.models.utils import get_mode
 from decomon.utils import ConvexDomainType, get_lower, get_upper, set_mode
 
 
-def get_model(model):
+def get_model(model: DecomonModel) -> DecomonModel:
     IBP = model.IBP
     forward = model.forward
 
@@ -21,10 +21,11 @@ def get_model(model):
 
     inputs = model.input
     output = model.output
+    output_: tf.Tensor
 
     if mode == ForwardMode.IBP:
 
-        def func(output_):
+        def func(output_: List[tf.Tensor]) -> tf.Tensor:
             u_c, l_c = output_
             return K.concatenate([K.expand_dims(u_c, -1), K.expand_dims(l_c, -1)], -1)
 
@@ -32,7 +33,7 @@ def get_model(model):
 
     elif mode == ForwardMode.AFFINE:
 
-        def func(output_):
+        def func(output_: List[tf.Tensor]) -> tf.Tensor:
             x_0, w_u, b_u, w_l, b_l = output_
             if len(x_0.shape) == 2:
                 x_0_ = x_0[:, :, None]
@@ -51,7 +52,7 @@ def get_model(model):
 
     elif mode == ForwardMode.HYBRID:
 
-        def func(output_):
+        def func(output_: List[tf.Tensor]) -> tf.Tensor:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = output_
 
             if len(x_0.shape) == 2:
@@ -87,7 +88,7 @@ def get_model(model):
     )
 
 
-def get_upper_loss(model):
+def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.Tensor]:
 
     IBP = model.IBP
     forward = model.forward
@@ -103,17 +104,17 @@ def get_upper_loss(model):
 
     n_out = np.prod(model.output[-1].shape[1:])
 
-    def upper_ibp(u_c, u_ref):
+    def upper_ibp(u_c: tf.Tensor, u_ref: tf.Tensor) -> tf.Tensor:
         # minimize the upper bound compared to the reference
         return K.max(u_c - u_ref, -1)
 
-    def upper_forward(x, w_u, b_u, u_ref):
+    def upper_forward(x: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, u_ref: tf.Tensor) -> tf.Tensor:
 
         upper = get_upper(x, w_u, b_u, convex_domain=convex_domain)
 
         return K.max(upper - u_ref, -1)
 
-    def loss_upper(y_true, y_pred):
+    def loss_upper(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
 
         if mode == ForwardMode.IBP:
             u_c = y_pred[:, :, 0]
@@ -158,7 +159,7 @@ def get_upper_loss(model):
     return loss_upper
 
 
-def get_lower_loss(model):
+def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.Tensor]:
 
     IBP = model.IBP
     forward = model.forward
@@ -174,17 +175,17 @@ def get_lower_loss(model):
 
     n_out = np.prod(model.output[-1].shape[1:])
 
-    def lower_ibp(l_c, l_ref):
+    def lower_ibp(l_c: tf.Tensor, l_ref: tf.Tensor) -> tf.Tensor:
         # minimize the upper bound compared to the reference
         return K.max(l_ref - l_c, -1)
 
-    def lower_forward(x, w_l, b_l, l_ref):
+    def lower_forward(x: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor, l_ref: tf.Tensor) -> tf.Tensor:
 
         lower = get_lower(x, w_l, b_l, convex_domain=convex_domain)
 
         return K.max(l_ref - lower, -1)
 
-    def loss_lower(y_true, y_pred):
+    def loss_lower(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
 
         if mode == ForwardMode.IBP:
             l_c = y_pred[:, :, 1]
@@ -229,7 +230,9 @@ def get_lower_loss(model):
     return loss_lower
 
 
-def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
+def get_adv_loss(
+    model: DecomonModel, sigmoid: bool = False, clip_value: Optional[float] = None, softmax: bool = False
+) -> Callable[[tf.Tensor, tf.Tensor], tf.Tensor]:
 
     IBP = model.IBP
     forward = model.forward
@@ -245,7 +248,7 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
 
     n_out = np.prod(model.output[-1].shape[1:])
 
-    def adv_ibp(u_c, l_c, y_tensor):
+    def adv_ibp(u_c: tf.Tensor, l_c: tf.Tensor, y_tensor: tf.Tensor) -> tf.Tensor:
 
         t_tensor = 1 - y_tensor
         s_tensor = y_tensor
@@ -258,7 +261,9 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
         upper = upper - (const + K.cast(1, const.dtype)) * (1 - M)
         return K.max(upper, (-1, -2))
 
-    def adv_forward(x, w_u, b_u, w_l, b_l, y_tensor):
+    def adv_forward(
+        x: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor, y_tensor: tf.Tensor
+    ) -> tf.Tensor:
 
         w_u_ = K.expand_dims(w_u, -1)
         w_l_ = K.expand_dims(w_l, -2)
@@ -279,7 +284,7 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
         upper = upper - (const + K.cast(1, const.dtype)) * (1 - M)
         return K.max(upper, (-1, -2))
 
-    def loss_adv(y_true, y_pred):
+    def loss_adv(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
 
         if mode == ForwardMode.IBP:
             u_c = y_pred[:, :, 0]
@@ -359,8 +364,8 @@ def get_adv_loss(model, sigmoid=False, clip_value=None, softmax=False):
 class DecomonLossFusion(DecomonLayer):
     def __init__(
         self,
-        asymptotic=False,
-        backward=False,
+        asymptotic: bool = False,
+        backward: bool = False,
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -382,7 +387,7 @@ class DecomonLossFusion(DecomonLayer):
         self.asymptotic = asymptotic
         self.backward = backward
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
         config.update(
             {
@@ -392,7 +397,7 @@ class DecomonLossFusion(DecomonLayer):
         )
         return config
 
-    def call_no_backward(self, inputs, **kwargs):
+    def call_no_backward(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
 
         if not self.asymptotic:
 
@@ -404,7 +409,7 @@ class DecomonLossFusion(DecomonLayer):
             u_c, l_c = set_mode(inputs, self.final_mode, self.mode, self.convex_domain)  # (None, n_out), (None, n_out)
             shape = u_c.shape[-1]
 
-            def adv_ibp(u_c, l_c, y_tensor):
+            def adv_ibp(u_c: tf.Tensor, l_c: tf.Tensor, y_tensor: tf.Tensor) -> tf.Tensor:
 
                 t_tensor = 1 - y_tensor
                 s_tensor = y_tensor
@@ -422,7 +427,7 @@ class DecomonLossFusion(DecomonLayer):
             score = K.concatenate([adv_ibp(u_c, l_c, source_tensor[:, i])[:, None] for i in range(shape)], -1)
             return K.maximum(score, -1)  # + 1e-3*K.maximum(K.max(K.abs(u_c), -1)[:,None], K.abs(l_c))
 
-    def call_backward(self, inputs, **kwargs):
+    def call_backward(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
 
         if not self.asymptotic:
 
@@ -433,13 +438,13 @@ class DecomonLossFusion(DecomonLayer):
 
             raise NotImplementedError()
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
         if self.backward:
             return self.call_backward(inputs, **kwargs)
         else:
             return self.call_no_backward(inputs, **kwargs)
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> tf.TensorShape:
         return input_shape[-1]
 
 
@@ -447,7 +452,7 @@ class DecomonLossFusion(DecomonLayer):
 class DecomonRadiusRobust(DecomonLayer):
     def __init__(
         self,
-        backward=False,
+        backward: bool = False,
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -474,7 +479,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
         self.backward = backward
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
         config.update(
             {
@@ -483,7 +488,7 @@ class DecomonRadiusRobust(DecomonLayer):
         )
         return config
 
-    def call_no_backward(self, inputs, **kwargs):
+    def call_no_backward(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
 
         if self.mode == ForwardMode.HYBRID:
             x, _, w_u, b_u, _, w_l, b_l = inputs
@@ -497,7 +502,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
         shape = b_l.shape[-1]
 
-        def radius_label(y_tensor, backward=False):
+        def radius_label(y_tensor: tf.Tensor, backward: bool = False) -> tf.Tensor:
 
             t_tensor = 1 - y_tensor
             s_tensor = y_tensor
@@ -519,7 +524,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
         return K.concatenate([radius_label(source_tensor[:, i]) for i in range(shape)], -1)
 
-    def call_backward(self, inputs, **kwargs):
+    def call_backward(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
 
         if self.mode == ForwardMode.HYBRID:
             x, _, w_u, b_u, _, w_l, b_l = inputs
@@ -533,7 +538,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
         shape = b_l.shape[-1]
 
-        def radius_label(y_tensor):
+        def radius_label(y_tensor: tf.Tensor) -> tf.Tensor:
             W_adv = w_u
             b_adv = b_u - 1e6 * y_tensor
 
@@ -548,17 +553,17 @@ class DecomonRadiusRobust(DecomonLayer):
 
         return K.concatenate([radius_label(source_tensor[:, i]) for i in range(shape)], -1)
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
         if self.backward:
             return self.call_backward(inputs, **kwargs)
         else:
             return self.call_no_backward(inputs, **kwargs)
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> tf.TensorShape:
         return input_shape[-1]
 
 
-def build_radius_robust_model(model):
+def build_radius_robust_model(model: DecomonModel) -> DecomonModel:
     IBP = model.IBP
     forward = model.forward
 
@@ -582,7 +587,7 @@ def build_radius_robust_model(model):
 
 
 ##### DESIGN LOSS FUNCTIONS
-def build_crossentropy_model(model):
+def build_crossentropy_model(model: DecomonModel) -> DecomonModel:
     IBP = model.IBP
     forward = model.forward
 
@@ -606,7 +611,7 @@ def build_crossentropy_model(model):
 
 
 ##### DESIGN LOSS FUNCTIONS
-def build_asymptotic_crossentropy_model(model):
+def build_asymptotic_crossentropy_model(model: DecomonModel) -> DecomonModel:
     IBP = model.IBP
     forward = model.forward
 

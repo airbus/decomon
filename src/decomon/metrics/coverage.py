@@ -1,21 +1,26 @@
 ## Measuring the percentage of the input space that could be discarded as we are able to prove the property on it
+
+from typing import Any, Callable, Dict, List, Optional, Union
+
 import numpy as np
+import numpy.typing as npt
+import tensorflow as tf
 
 from decomon.models.convert import clone as convert
 from decomon.models.models import DecomonModel
 from decomon.utils import ConvexDomainType
-from decomon.wrapper import get_adv_box, refine_boxes
+from decomon.wrapper import LabelType, get_adv_box, prepare_labels, refine_boxes
 
 
 def get_adv_coverage_box(
-    model,
-    x_min,
-    x_max,
-    source_labels,
-    target_labels=None,
-    batch_size=-1,
-    n_sub_boxes=1,
-):
+    model: Union[tf.keras.Model, DecomonModel],
+    x_min: npt.NDArray[np.float_],
+    x_max: npt.NDArray[np.float_],
+    source_labels: LabelType,
+    target_labels: Optional[LabelType] = None,
+    batch_size: int = -1,
+    n_sub_boxes: int = 1,
+) -> npt.NDArray[np.float_]:
     """if the output is negative, then it is a formal guarantee that there is no adversarial examples
 
     Args:
@@ -38,6 +43,7 @@ def get_adv_coverage_box(
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion
+    model_: DecomonModel
     if not isinstance(model, DecomonModel):
         model_ = convert(model)
     else:
@@ -66,18 +72,9 @@ def get_adv_coverage_box(
 
     z = np.concatenate([x_min, x_max], 1)
 
-    if isinstance(source_labels, (int, np.int_)):
-        source_labels = np.zeros((n_batch, 1)) + source_labels
-
-    if isinstance(source_labels, list):
-        source_labels = np.array(source_labels).reshape((n_batch, -1))
-
-    source_labels = source_labels.reshape((n_batch, -1))
-    source_labels = source_labels.astype(np.int_)
-
+    source_labels = prepare_labels(labels=source_labels, n_batch=n_batch)
     if target_labels is not None:
-        target_labels = target_labels.reshape((n_batch, -1))
-        target_labels = target_labels.astype(np.int_)
+        target_labels = prepare_labels(labels=target_labels, n_batch=n_batch)
 
     if n_split > 1:
         shape = list(source_labels.shape[1:])
@@ -93,6 +90,7 @@ def get_adv_coverage_box(
         X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
         S_ = [source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        T_: List[Optional[npt.NDArray[np.int_]]]
         if (
             (target_labels is not None)
             and (not isinstance(target_labels, int))
@@ -113,7 +111,12 @@ def get_adv_coverage_box(
 
         output = model_.predict(z)
 
-        def get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
+        def get_ibp_score(
+            u_c: npt.NDArray[np.float_],
+            l_c: npt.NDArray[np.float_],
+            source_tensor: npt.NDArray[np.int_],
+            target_tensor: Optional[npt.NDArray[np.int_]] = None,
+        ) -> npt.NDArray[np.float_]:
 
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
@@ -132,7 +135,15 @@ def get_adv_coverage_box(
 
             return np.max(np.max(upper, -2), -1)
 
-        def get_forward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None):
+        def get_forward_score(
+            z_tensor: npt.NDArray[np.float_],
+            w_u: npt.NDArray[np.float_],
+            b_u: npt.NDArray[np.float_],
+            w_l: npt.NDArray[np.float_],
+            b_l: npt.NDArray[np.float_],
+            source_tensor: npt.NDArray[np.int_],
+            target_tensor: Optional[npt.NDArray[np.int_]] = None,
+        ) -> npt.NDArray[np.float_]:
 
             if target_tensor is None:
                 target_tensor = 1 - source_tensor

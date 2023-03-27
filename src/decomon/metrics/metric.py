@@ -8,6 +8,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Input, Layer
 from tensorflow.keras.models import Model
 
+from decomon.models.models import DecomonModel
 from decomon.utils import get_upper
 
 
@@ -43,7 +44,7 @@ class MetricLayer(ABC, Layer):
         self.mode = MetricMode(mode)
         self.convex_domain = convex_domain
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
         config.update(
             {
@@ -92,7 +93,9 @@ class AdversarialCheck(MetricLayer):
         """
         super().__init__(ibp=ibp, affine=affine, mode=mode, convex_domain=convex_domain, **kwargs)
 
-    def linear_adv(self, z_tensor, y_tensor, w_u, b_u, w_l, b_l):
+    def linear_adv(
+        self, z_tensor: tf.Tensor, y_tensor: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor
+    ) -> tf.Tensor:
         w_upper = w_u * (1 - y_tensor[:, None]) - K.expand_dims(K.sum(w_l * y_tensor[:, None], -1), -1)
         b_upper = b_u * (1 - y_tensor) - b_l * y_tensor
 
@@ -211,7 +214,7 @@ class AdversarialScore(AdversarialCheck):
         return adv_score
 
 
-def build_formal_adv_check_model(decomon_model):
+def build_formal_adv_check_model(decomon_model: DecomonModel) -> tf.keras.Model:
     """automatic design on a Keras  model which predicts a certificate of adversarial robustness
 
     Args:
@@ -234,7 +237,7 @@ def build_formal_adv_check_model(decomon_model):
     return adv_model
 
 
-def build_formal_adv_model(decomon_model):
+def build_formal_adv_model(decomon_model: DecomonModel) -> tf.keras.Model:
     """automatic design on a Keras  model which predicts a certificate of adversarial robustness
 
     Args:
@@ -282,7 +285,7 @@ class UpperScore(MetricLayer):
         """
         super().__init__(ibp=ibp, affine=affine, mode=mode, convex_domain=convex_domain, **kwargs)
 
-    def linear_upper(self, z_tensor, y_tensor, w_u, b_u):
+    def linear_upper(self, z_tensor: tf.Tensor, y_tensor: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor) -> tf.Tensor:
         w_upper = w_u * y_tensor[:, None]
         b_upper = b_u * y_tensor
 
@@ -326,7 +329,7 @@ class UpperScore(MetricLayer):
         return upper_score
 
 
-def build_formal_upper_model(decomon_model):
+def build_formal_upper_model(decomon_model: DecomonModel) -> tf.keras.Model:
     """automatic design on a Keras  model which predicts a certificate on the local upper bound
 
     Args:
@@ -349,7 +352,9 @@ def build_formal_upper_model(decomon_model):
     return upper_model
 
 
-def _get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
+def _get_ibp_score(
+    u_c: tf.Tensor, l_c: tf.Tensor, source_tensor: tf.Tensor, target_tensor: Optional[tf.Tensor] = None
+) -> tf.Tensor:
     if target_tensor is None:
         target_tensor = 1.0 - source_tensor
 
@@ -362,7 +367,15 @@ def _get_ibp_score(u_c, l_c, source_tensor, target_tensor=None):
     return K.max(score_u, -1)
 
 
-def _get_forward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None):
+def _get_forward_score(
+    z_tensor: tf.Tensor,
+    w_u: tf.Tensor,
+    b_u: tf.Tensor,
+    w_l: tf.Tensor,
+    b_l: tf.Tensor,
+    source_tensor: tf.Tensor,
+    target_tensor: Optional[tf.Tensor] = None,
+) -> tf.Tensor:
     if target_tensor is None:
         target_tensor = 1.0 - source_tensor
 
@@ -384,5 +397,13 @@ def _get_forward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tenso
     return K.max(upper, (-1, -2))
 
 
-def _get_backward_score(z_tensor, w_u, b_u, w_l, b_l, source_tensor, target_tensor=None):
+def _get_backward_score(
+    z_tensor: tf.Tensor,
+    w_u: tf.Tensor,
+    b_u: tf.Tensor,
+    w_l: tf.Tensor,
+    b_l: tf.Tensor,
+    source_tensor: tf.Tensor,
+    target_tensor: Optional[tf.Tensor] = None,
+) -> tf.Tensor:
     return _get_forward_score(z_tensor, w_u[:, 0], b_u[:, 0], w_l[:, 0], b_l[:, 0], source_tensor, target_tensor)
