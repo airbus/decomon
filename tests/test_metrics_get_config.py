@@ -1,6 +1,11 @@
 from decomon.layers.core import ForwardMode
 from decomon.metrics.loss import DecomonLossFusion, DecomonRadiusRobust
-from decomon.metrics.metric import AdversarialCheck, AdversarialScore, UpperScore
+from decomon.metrics.metric import (
+    AdversarialCheck,
+    AdversarialScore,
+    MetricMode,
+    UpperScore,
+)
 
 
 def test_decomon_loss():
@@ -19,11 +24,11 @@ def test_decomon_loss():
 
 
 def test_metric():
-    ibp, forward, mode, convex_domain = True, False, ForwardMode.AFFINE, {}
+    ibp, affine, mode, convex_domain = True, False, MetricMode.BACKWARD, {}
     for cls in [AdversarialCheck, AdversarialScore, UpperScore]:
-        layer = cls(ibp=ibp, forward=forward, mode=mode, convex_domain=convex_domain)
+        layer = cls(ibp=ibp, affine=affine, mode=mode, convex_domain=convex_domain)
         config = layer.get_config()
         assert config["ibp"] == ibp
-        assert config["forward"] == forward
+        assert config["affine"] == affine
         assert config["mode"] == mode
         assert "convex_domain" in config
