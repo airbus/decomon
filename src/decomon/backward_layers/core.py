@@ -22,6 +22,8 @@ class BackwardLayer(ABC, Wrapper):
         previous: bool = True,
         **kwargs: Any,
     ):
+        kwargs.pop("slope", None)
+        kwargs.pop("finetune", None)
         super().__init__(layer, **kwargs)
         self.rec = rec
         self.previous = previous
