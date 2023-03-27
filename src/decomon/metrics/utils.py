@@ -1,3 +1,7 @@
+from typing import Any, Dict, List, Optional, Union
+
+import tensorflow as tf
+
 from decomon.layers.core import ForwardMode
 from decomon.layers.utils import exp, expand_dims, log, sum
 from decomon.utils import add, minus
@@ -5,7 +9,12 @@ from decomon.utils import add, minus
 # compute categorical cross entropy
 
 
-def categorical_cross_entropy(input_, dc_decomp=False, mode=ForwardMode.HYBRID, convex_domain=None):
+def categorical_cross_entropy(
+    input_: List[tf.Tensor],
+    dc_decomp: bool = False,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    convex_domain: Optional[Dict[str, Any]] = None,
+) -> List[tf.Tensor]:
 
     # step 1: exponential
     if convex_domain is None:
