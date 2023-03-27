@@ -1,9 +1,11 @@
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional, Union
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Wrapper
+from tensorflow.keras.layers import Layer, Wrapper
 
-from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import (
     backward_add,
     backward_maximum,
@@ -12,7 +14,7 @@ from decomon.backward_layers.utils import (
     backward_substract,
     get_identity_lirpa,
 )
-from decomon.layers.core import ForwardMode
+from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.decomon_merge_layers import (
     DecomonAdd,
     DecomonConcatenate,
@@ -26,9 +28,85 @@ from decomon.layers.utils import broadcast, multiply, permute_dimensions, split
 from decomon.utils import Slope
 
 
-class BackwardMerge(Wrapper):
-    def __init__(self, layer, **kwargs):
+class BackwardMerge(ABC, Wrapper):
+
+    layer: Layer
+    _trainable_weights: List[tf.Variable]
+
+    def __init__(
+        self,
+        layer: Layer,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        previous: bool = True,
+        **kwargs: Any,
+    ):
         super().__init__(layer, **kwargs)
+        self.rec = rec
+        self.previous = previous
+        if isinstance(self.layer, DecomonLayer):
+            self.mode = self.layer.mode
+            self.convex_domain = self.layer.convex_domain
+            self.dc_decomp = self.layer.dc_decomp
+        else:
+            self.mode = ForwardMode(mode)
+            if convex_domain is None:
+                self.convex_domain = {}
+            else:
+                self.convex_domain = convex_domain
+            self.dc_decomp = dc_decomp
+
+    def get_config(self) -> Dict[str, Any]:
+        config = super().get_config()
+        config.update(
+            {
+                "rec": self.rec,
+                "mode": self.mode,
+                "convex_domain": self.convex_domain,
+                "dc_decomp": self.dc_decomp,
+                "previous": self.previous,
+            }
+        )
+        return config
+
+    @abstractmethod
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+        """
+        Args:
+            inputs
+
+        Returns:
+
+        """
+        pass
+
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
+        """
+        Args:
+            input_shape
+
+        Returns:
+
+        """
+        # generic case: nothing to do before call
+        pass
+
+    def freeze_weights(self) -> None:
+        pass
+
+    def unfreeze_weights(self) -> None:
+        pass
+
+    def freeze_alpha(self) -> None:
+        pass
+
+    def unfreeze_alpha(self) -> None:
+        pass
+
+    def reset_finetuning(self) -> None:
+        pass
 
 
 class BackwardAdd(BackwardMerge):
@@ -38,28 +116,26 @@ class BackwardAdd(BackwardMerge):
         self,
         layer,
         slope=Slope.V_SLOPE,
-        previous=True,
-        mode=ForwardMode.HYBRID,
-        convex_domain=None,
         finetune=False,
         input_dim=-1,
-        **kwargs,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        previous=True,
+        **kwargs: Any,
     ):
-        super().__init__(layer, **kwargs)
-        if convex_domain is None:
-            convex_domain = {}
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
         self.slope = slope
-        if hasattr(self.layer, "mode"):
-            self.mode = self.layer.mode
-            self.convex_domain = self.layer.convex_domain
-            self.dc_decomp = self.layer.dc_decomp
-        else:
-            self.mode = ForwardMode(mode)
-            self.convex_domain = convex_domain
-            self.dc_decomp = False
         self.finetune = False
-        self.previous = previous
-
         self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp).call
 
     def get_config(self):
@@ -67,7 +143,6 @@ class BackwardAdd(BackwardMerge):
         config.update(
             {
                 "slope": self.slope,
-                "previous": self.previous,
                 "finetune": self.finetune,
             }
         )
@@ -127,26 +202,26 @@ class BackwardAverage(BackwardMerge):
         self,
         layer,
         slope=Slope.V_SLOPE,
-        previous=True,
-        mode=ForwardMode.HYBRID,
-        convex_domain=None,
         finetune=False,
         input_dim=-1,
-        **kwargs,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        previous=True,
+        **kwargs: Any,
     ):
-        super().__init__(layer, **kwargs)
-
-        if convex_domain is None:
-            convex_domain = {}
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
         self.slope = Slope(slope)
-        if hasattr(self.layer, "mode"):
-            self.mode = self.layer.mode
-            self.convex_domain = self.layer.convex_domain
-        else:
-            self.mode = mode
-            self.convex_domain = convex_domain
         self.finetune = False
-        self.previous = previous
         self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=False).call
 
     def get_config(self):
@@ -154,7 +229,6 @@ class BackwardAverage(BackwardMerge):
         config.update(
             {
                 "slope": self.slope,
-                "previous": self.previous,
                 "finetune": self.finetune,
             }
         )
@@ -231,13 +305,30 @@ class BackwardAverage(BackwardMerge):
 class BackwardSubtract(BackwardMerge):
     """Backward  LiRPA of Subtract"""
 
-    def __init__(self, layer, slope=Slope.V_SLOPE, **kwargs):
-        super().__init__(layer, **kwargs)
+    def __init__(
+        self,
+        layer,
+        slope=Slope.V_SLOPE,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        previous=True,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
         if not isinstance(layer, DecomonSubtract):
             raise KeyError()
 
         self.slope = Slope(slope)
-        self.mode = self.layer.mode
 
     def get_config(self):
         config = super().get_config()
@@ -279,13 +370,30 @@ class BackwardSubtract(BackwardMerge):
 class BackwardMaximum(BackwardMerge):
     """Backward  LiRPA of Maximum"""
 
-    def __init__(self, layer, slope=Slope.V_SLOPE, **kwargs):
-        super().__init__(layer, **kwargs)
+    def __init__(
+        self,
+        layer,
+        slope=Slope.V_SLOPE,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        previous=True,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
         if not isinstance(layer, DecomonMaximum):
             raise KeyError()
 
         self.slope = Slope(slope)
-        self.mode = self.layer.mode
 
     def get_config(self):
         config = super().get_config()
@@ -327,13 +435,30 @@ class BackwardMaximum(BackwardMerge):
 class BackwardMinimum(BackwardMerge):
     """Backward  LiRPA of Minimum"""
 
-    def __init__(self, layer, slope=Slope.V_SLOPE, **kwargs):
-        super().__init__(layer, **kwargs)
+    def __init__(
+        self,
+        layer,
+        slope=Slope.V_SLOPE,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        previous=True,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
         if not isinstance(layer, DecomonMinimum):
             raise KeyError()
 
         self.slope = Slope(slope)
-        self.mode = self.layer.mode
 
     def get_config(self):
         config = super().get_config()
@@ -375,13 +500,30 @@ class BackwardMinimum(BackwardMerge):
 class BackwardConcatenate(BackwardMerge):
     """Backward  LiRPA of Concatenate"""
 
-    def __init__(self, layer, slope=Slope.V_SLOPE, **kwargs):
-        super().__init__(layer, **kwargs)
+    def __init__(
+        self,
+        layer,
+        slope=Slope.V_SLOPE,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        previous=True,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
         if not isinstance(layer, DecomonConcatenate):
             raise KeyError()
 
         self.slope = Slope(slope)
-        self.mode = self.layer.mode
         self.axis = self.layer.axis
 
     def get_config(self):
@@ -421,13 +563,30 @@ class BackwardConcatenate(BackwardMerge):
 class BackwardMultiply(BackwardMerge):
     """Backward  LiRPA of Multiply"""
 
-    def __init__(self, layer, slope=Slope.V_SLOPE, **kwargs):
-        super().__init__(layer, **kwargs)
+    def __init__(
+        self,
+        layer,
+        slope=Slope.V_SLOPE,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        previous=True,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
         if not isinstance(layer, DecomonMultiply):
             raise KeyError()
 
         self.slope = Slope(slope)
-        self.mode = self.layer.mode
 
     def get_config(self):
         config = super().get_config()
@@ -469,16 +628,32 @@ class BackwardMultiply(BackwardMerge):
 class BackwardDot(BackwardMerge):
     """Backward  LiRPA of Dot"""
 
-    def __init__(self, layer, slope=Slope.V_SLOPE, **kwargs):
-        super().__init__(layer, **kwargs)
+    def __init__(
+        self,
+        layer,
+        slope=Slope.V_SLOPE,
+        rec: int = 1,
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        convex_domain: Optional[Dict[str, Any]] = None,
+        dc_decomp: bool = False,
+        previous=True,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            layer=layer,
+            rec=rec,
+            mode=mode,
+            convex_domain=convex_domain,
+            dc_decomp=dc_decomp,
+            previous=previous,
+            **kwargs,
+        )
         if not isinstance(layer, DecomonDot):
             raise KeyError()
 
         self.slope = Slope(slope)
-        self.mode = self.layer.mode
         self.axes = [i for i in self.layer.axes]
         self.op = BackwardAdd(self.layer)
-        self.convex_domain = self.layer.convex_domain
 
         raise NotImplementedError()
 
