@@ -17,10 +17,7 @@ class BackwardMaxPooling2D(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        slope=Slope.V_SLOPE,
         previous=True,
-        finetune=False,
-        input_dim=-1,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -50,7 +47,6 @@ class BackwardMaxPooling2D(BackwardLayer):
         padding,
         data_format,
         convex_domain=None,
-        slope=Slope.V_SLOPE,
     ):
 
         if convex_domain is None:
@@ -67,7 +63,6 @@ class BackwardMaxPooling2D(BackwardLayer):
                 padding,
                 data_format,
                 convex_domain,
-                slope,
             )
         else:
             return self._pooling_function_not_fast(
@@ -81,7 +76,6 @@ class BackwardMaxPooling2D(BackwardLayer):
                 padding,
                 data_format,
                 convex_domain,
-                slope,
             )
 
     def _pooling_function_fast(
@@ -96,7 +90,6 @@ class BackwardMaxPooling2D(BackwardLayer):
         padding,
         data_format,
         convex_domain=None,
-        slope=Slope.V_SLOPE,
     ):
 
         if convex_domain is None:
@@ -143,7 +136,6 @@ class BackwardMaxPooling2D(BackwardLayer):
         padding,
         data_format,
         convex_domain=None,
-        slope=Slope.V_SLOPE,
     ):
         """
         Args:
@@ -228,7 +220,6 @@ class BackwardMaxPooling2D(BackwardLayer):
             w_out_l,
             b_out_l,
             convex_domain=convex_domain,
-            slope=slope,
             mode=self.mode,
             axis=-1,
         )

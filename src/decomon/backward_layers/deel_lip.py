@@ -27,9 +27,7 @@ class BackwardGroupSort2(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        slope=Slope.V_SLOPE,
         previous=True,
-        finetune=False,
         input_dim=-1,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -47,9 +45,6 @@ class BackwardGroupSort2(BackwardLayer):
             **kwargs,
         )
 
-        self.slope = Slope(slope)
-        self.finetune = finetune
-
         if not isinstance(layer, DecomonLayer):
             self.layer = to_decomon(
                 layer,
@@ -64,16 +59,6 @@ class BackwardGroupSort2(BackwardLayer):
             )[0]
 
         self.frozen_weights = False
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "slope": self.slope,
-                "finetune": self.finetune,
-            }
-        )
-        return config
 
     def call_previous(self, inputs):
 
