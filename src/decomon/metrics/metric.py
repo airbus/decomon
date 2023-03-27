@@ -6,7 +6,7 @@ from tensorflow.keras.models import Model
 from decomon.utils import get_upper
 
 
-class Adversarial_score(Layer):
+class AdversarialScore(Layer):
     """Training with symbolic LiRPA bounds for promoting adversarial robustness"""
 
     def __init__(self, ibp, forward, mode, convex_domain, **kwargs):
@@ -130,7 +130,7 @@ class Adversarial_score(Layer):
         return adv_score
 
 
-class Adversarial_check(Layer):
+class AdversarialCheck(Layer):
     """Training with symbolic LiRPA bounds for promoting adversarial robustness"""
 
     def __init__(self, ibp, forward, mode, convex_domain, **kwargs):
@@ -268,7 +268,7 @@ def build_formal_adv_check_model(decomon_model):
     # check type and that backward pass is available
 
     convex_domain = decomon_model.convex_domain
-    layer = Adversarial_check(decomon_model.IBP, decomon_model.forward, decomon_model.mode, convex_domain)
+    layer = AdversarialCheck(decomon_model.IBP, decomon_model.forward, decomon_model.mode, convex_domain)
     output = decomon_model.output
     input = decomon_model.input
     n_out = decomon_model.output[0].shape[1:]
@@ -291,7 +291,7 @@ def build_formal_adv_model(decomon_model):
     # check type and that backward pass is available
 
     convex_domain = decomon_model.convex_domain
-    layer = Adversarial_score(decomon_model.IBP, decomon_model.forward, decomon_model.mode, convex_domain)
+    layer = AdversarialScore(decomon_model.IBP, decomon_model.forward, decomon_model.mode, convex_domain)
     output = decomon_model.output
     input = decomon_model.input
     n_out = decomon_model.output[0].shape[1:]
@@ -302,7 +302,7 @@ def build_formal_adv_model(decomon_model):
     return adv_model
 
 
-class Upper_score(Layer):
+class UpperScore(Layer):
     """Training with symbolic LiRPA bounds for limiting the local maximum of a neural network"""
 
     def __init__(self, ibp, forward, mode, convex_domain, **kwargs):
@@ -380,7 +380,7 @@ def build_formal_upper_model(decomon_model):
     # check type and that backward pass is available
 
     convex_domain = decomon_model.convex_domain
-    layer = Upper_score(decomon_model.IBP, decomon_model.forward, decomon_model.mode, convex_domain)
+    layer = UpperScore(decomon_model.IBP, decomon_model.forward, decomon_model.mode, convex_domain)
     output = decomon_model.output
     input = decomon_model.input
     n_out = decomon_model.output[0].shape[1:]
