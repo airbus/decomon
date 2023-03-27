@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
+from tensorflow.keras.layers import Wrapper
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import (
@@ -25,7 +26,7 @@ from decomon.layers.utils import broadcast, multiply, permute_dimensions, split
 from decomon.utils import Slope
 
 
-class BackwardMerge(BackwardLayer):
+class BackwardMerge(Wrapper):
     def __init__(self, layer, **kwargs):
         super().__init__(layer, **kwargs)
 
