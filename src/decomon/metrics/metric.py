@@ -1,4 +1,9 @@
+from abc import ABC, abstractmethod
+from enum import Enum
+from typing import Any, Dict, List, Optional, Union
+
 import numpy as np
+import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Input, Layer
 from tensorflow.keras.models import Model
@@ -6,10 +11,73 @@ from tensorflow.keras.models import Model
 from decomon.utils import get_upper
 
 
-class AdversarialScore(Layer):
+class MetricMode(Enum):
+    FORWARD = "forward"
+    BACKWARD = "backward"
+
+
+class MetricLayer(ABC, Layer):
+    def __init__(
+        self,
+        ibp: bool,
+        affine: bool,
+        mode: Union[str, MetricMode],
+        convex_domain: Optional[Dict[str, Any]],
+        **kwargs: Any,
+    ):
+        """
+        Args:
+            ibp: boolean that indicates whether we propagate constant
+                bounds
+            affine: boolean that indicates whether we propagate affine
+                bounds
+            mode: str: 'backward' or 'forward' whether we doforward or
+                backward linear relaxation
+            convex_domain: the type of input convex domain for the
+                linear relaxation
+            **kwargs
+        """
+        super().__init__(**kwargs)
+        self.ibp = ibp
+        self.affine = affine
+        self.mode = MetricMode(mode)
+        self.convex_domain = convex_domain
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "ibp": self.ibp,
+                "affine": self.affine,
+                "mode": self.mode,
+                "convex_domain": self.convex_domain,
+            }
+        )
+        return config
+
+    @abstractmethod
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
+        """
+        Args:
+            inputs
+
+        Returns:
+
+        """
+        pass
+
+
+class AdversarialScore(MetricLayer):
     """Training with symbolic LiRPA bounds for promoting adversarial robustness"""
 
-    def __init__(self, ibp, forward, mode, convex_domain, **kwargs):
+    def __init__(
+        self,
+        ibp: bool,
+        affine: bool,
+        mode: Union[str, MetricMode],
+        convex_domain: Optional[Dict[str, Any]],
+        **kwargs: Any,
+    ):
         """
         Args:
             ibp: boolean that indicates whether we propagate constant
@@ -22,23 +90,7 @@ class AdversarialScore(Layer):
                 linear relaxation
             **kwargs
         """
-        super().__init__(**kwargs)
-        self.ibp = ibp
-        self.forward = forward
-        self.mode = mode
-        self.convex_domain = convex_domain
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "ibp": self.ibp,
-                "forward": self.forward,
-                "mode": self.mode,
-                "convex_domain": self.convex_domain,
-            }
-        )
-        return config
+        super().__init__(ibp=ibp, affine=affine, mode=mode, convex_domain=convex_domain, **kwargs)
 
     def linear_adv(self, z_tensor, y_tensor, w_u, b_u, w_l, b_l):
 
@@ -50,7 +102,7 @@ class AdversarialScore(Layer):
 
         return K.max(adv_score, -1)
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
         """
         Args:
             inputs
@@ -99,30 +151,30 @@ class AdversarialScore(Layer):
 
             return get_forward_score(z_tensor, w_u[:, 0], b_u[:, 0], w_l[:, 0], b_l[:, 0], source_tensor, target_tensor)
 
-        if self.ibp and self.forward:
+        if self.ibp and self.affine:
             _, z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = inputs[:8]
-        elif not self.ibp and self.forward:
+        elif not self.ibp and self.affine:
             _, z, w_u_f, b_u_f, w_l_f, b_l_f = inputs[:6]
-        elif self.ibp and not self.forward:
+        elif self.ibp and not self.affine:
             _, z, u_c, l_c = inputs[:4]
         else:
             raise NotImplementedError("not IBP and not forward not implemented")
 
         if self.ibp:
             adv_ibp = get_ibp_score(u_c, l_c, y_tensor)
-        if self.forward:
+        if self.affine:
             adv_f = get_forward_score(z, w_u_f, b_u_f, w_l_f, b_l_f, y_tensor)
 
-        if self.ibp and not self.forward:
+        if self.ibp and not self.affine:
             adv_score = adv_ibp
-        elif self.ibp and self.forward:
+        elif self.ibp and self.affine:
             adv_score = K.minimum(adv_ibp, adv_f)
-        elif not self.ibp and self.forward:
+        elif not self.ibp and self.affine:
             adv_score = adv_f
         else:
             raise NotImplementedError("not IBP and not forward not implemented")
 
-        if self.mode == "backward":
+        if self.mode == MetricMode.BACKWARD:
             w_u_b, b_u_b, w_l_b, b_l_b, _ = inputs[-5:]
             adv_b = get_backward_score(z, w_u_b, b_u_b, w_l_b, b_l_b, y_tensor)
             adv_score = K.minimum(adv_score, adv_b)
@@ -130,10 +182,17 @@ class AdversarialScore(Layer):
         return adv_score
 
 
-class AdversarialCheck(Layer):
+class AdversarialCheck(MetricLayer):
     """Training with symbolic LiRPA bounds for promoting adversarial robustness"""
 
-    def __init__(self, ibp, forward, mode, convex_domain, **kwargs):
+    def __init__(
+        self,
+        ibp: bool,
+        affine: bool,
+        mode: Union[str, MetricMode],
+        convex_domain: Optional[Dict[str, Any]],
+        **kwargs: Any,
+    ):
         """
         Args:
             ibp: boolean that indicates whether we propagate constant
@@ -146,23 +205,7 @@ class AdversarialCheck(Layer):
                 linear relaxation
             **kwargs
         """
-        super().__init__(**kwargs)
-        self.ibp = ibp
-        self.forward = forward
-        self.mode = mode
-        self.convex_domain = convex_domain
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "ibp": self.ibp,
-                "forward": self.forward,
-                "mode": self.mode,
-                "convex_domain": self.convex_domain,
-            }
-        )
-        return config
+        super().__init__(ibp=ibp, affine=affine, mode=mode, convex_domain=convex_domain, **kwargs)
 
     def linear_adv(self, z_tensor, y_tensor, w_u, b_u, w_l, b_l):
         w_upper = w_u * (1 - y_tensor[:, None]) - K.expand_dims(K.sum(w_l * y_tensor[:, None], -1), -1)
@@ -172,7 +215,7 @@ class AdversarialCheck(Layer):
 
         return K.max(adv_score, -1)
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
         """
         Args:
             inputs
@@ -225,30 +268,30 @@ class AdversarialCheck(Layer):
 
             return get_forward_score(z_tensor, w_u[:, 0], b_u[:, 0], w_l[:, 0], b_l[:, 0], source_tensor, target_tensor)
 
-        if self.ibp and self.forward:
+        if self.ibp and self.affine:
             _, z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = inputs[:8]
-        elif not self.ibp and self.forward:
+        elif not self.ibp and self.affine:
             _, z, w_u_f, b_u_f, w_l_f, b_l_f = inputs[:6]
-        elif self.ibp and not self.forward:
+        elif self.ibp and not self.affine:
             _, z, u_c, l_c = inputs[:4]
         else:
             raise NotImplementedError("not IBP and not forward not implemented")
 
         if self.ibp:
             adv_ibp = get_ibp_score(u_c, l_c, y_tensor)
-        if self.forward:
+        if self.affine:
             adv_f = get_forward_score(z, w_u_f, b_u_f, w_l_f, b_l_f, y_tensor)
 
-        if self.ibp and not self.forward:
+        if self.ibp and not self.affine:
             adv_score = adv_ibp
-        elif self.ibp and self.forward:
+        elif self.ibp and self.affine:
             adv_score = K.minimum(adv_ibp, adv_f)
-        elif not self.ibp and self.forward:
+        elif not self.ibp and self.affine:
             adv_score = adv_f
         else:
             raise NotImplementedError("not IBP and not forward not implemented")
 
-        if self.mode == "backward":
+        if self.mode == MetricMode.BACKWARD:
             w_u_b, b_u_b, w_l_b, b_l_b, _ = inputs[-5:]
             adv_b = get_backward_score(z, w_u_b, b_u_b, w_l_b, b_l_b, y_tensor)
             adv_score = K.minimum(adv_score, adv_b)
@@ -302,27 +345,30 @@ def build_formal_adv_model(decomon_model):
     return adv_model
 
 
-class UpperScore(Layer):
+class UpperScore(MetricLayer):
     """Training with symbolic LiRPA bounds for limiting the local maximum of a neural network"""
 
-    def __init__(self, ibp, forward, mode, convex_domain, **kwargs):
-        super().__init__(**kwargs)
-        self.ibp = ibp
-        self.forward = forward
-        self.mode = mode
-        self.convex_domain = convex_domain
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "ibp": self.ibp,
-                "forward": self.forward,
-                "mode": self.mode,
-                "convex_domain": self.convex_domain,
-            }
-        )
-        return config
+    def __init__(
+        self,
+        ibp: bool,
+        affine: bool,
+        mode: Union[str, MetricMode],
+        convex_domain: Optional[Dict[str, Any]],
+        **kwargs: Any,
+    ):
+        """
+        Args:
+            ibp: boolean that indicates whether we propagate constant
+                bounds
+            forward: boolean that indicates whether we propagate affine
+                bounds
+            mode: str: 'backward' or 'forward' whether we doforward or
+                backward linear relaxation
+            convex_domain: the type of input convex domain for the
+                linear relaxation
+            **kwargs
+        """
+        super().__init__(ibp=ibp, affine=affine, mode=mode, convex_domain=convex_domain, **kwargs)
 
     def linear_upper(self, z_tensor, y_tensor, w_u, b_u):
         w_upper = w_u * y_tensor[:, None]
@@ -332,7 +378,7 @@ class UpperScore(Layer):
 
         return K.sum(upper_score, -1)
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
         """
         Args:
             inputs
@@ -345,22 +391,22 @@ class UpperScore(Layer):
         y_tensor = inputs[-1]
         z_tensor = inputs[1]
 
-        if self.ibp and self.forward:
+        if self.ibp and self.affine:
             _, _, u_c, w_u_f, b_u_f, _, _, _ = inputs[:8]
 
             upper_ibp = K.sum(u_c * y_tensor, -1)
             upper_forward = self.linear_upper(z_tensor, y_tensor, w_u_f, b_u_f)
             upper_score = K.minimum(upper_ibp, upper_forward)
-        elif not self.ibp and self.forward:
+        elif not self.ibp and self.affine:
             _, _, w_u_f, b_u_f = inputs[:6]
             upper_score = self.linear_upper(z_tensor, y_tensor, w_u_f, b_u_f)
-        elif self.ibp and not self.forward:
+        elif self.ibp and not self.affine:
             _, _, u_c, l_c = inputs[:4]
             upper_score = K.sum(u_c * y_tensor, -1)
         else:
             raise NotImplementedError("not IBP and not forward not implemented")
 
-        if self.mode == "backward":
+        if self.mode == MetricMode.BACKWARD:
             w_u_b, b_u_b, _, _, _ = inputs[-5:]
             upper_backward = self.linear_upper(z_tensor, y_tensor, w_u_b[:, 0], b_u_b[:, 0])
             upper_score = K.minimum(upper_score, upper_backward)
