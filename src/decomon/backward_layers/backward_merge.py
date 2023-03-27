@@ -114,12 +114,12 @@ class BackwardAdd(BackwardMerge):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
-        previous=True,
+        previous: bool = True,
         **kwargs: Any,
     ):
         super().__init__(
@@ -133,7 +133,7 @@ class BackwardAdd(BackwardMerge):
         )
         self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp).call
 
-    def call_previous(self, inputs):
+    def call_previous(self, inputs: List[tf.Tensor]) -> List[List[tf.Tensor]]:
 
         x_ = inputs[:-4]
 
@@ -168,12 +168,12 @@ class BackwardAdd(BackwardMerge):
                 )
                 return [bounds_0, bounds_1]
 
-    def call_no_previous(self, inputs):
+    def call_no_previous(self, inputs: List[tf.Tensor]) -> List[List[tf.Tensor]]:
 
         bounds = list(get_identity_lirpa(inputs))
         return self.call_previous(inputs + bounds)
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
         if self.previous:
             return self.call_previous(inputs)
         else:
@@ -185,12 +185,12 @@ class BackwardAverage(BackwardMerge):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
-        previous=True,
+        previous: bool = True,
         **kwargs: Any,
     ):
         super().__init__(
@@ -204,7 +204,7 @@ class BackwardAverage(BackwardMerge):
         )
         self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=False).call
 
-    def call_previous(self, inputs):
+    def call_previous(self, inputs: List[tf.Tensor]) -> List[List[tf.Tensor]]:
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -219,8 +219,8 @@ class BackwardAverage(BackwardMerge):
         if n_elem == 1:
             return [[w_out_u, b_out_u, w_out_l, b_out_l]]
         else:
-            bounds = []
-            input_bounds = []
+            bounds: List[List[tf.Tensor]] = []
+            input_bounds: List[List[tf.Tensor]] = []
 
             for j in np.arange(1, n_elem)[::-1]:
                 inputs_1 = x_[n_comp * j : n_comp * (j + 1)]
@@ -257,15 +257,14 @@ class BackwardAverage(BackwardMerge):
                 if j == 1:
                     input_bounds.append(bounds_0)
 
-        input_bounds = input_bounds[::-1]
-        input_bounds = [[1.0 / n_elem * elem_i for elem_i in elem] for elem in input_bounds]
-        return input_bounds
+            input_bounds = input_bounds[::-1]
+            return [[1.0 / n_elem * elem_i for elem_i in elem] for elem in input_bounds]
 
-    def call_no_previous(self, inputs):
+    def call_no_previous(self, inputs: List[tf.Tensor]) -> List[List[tf.Tensor]]:
         bounds = list(get_identity_lirpa(inputs))
         return self.call_previous(inputs + bounds)
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
         if self.previous:
             return self.call_previous(inputs)
         else:
@@ -277,12 +276,12 @@ class BackwardSubtract(BackwardMerge):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
-        previous=True,
+        previous: bool = True,
         **kwargs: Any,
     ):
         super().__init__(
@@ -297,7 +296,7 @@ class BackwardSubtract(BackwardMerge):
         if not isinstance(layer, DecomonSubtract):
             raise KeyError()
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -330,12 +329,12 @@ class BackwardMaximum(BackwardMerge):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
-        previous=True,
+        previous: bool = True,
         **kwargs: Any,
     ):
         super().__init__(
@@ -350,7 +349,7 @@ class BackwardMaximum(BackwardMerge):
         if not isinstance(layer, DecomonMaximum):
             raise KeyError()
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -383,12 +382,12 @@ class BackwardMinimum(BackwardMerge):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
-        previous=True,
+        previous: bool = True,
         **kwargs: Any,
     ):
         super().__init__(
@@ -403,7 +402,7 @@ class BackwardMinimum(BackwardMerge):
         if not isinstance(layer, DecomonMinimum):
             raise KeyError()
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -436,12 +435,12 @@ class BackwardConcatenate(BackwardMerge):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
-        previous=True,
+        previous: bool = True,
         **kwargs: Any,
     ):
         super().__init__(
@@ -458,7 +457,7 @@ class BackwardConcatenate(BackwardMerge):
 
         self.axis = self.layer.axis
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
 
@@ -488,12 +487,12 @@ class BackwardMultiply(BackwardMerge):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
-        previous=True,
+        previous: bool = True,
         **kwargs: Any,
     ):
         super().__init__(
@@ -508,7 +507,7 @@ class BackwardMultiply(BackwardMerge):
         if not isinstance(layer, DecomonMultiply):
             raise KeyError()
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -541,12 +540,12 @@ class BackwardDot(BackwardMerge):
 
     def __init__(
         self,
-        layer,
+        layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
-        previous=True,
+        previous: bool = True,
         **kwargs: Any,
     ):
         super().__init__(
@@ -566,7 +565,7 @@ class BackwardDot(BackwardMerge):
 
         raise NotImplementedError()
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
         x_ = inputs[:-4]
         w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
@@ -677,4 +676,4 @@ class BackwardDot(BackwardMerge):
             bounds_m_1[3],
         ]
 
-        return bounds_m_0, bounds_m_1
+        return [bounds_m_0, bounds_m_1]

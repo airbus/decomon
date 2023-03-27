@@ -1,4 +1,6 @@
 # extra layers necessary for backward LiRPA
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import InputSpec, Layer
@@ -9,11 +11,11 @@ from decomon.utils import get_lower, get_upper
 
 
 class Fuse(Layer):
-    def __init__(self, mode, **kwargs):
+    def __init__(self, mode: Union[str, ForwardMode], **kwargs: Any):
         super().__init__(**kwargs)
         self.mode = ForwardMode(mode)
 
-    def call(self, inputs_):
+    def call(self, inputs_: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         inputs = inputs_[:-4]
         backward_bounds = inputs_[-4:]
 
@@ -26,19 +28,19 @@ class Fuse(Layer):
 
         return merge_with_previous([w_f_u, b_f_u, w_f_l, b_f_l] + backward_bounds)
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
         config.update({"mode": self.mode})
         return config
 
 
 class Convert2BackwardMode(Layer):
-    def __init__(self, mode, convex_domain, **kwargs):
+    def __init__(self, mode: Union[str, ForwardMode], convex_domain: Optional[Dict[str, Any]], **kwargs: Any):
         super().__init__(**kwargs)
         self.mode = ForwardMode(mode)
         self.convex_domain = convex_domain
 
-    def call(self, inputs_):
+    def call(self, inputs_: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         inputs = inputs_[:-4]
         backward_bounds = inputs_[-4:]
         w_out_u, b_out_u, w_out_l, b_out_l = backward_bounds
@@ -52,24 +54,32 @@ class Convert2BackwardMode(Layer):
         if self.mode == ForwardMode.AFFINE:
             return [x_0] + backward_bounds
 
-        if self.mode == ForwardMode.IBP:
+        elif self.mode == ForwardMode.IBP:
             u_c_ = get_upper(x_0, w_out_u, b_out_u, convex_domain={})
             l_c_ = get_lower(x_0, w_out_l, b_out_l, convex_domain={})
             return [u_c_, l_c_]
 
-        if self.mode == ForwardMode.HYBRID:
+        elif self.mode == ForwardMode.HYBRID:
             u_c_ = get_upper(x_0, w_out_u, b_out_u, convex_domain=self.convex_domain)
             l_c_ = get_lower(x_0, w_out_l, b_out_l, convex_domain=self.convex_domain)
             return [x_0, u_c_, w_out_u, b_out_u, l_c_, w_out_l, b_out_l]
 
-    def get_config(self):
+        else:
+            raise ValueError(f"Unknwon mode {self.mode}")
+
+    def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
         config.update({"mode": self.mode, "convex_domain": self.convex_domain})
         return config
 
 
 class MergeWithPrevious(Layer):
-    def __init__(self, input_shape_layer=None, backward_shape_layer=None, **kwargs):
+    def __init__(
+        self,
+        input_shape_layer: Optional[Tuple[int, ...]] = None,
+        backward_shape_layer: Optional[Tuple[int, ...]] = None,
+        **kwargs: Any,
+    ):
         super().__init__(**kwargs)
         self.input_shape_layer = input_shape_layer
         self.backward_shape_layer = backward_shape_layer
@@ -83,10 +93,10 @@ class MergeWithPrevious(Layer):
             b_b_spec = InputSpec(ndim=2, axes={-1: n_out})
             self.input_spec = [w_out_spec, b_out_spec] * 2 + [w_b_spec, b_b_spec] * 2  #
 
-    def call(self, inputs):
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         return merge_with_previous(inputs)
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
         config.update(
             {
@@ -98,13 +108,19 @@ class MergeWithPrevious(Layer):
 
 
 class Convert2Mode(Layer):
-    def __init__(self, mode_from, mode_to, convex_domain, **kwargs):
+    def __init__(
+        self,
+        mode_from: Union[str, ForwardMode],
+        mode_to: Union[str, ForwardMode],
+        convex_domain: Optional[Dict[str, Any]],
+        **kwargs: Any,
+    ):
         super().__init__(**kwargs)
         self.mode_from = ForwardMode(mode_from)
         self.mode_to = ForwardMode(mode_to)
         self.convex_domain = convex_domain
 
-    def call(self, inputs_):
+    def call(self, inputs_: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         mode_from = self.mode_from
         mode_to = self.mode_to
@@ -132,19 +148,23 @@ class Convert2Mode(Layer):
             if mode_to in [ForwardMode.IBP, ForwardMode.HYBRID]:
                 u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
                 l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
-        if mode_from == ForwardMode.IBP:
+        elif mode_from == ForwardMode.IBP:
             u_c, l_c = inputs_
-        if mode_from == ForwardMode.HYBRID:
+        elif mode_from == ForwardMode.HYBRID:
             _, u_c, w_u, b_u, l_c, w_l, b_l = inputs_
+        else:
+            raise ValueError(f"Unknwon mode {self.mode}")
 
         if mode_to == ForwardMode.IBP:
             return [u_c, l_c]
-        if mode_to == ForwardMode.AFFINE:
+        elif mode_to == ForwardMode.AFFINE:
             return [x_0, w_u, b_u, w_l, b_l]
-        if mode_to == ForwardMode.HYBRID:
+        elif mode_to == ForwardMode.HYBRID:
             return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
+        else:
+            raise ValueError(f"Unknwon mode {self.mode}")
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
         config.update({"mode_from": self.mode_from, "mode_to": self.mode_to, "convex_domain": self.convex_domain})
         return config
