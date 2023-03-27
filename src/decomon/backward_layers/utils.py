@@ -222,7 +222,6 @@ def backward_softplus_(
     w_out_l: tf.Tensor,
     b_out_l: tf.Tensor,
     convex_domain: Optional[Dict[str, Any]] = None,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
@@ -235,7 +234,6 @@ def backward_softplus_(
         w_out_l
         b_out_l
         convex_domain
-        slope
         mode
         fast
 
@@ -340,7 +338,6 @@ def backward_maximum(
     w_out_l: tf.Tensor,
     b_out_l: tf.Tensor,
     convex_domain: Optional[Dict[str, Any]] = None,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
 ) -> Tuple[List[tf.Tensor], List[tf.Tensor]]:
@@ -354,7 +351,6 @@ def backward_maximum(
         w_out_l
         b_out_l
         convex_domain
-        slope
         mode
 
     Returns:
@@ -389,7 +385,6 @@ def backward_max_(
     w_out_l: tf.Tensor,
     b_out_l: tf.Tensor,
     convex_domain: Optional[Dict[str, Any]] = None,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis: int = -1,
     **kwargs: Any,
@@ -530,7 +525,6 @@ def backward_minimum(
     w_out_l: tf.Tensor,
     b_out_l: tf.Tensor,
     convex_domain: Optional[Dict[str, Any]] = None,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
 ) -> Tuple[List[tf.Tensor], List[tf.Tensor]]:
@@ -544,7 +538,6 @@ def backward_minimum(
         w_out_l
         b_out_l
         convex_domain
-        slope
         mode
 
     Returns:
@@ -553,9 +546,7 @@ def backward_minimum(
 
     if convex_domain is None:
         convex_domain = {}
-    w_out_u_, b_out_u_, w_out_l_, b_out_l_ = backward_minus(
-        w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, slope=slope, mode=mode
-    )
+    w_out_u_, b_out_u_, w_out_l_, b_out_l_ = backward_minus(w_out_u, b_out_u, w_out_l, b_out_l)
     bounds_0, bounds_1 = backward_maximum(
         inputs_0,
         inputs_1,
@@ -564,7 +555,6 @@ def backward_minimum(
         w_out_l_,
         b_out_l_,
         convex_domain=convex_domain,
-        slope=slope,
         mode=mode,
         **kwargs,
     )
@@ -572,12 +562,8 @@ def backward_minimum(
     w_out_u_0, b_out_u_0, w_out_l_0, b_out_l_0 = bounds_0
     w_out_u_1, b_out_u_1, w_out_l_1, b_out_l_1 = bounds_1
 
-    bounds_0_ = backward_minus(
-        w_out_u_0, b_out_u_0, w_out_l_0, b_out_l_0, convex_domain=convex_domain, slope=slope, mode=mode
-    )
-    bounds_1_ = backward_minus(
-        w_out_u_1, b_out_u_1, w_out_l_1, b_out_l_1, convex_domain=convex_domain, slope=slope, mode=mode
-    )
+    bounds_0_ = backward_minus(w_out_u_0, b_out_u_0, w_out_l_0, b_out_l_0)
+    bounds_1_ = backward_minus(w_out_u_1, b_out_u_1, w_out_l_1, b_out_l_1)
 
     return bounds_0_, bounds_1_
 
@@ -587,9 +573,6 @@ def backward_minus(
     b_out_u: tf.Tensor,
     w_out_l: tf.Tensor,
     b_out_l: tf.Tensor,
-    convex_domain: Optional[Dict[str, Any]] = None,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
-    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
 ) -> List[tf.Tensor]:
     """Backward  LiRPA of -x
 
@@ -599,15 +582,12 @@ def backward_minus(
         w_out_l
         b_out_l
         convex_domain
-        slope
         mode
 
     Returns:
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
     w_u_ = -w_out_l
     b_u_ = -b_out_l
     w_l_ = -w_out_u
@@ -688,7 +668,6 @@ def backward_multiply(
     w_out_l: tf.Tensor,
     b_out_l: tf.Tensor,
     convex_domain: Optional[Dict[str, Any]] = None,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
 ) -> Tuple[List[tf.Tensor], List[tf.Tensor]]:
     """Backward  LiRPA of element-wise multiply inputs_0*inputs_1
@@ -701,7 +680,6 @@ def backward_multiply(
         w_out_l
         b_out_l
         convex_domain
-        slope
         mode
 
     Returns:
@@ -780,9 +758,7 @@ def backward_sort(
     b_out_l: tf.Tensor,
     axis: int = -1,
     convex_domain: Optional[Dict[str, Any]] = None,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Backward  LiRPA of sort
 
@@ -794,7 +770,6 @@ def backward_sort(
         b_out_l
         axis
         convex_domain
-        slope
         mode
 
     Returns:
