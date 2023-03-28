@@ -67,12 +67,7 @@ def convert(
     final_ibp: bool = False,
     final_forward: bool = False,
     **kwargs: Any,
-) -> Tuple[
-    List[tf.Tensor],
-    List[tf.Tensor],
-    Union[LayerMapDict, Dict[Tuple[int, bool], BackwardLayer]],
-    Optional[OutputMapDict],
-]:
+) -> Tuple[List[tf.Tensor], List[tf.Tensor], Union[LayerMapDict, Dict[int, BackwardLayer]], Optional[OutputMapDict],]:
 
     if back_bounds is None:
         back_bounds = []
@@ -85,7 +80,7 @@ def convert(
     if isinstance(method, str):
         method = ConvertMethod(method.lower())
 
-    layer_map: Union[LayerMapDict, Dict[Tuple[int, bool], BackwardLayer]]
+    layer_map: Union[LayerMapDict, Dict[int, BackwardLayer]]
 
     if method != ConvertMethod.CROWN:
 
