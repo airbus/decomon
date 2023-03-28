@@ -130,18 +130,16 @@ class BackwardAdd(BackwardMerge):
         )
         self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp).call
 
-    def call_previous(self, inputs: List[tf.Tensor]) -> List[List[tf.Tensor]]:
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
-        x_ = inputs[:-4]
-
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
+        w_out_u, b_out_u, w_out_l, b_out_l = get_identity_lirpa(inputs)
         n_comp = 2
         if self.mode == ForwardMode.AFFINE:
             n_comp = 5
         if self.mode == ForwardMode.HYBRID:
             n_comp = 7
 
-        n_elem = len(x_) // n_comp
+        n_elem = len(inputs) // n_comp
 
         if n_elem == 1:
             return [[w_out_u, b_out_u, w_out_l, b_out_l]]
@@ -150,8 +148,8 @@ class BackwardAdd(BackwardMerge):
                 raise NotImplementedError()
             else:
 
-                inputs_0 = x_[:n_comp]
-                inputs_1 = x_[n_comp:]
+                inputs_0 = inputs[:n_comp]
+                inputs_1 = inputs[n_comp:]
 
                 bounds_0, bounds_1 = backward_add(
                     inputs_0,
@@ -164,11 +162,6 @@ class BackwardAdd(BackwardMerge):
                     mode=self.mode,
                 )
                 return [bounds_0, bounds_1]
-
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
-
-        bounds = list(get_identity_lirpa(inputs))
-        return self.call_previous(inputs + bounds)
 
 
 class BackwardAverage(BackwardMerge):
@@ -193,10 +186,9 @@ class BackwardAverage(BackwardMerge):
         )
         self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=False).call
 
-    def call_previous(self, inputs: List[tf.Tensor]) -> List[List[tf.Tensor]]:
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
-        x_ = inputs[:-4]
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
+        w_out_u, b_out_u, w_out_l, b_out_l = get_identity_lirpa(inputs)
 
         n_comp = 2
         if self.mode == ForwardMode.AFFINE:
@@ -204,7 +196,7 @@ class BackwardAverage(BackwardMerge):
         if self.mode == ForwardMode.HYBRID:
             n_comp = 7
 
-        n_elem = len(x_) // n_comp
+        n_elem = len(inputs) // n_comp
         if n_elem == 1:
             return [[w_out_u, b_out_u, w_out_l, b_out_l]]
         else:
@@ -212,11 +204,11 @@ class BackwardAverage(BackwardMerge):
             input_bounds: List[List[tf.Tensor]] = []
 
             for j in np.arange(1, n_elem)[::-1]:
-                inputs_1 = x_[n_comp * j : n_comp * (j + 1)]
+                inputs_1 = inputs[n_comp * j : n_comp * (j + 1)]
                 if j == 1:
-                    inputs_0 = x_[:n_comp]
+                    inputs_0 = inputs[:n_comp]
                 else:
-                    inputs_0 = self.op(x_[: n_comp * j])
+                    inputs_0 = self.op(inputs[: n_comp * j])
                 if len(bounds) == 0:
                     bounds_0, bounds_1 = backward_add(
                         inputs_0,
@@ -248,10 +240,6 @@ class BackwardAverage(BackwardMerge):
 
             input_bounds = input_bounds[::-1]
             return [[1.0 / n_elem * elem_i for elem_i in elem] for elem in input_bounds]
-
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
-        bounds = list(get_identity_lirpa(inputs))
-        return self.call_previous(inputs + bounds)
 
 
 class BackwardSubtract(BackwardMerge):
