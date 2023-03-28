@@ -67,17 +67,16 @@ def get_disconnected_input(
 
 def retrieve_layer(
     node: Node,
-    previous: int,
     layer_fn: Callable[[Layer], BackwardLayer],
-    backward_map: Dict[Tuple[int, bool], BackwardLayer],
+    backward_map: Dict[int, BackwardLayer],
     joint: bool = True,
 ) -> BackwardLayer:
-    if (id(node), bool(previous)) in backward_map:
-        backward_layer = backward_map[id(node), bool(previous)]
+    if id(node) in backward_map:
+        backward_layer = backward_map[id(node)]
     else:
         backward_layer = layer_fn(node.outbound_layer)
         if joint:
-            backward_map[id(node), bool(previous)] = backward_layer
+            backward_map[id(node)] = backward_layer
     return backward_layer
 
 
@@ -89,7 +88,7 @@ def crown_(
     input_map: Dict[int, List[tf.Tensor]],
     layer_fn: Callable[[Layer], BackwardLayer],
     backward_bounds: List[tf.Tensor],
-    backward_map: Optional[Dict[Tuple[int, bool], BackwardLayer]] = None,
+    backward_map: Optional[Dict[int, BackwardLayer]] = None,
     joint: bool = True,
     fuse: bool = True,
     output_map: Optional[Dict[int, List[tf.Tensor]]] = None,
@@ -139,7 +138,7 @@ def crown_(
         )
 
     else:
-        backward_layer = retrieve_layer(node, len(backward_bounds), layer_fn, backward_map, joint)
+        backward_layer = retrieve_layer(node=node, layer_fn=layer_fn, backward_map=backward_map, joint=joint)
 
         if id(node) not in output_map:
             backward_bounds_ = backward_layer(inputs)
@@ -239,13 +238,13 @@ def get_input_nodes(
     set_mode_layer: Layer,
     convex_domain: Optional[Dict[str, Any]] = None,
     **kwargs: Any,
-) -> Tuple[Dict[int, List[tf.Tensor]], Dict[Tuple[int, bool], BackwardLayer], Dict[int, List[tf.Tensor]]]:
+) -> Tuple[Dict[int, List[tf.Tensor]], Dict[int, BackwardLayer], Dict[int, List[tf.Tensor]]]:
 
     keys = [e for e in dico_nodes.keys()]
     keys.sort(reverse=True)
     fuse_layer = None
     input_map: Dict[int, List[tf.Tensor]] = {}
-    backward_map: Dict[Tuple[int, bool], BackwardLayer] = {}
+    backward_map: Dict[int, BackwardLayer] = {}
     if convex_domain is None:
         convex_domain = {}
     crown_map: Dict[int, List[tf.Tensor]] = {}
@@ -313,7 +312,7 @@ def crown_model(
     layer_fn: Callable[..., BackwardLayer] = to_backward,
     fuse: bool = True,
     **kwargs: Any,
-) -> Tuple[List[tf.Tensor], List[tf.Tensor], Dict[Tuple[int, bool], BackwardLayer], None]:
+) -> Tuple[List[tf.Tensor], List[tf.Tensor], Dict[int, BackwardLayer], None]:
     if back_bounds is None:
         back_bounds = []
     if forward_map is None:
@@ -436,7 +435,7 @@ def convert_backward(
     final_ibp: bool = True,
     final_forward: bool = False,
     **kwargs: Any,
-) -> Tuple[List[tf.Tensor], List[tf.Tensor], Dict[Tuple[int, bool], BackwardLayer], None]:
+) -> Tuple[List[tf.Tensor], List[tf.Tensor], Dict[int, BackwardLayer], None]:
     if back_bounds is None:
         back_bounds = []
     if forward_map is None:
