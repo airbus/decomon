@@ -63,6 +63,7 @@ exclude = '''
 '''
 
 [tool.mypy]
+files = "src"
 ignore_missing_imports = true
 strict_optional = true
 implicit_optional = false
