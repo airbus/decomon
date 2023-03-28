@@ -1,8 +1,8 @@
 from typing import Callable, List, Optional, Sequence, Tuple, Union
 
-import keras
 import numpy as np
 import numpy.typing as npt
+import tensorflow as tf
 
 from decomon.models.convert import clone as convert
 from decomon.models.models import DecomonModel
@@ -26,7 +26,7 @@ def _get_dual_ord(p: float) -> float:
         raise ValueError(f"p must be equal to 1, 2, or np.inf, unknown value {p}.")
 
 
-def _prepare_labels(labels: LabelType, n_batch: int) -> np.typing.NDArray[np.int_]:
+def prepare_labels(labels: LabelType, n_batch: int) -> np.typing.NDArray[np.int_]:
     if isinstance(labels, (int, np.int_)):
         labels = np.zeros((n_batch, 1), dtype=np.int_) + labels
     elif not isinstance(labels, np.ndarray):
@@ -38,7 +38,7 @@ def _prepare_labels(labels: LabelType, n_batch: int) -> np.typing.NDArray[np.int
 
 ##### ADVERSARIAL ROBUSTTNESS #####
 def get_adv_box(
-    model: Union[keras.Model, DecomonModel],
+    model: Union[tf.keras.Model, DecomonModel],
     x_min: npt.NDArray[np.float_],
     x_max: npt.NDArray[np.float_],
     source_labels: LabelType,
@@ -103,9 +103,9 @@ def get_adv_box(
 
     z = np.concatenate([x_min, x_max], 1)
 
-    source_labels = _prepare_labels(source_labels, n_batch)
+    source_labels = prepare_labels(source_labels, n_batch)
     if target_labels is not None:
-        target_labels = _prepare_labels(target_labels, n_batch)
+        target_labels = prepare_labels(target_labels, n_batch)
 
     if n_split > 1:
         shape = list(source_labels.shape[1:])
@@ -255,7 +255,7 @@ def get_adv_box(
 
 
 def check_adv_box(
-    model: Union[keras.Model, DecomonModel],
+    model: Union[tf.keras.Model, DecomonModel],
     x_min: npt.NDArray[np.float_],
     x_max: npt.NDArray[np.float_],
     source_labels: npt.NDArray[np.int_],
@@ -410,7 +410,7 @@ def check_adv_box(
 
 #### FORMAL BOUNDS ######
 def get_upper_box(
-    model: Union[keras.Model, DecomonModel],
+    model: Union[tf.keras.Model, DecomonModel],
     x_min: npt.NDArray[np.float_],
     x_max: npt.NDArray[np.float_],
     batch_size: int = -1,
@@ -433,7 +433,7 @@ def get_upper_box(
 
 
 def get_lower_box(
-    model: Union[keras.Model, DecomonModel],
+    model: Union[tf.keras.Model, DecomonModel],
     x_min: npt.NDArray[np.float_],
     x_max: npt.NDArray[np.float_],
     batch_size: int = -1,
@@ -456,7 +456,7 @@ def get_lower_box(
 
 
 def get_range_box(
-    model: Union[keras.Model, DecomonModel],
+    model: Union[tf.keras.Model, DecomonModel],
     x_min: npt.NDArray[np.float_],
     x_max: npt.NDArray[np.float_],
     batch_size: int = -1,
@@ -589,7 +589,7 @@ def get_range_box(
 
 # get upper bound of a sample with bounded noise
 def get_upper_noise(
-    model: Union[keras.Model, DecomonModel],
+    model: Union[tf.keras.Model, DecomonModel],
     x: npt.NDArray[np.float_],
     eps: float,
     p: float = np.inf,
@@ -615,7 +615,7 @@ def get_upper_noise(
 
 # get upper bound of a sample with bounded noise
 def get_lower_noise(
-    model: Union[keras.Model, DecomonModel],
+    model: Union[tf.keras.Model, DecomonModel],
     x: npt.NDArray[np.float_],
     eps: float,
     p: float = np.inf,
@@ -641,7 +641,7 @@ def get_lower_noise(
 
 # get upper bound of a sample with bounded noise
 def get_range_noise(
-    model: Union[keras.Model, DecomonModel],
+    model: Union[tf.keras.Model, DecomonModel],
     x: npt.NDArray[np.float_],
     eps: float,
     p: float = np.inf,
@@ -798,7 +798,7 @@ def refine_boxes(
 
 def refine_box(
     func: Callable[..., npt.NDArray[np.float_]],
-    model: Union[keras.Model, DecomonModel],
+    model: Union[tf.keras.Model, DecomonModel],
     x_min: npt.NDArray[np.float_],
     x_max: npt.NDArray[np.float_],
     n_split: int,
@@ -911,7 +911,7 @@ def refine_box(
 
 ### adversarial robustness Lp norm
 def get_adv_noise(
-    model: Union[keras.Model, DecomonModel],
+    model: Union[tf.keras.Model, DecomonModel],
     x: npt.NDArray[np.float_],
     source_labels: LabelType,
     eps: float = 0.0,
