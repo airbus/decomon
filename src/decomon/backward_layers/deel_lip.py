@@ -28,7 +28,6 @@ class BackwardGroupSort2(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        previous: bool = True,
         input_dim: int = -1,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -42,7 +41,6 @@ class BackwardGroupSort2(BackwardLayer):
             mode=mode,
             convex_domain=convex_domain,
             dc_decomp=dc_decomp,
-            previous=previous,
             **kwargs,
         )
 
@@ -60,14 +58,3 @@ class BackwardGroupSort2(BackwardLayer):
             )[0]
 
         self.frozen_weights = False
-
-    def call_previous(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
-
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-
-        if self.layer.data_format == "channels_last":
-            shape = int(w_out_u.shape[1] / 2)
-            n_out = w_out_u.shape[-1]
-            w_out_u_ = K.reshape(w_out_u, [-1, shape, self.layer.n, n_out])
-
-        raise NotImplementedError()

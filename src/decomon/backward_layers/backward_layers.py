@@ -33,7 +33,6 @@ class BackwardDense(BackwardLayer):
         self,
         layer: Layer,
         slope: Union[str, Slope] = Slope.V_SLOPE,
-        previous: bool = True,
         finetune: bool = False,
         input_dim: int = -1,
         rec: int = 1,
@@ -48,7 +47,6 @@ class BackwardDense(BackwardLayer):
             mode=mode,
             convex_domain=convex_domain,
             dc_decomp=dc_decomp,
-            previous=previous,
             **kwargs,
         )
         self.kernel = self.layer.kernel
@@ -83,70 +81,7 @@ class BackwardDense(BackwardLayer):
         )
         return config
 
-    def call_previous(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
-
-        if not len(inputs):
-            raise ValueError()
-
-        x_ = inputs[:-4]
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-
-        # start with the activation: determine the upper and lower bounds before the weights
-        weights = self.kernel
-
-        if self.activation_name != "linear":
-            x = self.layer.call_linear(x_)
-            if self.finetune:
-                if self.activation_name[:4] != "relu":
-                    w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                        x + [w_out_u, b_out_u, w_out_l, b_out_l],
-                        convex_domain=self.convex_domain,
-                        slope=self.slope,
-                        mode=self.mode,
-                        previous=self.previous,
-                        finetune=[self.alpha_b_u, self.alpha_b_l],
-                    )
-                else:
-                    w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                        x + [w_out_u, b_out_u, w_out_l, b_out_l],
-                        convex_domain=self.convex_domain,
-                        slope=self.slope,
-                        mode=self.mode,
-                        previous=self.previous,
-                        finetune=self.alpha_b_l,
-                    )
-            else:
-                w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                    x + [w_out_u, b_out_u, w_out_l, b_out_l],
-                    convex_domain=self.convex_domain,
-                    slope=self.slope,
-                    mode=self.mode,
-                )
-        # w_out_u (None, n_out, n_back)  b_out_u (None, n_back)
-
-        weights = K.expand_dims(K.expand_dims(weights, 0), -1)  # (1, n_in, n_out, 1)
-        if len(w_out_u.shape) == 2:
-            w_out_u = tf.linalg.diag(w_out_u)  # (None, n_out, n_back=n_out)
-        if len(w_out_l.shape) == 2:
-            w_out_l = tf.linalg.diag(w_out_l)
-
-        if self.use_bias:
-            bias = self.bias
-            bias = K.expand_dims(K.expand_dims(bias, 0), -1)  # (None, n_out, 1)
-            b_out_u_ = K.sum(w_out_u * bias, 1) + b_out_u  # (None, n_back)
-            b_out_l_ = K.sum(w_out_l * bias, 1)
-            b_out_l_ += b_out_l
-
-        else:
-            b_out_u_ = b_out_u
-            b_out_l_ = b_out_l
-        w_out_u = K.expand_dims(w_out_u, 1)
-        w_out_l = K.expand_dims(w_out_l, 1)
-        w_out_u_ = K.sum(w_out_u * weights, 2)  # (None, n_in,  n_back)
-        w_out_l_ = K.sum(w_out_l * weights, 2)
-        return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
-
-    def call_no_previous(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         if len(inputs):
             x_ = inputs
@@ -164,7 +99,6 @@ class BackwardDense(BackwardLayer):
                         convex_domain=self.convex_domain,
                         slope=self.slope,
                         mode=self.mode,
-                        previous=False,
                         finetune=[self.alpha_b_u, self.alpha_b_l],
                     )
                 else:
@@ -173,7 +107,6 @@ class BackwardDense(BackwardLayer):
                         convex_domain=self.convex_domain,
                         slope=self.slope,
                         mode=self.mode,
-                        previous=False,
                         finetune=self.alpha_b_l,
                     )
             else:
@@ -181,7 +114,6 @@ class BackwardDense(BackwardLayer):
                     x,
                     convex_domain=self.convex_domain,
                     slope=self.slope,
-                    previous=self.previous,
                     mode=self.mode,
                 )
 
@@ -216,12 +148,6 @@ class BackwardDense(BackwardLayer):
             else:
                 b_out_u_, b_out_l_ = [z_value * w_out_u_[:, 0]] * 2
         return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
-
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        if self.previous:
-            return self.call_previous(inputs)
-        else:
-            return self.call_no_previous(inputs)
 
     def build(self, input_shape: List[tf.TensorShape]) -> None:
         """
@@ -293,7 +219,6 @@ class BackwardConv2D(BackwardLayer):
         self,
         layer: Layer,
         slope: Union[str, Slope] = Slope.V_SLOPE,
-        previous: bool = True,
         finetune: bool = False,
         input_dim: int = -1,
         rec: int = 1,
@@ -308,7 +233,6 @@ class BackwardConv2D(BackwardLayer):
             mode=mode,
             convex_domain=convex_domain,
             dc_decomp=dc_decomp,
-            previous=previous,
             **kwargs,
         )
         self.activation = get(layer.get_config()["activation"])
@@ -416,31 +340,7 @@ class BackwardConv2D(BackwardLayer):
 
         return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
 
-    def call_previous(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
-        x = inputs[:-4]
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-
-        if self.activation_name != "linear":
-            x_output = self.layer.call_linear(x)
-            if self.finetune:
-                w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                    x_output + [w_out_u, b_out_u, w_out_l, b_out_l],
-                    convex_domain=self.convex_domain,
-                    slope=self.slope,
-                    mode=self.mode,
-                    finetune=self.alpha_b_l,
-                )
-            else:
-
-                w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                    x_output + [w_out_u, b_out_u, w_out_l, b_out_l],
-                    convex_domain=self.convex_domain,
-                    slope=self.slope,
-                    mode=self.mode,
-                )
-        return self.get_bounds_linear(w_out_u, b_out_u, w_out_l, b_out_l)
-
-    def call_no_previous(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         x = inputs
 
         if self.activation_name != "linear":
@@ -454,12 +354,11 @@ class BackwardConv2D(BackwardLayer):
                     slope=self.slope,
                     mode=self.mode,
                     finetune=self.alpha_b_l,
-                    previous=False,
                 )
 
             else:
                 w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                    x_output, convex_domain=self.convex_domain, slope=self.slope, mode=self.mode, previous=False
+                    x_output, convex_domain=self.convex_domain, slope=self.slope, mode=self.mode
                 )
 
             return self.get_bounds_linear(w_out_u, b_out_u, w_out_l, b_out_l)
@@ -477,12 +376,6 @@ class BackwardConv2D(BackwardLayer):
             b_out_l_ = b_out_u_
 
         return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
-
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        if self.previous:
-            return self.call_previous(inputs)
-        else:
-            return self.call_no_previous(inputs)
 
     def build(self, input_shape: List[tf.TensorShape]) -> None:
         """
@@ -546,7 +439,6 @@ class BackwardActivation(BackwardLayer):
         self,
         layer: Layer,
         slope: Union[str, Slope] = Slope.V_SLOPE,
-        previous: bool = True,
         finetune: bool = False,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -560,7 +452,6 @@ class BackwardActivation(BackwardLayer):
             mode=mode,
             convex_domain=convex_domain,
             dc_decomp=dc_decomp,
-            previous=previous,
             **kwargs,
         )
         self.activation = get(layer.get_config()["activation"])
@@ -591,10 +482,7 @@ class BackwardActivation(BackwardLayer):
         Returns:
 
         """
-        if self.previous:
-            input_dim = np.prod(input_shape[-5][1:])
-        else:
-            input_dim = np.prod(input_shape[-1][1:])
+        input_dim = np.prod(input_shape[-1][1:])
 
         if self.finetune and self.activation_name != "linear":
 
@@ -694,37 +582,7 @@ class BackwardActivation(BackwardLayer):
 
         self.built = True
 
-    def call_previous(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-
-        # infer the output dimension
-        if self.finetune:
-            if self.activation_name != "linear":
-                w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                    inputs,
-                    convex_domain=self.convex_domain,
-                    slope=self.slope,
-                    mode=self.mode,
-                    finetune=self.finetune_param,
-                    finetune_grid=self.grid_finetune,
-                )
-        else:
-            if self.activation_name != "linear":
-                w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                    inputs,
-                    convex_domain=self.convex_domain,
-                    slope=self.slope,
-                    mode=self.mode,
-                    finetune_grid=self.grid_finetune,
-                )
-        # reshape
-        if len(w_out_u) == 2:
-            w_out_u = tf.linalg.diag(w_out_u)
-        if len(w_out_l) == 2:
-            w_out_l = tf.linalg.diag(w_out_l)
-        return [w_out_u, b_out_u, w_out_l, b_out_l]
-
-    def call_no_previous(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         # infer the output dimension
         y_ = inputs[-1]
@@ -735,7 +593,6 @@ class BackwardActivation(BackwardLayer):
                     convex_domain=self.convex_domain,
                     slope=self.slope,
                     mode=self.mode,
-                    previous=False,  # add hyperparameters
                     finetune=self.finetune_param,
                     finetune_grid=self.grid_finetune,
                 )
@@ -745,7 +602,6 @@ class BackwardActivation(BackwardLayer):
                     convex_domain=self.convex_domain,
                     slope=self.slope,
                     mode=self.mode,
-                    previous=False,  # add hyperparameters
                     finetune_grid=self.grid_finetune,
                 )
         else:
@@ -768,12 +624,6 @@ class BackwardActivation(BackwardLayer):
             w_out_l = tf.linalg.diag(w_out_l)
 
         return [w_out_u, b_out_u, w_out_l, b_out_l]
-
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        if self.previous:
-            return self.call_previous(inputs)
-        else:
-            return self.call_no_previous(inputs)
 
     def freeze_alpha(self) -> None:
         if not self.frozen_alpha:
@@ -811,7 +661,6 @@ class BackwardFlatten(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        previous: bool = True,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -824,27 +673,23 @@ class BackwardFlatten(BackwardLayer):
             mode=mode,
             convex_domain=convex_domain,
             dc_decomp=dc_decomp,
-            previous=previous,
             **kwargs,
         )
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        if self.previous:
-            return inputs[-4:]
-        else:
-            y_ = inputs[-1]
-            shape = np.prod(y_.shape[1:])
+        y_ = inputs[-1]
+        shape = np.prod(y_.shape[1:])
 
-            z_value = K.cast(0.0, self.dtype)
-            o_value = K.cast(1.0, self.dtype)
-            y_flat = K.reshape(y_, [-1, shape])
+        z_value = K.cast(0.0, self.dtype)
+        o_value = K.cast(1.0, self.dtype)
+        y_flat = K.reshape(y_, [-1, shape])
 
-            w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
-            b_out_u, b_out_l = [z_value * y_flat] * 2
-            w_out_u = tf.linalg.diag(w_out_u)
-            w_out_l = tf.linalg.diag(w_out_l)
+        w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
+        b_out_u, b_out_l = [z_value * y_flat] * 2
+        w_out_u = tf.linalg.diag(w_out_u)
+        w_out_l = tf.linalg.diag(w_out_l)
 
-            return [w_out_u, b_out_u, w_out_l, b_out_l]
+        return [w_out_u, b_out_u, w_out_l, b_out_l]
 
 
 class BackwardReshape(BackwardLayer):
@@ -853,7 +698,6 @@ class BackwardReshape(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        previous: bool = True,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -866,11 +710,10 @@ class BackwardReshape(BackwardLayer):
             mode=mode,
             convex_domain=convex_domain,
             dc_decomp=dc_decomp,
-            previous=previous,
             **kwargs,
         )
 
-    def call_no_previous(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         y_ = inputs[-1]
         shape = np.prod(y_.shape[1:])
@@ -886,17 +729,6 @@ class BackwardReshape(BackwardLayer):
 
         return [w_out_u, b_out_u, w_out_l, b_out_l]
 
-    def call_previous(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
-
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-        return [w_out_u, b_out_u, w_out_l, b_out_l]
-
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        if self.previous:
-            return self.call_previous(inputs)
-        else:
-            return self.call_no_previous(inputs)
-
 
 class BackwardPermute(BackwardLayer):
     """Backward LiRPA of Permute"""
@@ -904,7 +736,6 @@ class BackwardPermute(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        previous: bool = True,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -917,7 +748,6 @@ class BackwardPermute(BackwardLayer):
             mode=mode,
             convex_domain=convex_domain,
             dc_decomp=dc_decomp,
-            previous=previous,
             **kwargs,
         )
         self.dims = layer.dims
@@ -925,20 +755,16 @@ class BackwardPermute(BackwardLayer):
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
-        if self.previous:
-            w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-            y = inputs[:-4][-1]
-        else:
-            y = inputs[-1]
-            shape = np.prod(y.shape[1:])
-            z_value = K.cast(0.0, self.dtype)
-            o_value = K.cast(1.0, self.dtype)
-            y_flat = K.reshape(y, [-1, shape])
+        y = inputs[-1]
+        shape = np.prod(y.shape[1:])
+        z_value = K.cast(0.0, self.dtype)
+        o_value = K.cast(1.0, self.dtype)
+        y_flat = K.reshape(y, [-1, shape])
 
-            w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
-            b_out_u, b_out_l = [z_value * y_flat] * 2
-            w_out_u = tf.linalg.diag(w_out_u)
-            w_out_l = tf.linalg.diag(w_out_l)
+        w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
+        b_out_u, b_out_l = [z_value * y_flat] * 2
+        w_out_u = tf.linalg.diag(w_out_u)
+        w_out_l = tf.linalg.diag(w_out_l)
 
         # w_out_u (None, n_in, n_out)
 
@@ -963,7 +789,6 @@ class BackwardDropout(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        previous: bool = True,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -976,26 +801,22 @@ class BackwardDropout(BackwardLayer):
             mode=mode,
             convex_domain=convex_domain,
             dc_decomp=dc_decomp,
-            previous=previous,
             **kwargs,
         )
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
-        if self.previous:
-            w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-        else:
-            y_ = inputs[-1]
-            shape = np.prod(y_.shape[1:])
+        y_ = inputs[-1]
+        shape = np.prod(y_.shape[1:])
 
-            z_value = K.cast(0.0, self.dtype)
-            o_value = K.cast(1.0, self.dtype)
-            y_flat = K.reshape(y_, [-1, shape])
+        z_value = K.cast(0.0, self.dtype)
+        o_value = K.cast(1.0, self.dtype)
+        y_flat = K.reshape(y_, [-1, shape])
 
-            w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
-            b_out_u, b_out_l = [z_value * y_flat] * 2
-            w_out_u = tf.linalg.diag(w_out_u)
-            w_out_l = tf.linalg.diag(w_out_l)
+        w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
+        b_out_u, b_out_l = [z_value * y_flat] * 2
+        w_out_u = tf.linalg.diag(w_out_u)
+        w_out_l = tf.linalg.diag(w_out_l)
 
         return [w_out_u, b_out_u, w_out_l, b_out_l]
 
@@ -1010,7 +831,6 @@ class BackwardBatchNormalization(BackwardLayer):
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
-        previous: bool = True,
         **kwargs: Any,
     ):
         super().__init__(
@@ -1019,7 +839,6 @@ class BackwardBatchNormalization(BackwardLayer):
             mode=mode,
             convex_domain=convex_domain,
             dc_decomp=dc_decomp,
-            previous=previous,
             **kwargs,
         )
 
@@ -1070,7 +889,6 @@ class BackwardInputLayer(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        previous: bool = True,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -1083,30 +901,17 @@ class BackwardInputLayer(BackwardLayer):
             mode=mode,
             convex_domain=convex_domain,
             dc_decomp=dc_decomp,
-            previous=previous,
             **kwargs,
         )
 
-    def call_previous(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-
-        return [w_out_u, b_out_u, w_out_l, b_out_l]
-
-    def call_no_previous(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         return get_identity_lirpa(inputs)
-
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        if self.previous:
-            return self.call_previous(inputs)
-        else:
-            return self.call_no_previous(inputs)
 
 
 def to_backward(
     layer: Layer,
     slope: Union[str, Slope] = Slope.V_SLOPE,
-    previous: bool = True,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     convex_domain: Optional[Dict[str, Any]] = None,
     finetune: bool = False,
@@ -1123,7 +928,6 @@ def to_backward(
     return class_(
         layer,
         slope=slope,
-        previous=previous,
         mode=mode,
         convex_domain=convex_domain,
         finetune=finetune,

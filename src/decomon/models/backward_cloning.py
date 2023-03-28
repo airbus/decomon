@@ -76,7 +76,6 @@ def retrieve_layer(
         backward_layer = backward_map[id(node), bool(previous)]
     else:
         backward_layer = layer_fn(node.outbound_layer)
-        backward_layer.previous = bool(previous)
         if joint:
             backward_map[id(node), bool(previous)] = backward_layer
     return backward_layer
@@ -143,8 +142,6 @@ def crown_(
         backward_layer = retrieve_layer(node, len(backward_bounds), layer_fn, backward_map, joint)
 
         if id(node) not in output_map:
-            if backward_layer.previous:
-                backward_layer.previous = False
             backward_bounds_ = backward_layer(inputs)
             output_map[id(node)] = backward_bounds_
         else:
@@ -158,13 +155,6 @@ def crown_(
                 merge_layers = MergeWithPrevious(backward_bounds_[0].shape, backward_bounds[0].shape)
             backward_tmp = merge_layers(backward_bounds_ + backward_bounds)
             backward_bounds_ = backward_tmp
-
-            # backward_bounds_ = \
-            #    backward_layer(inputs+backward_bounds)
-            # debugging
-
-            # backward_layer.previous = False
-            # tmp = backward_layer.call_no_previous(inputs)
 
     if not isinstance(backward_bounds_, list):
         backward_bounds = [e for e in backward_bounds_]
@@ -356,7 +346,7 @@ def crown_model(
         has_iter = True
 
     if not has_iter:
-        # layer, slope = V_slope.name, previous = True, mode = ForwardMode.F_HYBRID, convex_domain = {}, finetune = False, rec = 1, ** kwargs
+
         def func(layer: Layer) -> Layer:
             return to_backward(layer, mode=get_mode(IBP, forward), finetune=finetune)
 

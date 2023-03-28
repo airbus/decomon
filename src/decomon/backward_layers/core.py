@@ -19,14 +19,12 @@ class BackwardLayer(ABC, Wrapper):
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
-        previous: bool = True,
         **kwargs: Any,
     ):
         kwargs.pop("slope", None)
         kwargs.pop("finetune", None)
         super().__init__(layer, **kwargs)
         self.rec = rec
-        self.previous = previous
         if isinstance(self.layer, DecomonLayer):
             self.mode = self.layer.mode
             self.convex_domain = self.layer.convex_domain
@@ -47,7 +45,6 @@ class BackwardLayer(ABC, Wrapper):
                 "mode": self.mode,
                 "convex_domain": self.convex_domain,
                 "dc_decomp": self.dc_decomp,
-                "previous": self.previous,
             }
         )
         return config

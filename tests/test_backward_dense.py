@@ -13,7 +13,7 @@ from decomon.layers.decomon_layers import DecomonDense, to_decomon
 from decomon.utils import Slope
 
 
-def test_Backward_Dense_1D_box(n, activation, use_bias, previous, mode, floatx, helpers):
+def test_Backward_Dense_1D_box(n, activation, use_bias, mode, floatx, helpers):
 
     slope = Slope.V_SLOPE
 
@@ -64,21 +64,11 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, previous, mode, floatx, 
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
     # get backward layer
-    layer_backward = to_backward(
-        layer_, input_dim=input_dim, slope=slope, previous=previous, mode=mode, convex_domain={}
-    )
+    layer_backward = to_backward(layer_, input_dim=input_dim, slope=slope, mode=mode, convex_domain={})
 
-    if previous:
-        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
-
-        f_dense = K.function(inputs + [w_out, b_out], [w_out_u, b_out_u, w_out_l, b_out_l])
-
-        output_ = f_dense(inputs_ + [np.ones((len(x), 1, 1)), np.zeros((len(x), 1))])
-    else:
-
-        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
-        f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
-        output_ = f_dense(inputs_)
+    w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
+    f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
+    output_ = f_dense(inputs_)
     w_u_, b_u_, w_l_, b_l_ = output_
 
     if use_bias:
@@ -153,7 +143,7 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, previous, mode, floatx, 
     K.set_floatx("float32")
 
 
-def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, previous, helpers):
+def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, helpers):
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     decimal = 5
@@ -203,27 +193,11 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, previou
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
     # get backward layer
-    layer_backward = to_backward(layer_, input_dim=input_dim, previous=previous, mode=mode, convex_domain={})
-    if previous:
-        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
-        f_dense = K.function(inputs + [w_out, b_out], [w_out_u, b_out_u, w_out_l, b_out_l])
-        output_ = f_dense(
-            inputs_
-            + [
-                np.ones((len(x), 1, 1)),
-                np.zeros(
-                    (
-                        len(x),
-                        1,
-                    )
-                ),
-            ]
-        )
-    else:
-        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
-        f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
-        # import pdb; pdb.set_trace()
-        output_ = f_dense(inputs_)
+    layer_backward = to_backward(layer_, input_dim=input_dim, mode=mode, convex_domain={})
+    w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
+    f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
+    # import pdb; pdb.set_trace()
+    output_ = f_dense(inputs_)
     w_u_, b_u_, w_l_, b_l_ = output_
 
     helpers.assert_output_properties_box_linear(

@@ -45,7 +45,6 @@ def backward_relu(
     threshold: float = 0.0,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    previous: bool = True,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Backward  LiRPA of relu
@@ -75,31 +74,23 @@ def backward_relu(
 
     if not alpha and max_value is None:
         # default values: return relu_(x) = max(x, 0)
-        if previous:
-            y = x[:-4]
-            w_out_u, b_out_u, w_out_l, b_out_l = x[-4:]
-
-            return backward_relu_(
-                y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, mode=mode, **kwargs
-            )
+        nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+        if mode == ForwardMode.IBP:
+            upper, lower = x[:nb_tensors]
+        elif mode == ForwardMode.AFFINE:
+            z_, w_u_, b_u_, w_l_, b_l_ = x[:nb_tensors]
+            upper = get_upper(z_, w_u_, b_u_)
+            lower = get_lower(z_, w_l_, b_l_)
+        elif mode == ForwardMode.HYBRID:
+            _, upper, _, _, lower, _, _ = x[:nb_tensors]
         else:
-            nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
-            if mode == ForwardMode.IBP:
-                upper, lower = x[:nb_tensors]
-            elif mode == ForwardMode.AFFINE:
-                z_, w_u_, b_u_, w_l_, b_l_ = x[:nb_tensors]
-                upper = get_upper(z_, w_u_, b_u_)
-                lower = get_lower(z_, w_l_, b_l_)
-            elif mode == ForwardMode.HYBRID:
-                _, upper, _, _, lower, _, _ = x[:nb_tensors]
-            else:
-                raise ValueError(f"Unknown mode {mode}")
-            bounds = get_linear_hull_relu(upper, lower, slope=slope, **kwargs)
-            shape = np.prod(x[-1].shape[1:])
-            bounds = [K.reshape(elem, (-1, shape)) for elem in bounds]
+            raise ValueError(f"Unknown mode {mode}")
+        bounds = get_linear_hull_relu(upper, lower, slope=slope, **kwargs)
+        shape = np.prod(x[-1].shape[1:])
+        bounds = [K.reshape(elem, (-1, shape)) for elem in bounds]
 
-            w_u_, b_u_, w_l_, b_l_ = bounds
-            return [w_u_, b_u_, w_l_, b_l_]
+        w_u_, b_u_, w_l_, b_l_ = bounds
+        return [w_u_, b_u_, w_l_, b_l_]
 
     raise NotImplementedError()
 
@@ -110,7 +101,6 @@ def backward_sigmoid(
     convex_domain: Optional[Dict[str, Any]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    previous: bool = True,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Backward  LiRPA of sigmoid
@@ -131,37 +121,19 @@ def backward_sigmoid(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
-    if previous:
-        x = inputs[:-4]
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-        w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
-            x, func=K.sigmoid, f_prime=sigmoid_prime, convex_domain=convex_domain, mode=mode
-        )
+    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
 
-        w_u_0 = K.expand_dims(K.expand_dims(w_u_0, 1), -1)
-        w_l_0 = K.expand_dims(K.expand_dims(w_l_0, 1), -1)
-        b_u_0 = K.expand_dims(K.expand_dims(b_u_0, 1), -1)
-        b_l_0 = K.expand_dims(K.expand_dims(b_l_0, 1), -1)
-        w_out_u_ = K.maximum(0.0, w_out_u) * w_u_0 + K.minimum(0.0, w_out_u) * w_l_0
-        w_out_l_ = K.maximum(0.0, w_out_l) * w_l_0 + K.minimum(0.0, w_out_l) * w_u_0
-        b_out_u_ = K.sum(K.maximum(0.0, w_out_u) * b_u_0 + K.minimum(0.0, w_out_u) * b_l_0, 2) + b_out_u
-        b_out_l_ = K.sum(K.maximum(0.0, w_out_l) * b_l_0 + K.minimum(0.0, w_out_l) * b_u_0, 2) + b_out_l
-
-        return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
+    if mode == ForwardMode.IBP:
+        upper, lower = inputs[:nb_tensors]
+    elif mode == ForwardMode.AFFINE:
+        z_, w_u_, b_u_, w_l_, b_l_ = inputs[:nb_tensors]
+        upper = get_upper(z_, w_u_, b_u_)
+        lower = get_lower(z_, w_l_, b_l_)
+    elif mode == ForwardMode.HYBRID:
+        _, upper, _, _, lower, _, _ = inputs[:nb_tensors]
     else:
-        nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
-
-        if mode == ForwardMode.IBP:
-            upper, lower = inputs[:nb_tensors]
-        elif mode == ForwardMode.AFFINE:
-            z_, w_u_, b_u_, w_l_, b_l_ = inputs[:nb_tensors]
-            upper = get_upper(z_, w_u_, b_u_)
-            lower = get_lower(z_, w_l_, b_l_)
-        elif mode == ForwardMode.HYBRID:
-            _, upper, _, _, lower, _, _ = inputs[:nb_tensors]
-        else:
-            raise ValueError(f"Unknown mode {mode}")
-        return get_linear_hull_sigmoid(upper, lower, slope=slope, **kwargs)
+        raise ValueError(f"Unknown mode {mode}")
+    return get_linear_hull_sigmoid(upper, lower, slope=slope, **kwargs)
 
 
 def backward_tanh(
@@ -170,7 +142,6 @@ def backward_tanh(
     convex_domain: Optional[Dict[str, Any]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    previous: bool = True,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Backward  LiRPA of tanh
@@ -191,39 +162,19 @@ def backward_tanh(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
-    if previous:
-        x = inputs[:-4]
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
-        w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
-            x, func=K.tanh, f_prime=tanh_prime, convex_domain=convex_domain, mode=mode, **kwargs
-        )
+    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
 
-        # here balance the results for convex linear relaxations
-        w_u_0 = K.expand_dims(K.expand_dims(w_u_0, 1), -1)
-        w_l_0 = K.expand_dims(K.expand_dims(w_l_0, 1), -1)
-        b_u_0 = K.expand_dims(K.expand_dims(b_u_0, 1), -1)
-        b_l_0 = K.expand_dims(K.expand_dims(b_l_0, 1), -1)
-        w_out_u_ = K.maximum(0.0, w_out_u) * w_u_0 + K.minimum(0.0, w_out_u) * w_l_0
-        w_out_l_ = K.maximum(0.0, w_out_l) * w_l_0 + K.minimum(0.0, w_out_l) * w_u_0
-        b_out_u_ = K.sum(K.maximum(0.0, w_out_u) * b_u_0 + K.minimum(0.0, w_out_u) * b_l_0, 2) + b_out_u
-        b_out_l_ = K.sum(K.maximum(0.0, w_out_l) * b_l_0 + K.minimum(0.0, w_out_l) * b_u_0, 2) + b_out_l
-
-        return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
+    if mode == ForwardMode.IBP:
+        upper, lower = inputs[:nb_tensors]
+    elif mode == ForwardMode.AFFINE:
+        z_, w_u_, b_u_, w_l_, b_l_ = inputs[:nb_tensors]
+        upper = get_upper(z_, w_u_, b_u_)
+        lower = get_lower(z_, w_l_, b_l_)
+    elif mode == ForwardMode.HYBRID:
+        _, upper, _, _, lower, _, _ = inputs[:nb_tensors]
     else:
-
-        nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
-
-        if mode == ForwardMode.IBP:
-            upper, lower = inputs[:nb_tensors]
-        elif mode == ForwardMode.AFFINE:
-            z_, w_u_, b_u_, w_l_, b_l_ = inputs[:nb_tensors]
-            upper = get_upper(z_, w_u_, b_u_)
-            lower = get_lower(z_, w_l_, b_l_)
-        elif mode == ForwardMode.HYBRID:
-            _, upper, _, _, lower, _, _ = inputs[:nb_tensors]
-        else:
-            raise ValueError(f"Unknown mode {mode}")
-        return get_linear_hull_tanh(upper, lower, slope=slope, **kwargs)
+        raise ValueError(f"Unknown mode {mode}")
+    return get_linear_hull_tanh(upper, lower, slope=slope, **kwargs)
 
 
 def backward_hard_sigmoid(
@@ -232,7 +183,6 @@ def backward_hard_sigmoid(
     convex_domain: Optional[Dict[str, Any]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    previous: bool = True,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Backward  LiRPA of hard sigmoid
@@ -262,7 +212,6 @@ def backward_elu(
     convex_domain: Optional[Dict[str, Any]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    previous: bool = True,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Backward  LiRPA of Exponential Linear Unit
@@ -293,7 +242,6 @@ def backward_selu(
     convex_domain: Optional[Dict[str, Any]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    previous: bool = True,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Backward LiRPA of Scaled Exponential Linear Unit (SELU)
@@ -324,7 +272,6 @@ def backward_linear(
     convex_domain: Optional[Dict[str, Any]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    previous: bool = True,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Backward LiRPA of linear
@@ -341,8 +288,6 @@ def backward_linear(
     """
     if convex_domain is None:
         convex_domain = {}
-    if previous:
-        return x[-4:]
     mode = ForwardMode(mode)
     slope = Slope(slope)
     raise NotImplementedError()
@@ -354,7 +299,6 @@ def backward_exponential(
     convex_domain: Optional[Dict[str, Any]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    previous: bool = True,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Backward LiRPAof exponential
@@ -384,7 +328,6 @@ def backward_softplus(
     convex_domain: Optional[Dict[str, Any]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    previous: bool = True,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Backward LiRPA of softplus
@@ -405,27 +348,19 @@ def backward_softplus(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
-    if previous:
-        y = x[:-4]
-        w_out_u, b_out_u, w_out_l, b_out_l = x[-4:]
+    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
 
-        return backward_softplus_(
-            y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, mode=mode, **kwargs
-        )
+    if mode == ForwardMode.IBP:
+        upper, lower = x[:nb_tensors]
+    elif mode == ForwardMode.AFFINE:
+        z_, w_u_, b_u_, w_l_, b_l_ = x[:nb_tensors]
+        upper = get_upper(z_, w_u_, b_u_)
+        lower = get_lower(z_, w_l_, b_l_)
+    elif mode == ForwardMode.HYBRID:
+        _, upper, _, _, lower, _, _ = x[:nb_tensors]
     else:
-        nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
-
-        if mode == ForwardMode.IBP:
-            upper, lower = x[:nb_tensors]
-        elif mode == ForwardMode.AFFINE:
-            z_, w_u_, b_u_, w_l_, b_l_ = x[:nb_tensors]
-            upper = get_upper(z_, w_u_, b_u_)
-            lower = get_lower(z_, w_l_, b_l_)
-        elif mode == ForwardMode.HYBRID:
-            _, upper, _, _, lower, _, _ = x[:nb_tensors]
-        else:
-            raise ValueError(f"Unknown mode {mode}")
-        return get_linear_softplus_hull(upper, lower, slope=slope, **kwargs)
+        raise ValueError(f"Unknown mode {mode}")
+    return get_linear_softplus_hull(upper, lower, slope=slope, **kwargs)
 
 
 def backward_softsign(
@@ -434,7 +369,6 @@ def backward_softsign(
     convex_domain: Optional[Dict[str, Any]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    previous: bool = True,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Backward LiRPA of softsign
@@ -455,22 +389,13 @@ def backward_softsign(
 
     if convex_domain is None:
         convex_domain = {}
-    if previous:
-        y = x[:-4]
-        w_out_u, b_out_u, w_out_l, b_out_l = x[-4:]
 
-        return backward_softsign_(
-            y, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, mode=mode, **kwargs
-        )
-    else:
-        bounds = get_linear_hull_s_shape(
-            x, func=K.softsign, f_prime=softsign_prime, convex_domain=convex_domain, mode=mode
-        )
-        shape = np.prod(x[-1].shape[1:])
-        bounds = [K.reshape(elem, (-1, shape)) for elem in bounds]
+    bounds = get_linear_hull_s_shape(x, func=K.softsign, f_prime=softsign_prime, convex_domain=convex_domain, mode=mode)
+    shape = np.prod(x[-1].shape[1:])
+    bounds = [K.reshape(elem, (-1, shape)) for elem in bounds]
 
-        w_u_, b_u_, w_l_, b_l_ = bounds
-        return [w_u_, b_u_, w_l_, b_l_]
+    w_u_, b_u_, w_l_, b_l_ = bounds
+    return [w_u_, b_u_, w_l_, b_l_]
 
 
 def backward_softsign_(
@@ -511,7 +436,6 @@ def backward_softmax(
     convex_domain: Optional[Dict[str, Any]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    previous: bool = True,
     axis: int = -1,
     **kwargs: Any,
 ) -> List[tf.Tensor]:

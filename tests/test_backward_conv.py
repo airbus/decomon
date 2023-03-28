@@ -11,7 +11,7 @@ from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonConv2D
 
 
-def test_Decomon_conv_box(data_format, activation, padding, use_bias, mode, floatx, previous, helpers):
+def test_Decomon_conv_box(data_format, activation, padding, use_bias, mode, floatx, helpers):
 
     if data_format == "channels_first" and not len(K._get_available_gpus()):
         return
@@ -61,25 +61,11 @@ def test_Decomon_conv_box(data_format, activation, padding, use_bias, mode, floa
     w_out = Input((output_shape, output_shape))
     b_out = Input((output_shape,))
     # get backward layer
-    layer_backward = to_backward(layer, previous=previous)
+    layer_backward = to_backward(layer)
 
-    if previous:
-        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
-        f_conv = K.function(inputs + [w_out, b_out], [w_out_u, b_out_u, w_out_l, b_out_l])
-        w_init = np.concatenate([np.diag([1.0] * output_shape)[None]] * len(x)).reshape(
-            (-1, output_shape, output_shape)
-        )
-        b_init = np.zeros((len(x), output_shape))
-        output_ = f_conv(inputs_ + [w_init, b_init])
-
-    else:
-        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
-        f_conv = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
-        output_ = f_conv(inputs_)
-
-    # import pdb; pdb.set_trace()
-
-    # import pdb; pdb.set_trace()
+    w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
+    f_conv = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
+    output_ = f_conv(inputs_)
 
     w_u_, b_u_, w_l_, b_l_ = output_
 

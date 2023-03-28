@@ -13,7 +13,7 @@ from decomon.layers.decomon_layers import DecomonActivation, DecomonFlatten
 from decomon.layers.decomon_reshape import DecomonReshape
 
 
-def test_Backward_Activation_1D_box_model(n, activation, mode, previous, floatx, helpers):
+def test_Backward_Activation_1D_box_model(n, activation, mode, floatx, helpers):
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     decimal = 5
@@ -46,26 +46,10 @@ def test_Backward_Activation_1D_box_model(n, activation, mode, previous, floatx,
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
     # get backward layer
-    layer_backward = to_backward(layer, previous=previous)
-    if previous:
-        w_out_u_, b_out_u_, w_out_l_, b_out_l_ = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
-        model = Model(inputs[2:] + [w_out, b_out], [w_out_u_, b_out_u_, w_out_l_, b_out_l_])
-        w_u_, b_u_, w_l_, b_l_ = model.predict(
-            inputs_[2:]
-            + [
-                np.ones((len(x), 1, 1)),
-                np.zeros(
-                    (
-                        len(x),
-                        1,
-                    )
-                ),
-            ]
-        )
-    else:
-        w_out_u_, b_out_u_, w_out_l_, b_out_l_ = layer_backward(input_mode)
-        model = Model(inputs[2:], [w_out_u_, b_out_u_, w_out_l_, b_out_l_])
-        w_u_, b_u_, w_l_, b_l_ = model.predict(inputs_[2:])
+    layer_backward = to_backward(layer)
+    w_out_u_, b_out_u_, w_out_l_, b_out_l_ = layer_backward(input_mode)
+    model = Model(inputs[2:], [w_out_u_, b_out_u_, w_out_l_, b_out_l_])
+    w_u_, b_u_, w_l_, b_l_ = model.predict(inputs_[2:])
 
     helpers.assert_output_properties_box_linear(
         x,
@@ -86,7 +70,7 @@ def test_Backward_Activation_1D_box_model(n, activation, mode, previous, floatx,
     K.set_epsilon(eps)
 
 
-def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, previous, helpers):
+def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -122,27 +106,11 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, previous,
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
     # get backward layer
-    layer_backward = to_backward(layer, previous=previous)
-    if previous:
-        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
-        f_dense = K.function(inputs + [w_out, b_out], [w_out_u, b_out_u, w_out_l, b_out_l])
-        output_ = f_dense(
-            inputs_
-            + [
-                np.ones((len(x), 1, 1)),
-                np.zeros(
-                    (
-                        len(x),
-                        1,
-                    )
-                ),
-            ]
-        )
-    else:
-        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
-        f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
-        # import pdb; pdb.set_trace()
-        output_ = f_dense(inputs_)
+    layer_backward = to_backward(layer)
+    w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
+    f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
+    # import pdb; pdb.set_trace()
+    output_ = f_dense(inputs_)
     w_u_, b_u_, w_l_, b_l_ = output_
 
     helpers.assert_output_properties_box_linear(
@@ -182,7 +150,7 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, previous,
     K.set_epsilon(eps)
 
 
-def test_Backward_Flatten_multiD_box(odd, floatx, mode, previous, data_format, helpers):
+def test_Backward_Flatten_multiD_box(odd, floatx, mode, data_format, helpers):
 
     if data_format == "channels_first" and not len(K._get_available_gpus()):
         return
@@ -221,27 +189,12 @@ def test_Backward_Flatten_multiD_box(odd, floatx, mode, previous, data_format, h
     w_out = Input((1, 1))
     b_out = Input((1,))
     # get backward layer
-    layer_backward = to_backward(layer, previous=previous)
-    if previous:
-        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
-        f_dense = K.function(inputs + [w_out, b_out], [w_out_u, b_out_u, w_out_l, b_out_l])
-        output_ = f_dense(
-            inputs_
-            + [
-                np.ones((len(x), 1, 1)),
-                np.zeros(
-                    (
-                        len(x),
-                        1,
-                    )
-                ),
-            ]
-        )
-    else:
-        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
-        f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
-        # import pdb; pdb.set_trace()
-        output_ = f_dense(inputs_)
+    layer_backward = to_backward(
+        layer,
+    )
+    w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
+    f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
+    output_ = f_dense(inputs_)
     w_u_, b_u_, w_l_, b_l_ = output_
 
     helpers.assert_output_properties_box_linear(
@@ -262,7 +215,7 @@ def test_Backward_Flatten_multiD_box(odd, floatx, mode, previous, data_format, h
     K.set_epsilon(eps)
 
 
-def test_Backward_Reshape_multiD_box(odd, floatx, mode, previous, data_format, helpers):
+def test_Backward_Reshape_multiD_box(odd, floatx, mode, data_format, helpers):
     if data_format == "channels_first" and not len(K._get_available_gpus()):
         return
 
@@ -300,27 +253,10 @@ def test_Backward_Reshape_multiD_box(odd, floatx, mode, previous, data_format, h
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
     # get backward layer
-    layer_backward = to_backward(layer, previous=previous)
-    if previous:
-        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode + [w_out, b_out, w_out, b_out])
-        f_dense = K.function(inputs + [w_out, b_out], [w_out_u, b_out_u, w_out_l, b_out_l])
-        output_ = f_dense(
-            inputs_
-            + [
-                np.ones((len(x), 1, 1)),
-                np.zeros(
-                    (
-                        len(x),
-                        1,
-                    )
-                ),
-            ]
-        )
-    else:
-        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
-        f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
-        # import pdb; pdb.set_trace()
-        output_ = f_dense(inputs_)
+    layer_backward = to_backward(layer)
+    w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
+    f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
+    output_ = f_dense(inputs_)
     w_u_, b_u_, w_l_, b_l_ = output_
 
     helpers.assert_output_properties_box_linear(
