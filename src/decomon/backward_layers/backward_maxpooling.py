@@ -23,7 +23,6 @@ class BackwardMaxPooling2D(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        previous: bool = True,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -36,7 +35,6 @@ class BackwardMaxPooling2D(BackwardLayer):
             mode=mode,
             convex_domain=convex_domain,
             dc_decomp=dc_decomp,
-            previous=previous,
             **kwargs,
         )
         raise NotImplementedError()

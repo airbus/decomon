@@ -16,7 +16,7 @@ from decomon.utils import relu_
         (softsign, backward_softsign, "softsign"),
     ],
 )
-def test_activation_backward_1D_box(n, mode, previous, floatx, activation_func, tensor_func, funcname, helpers):
+def test_activation_backward_1D_box(n, mode, floatx, activation_func, tensor_func, funcname, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -52,16 +52,9 @@ def test_activation_backward_1D_box(n, mode, previous, floatx, activation_func, 
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1), dtype=K.floatx())
 
-    if previous:
-        w_out_u, b_out_u, w_out_l, b_out_l = tensor_func(
-            input_mode + [w_out, b_out, w_out, b_out], mode=mode, previous=previous
-        )
-        f_func = K.function(inputs + [w_out, b_out], [w_out_u, b_out_u, w_out_l, b_out_l])
-        output_ = f_func(inputs_ + [np.ones((len(x_), 1, 1)), np.zeros((len(x_), 1))])
-    else:
-        w_out_u, b_out_u, w_out_l, b_out_l = tensor_func(input_mode, mode=mode, previous=previous)
-        f_func = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
-        output_ = f_func(inputs_)
+    w_out_u, b_out_u, w_out_l, b_out_l = tensor_func(input_mode, mode=mode)
+    f_func = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
+    output_ = f_func(inputs_)
 
     w_u_, b_u_, w_l_, b_l_ = output_
     w_u_b = np.sum(np.maximum(w_u_, 0) * W_u_ + np.minimum(w_u_, 0) * W_l_, 1)[:, :, None]

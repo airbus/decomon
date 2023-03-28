@@ -34,11 +34,6 @@ def floatx(request):
 
 
 @pytest.fixture(params=[True, False])
-def previous(request):
-    return request.param
-
-
-@pytest.fixture(params=[True, False])
 def use_bias(request):
     return request.param
 
