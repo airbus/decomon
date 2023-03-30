@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -345,9 +346,12 @@ def crown_model(
         has_iter = True
 
     if not has_iter:
+        layer_fn_copy = deepcopy(layer_fn)
 
         def func(layer: Layer) -> Layer:
-            return to_backward(layer, mode=get_mode(IBP, forward), finetune=finetune)
+            return layer_fn_copy(
+                layer, mode=get_mode(IBP, forward), finetune=finetune, convex_domain=convex_domain
+            )
 
         layer_fn = func
 
