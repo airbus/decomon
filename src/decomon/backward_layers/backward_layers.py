@@ -61,6 +61,7 @@ class BackwardDense(BackwardLayer):
             self.layer = to_decomon(
                 layer,
                 input_dim,
+                slope=slope,
                 dc_decomp=False,
                 convex_domain=self.convex_domain,
                 finetune=False,
@@ -243,6 +244,7 @@ class BackwardConv2D(BackwardLayer):
             self.layer = to_decomon(
                 layer,
                 input_dim,
+                slope=slope,
                 dc_decomp=False,
                 convex_domain=self.convex_domain,
                 finetune=False,

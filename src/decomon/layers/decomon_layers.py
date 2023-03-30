@@ -44,7 +44,7 @@ from decomon.layers.utils import (
     NonPos,
     Project_initializer_pos,
 )
-from decomon.utils import ConvexDomainType, get_lower, get_upper
+from decomon.utils import ConvexDomainType, Slope, get_lower, get_upper
 
 try:
     from keras.layers.merge import _Merge as Merge
@@ -1640,6 +1640,7 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
 def to_decomon(
     layer: Layer,
     input_dim: int,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     finetune: bool = False,
@@ -1657,6 +1658,7 @@ def to_decomon(
         layer: a Keras Layer
         input_dim: an integer that represents the dim
             of the input convex domain
+        slope:
         dc_decomp: boolean that indicates whether we return a difference
             of convex decomposition of our layer
         convex_domain: the type of convex domain
@@ -1707,6 +1709,7 @@ def to_decomon(
 
             config_layer["mode"] = mode
             config_layer["finetune"] = finetune
+            config_layer["slope"] = slope
             config_layer["shared"] = shared
             config_layer["fast"] = fast
             layer_list: List[DecomonLayer] = []
@@ -1724,6 +1727,7 @@ def to_decomon(
             if not activation is None and not isinstance(layer, Activation) and not isinstance(activation, dict):
                 layer_next = DecomonActivation(
                     activation,
+                    slope=slope,
                     mode=mode,
                     finetune=finetune,
                     dc_decomp=dc_decomp,
@@ -1736,6 +1740,7 @@ def to_decomon(
                     layer_next_list = to_decomon(
                         layer.activation,
                         input_dim,
+                        slope=slope,
                         dc_decomp=dc_decomp,
                         convex_domain=convex_domain,
                         finetune=finetune,

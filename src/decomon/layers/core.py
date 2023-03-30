@@ -79,6 +79,7 @@ class DecomonLayer(ABC, Layer):
             **kwargs: extra parameters
         difference of convex decomposition of our layer
         """
+        kwargs.pop("slope", None)  # remove it if not used by the decomon layer
         super().__init__(**kwargs)
 
         if convex_domain is None:
