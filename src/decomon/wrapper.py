@@ -7,7 +7,7 @@ import tensorflow as tf
 from decomon.models.convert import clone as convert
 from decomon.models.models import DecomonModel
 from decomon.models.utils import ConvertMethod
-from decomon.utils import ConvexDomainType
+from decomon.utils import ConvexDomainType, Slope
 
 IntegerType = Union[int, np.int_]
 """Alias for integers types."""
@@ -45,6 +45,7 @@ def get_adv_box(
     target_labels: Optional[LabelType] = None,
     batch_size: int = -1,
     n_sub_boxes: int = 1,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
 ) -> npt.NDArray[np.float_]:
     """if the output is negative, then it is a formal guarantee that there is no adversarial examples
 
@@ -60,7 +61,8 @@ def get_adv_box(
             contain multiple target labels for each sample)
         batch_size: for computational efficiency, one can split the
             calls to minibatches
-
+        n_sub_boxes:
+        slope:
     Returns:
         numpy array, vector with upper bounds for adversarial attacks
     """
@@ -70,7 +72,7 @@ def get_adv_box(
     # check that the model is a DecomonModel, else do the conversion
     model_: DecomonModel
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, ibp=True, forward=True)
+        model_ = convert(model, ibp=True, forward=True, slope=slope)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
             ConvexDomainType.BOX,
@@ -261,6 +263,7 @@ def check_adv_box(
     source_labels: npt.NDArray[np.int_],
     target_labels: Optional[npt.NDArray[np.int_]] = None,
     batch_size: int = -1,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
 ) -> npt.NDArray[np.float_]:
     """if the output is negative, then it is a formal guarantee that there is no adversarial examples
 
@@ -276,6 +279,7 @@ def check_adv_box(
             contain multiple target labels for each sample)
         batch_size: for computational efficiency, one can split the
             calls to minibatches
+        slope:
 
     Returns:
         numpy array, vector with upper bounds for adversarial attacks
@@ -285,7 +289,7 @@ def check_adv_box(
 
     # check that the model is a DecomonModel, else do the conversion
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, ibp=True, forward=True)
+        model_ = convert(model, ibp=True, forward=True, slope=slope)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
             ConvexDomainType.BOX,
@@ -461,6 +465,7 @@ def get_range_box(
     x_max: npt.NDArray[np.float_],
     batch_size: int = -1,
     n_sub_boxes: int = 1,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
 ) -> Tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
     """bounding the outputs of a model in a given box
     if the constant is negative, then it is a formal guarantee that there is no adversarial examples
@@ -471,6 +476,7 @@ def get_range_box(
         x_max: numpy array for the extremal upper corner of the boxes
         batch_size: for computational efficiency, one can split the
             calls to minibatches
+        slope:
 
     Returns:
         2 numpy array, vector with upper bounds and vector with lower
@@ -481,7 +487,7 @@ def get_range_box(
 
     # check that the model is a DecomonModel, else do the conversion
     if not (isinstance(model, DecomonModel)):
-        model_ = convert(model, ibp=True, forward=True)
+        model_ = convert(model, ibp=True, forward=True, slope=slope)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
             ConvexDomainType.BOX,
@@ -646,6 +652,7 @@ def get_range_noise(
     eps: float,
     p: float = np.inf,
     batch_size: int = -1,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
 ) -> Tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
     """Bounds the output of a model in an Lp Ball
 
@@ -656,6 +663,7 @@ def get_range_noise(
         p: the type of Lp norm (p=2, 1, np.inf)
         batch_size: for computational efficiency, one can split the
             calls to minibatches
+        slope:
 
     Returns:
         2 numpy arrays, vector with upper andlower bounds
@@ -667,7 +675,12 @@ def get_range_noise(
 
     if not isinstance(model, DecomonModel):
         model_ = convert(
-            model, method=ConvertMethod.CROWN_FORWARD_HYBRID, convex_domain=convex_domain, ibp=True, forward=False
+            model,
+            method=ConvertMethod.CROWN_FORWARD_HYBRID,
+            convex_domain=convex_domain,
+            ibp=True,
+            forward=False,
+            slope=slope,
         )
     else:
         model_ = model
@@ -806,6 +819,7 @@ def refine_box(
     target_labels: Optional[npt.NDArray[np.int_]] = None,
     batch_size: int = -1,
     random: bool = True,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
 ) -> npt.NDArray[np.float_]:
 
     if func.__name__ not in [
@@ -815,7 +829,7 @@ def refine_box(
 
     # check that the model is a DecomonModel, else do the conversion
     if not isinstance(model, DecomonModel):
-        model_ = convert(model)
+        model_ = convert(model, slope=slope)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
             ConvexDomainType.BOX,
@@ -918,6 +932,7 @@ def get_adv_noise(
     p: float = np.inf,
     target_labels: Optional[LabelType] = None,
     batch_size: int = -1,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
 ) -> npt.NDArray[np.float_]:
     """if the output is negative, then it is a formal guarantee that there is no adversarial examples
 
@@ -933,6 +948,7 @@ def get_adv_noise(
             contain multiple target labels for each sample)
         batch_size: for computational efficiency, one can split the
             calls to minibatches
+        slope:
 
     Returns:
         numpy array, vector with upper bounds for adversarial attacks
@@ -942,7 +958,7 @@ def get_adv_noise(
 
     # check that the model is a DecomonModel, else do the conversion
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, convex_domain=convex_domain)
+        model_ = convert(model, convex_domain=convex_domain, slope=slope)
     else:
         model_ = model
         if eps >= 0:
