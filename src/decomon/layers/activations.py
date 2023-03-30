@@ -9,6 +9,7 @@ from tensorflow.types.experimental import TensorLike
 from decomon.layers.core import DecomonLayer, ForwardMode, StaticVariables
 from decomon.layers.utils import exp, expand_dims, frac_pos, multiply, softplus_, sum
 from decomon.utils import (
+    Slope,
     get_linear_hull_s_shape,
     get_lower,
     get_upper,
@@ -41,6 +42,7 @@ def relu(
     max_value: Optional[float] = None,
     threshold: float = 0.0,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """
@@ -52,6 +54,7 @@ def relu(
         max_value: see Keras official documentation
         threshold: see Keras official documentation
         mode: type of Forward propagation (IBP, Forward or Hybrid)
+        slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
 
@@ -66,7 +69,7 @@ def relu(
 
     if not alpha and max_value is None:
         # default values: return relu_(x) = max(x, 0)
-        return relu_(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, **kwargs)
+        return relu_(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope, **kwargs)
 
     raise NotImplementedError()
 
@@ -78,6 +81,7 @@ def linear_hull_s_shape(
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
 ) -> List[tf.Tensor]:
     """Computing the linear hull of s-shape functions
 
@@ -88,6 +92,7 @@ def linear_hull_s_shape(
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (IBP, Forward or Hybrid)
+        slope:
     whether we return a difference of convex decomposition of our layer
 
     Returns:
@@ -154,6 +159,7 @@ def sigmoid(
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """LiRPA for Sigmoid activation function .
@@ -175,7 +181,9 @@ def sigmoid(
         convex_domain = {}
     func = K.sigmoid
     f_prime = sigmoid_prime
-    return linear_hull_s_shape(x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
+    return linear_hull_s_shape(
+        x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope
+    )
 
 
 def tanh(
@@ -183,6 +191,7 @@ def tanh(
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """LiRPA for Hyperbolic activation function.
@@ -193,6 +202,7 @@ def tanh(
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (IBP, Forward or Hybrid)
+        slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
 
@@ -204,7 +214,9 @@ def tanh(
         convex_domain = {}
     func = K.tanh
     f_prime = tanh_prime
-    return linear_hull_s_shape(x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
+    return linear_hull_s_shape(
+        x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope
+    )
 
 
 def hard_sigmoid(
@@ -212,6 +224,7 @@ def hard_sigmoid(
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """LiRPA for Hard sigmoid activation function.
@@ -222,6 +235,7 @@ def hard_sigmoid(
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (IBP, Forward or Hybrid)
+        slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
 
@@ -242,6 +256,7 @@ def elu(
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """LiRPA for Exponential linear unit.
@@ -251,6 +266,7 @@ def elu(
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (IBP, Forward or Hybrid)
+        slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
 
@@ -271,6 +287,7 @@ def selu(
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """LiRPA for Scaled Exponential Linear Unit (SELU).
@@ -287,6 +304,7 @@ def selu(
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (IBP, Forward or Hybrid)
+        slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
 
@@ -306,6 +324,7 @@ def linear(
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """LiRPA foe Linear (i.e. identity) activation function.
@@ -315,6 +334,7 @@ def linear(
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (IBP, Forward or Hybrid)
+        slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
 
@@ -331,6 +351,7 @@ def exponential(
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """LiRPA for Exponential activation function.
@@ -340,6 +361,7 @@ def exponential(
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (IBP, Forward or Hybrid)
+        slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
 
@@ -349,7 +371,7 @@ def exponential(
 
     if convex_domain is None:
         convex_domain = {}
-    return exp(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, **kwargs)
+    return exp(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope, **kwargs)
 
 
 def softplus(
@@ -357,6 +379,7 @@ def softplus(
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """LiRPA for Softplus activation function `log(exp(x) + 1)`.
@@ -366,6 +389,7 @@ def softplus(
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (IBP, Forward or Hybrid)
+        slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
 
@@ -377,7 +401,7 @@ def softplus(
     if dc_decomp:
         raise NotImplementedError()
 
-    return softplus_(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
+    return softplus_(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope)
 
 
 def softsign(
@@ -385,6 +409,7 @@ def softsign(
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """LiRPA for Softsign activation function `x / (abs(x) + 1)`.
@@ -394,6 +419,7 @@ def softsign(
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (IBP, Forward or Hybrid)
+        slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
 
@@ -405,7 +431,9 @@ def softsign(
         convex_domain = {}
     func = K.softsign
     f_prime = softsign_prime
-    return linear_hull_s_shape(x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
+    return linear_hull_s_shape(
+        x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope
+    )
 
 
 def softmax(
@@ -415,6 +443,7 @@ def softmax(
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis: int = -1,
     clip: bool = True,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """LiRPA for Softmax activation function.
@@ -424,6 +453,7 @@ def softmax(
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (IBP, Forward or Hybrid)
+        slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
 
@@ -437,7 +467,7 @@ def softmax(
     mode = ForwardMode(mode)
 
     x_ = minus(x, mode=mode)
-    x_0 = exponential(x_, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
+    x_0 = exponential(x_, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope)
     x_sum = sum(x_0, axis=axis, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
     x_frac = expand_dims(
         frac_pos(x_sum, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode), mode=mode, axis=axis
@@ -467,6 +497,7 @@ def group_sort_2(
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     data_format: str = "channels_last",
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
 
