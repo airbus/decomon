@@ -33,6 +33,31 @@ jobs:
       - name: pre-commit checks
         run: pre-commit run --all-files --show-diff-on-failure --color=always
 
+  type-checking:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade tox setuptools
+      - name: Restore cached .tox
+        id: cache-tox
+        uses: actions/cache@v3
+        with:
+          path: .tox
+          key:
+            tox-${{ matrix.python-version }}-${{ matrix.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys:
+            tox-${{ matrix.python-version }}-${{ matrix.os }}
+      - name: Run mypy via tox
+        run: python -m tox -e type
+
   tests:
     strategy:
       matrix:
