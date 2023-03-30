@@ -21,7 +21,7 @@ from decomon.models.utils import (
     get_depth_dict,
     get_inner_layers,
 )
-from decomon.utils import ConvexDomainType
+from decomon.utils import Slope
 
 OutputMapKey = Union[str, int]
 OutputMapVal = Union[List[tf.Tensor], "OutputMapDict"]
@@ -34,6 +34,7 @@ LayerMapDict = Dict[int, LayerMapVal]
 def include_dim_layer_fn(
     layer_fn: Callable[..., List[DecomonLayer]],
     input_dim: int,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     IBP: bool = True,
@@ -62,6 +63,7 @@ def include_dim_layer_fn(
             return layer_fn_copy(
                 layer,
                 input_dim=input_dim,
+                slope=slope,
                 convex_domain=convex_domain,
                 dc_decomp=dc_decomp,
                 IBP=IBP,
@@ -171,6 +173,7 @@ def convert_forward_functional_model(
         layer_fn = include_dim_layer_fn(
             layer_fn,
             input_dim=input_dim,
+            slope=slope,
             convex_domain=convex_domain,
             IBP=IBP,
             forward=forward,
