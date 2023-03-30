@@ -8,11 +8,12 @@ from tensorflow.keras.layers import Input, InputLayer, Lambda, Layer
 from tensorflow.keras.models import Model
 
 from decomon.backward_layers.core import BackwardLayer
+from decomon.backward_layers.crown import Convert2Mode
 from decomon.layers.decomon_layers import to_decomon
 from decomon.models.backward_cloning import convert_backward
 from decomon.models.forward_cloning import LayerMapDict, OutputMapDict, convert_forward
 from decomon.models.models import DecomonModel
-from decomon.models.utils import ConvertMethod, convert_2_mode, get_mode
+from decomon.models.utils import ConvertMethod, get_mode
 from decomon.utils import ConvexDomainType, get_lower, get_upper
 
 
@@ -122,7 +123,9 @@ def convert(
         # check final_ibp and final_forward
         mode_from = get_mode(ibp, forward)
         mode_to = get_mode(final_ibp, final_forward)
-        output = convert_2_mode(mode_from=mode_from, mode_to=mode_to, convex_domain=convex_domain)(results[1])
+        output = Convert2Mode(
+            mode_from=mode_from, mode_to=mode_to, convex_domain=convex_domain, dtype=model.layers[0].dtype
+        )(results[1])
 
     # build decomon model
     return input_tensors, output, layer_map, forward_map
