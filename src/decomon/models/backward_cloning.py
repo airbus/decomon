@@ -29,7 +29,7 @@ from decomon.models.utils import (
     get_depth_dict,
     get_mode,
 )
-from decomon.utils import get_lower, get_upper
+from decomon.utils import Slope, get_lower, get_upper
 
 
 def get_disconnected_input(
@@ -126,7 +126,7 @@ def crown_(
 
         inputs_ = get_disconnected_input(get_mode(IBP, forward), convex_domain, dtype=inputs[0].dtype)(inputs)
         _, backward_bounds_, _, _ = crown_model(
-            node.outbound_layer,
+            model=node.outbound_layer,
             input_tensors=inputs_,
             backward_bounds=backward_bounds,
             IBP=IBP,
@@ -302,6 +302,7 @@ def crown_model(
     model: Model,
     input_tensors: Optional[List[tf.Tensor]] = None,
     back_bounds: Optional[List[tf.Tensor]] = None,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
     IBP: bool = True,
     forward: bool = True,
@@ -350,7 +351,7 @@ def crown_model(
 
         def func(layer: Layer) -> Layer:
             return layer_fn_copy(
-                layer, mode=get_mode(IBP, forward), finetune=finetune, convex_domain=convex_domain
+                layer, mode=get_mode(IBP, forward), finetune=finetune, convex_domain=convex_domain, slope=slope
             )
 
         layer_fn = func
@@ -427,6 +428,7 @@ def convert_backward(
     model: Model,
     input_tensors: Optional[List[tf.Tensor]] = None,
     back_bounds: Optional[List[tf.Tensor]] = None,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
     IBP: bool = True,
     forward: bool = True,
@@ -450,18 +452,19 @@ def convert_backward(
             bias = K.cast(0.0, model.layers[0].dtype) * C[:, 0]
             back_bounds = [C, bias] * 2
     result = crown_model(
-        model,
-        input_tensors,
-        back_bounds,
-        input_dim,
-        IBP,
-        forward,
-        convex_domain,
-        finetune,
-        forward_map,
-        softmax_to_linear,
-        joint,
-        layer_fn,
+        model=model,
+        input_tensors=input_tensors,
+        back_bounds=back_bounds,
+        slope=slope,
+        input_dim=input_dim,
+        IBP=IBP,
+        forward=forward,
+        convex_domain=convex_domain,
+        finetune=finetune,
+        forward_map=forward_map,
+        softmax_to_linear=softmax_to_linear,
+        joint=joint,
+        layer_fn=layer_fn,
         fuse=True,
         **kwargs,
     )

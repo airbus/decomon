@@ -14,7 +14,7 @@ from decomon.models.backward_cloning import convert_backward
 from decomon.models.forward_cloning import LayerMapDict, OutputMapDict, convert_forward
 from decomon.models.models import DecomonModel
 from decomon.models.utils import ConvertMethod, get_mode
-from decomon.utils import ConvexDomainType, get_lower, get_upper
+from decomon.utils import ConvexDomainType, Slope, get_lower, get_upper
 
 
 class FeedDirection(Enum):
@@ -57,6 +57,7 @@ def convert(
     forward: bool = False,
     back_bounds: Optional[List[tf.Tensor]] = None,
     layer_fn: Callable[..., List[Layer]] = to_decomon,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
     convex_domain: Optional[Dict[str, Any]] = None,
     finetune: bool = False,
@@ -91,6 +92,7 @@ def convert(
             model=model,
             input_tensors=input_tensors,
             layer_fn=layer_fn,
+            slope=slope,
             input_dim=input_dim,
             dc_decomp=False,
             convex_domain=convex_domain,
@@ -108,6 +110,7 @@ def convert(
             model=model,
             input_tensors=input_tensors,
             back_bounds=back_bounds,
+            slope=slope,
             input_dim=input_dim,
             convex_domain=convex_domain,
             IBP=ibp,
@@ -134,6 +137,7 @@ def convert(
 def clone(
     model: Model,
     layer_fn: Callable[..., List[Layer]] = to_decomon,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     convex_domain: Optional[Dict[str, Any]] = None,
     method: Union[str, ConvertMethod] = ConvertMethod.CROWN,
     back_bounds: Optional[List[tf.Tensor]] = None,
@@ -266,6 +270,7 @@ def clone(
     _, output, _, _ = convert(
         model,
         layer_fn=layer_fn,
+        slope=slope,
         input_tensors=input_tensors,
         back_bounds=back_bounds,
         method=method,
