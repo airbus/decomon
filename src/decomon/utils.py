@@ -1035,6 +1035,7 @@ def get_linear_hull_s_shape(
     f_prime: TensorFunction = sigmoid_prime,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Computing the linear hull of shape functions  given the pre activation neurons

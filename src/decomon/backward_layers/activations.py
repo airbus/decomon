@@ -406,13 +406,14 @@ def backward_softsign_(
     b_out_l: tf.Tensor,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
 
     if convex_domain is None:
         convex_domain = {}
     w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
-        y, func=K.softsign, f_prime=softsign_prime, convex_domain=convex_domain, mode=mode
+        y, func=K.softsign, f_prime=softsign_prime, convex_domain=convex_domain, mode=mode, slope=slope
     )
 
     w_u_0 = K.expand_dims(w_u_0, -1)

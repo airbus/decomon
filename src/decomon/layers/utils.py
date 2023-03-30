@@ -340,7 +340,7 @@ def softplus_(
 
     if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
 
-        w_u_, b_u_, w_l_, b_l_ = get_linear_softplus_hull(upper, lower, slope, **kwargs)
+        w_u_, b_u_, w_l_, b_l_ = get_linear_softplus_hull(upper=upper, lower=lower, slope=slope, **kwargs)
         b_u_ = w_u_ * b_u + b_u_
         b_l_ = w_l_ * b_l + b_l_
         w_u_ = K.expand_dims(w_u_, 1) * w_u
@@ -1279,6 +1279,7 @@ def exp(
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Exponential activation function.
@@ -1288,6 +1289,7 @@ def exp(
         dc_decomp: boolean that indicates
         convex_domain: the type of convex input domain
         mode: type of Forward propagation (IBP, Forward or Hybrid)
+        slope:
         **kwargs: extra parameters
     whether we return a difference of convex decomposition of our layer
 
