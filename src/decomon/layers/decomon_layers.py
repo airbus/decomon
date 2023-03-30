@@ -73,6 +73,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        slope: Union[str, Slope] = Slope.V_SLOPE,
         finetune: bool = False,
         shared: bool = False,
         fast: bool = True,
@@ -93,6 +94,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             fast=fast,
             **kwargs,
         )
+        self.slope = slope
         self.kernel_constraint_pos_ = NonNeg()
         self.kernel_constraint_neg_ = NonPos()
 
@@ -517,7 +519,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         # temporary fix until all activations are ready
         if self.activation is not None:
-            output = self.activation(output, dc_decomp=self.dc_decomp, mode=self.mode)
+            output = self.activation(output, dc_decomp=self.dc_decomp, mode=self.mode, slope=self.slope)
 
         return output
 
@@ -653,6 +655,7 @@ class DecomonDense(Dense, DecomonLayer):
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        slope: Union[str, Slope] = Slope.V_SLOPE,
         finetune: bool = False,
         shared: bool = False,
         fast: bool = True,
@@ -672,6 +675,7 @@ class DecomonDense(Dense, DecomonLayer):
             fast=fast,
             **kwargs,
         )
+        self.slope = slope
         self.kernel_constraint_pos_ = NonNeg()
         self.kernel_constraint_neg_ = NonPos()
         self.input_spec = [InputSpec(min_ndim=2) for _ in range(self.nb_tensors)]
@@ -1022,6 +1026,7 @@ class DecomonDense(Dense, DecomonLayer):
                         convex_domain=self.convex_domain,
                         mode=self.mode,
                         finetune=[self.beta_u_f_, self.beta_l_f_],
+                        slope=self.slope,
                     )
                 else:
                     output = self.activation(
@@ -1030,13 +1035,11 @@ class DecomonDense(Dense, DecomonLayer):
                         convex_domain=self.convex_domain,
                         mode=self.mode,
                         finetune=self.beta_l_f_,
+                        slope=self.slope,
                     )
             else:
                 output = self.activation(
-                    output,
-                    dc_decomp=self.dc_decomp,
-                    convex_domain=self.convex_domain,
-                    mode=self.mode,
+                    output, dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode, slope=self.slope
                 )
 
         return output
@@ -1151,6 +1154,7 @@ class DecomonActivation(Activation, DecomonLayer):
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        slope: Union[str, Slope] = Slope.V_SLOPE,
         finetune: bool = False,
         shared: bool = False,
         fast: bool = True,
@@ -1168,6 +1172,7 @@ class DecomonActivation(Activation, DecomonLayer):
             **kwargs,
         )
 
+        self.slope = slope
         self.supports_masking = True
         self.activation = activations.get(activation)
         self.activation_name = activation
@@ -1205,6 +1210,7 @@ class DecomonActivation(Activation, DecomonLayer):
                     dc_decomp=self.dc_decomp,
                     convex_domain=self.convex_domain,
                     finetune=self.beta_l_f,
+                    slope=self.slope,
                 )
             else:
                 return self.activation(
@@ -1213,9 +1219,12 @@ class DecomonActivation(Activation, DecomonLayer):
                     dc_decomp=self.dc_decomp,
                     convex_domain=self.convex_domain,
                     finetune=[self.beta_u_f, self.beta_l_f],
+                    slope=self.slope,
                 )
         else:
-            output = self.activation(inputs, mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp)
+            output = self.activation(
+                inputs, mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp, slope=self.slope
+            )
             return output
 
     def reset_finetuning(self) -> None:
