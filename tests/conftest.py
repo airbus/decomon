@@ -63,6 +63,29 @@ def odd(request):
     return request.param
 
 
+@pytest.fixture(params=[1, 2, 3, -1])
+def axis(request):
+    return request.param
+
+
+@pytest.fixture(params=[0, 1, 2, 3, 4, 5])
+def finetune_odd(request):
+    # hard code several configuration of finetune for images odd=1 (6, 6, 2)
+    finetune_params = np.zeros((6, 6, 2))
+    if request.param == 1:
+        finetune_params += 1
+    if request.param == 2:
+        finetune_params[0] = 1
+    if request.param == 3:
+        finetune_params[:, 0] = 1
+    if request.param == 4:
+        finetune_params[:, :, 0] = 1
+    if request.param == 5:
+        finetune_params[0, 0, 0] = 1
+
+    return finetune_params
+
+
 @pytest.fixture(params=[m.value for m in ConvertMethod])
 def method(request):
     return request.param
