@@ -695,14 +695,16 @@ class Helpers:
             decimal=decimal,
             err_msg="x_max < x_  for function {}".format(name),
         )
-        if w_u_ is not None:
+        if w_u_ is not None or w_l_ is not None:
             x_expand = x_ + np.zeros_like(x_)
             n_expand = len(w_u_.shape) - len(x_expand.shape)
             for i in range(n_expand):
                 x_expand = np.expand_dims(x_expand, -1)
 
-            lower_ = np.sum(w_l_ * x_expand, 1) + b_l_
-            upper_ = np.sum(w_u_ * x_expand, 1) + b_u_
+            if w_l_ is not None:
+                lower_ = np.sum(w_l_ * x_expand, 1) + b_l_
+            if w_u_ is not None:
+                upper_ = np.sum(w_u_ * x_expand, 1) + b_u_
 
         # check that the functions h_ and g_ remains monotonic
         if h_ is not None:
@@ -723,17 +725,18 @@ class Helpers:
         if w_u_ is not None:
             if K.floatx() == "float32":
                 assert_almost_equal(
-                    np.clip(lower_ - y_, 0.0, np.inf),
-                    np.zeros_like(y_),
-                    decimal=decimal,
-                    err_msg="lower_ >y",
-                )
-
-                assert_almost_equal(
                     np.clip(y_ - upper_, 0.0, 1e6),
                     np.zeros_like(y_),
                     decimal=decimal,
                     err_msg="upper <y",
+                )
+        if w_l_ is not None:
+            if K.floatx() == "float32":
+                assert_almost_equal(
+                    np.clip(lower_ - y_, 0.0, np.inf),
+                    np.zeros_like(y_),
+                    decimal=decimal,
+                    err_msg="lower_ >y",
                 )
 
         if l_c_ is not None:
@@ -749,37 +752,6 @@ class Helpers:
                 decimal=decimal,
                 err_msg="u_c <y",
             )
-
-            # computer lower bounds on the domain
-        if w_u_ is not None and l_c_ is not None:
-            x_expand_min = x_min_ + np.zeros_like(x_)
-            x_expand_max = x_max_ + np.zeros_like(x_)
-            n_expand = len(w_u_.shape) - len(x_expand_min.shape)
-            for i in range(n_expand):
-                x_expand_min = np.expand_dims(x_expand_min, -1)
-                x_expand_max = np.expand_dims(x_expand_max, -1)
-
-            lower_ = (
-                np.sum(np.maximum(0, w_l_) * x_expand_min, 1) + np.sum(np.minimum(0, w_l_) * x_expand_max, 1) + b_l_
-            )
-            upper_ = (
-                np.sum(np.maximum(0, w_u_) * x_expand_max, 1) + np.sum(np.minimum(0, w_u_) * x_expand_min, 1) + b_u_
-            )
-
-            """
-            assert_almost_equal(
-                np.clip(lower_.min(0) - l_c_.max(0), 0.0, np.inf),
-                np.zeros_like(y_.min(0)),
-                decimal=decimal,
-                err_msg="lower_ >l_c",
-            )
-            assert_almost_equal(
-                np.clip(u_c_.min(0) - upper_.max(0), 0.0, 1e6),
-                np.zeros_like(y_.min(0)),
-                decimal=decimal,
-                err_msg="upper <u_c",
-            )
-            """
 
     @staticmethod
     def assert_output_properties_box_linear(
