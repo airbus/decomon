@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import pytest
 import tensorflow.python.keras.backend as K
@@ -68,20 +70,22 @@ def axis(request):
     return request.param
 
 
-@pytest.fixture(params=[0, 1, 2, 3, 4, 5])
-def finetune_odd(request):
+@pytest.fixture(params=[0, 1, 2, 3, 4, 5, 6])
+def finetune_odd(request) -> Optional[np.ndarray]:
     # hard code several configuration of finetune for images odd=1 (6, 6, 2)
     finetune_params = np.zeros((6, 6, 2))
     if request.param == 1:
         finetune_params += 1
-    if request.param == 2:
+    elif request.param == 2:
         finetune_params[0] = 1
-    if request.param == 3:
+    elif request.param == 3:
         finetune_params[:, 0] = 1
-    if request.param == 4:
+    elif request.param == 4:
         finetune_params[:, :, 0] = 1
-    if request.param == 5:
+    elif request.param == 5:
         finetune_params[0, 0, 0] = 1
+    else:
+        return None
 
     return finetune_params
 
