@@ -224,6 +224,24 @@ Beware that when doing so,
 
 If you prefer run pre-commit manually, you can remove the hooks with `pre-commit uninstall`.
 
+### Annotations
+
+The code is now fully annotated, and [mypy](https://mypy-lang.org/) is used to statically type checking it during CI workflow.
+So when you write new code, you should add the appropriate annotations to your functions and methods.
+
+You can then test it directly with mypy
+```shell
+pip install mypy
+mypy
+```
+
+This check is also part of the tox test suite, via the tox environment "type":
+```shell
+tox -e type
+```
+See the [section about unit tests](#running-unit-tests) for more information on tox.
+
+
 ### Notebooks
 
 We try to give some introductory examples via notebooks available in the corresponding `tutorials/` directory.
@@ -352,7 +370,8 @@ to submit great pull requests and review them efficiently.
 Before submitting your pull request, think to
 - [run the unit tests](#running-unit-tests),
 - [check the documentation locally](#building-the-docs-locally) if you modified it,
-- check you respect the coding styles by [running linters](#coding-style-and-code-linting).
+- check you respect the coding styles by [running linters](#coding-style-and-code-linting),
+- check that mypy is happy with [your annotations](#annotations).
 
 If you do not, you will still be able to see the status of your PR as CI will do these checks for you.
 
