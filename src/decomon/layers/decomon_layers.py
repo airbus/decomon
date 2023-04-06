@@ -73,16 +73,13 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        slope: Union[str, Slope] = Slope.V_SLOPE,
         finetune: bool = False,
         shared: bool = False,
         fast: bool = True,
         **kwargs: Any,
     ):
 
-        activation = kwargs.get("activation", None)
-        if "activation" in kwargs:
-            kwargs["activation"] = None
+        kwargs.pop("activation", None)
         super().__init__(
             filters=filters,
             kernel_size=kernel_size,
@@ -94,7 +91,6 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             fast=fast,
             **kwargs,
         )
-        self.slope = Slope(slope)
         self.kernel_constraint_pos_ = NonNeg()
         self.kernel_constraint_neg_ = NonPos()
 
@@ -103,7 +99,6 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         self.kernel = None
         self.kernel_constraints_pos = None
         self.kernel_constraints_neg = None
-        self.activation = activations.get(activation)
         self.bias = None
         self.w_ = None
 
@@ -262,12 +257,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
         self.kernel = layer.kernel
         self.bias = layer.bias
 
-    def set_linear(self, bool_init: bool) -> None:
-
-        if self.activation is not None and self.get_config()["activation"] != "linear":
-            self.linear_layer = bool_init
-
-    def call_linear(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         """computing the perturbation analysis of the operator without the activation function
 
         Args:
@@ -507,22 +497,6 @@ class DecomonConv2D(Conv2D, DecomonLayer):
 
         return output
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        """
-        Args:
-            inputs
-
-        Returns:
-
-        """
-        output = self.call_linear(inputs, **kwargs)
-
-        # temporary fix until all activations are ready
-        if self.activation is not None:
-            output = self.activation(output, dc_decomp=self.dc_decomp, mode=self.mode, slope=self.slope)
-
-        return output
-
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         """
         Args:
@@ -655,18 +629,16 @@ class DecomonDense(Dense, DecomonLayer):
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        slope: Union[str, Slope] = Slope.V_SLOPE,
         finetune: bool = False,
         shared: bool = False,
         fast: bool = True,
         **kwargs: Any,
     ):
-        if "activation" not in kwargs:
-            kwargs["activation"] = None
-        activation = kwargs["activation"]
-        kwargs["units"] = units
-        kwargs["kernel_constraint"] = None
+        kwargs.pop("activation", None)
+        kwargs.pop("kernel_constraint", None)
         super().__init__(
+            units=units,
+            kernel_constraint=None,
             convex_domain=convex_domain,
             dc_decomp=dc_decomp,
             mode=mode,
@@ -675,7 +647,6 @@ class DecomonDense(Dense, DecomonLayer):
             fast=fast,
             **kwargs,
         )
-        self.slope = Slope(slope)
         self.kernel_constraint_pos_ = NonNeg()
         self.kernel_constraint_neg_ = NonPos()
         self.input_spec = [InputSpec(min_ndim=2) for _ in range(self.nb_tensors)]
@@ -684,14 +655,8 @@ class DecomonDense(Dense, DecomonLayer):
         self.kernel: Optional[tf.Variable] = None
         self.kernel_constraints_pos = None
         self.kernel_constraints_neg = None
-        self.activation = activations.get(activation)
         self.dot_op = Dot(axes=(1, 2))
         self.n_subgrad = 0  # deprecated optimization scheme
-        if activation is None:
-            self.activation_name = "linear"
-        else:
-            self.activation_name = activation
-
         self.input_shape_build: Optional[List[tf.TensorShape]] = None
         self.op_dot = K.dot
 
@@ -737,20 +702,6 @@ class DecomonDense(Dense, DecomonLayer):
 
         if self.finetune and self.mode == ForwardMode.HYBRID:
             # create extra parameters that can be optimized
-            if self.activation_name != "linear":
-
-                if self.activation_name[:4] != "relu":
-                    self.beta_u_f_ = self.add_weight(
-                        shape=(self.units,),
-                        initializer="ones",
-                        name="beta_u_f",
-                        regularizer=None,
-                        constraint=ClipAlpha(),
-                    )
-                self.beta_l_f_ = self.add_weight(
-                    shape=(self.units,), initializer="ones", name="beta_l_f", regularizer=None, constraint=ClipAlpha()
-                )
-
             self.alpha_ = self.add_weight(
                 shape=(input_dim, self.units),
                 initializer="ones",
@@ -810,15 +761,6 @@ class DecomonDense(Dense, DecomonLayer):
         if self.use_bias:
             self.bias = layer.bias
 
-    def set_linear(self, bool_init: bool) -> None:
-        self.linear_layer = bool_init
-
-    def get_linear(self) -> bool:
-        if self.activation is None and self.activation_name == "linear":
-            return self.linear_layer
-        else:
-            return False
-
     def set_back_bounds(self, has_backward_bounds: bool) -> None:
         # check for activation
         if self.activation is not None and self.activation_name != "linear" and has_backward_bounds:
@@ -833,7 +775,7 @@ class DecomonDense(Dense, DecomonLayer):
             op_ = Dot(1)
             self.op_dot = lambda x, y: op_([x, y])
 
-    def call_linear(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         """
         Args:
             inputs
@@ -842,7 +784,7 @@ class DecomonDense(Dense, DecomonLayer):
 
         """
         if self.kernel is None:
-            raise RuntimeError("self.kernel cannot be None when calling call_linear()")
+            raise RuntimeError("self.kernel cannot be None when calling call()")
 
         z_value = K.cast(0.0, self.dtype)
 
@@ -1005,45 +947,6 @@ class DecomonDense(Dense, DecomonLayer):
 
         return output
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        """
-        Args:
-            inputs: list of tensors
-
-        Returns:
-
-        """
-        output = self.call_linear(inputs)
-
-        if self.activation is not None and self.activation_name != "linear":
-
-            if self.finetune:
-                if self.activation_name[:4] != "relu":
-
-                    output = self.activation(
-                        output,
-                        dc_decomp=self.dc_decomp,
-                        convex_domain=self.convex_domain,
-                        mode=self.mode,
-                        finetune=[self.beta_u_f_, self.beta_l_f_],
-                        slope=self.slope,
-                    )
-                else:
-                    output = self.activation(
-                        output,
-                        dc_decomp=self.dc_decomp,
-                        convex_domain=self.convex_domain,
-                        mode=self.mode,
-                        finetune=self.beta_l_f_,
-                        slope=self.slope,
-                    )
-            else:
-                output = self.activation(
-                    output, dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode, slope=self.slope
-                )
-
-        return output
-
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         """
         Args:
@@ -1109,38 +1012,19 @@ class DecomonDense(Dense, DecomonLayer):
     def freeze_alpha(self) -> None:
         if not self.frozen_alpha:
             if self.finetune and self.mode == ForwardMode.HYBRID:
-                if self.activation_name == "linear":
-                    self._trainable_weights = self._trainable_weights[:-2]
-                else:
-                    if self.activation_name[:4] == "relu":
-                        self._trainable_weights = self._trainable_weights[:-3]
-                    else:
-                        self._trainable_weights = self._trainable_weights[:-4]
-                self.frozen_alpha = True
+                self._trainable_weights = self._trainable_weights[:-2]
+            self.frozen_alpha = True
 
     def unfreeze_alpha(self) -> None:
         if self.frozen_alpha:
             if self.finetune and self.mode == ForwardMode.HYBRID:
                 self._trainable_weights += [self.alpha_, self.gamma_]
-                if self.activation_name != "linear":
-                    if self.activation_name[:4] == "relu":
-                        self._trainable_weights += [self.beta_u_f_, self.beta_l_f_]
-                    else:
-                        self._trainable_weights += [self.beta_u_f_, self.beta_l_f_]
             self.frozen_alpha = False
 
     def reset_finetuning(self) -> None:
         if self.finetune and self.mode == ForwardMode.HYBRID:
-
             K.set_value(self.alpha_, np.ones_like(self.alpha_.value()))
             K.set_value(self.gamma_, np.ones_like(self.gamma_.value()))
-
-            if self.activation_name != "linear":
-                if self.activation_name[:4] == "relu":
-                    K.set_value(self.beta_l_f_, np.ones_like(self.beta_l_f_.value()))
-                else:
-                    K.set_value(self.beta_u_f_, np.ones_like(self.beta_u_f_.value()))
-                    K.set_value(self.beta_l_f_, np.ones_like(self.beta_l_f_.value()))
 
 
 class DecomonActivation(Activation, DecomonLayer):
@@ -1229,7 +1113,6 @@ class DecomonActivation(Activation, DecomonLayer):
 
     def reset_finetuning(self) -> None:
         if self.finetune and self.mode != ForwardMode.IBP:
-
             if self.activation_name != "linear":
                 if self.activation_name[:4] == "relu":
                     K.set_value(self.beta_l_f, np.ones_like(self.beta_l_f.value()))
@@ -1241,7 +1124,7 @@ class DecomonActivation(Activation, DecomonLayer):
         if not self.frozen_alpha:
             if self.finetune and self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
                 self._trainable_weights = []
-                self.frozen_alpha = True
+            self.frozen_alpha = True
 
     def unfreeze_alpha(self) -> None:
         if self.frozen_alpha:

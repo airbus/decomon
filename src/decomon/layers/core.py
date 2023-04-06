@@ -132,9 +132,6 @@ class DecomonLayer(ABC, Layer):
 
         """
 
-    def get_linear(self) -> bool:
-        return False
-
     @abstractmethod
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         """

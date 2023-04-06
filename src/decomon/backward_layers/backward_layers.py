@@ -92,7 +92,7 @@ class BackwardDense(BackwardLayer):
         # start with the activation: determine the upper and lower bounds before the weights
         weights = self.kernel
         if self.activation_name != "linear":
-            x = self.layer.call_linear(x_)
+            x = self.layer.call(x_)
             if self.finetune:
                 if self.activation_name[:4] != "relu":
                     w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
@@ -346,7 +346,7 @@ class BackwardConv2D(BackwardLayer):
         x = inputs
 
         if self.activation_name != "linear":
-            x_output = self.layer.call_linear(x)
+            x_output = self.layer.call(x)
             y_ = x_output[-1]
 
             if self.finetune:
