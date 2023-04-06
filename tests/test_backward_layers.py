@@ -11,6 +11,7 @@ from decomon.backward_layers.backward_layers import to_backward
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonActivation, DecomonFlatten
 from decomon.layers.decomon_reshape import DecomonReshape
+from decomon.utils import Slope
 
 
 def test_Backward_Activation_1D_box_model(n, activation, mode, floatx, helpers):
@@ -68,6 +69,39 @@ def test_Backward_Activation_1D_box_model(n, activation, mode, floatx, helpers):
 
     K.set_floatx("float32")
     K.set_epsilon(eps)
+
+
+def test_Backward_Activation_1D_box_model_slope(helpers):
+    n = 2
+    activation = "relu"
+    use_bias = False
+    mode = ForwardMode.AFFINE
+
+    layer = DecomonActivation(activation, dc_decomp=False, mode=mode, dtype=K.floatx())
+
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
+    x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
+    input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
+
+    outputs_by_slope = {}
+    for slope in Slope:
+        layer_backward = to_backward(layer, slope=slope, mode=mode, convex_domain={})
+        assert layer_backward.slope == slope
+        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
+        f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
+        outputs_by_slope[slope] = f_dense(inputs_)
+
+    # check results
+    # O_Slope != Z_Slope
+    same_outputs_O_n_Z = [
+        (a == b).all() for a, b in zip(outputs_by_slope[Slope.O_SLOPE], outputs_by_slope[Slope.Z_SLOPE])
+    ]
+    assert not all(same_outputs_O_n_Z)
+
+    # V_Slope == Z_Slope
+    for a, b in zip(outputs_by_slope[Slope.V_SLOPE], outputs_by_slope[Slope.Z_SLOPE]):
+        assert (a == b).all()
 
 
 def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, helpers):

@@ -8,6 +8,7 @@ from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.models import Model
 
 from decomon.backward_layers.backward_layers import to_backward
+from decomon.layers.activations import relu
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonDense, to_decomon
 from decomon.utils import Slope
@@ -141,6 +142,41 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, mode, floatx, helpers):
 
     K.set_epsilon(eps)
     K.set_floatx("float32")
+
+
+def test_Backward_Dense_1D_box_slope(helpers):
+    n = 2
+    activation = "relu"
+    use_bias = False
+    mode = ForwardMode.AFFINE
+
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
+    x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
+    input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
+
+    layer_keras = Dense(1, use_bias=use_bias, activation=activation, dtype=K.floatx())
+    input_dim = x.shape[-1]
+    layer_keras(inputs[1])
+
+    outputs_by_slope = {}
+    for slope in Slope:
+        layer_backward = to_backward(layer_keras, input_dim=input_dim, slope=slope, mode=mode, convex_domain={})
+        assert layer_backward.slope == slope
+        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
+        f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
+        outputs_by_slope[slope] = f_dense(inputs_)
+
+    # check results
+    # O_Slope != Z_Slope
+    same_outputs_O_n_Z = [
+        (a == b).all() for a, b in zip(outputs_by_slope[Slope.O_SLOPE], outputs_by_slope[Slope.Z_SLOPE])
+    ]
+    assert not all(same_outputs_O_n_Z)
+
+    # V_Slope == Z_Slope
+    for a, b in zip(outputs_by_slope[Slope.V_SLOPE], outputs_by_slope[Slope.Z_SLOPE]):
+        assert (a == b).all()
 
 
 def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, helpers):
