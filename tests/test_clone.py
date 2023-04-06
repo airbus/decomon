@@ -6,6 +6,7 @@ import tensorflow.python.keras.backend as K
 
 from decomon.layers.core import ForwardMode
 from decomon.models import clone
+from decomon.utils import Slope
 
 
 def test_convert_1D(n, method, mode, floatx, helpers):
@@ -70,3 +71,48 @@ def test_convert_1D(n, method, mode, floatx, helpers):
     )
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)
+
+
+def test_convert_1D_forward_slope(slope, helpers):
+    n, method, mode = 0, "forward-hybrid", "hybrid"
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
+    x_ = inputs_[0]
+    z_ = inputs_[2]
+
+    ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
+    ref_nn(inputs[1])
+
+    ibp = True
+    affine = True
+
+    f_dense = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine, slope=slope)
+
+    # check slope of activation layers
+    for layer in f_dense.layers:
+        if layer.__class__.__name__.lower().endswith("activation"):
+            assert layer.slope == Slope(slope)
+
+
+def test_convert_1D_backward_slope(slope, helpers):
+    n, method, mode = 0, "crown-forward-hybrid", "hybrid"
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
+    x_ = inputs_[0]
+    z_ = inputs_[2]
+
+    ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
+    ref_nn(inputs[1])
+
+    ibp = True
+    affine = True
+
+    f_dense = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine, slope=slope)
+
+    # check slope of layers with activation
+    for layer in f_dense.layers:
+        layer_class_name = layer.__class__.__name__
+        if layer_class_name.endswith("Activation"):
+            assert layer.slope == Slope(slope)
+        if layer_class_name in ("BackwardDense", "BackwardConv2D"):
+            assert layer.slope == Slope(slope)

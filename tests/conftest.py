@@ -18,10 +18,16 @@ from tensorflow.keras.models import Model, Sequential
 
 from decomon.layers.core import ForwardMode
 from decomon.models.utils import ConvertMethod
+from decomon.utils import Slope
 
 
 @pytest.fixture(params=[m.value for m in ForwardMode])
 def mode(request):
+    return request.param
+
+
+@pytest.fixture(params=[s.value for s in Slope])
+def slope(request):
     return request.param
 
 
