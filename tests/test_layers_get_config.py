@@ -73,12 +73,18 @@ def test_decomon_merge_layers():
 
 
 def test_decomon_layers():
-    for activation in ["relu", "softmax"]:
-        layer = DecomonActivation(activation=activation)
+    activation_mapping = {
+        "relu": "relu",
+        "softmax": "softmax",
+        "linear": "linear",
+        None: "linear",
+    }
+    for activation_arg, activation_res in activation_mapping.items():
+        layer = DecomonActivation(activation=activation_arg)
         config = layer.get_config()
         print(config)
         print(layer.activation)
-        assert config["activation"] == activation
+        assert config["activation"] == activation_res
 
     units = 2
     layer = DecomonDense(units=units)

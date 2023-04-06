@@ -25,7 +25,7 @@ def test_Decomon_conv_box(data_format, mode, floatx, helpers):
         decimal = 2
 
     monotonic_layer = DecomonConv2D(
-        10, kernel_size=(3, 3), activation="relu", dc_decomp=True, mode=mode, data_format=data_format, dtype=K.floatx()
+        10, kernel_size=(3, 3), dc_decomp=True, mode=mode, data_format=data_format, dtype=K.floatx()
     )
 
     inputs = helpers.get_tensor_decomposition_images_box(data_format, odd)
@@ -124,7 +124,7 @@ def test_Decomon_conv_box_nodc(data_format, floatx, helpers):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    monotonic_layer = DecomonConv2D(10, kernel_size=(3, 3), activation="relu", dc_decomp=False, dtype=K.floatx())
+    monotonic_layer = DecomonConv2D(10, kernel_size=(3, 3), dc_decomp=False, dtype=K.floatx())
 
     inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)
     inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)

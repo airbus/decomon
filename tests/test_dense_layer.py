@@ -11,7 +11,7 @@ from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonDense, to_decomon
 
 
-def test_DecomonDense_1D_box(n, activation, mode, shared, floatx, helpers):
+def test_DecomonDense_1D_box(n, mode, shared, floatx, helpers):
 
     K.set_floatx(f"float{floatx}")
     eps = K.epsilon()
@@ -20,11 +20,9 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx, helpers):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    monotonic_dense = DecomonDense(
-        1, use_bias=True, activation=activation, dc_decomp=True, mode=mode, shared=shared, dtype=K.floatx()
-    )
+    monotonic_dense = DecomonDense(1, use_bias=True, dc_decomp=True, mode=mode, shared=shared, dtype=K.floatx())
 
-    ref_dense = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
+    ref_dense = Dense(1, use_bias=True, dtype=K.floatx())
 
     inputs = helpers.get_tensor_decomposition_1d_box()
     inputs_ = helpers.get_standard_values_1d_box(n)
@@ -184,10 +182,10 @@ def test_DecomonDense_1D_box(n, activation, mode, shared, floatx, helpers):
     K.set_floatx("float32")
 
 
-def test_DecomonDense_multiD_box(odd, activation, mode, helpers):
+def test_DecomonDense_multiD_box(odd, mode, helpers):
 
-    monotonic_dense = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=True, mode=mode, dtype=K.floatx())
-    ref_dense = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
+    monotonic_dense = DecomonDense(1, use_bias=True, dc_decomp=True, mode=mode, dtype=K.floatx())
+    ref_dense = Dense(1, use_bias=True, dtype=K.floatx())
 
     inputs = helpers.get_tensor_decomposition_multid_box(odd)
     inputs_ = helpers.get_standard_values_multid_box(odd)
@@ -559,10 +557,10 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode, helpers):
         raise ValueError("Unknown mode.")
 
 
-def test_DecomonDense_1D_box_nodc(n, activation, helpers):
+def test_DecomonDense_1D_box_nodc(n, helpers):
 
-    monotonic_dense = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=False)
-    ref_dense = Dense(1, use_bias=True, activation=activation)
+    monotonic_dense = DecomonDense(1, use_bias=True, dc_decomp=False)
+    ref_dense = Dense(1, use_bias=True)
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
@@ -634,10 +632,10 @@ def test_DecomonDense_multiD_to_monotonic_box_nodc(odd, activation, mode, helper
     )
 
 
-def test_DecomonDense_multiD_box_dc(odd, activation, helpers):
+def test_DecomonDense_multiD_box_dc(odd, helpers):
 
-    monotonic_dense = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=False)
-    ref_dense = Dense(1, use_bias=True, activation=activation)
+    monotonic_dense = DecomonDense(1, use_bias=True, dc_decomp=False)
+    ref_dense = Dense(1, use_bias=True)
 
     inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)

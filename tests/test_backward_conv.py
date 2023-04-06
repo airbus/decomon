@@ -11,7 +11,7 @@ from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonConv2D
 
 
-def test_Decomon_conv_box(data_format, activation, padding, use_bias, mode, floatx, helpers):
+def test_Decomon_conv_box(data_format, padding, use_bias, mode, floatx, helpers):
 
     if data_format == "channels_first" and not len(K._get_available_gpus()):
         return
@@ -28,7 +28,6 @@ def test_Decomon_conv_box(data_format, activation, padding, use_bias, mode, floa
     layer = DecomonConv2D(
         10,
         kernel_size=(3, 3),
-        activation=activation,
         dc_decomp=False,
         padding=padding,
         use_bias=use_bias,

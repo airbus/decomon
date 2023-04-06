@@ -254,12 +254,8 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, helpers
     K.set_epsilon(eps)
 
 
-@pytest.mark.parametrize(
-    "n, activation",
-    [(0, "relu")],
-)
-def test_Backward_DecomonDense_1D_box_model(n, activation, helpers):
-    layer = DecomonDense(1, use_bias=True, activation=activation, dc_decomp=False)
+def test_Backward_DecomonDense_1D_box_model(n, helpers):
+    layer = DecomonDense(1, use_bias=True, dc_decomp=False)
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
