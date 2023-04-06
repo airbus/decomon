@@ -290,8 +290,8 @@ def clone(
             back_bounds_.append(elem)
 
     return DecomonModel(
-        input=[z_tensor] + back_bounds_ + extra_inputs,
-        output=output,
+        inputs=[z_tensor] + back_bounds_ + extra_inputs,
+        outputs=output,
         convex_domain=convex_domain,
         dc_decomp=False,
         method=method,

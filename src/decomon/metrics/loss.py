@@ -79,8 +79,8 @@ def get_model(model: DecomonModel) -> DecomonModel:
         raise ValueError(f"Unknown mode {mode}")
 
     return DecomonModel(
-        input=inputs,
-        output=output_,
+        inputs=inputs,
+        outputs=output_,
         convex_domain=model.convex_domain,
         ibp=ibp,
         affine=affine,
@@ -577,8 +577,8 @@ def build_radius_robust_model(model: DecomonModel) -> DecomonModel:
     output_robust = layer_robust(output)
 
     return DecomonModel(
-        input=inputs,
-        output=output_robust,
+        inputs=inputs,
+        outputs=output_robust,
         convex_domain=model.convex_domain,
         ibp=ibp,
         affine=affine,
@@ -601,8 +601,8 @@ def build_crossentropy_model(model: DecomonModel) -> DecomonModel:
     output_fusion = layer_fusion(output, mode=mode)
 
     return DecomonModel(
-        input=inputs,
-        output=output_fusion,
+        inputs=inputs,
+        outputs=output_fusion,
         convex_domain=model.convex_domain,
         ibp=ibp,
         affine=affine,
@@ -625,8 +625,8 @@ def build_asymptotic_crossentropy_model(model: DecomonModel) -> DecomonModel:
     output_fusion = layer_fusion(output, mode=mode)
 
     return DecomonModel(
-        input=inputs,
-        output=output_fusion,
+        inputs=inputs,
+        outputs=output_fusion,
         convex_domain=model.convex_domain,
         ibp=ibp,
         affine=affine,
