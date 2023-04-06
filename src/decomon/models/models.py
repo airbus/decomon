@@ -12,8 +12,8 @@ from decomon.utils import ConvexDomainType
 class DecomonModel(tf.keras.Model):
     def __init__(
         self,
-        input: Union[tf.Tensor, List[tf.Tensor]],
-        output: Union[tf.Tensor, List[tf.Tensor]],
+        inputs: Union[tf.Tensor, List[tf.Tensor]],
+        outputs: Union[tf.Tensor, List[tf.Tensor]],
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
         method: Union[str, ConvertMethod] = ConvertMethod.FORWARD_AFFINE,
@@ -24,7 +24,7 @@ class DecomonModel(tf.keras.Model):
         backward_bounds: bool = False,
         **kwargs: Any,
     ):
-        super().__init__(input, output, **kwargs)
+        super().__init__(inputs, outputs, **kwargs)
         if convex_domain is None:
             convex_domain = {}
         self.convex_domain = convex_domain
