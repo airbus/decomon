@@ -94,7 +94,7 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             fast=fast,
             **kwargs,
         )
-        self.slope = slope
+        self.slope = Slope(slope)
         self.kernel_constraint_pos_ = NonNeg()
         self.kernel_constraint_neg_ = NonPos()
 
@@ -675,7 +675,7 @@ class DecomonDense(Dense, DecomonLayer):
             fast=fast,
             **kwargs,
         )
-        self.slope = slope
+        self.slope = Slope(slope)
         self.kernel_constraint_pos_ = NonNeg()
         self.kernel_constraint_neg_ = NonPos()
         self.input_spec = [InputSpec(min_ndim=2) for _ in range(self.nb_tensors)]
@@ -1172,7 +1172,7 @@ class DecomonActivation(Activation, DecomonLayer):
             **kwargs,
         )
 
-        self.slope = slope
+        self.slope = Slope(slope)
         self.supports_masking = True
         self.activation = activations.get(activation)
         self.activation_name = activation
