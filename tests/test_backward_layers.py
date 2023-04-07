@@ -15,14 +15,7 @@ from decomon.layers.decomon_reshape import DecomonReshape
 from decomon.utils import Slope
 
 
-def test_Backward_Activation_1D_box_model(n, activation, mode, floatx, helpers):
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
-
+def test_Backward_Activation_1D_box_model(n, activation, mode, floatx, decimal, helpers):
     layer = DecomonActivation(activation, dc_decomp=False, mode=mode, dtype=K.floatx())
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
@@ -67,9 +60,6 @@ def test_Backward_Activation_1D_box_model(n, activation, mode, floatx, helpers):
         decimal=decimal,
     )
 
-    K.set_floatx("float32")
-    K.set_epsilon(eps)
-
 
 def test_Backward_Activation_1D_box_model_slope(helpers):
     n = 2
@@ -104,15 +94,7 @@ def test_Backward_Activation_1D_box_model_slope(helpers):
         assert (a == b).all()
 
 
-def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
-
+def test_Backward_Activation_multiD_box(odd, activation, floatx, decimal, mode, helpers):
     layer = DecomonActivation(activation, dc_decomp=False, mode=mode, dtype=K.floatx())
     inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
@@ -134,16 +116,12 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, helpers):
     else:
         raise ValueError("Unknown mode.")
 
-    # output = layer(inputs[2:])
-    # z_0, u_c_0, _, _, l_c_0, _, _ = output
-
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
     # get backward layer
     layer_backward = to_backward(layer)
     w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
     f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
-    # import pdb; pdb.set_trace()
     output_ = f_dense(inputs_)
     w_u_, b_u_, w_l_, b_l_ = output_
 
@@ -160,40 +138,12 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, helpers):
         b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
         decimal=decimal,
     )
-    """
-    try:
-        assert_output_properties_box_linear(
-            x,
-            None,
-            z_[:, 0],
-            z_[:, 1],
-            None,
-            np.sum(np.maximum(w_u_, 0) * W_u + np.minimum(w_u_, 0) * W_l, 1)[:, :, None],
-            b_u_ + np.sum(np.maximum(w_u_, 0) * b_u[:, :, None], 1) + np.sum(np.minimum(w_u_, 0) * b_l[:, :, None], 1),
-            None,
-            np.sum(np.maximum(w_l_, 0) * W_l + np.minimum(w_l_, 0) * W_u, 1)[:, :, None],
-            b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
-            "dense_{}".format(odd),
-            decimal=decimal,
-        )
-    except ValueError:
-        import pdb; pdb.set_trace()
-    """
-    K.set_floatx("float32")
-    K.set_epsilon(eps)
 
 
-def test_Backward_Flatten_multiD_box(odd, floatx, mode, data_format, helpers):
+def test_Backward_Flatten_multiD_box(odd, floatx, decimal, mode, data_format, helpers):
 
     if data_format == "channels_first" and not len(_get_available_gpus()):
         pytest.skip("data format 'channels first' is possible only in GPU mode")
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
 
     layer = DecomonFlatten("channels_last", dc_decomp=False, mode=mode, dtype=K.floatx())
     inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
@@ -243,20 +193,11 @@ def test_Backward_Flatten_multiD_box(odd, floatx, mode, data_format, helpers):
         b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
         decimal=decimal,
     )
-    K.set_floatx("float32")
-    K.set_epsilon(eps)
 
 
-def test_Backward_Reshape_multiD_box(odd, floatx, mode, data_format, helpers):
+def test_Backward_Reshape_multiD_box(odd, floatx, decimal, mode, data_format, helpers):
     if data_format == "channels_first" and not len(_get_available_gpus()):
         pytest.skip("data format 'channels first' is possible only in GPU mode")
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
 
     layer = DecomonReshape((-1,), dc_decomp=False, mode=mode, dtype=K.floatx())
     inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
@@ -278,9 +219,6 @@ def test_Backward_Reshape_multiD_box(odd, floatx, mode, data_format, helpers):
         u_c_0, l_c_0 = output
     else:
         raise ValueError("Unknown mode.")
-
-    # output = layer(inputs[2:])
-    # z_0, u_c_0, _, _, l_c_0, _, _ = output
 
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1,), dtype=K.floatx())
@@ -304,8 +242,6 @@ def test_Backward_Reshape_multiD_box(odd, floatx, mode, data_format, helpers):
         b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
         decimal=decimal,
     )
-    K.set_floatx("float32")
-    K.set_epsilon(eps)
 
 
 def test_to_backward_ko():

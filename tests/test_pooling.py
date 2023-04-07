@@ -1,6 +1,3 @@
-# Test unit for decomon with Dense layers
-
-
 import pytest
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import MaxPooling2D
@@ -9,17 +6,10 @@ from decomon.layers.core import ForwardMode
 from decomon.layers.maxpooling import DecomonMaxPooling2D
 
 
-def test_MaxPooling2D_box(mode, floatx, helpers):
+def test_MaxPooling2D_box(mode, floatx, decimal, helpers):
     odd, m_0, m_1 = 0, 0, 1
     data_format = "channels_last"
     fast = False
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
 
     inputs = helpers.get_tensor_decomposition_images_box(data_format, odd)
     inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1)
@@ -59,5 +49,3 @@ def test_MaxPooling2D_box(mode, floatx, helpers):
     helpers.assert_output_properties_box(
         x, y_, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)

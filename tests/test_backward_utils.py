@@ -24,15 +24,7 @@ def subtract_op(x, y):
     return x - y
 
 
-def test_relu_backward_1D_box(n, mode, floatx, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
-
+def test_relu_backward_1D_box(n, mode, floatx, decimal, helpers):
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
 
@@ -60,7 +52,6 @@ def test_relu_backward_1D_box(n, mode, floatx, helpers):
     w_out = Input((1, 1), dtype=K.floatx())
     b_out = Input((1), dtype=K.floatx())
 
-    # backward_relu_(input_mode, w_out, b_out, w_out, b_out, mode=mode)
     w_out_u, b_out_u, w_out_l, b_out_l = backward_relu_(input_mode, w_out, b_out, w_out, b_out, mode=mode)
 
     f_relu = K.function(inputs + [w_out, b_out], [w_out_u, b_out_u, w_out_l, b_out_l])
@@ -80,9 +71,6 @@ def test_relu_backward_1D_box(n, mode, floatx, helpers):
         x_, None, z_[:, 0], z_[:, 1], None, w_u_b, b_u_b, None, w_l_b, b_l_b, decimal=decimal
     )
 
-    K.set_epsilon(eps)
-    K.set_floatx("float32")
-
 
 @pytest.mark.parametrize(
     "n_0, n_1",
@@ -100,15 +88,7 @@ def test_relu_backward_1D_box(n, mode, floatx, helpers):
         (backward_subtract, subtract_op),
     ],
 )
-def test_reduce_backward_1D_box(n_0, n_1, backward_func, tensor_op, mode, floatx, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
-
+def test_reduce_backward_1D_box(n_0, n_1, backward_func, tensor_op, mode, floatx, decimal, helpers):
     inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_0_ = helpers.get_standard_values_1d_box(n_0, dc_decomp=False)
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0 = inputs_0_
@@ -191,6 +171,3 @@ def test_reduce_backward_1D_box(n_0, n_1, backward_func, tensor_op, mode, floatx
         b_l_b_1,
         decimal=decimal,
     )
-
-    K.set_epsilon(eps)
-    K.set_floatx("float32")

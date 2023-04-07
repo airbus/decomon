@@ -12,19 +12,12 @@ from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonConv2D
 
 
-def test_Decomon_conv_box(data_format, mode, floatx, helpers):
+def test_Decomon_conv_box(data_format, mode, floatx, decimal, helpers):
 
     if data_format == "channels_first" and not len(_get_available_gpus()):
         pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     odd, m_0, m_1 = 0, 0, 1
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 4
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
 
     decomon_layer = DecomonConv2D(
         10, kernel_size=(3, 3), dc_decomp=True, mode=mode, data_format=data_format, dtype=K.floatx()
@@ -82,23 +75,13 @@ def test_Decomon_conv_box(data_format, mode, floatx, helpers):
         x_, None, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
 
-
-def test_Decomon_conv_box_nodc(data_format, floatx, helpers):
+def test_Decomon_conv_box_nodc(data_format, floatx, decimal, helpers):
 
     if data_format == "channels_first" and not len(_get_available_gpus()):
         pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     odd, m_0, m_1 = 0, 0, 1
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
 
     decomon_layer = DecomonConv2D(10, kernel_size=(3, 3), dc_decomp=False, dtype=K.floatx())
 
@@ -122,20 +105,15 @@ def test_Decomon_conv_box_nodc(data_format, floatx, helpers):
         x, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
-
 
 def test_Decomon_conv_to_decomon_box(shared, floatx, helpers):
     data_format = "channels_last"
     odd, m_0, m_1 = 0, 0, 1
 
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 4
     if floatx == 16:
-        K.set_epsilon(1e-2)
         decimal = 1
+    else:
+        decimal = 5
 
     conv_ref = Conv2D(10, kernel_size=(3, 3), dtype=K.floatx())
     inputs = helpers.get_tensor_decomposition_images_box(data_format, odd)
@@ -158,9 +136,6 @@ def test_Decomon_conv_to_decomon_box(shared, floatx, helpers):
     helpers.assert_output_properties_box(
         x, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
-
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
 
 
 def test_Decomon_conv_to_decomon_box_nodc(helpers):

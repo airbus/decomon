@@ -1,6 +1,3 @@
-# Test unit for decomon with Dense layers
-
-
 import pytest
 import tensorflow.keras.backend as K
 
@@ -8,17 +5,7 @@ from decomon.layers.core import ForwardMode
 from decomon.metrics.utils import categorical_cross_entropy
 
 
-def test_categorical_cross_entropy(odd, mode, floatx, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-    if floatx == 16:
-        decimal = 2
-    else:
-        decimal = 5
-
+def test_categorical_cross_entropy(odd, mode, floatx, decimal, helpers):
     inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
 
@@ -56,6 +43,3 @@ def test_categorical_cross_entropy(odd, mode, floatx, helpers):
         )
     else:
         raise ValueError("Unknown mode.")
-
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)

@@ -38,7 +38,26 @@ def n(request):
 
 @pytest.fixture(params=[32, 64, 16])
 def floatx(request):
-    return request.param
+    # setup
+    eps_bak = K.epsilon()  # store current epsilon
+    floatx_bak = K.floatx()  # store current floatx
+    precision = request.param
+    K.set_floatx("float{}".format(precision))
+    if precision == 16:
+        K.set_epsilon(1e-2)
+    # actual value
+    yield precision
+    # tear down
+    K.set_epsilon(eps_bak)
+    K.set_floatx(floatx_bak)
+
+
+@pytest.fixture
+def decimal(floatx):
+    if floatx == 16:
+        return 2
+    else:
+        return 5
 
 
 @pytest.fixture(params=[True, False])
@@ -111,17 +130,7 @@ class Helpers:
 
     @staticmethod
     def get_standard_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
-        """
-
-        :param n: A set of functions with their monotonic
-        decomposition for testing the activations
-        :return:
-        """
-        """
-        A set of functions with their monotonic decomposition
-        for testing the activations
-        """
-
+        """A set of functions with their monotonic decomposition for testing the activations"""
         w_u_ = np.ones(nb, dtype=K.floatx())
         b_u_ = np.zeros(nb, dtype=K.floatx())
         w_l_ = np.ones(nb, dtype=K.floatx())
@@ -273,12 +282,23 @@ class Helpers:
         ]
 
     @staticmethod
+    def get_input_dim_multid_box(odd):
+        if odd:
+            return 3
+        else:
+            return 2
+
+    @staticmethod
+    def get_input_dim_images_box(odd):
+        if odd:
+            return 7
+        else:
+            return 6
+
+    @staticmethod
     def get_tensor_decomposition_multid_box(odd=1, dc_decomp=True):
 
-        if odd:
-            n = 3
-        else:
-            n = 2
+        n = Helpers.get_input_dim_multid_box(odd)
 
         if dc_decomp:
             # x, y, z, u, w_u, b_u, l, w_l, b_l, h, g
@@ -442,10 +462,7 @@ class Helpers:
     @staticmethod
     def build_image_from_1D_box(odd=0, m=0, dc_decomp=True):
 
-        if odd:
-            n = 7
-        else:
-            n = 6
+        n = Helpers.get_input_dim_images_box(odd)
 
         if dc_decomp:
             (
@@ -637,10 +654,7 @@ class Helpers:
     @staticmethod
     def get_tensor_decomposition_images_box(data_format, odd, dc_decomp=True):
 
-        if odd:
-            n = 7
-        else:
-            n = 6
+        n = Helpers.get_input_dim_images_box(odd)
 
         if data_format == "channels_last":
             # x, y, z, u, w_u, b_u, l, w_l, b_l

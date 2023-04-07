@@ -8,15 +8,8 @@ from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
 
 
-def test_Decomon_reshape_box(mode, floatx, helpers):
+def test_Decomon_reshape_box(mode, floatx, decimal, helpers):
     odd, m_0, m_1 = 0, 0, 1
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 1
 
     inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd)
     inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
@@ -55,19 +48,9 @@ def test_Decomon_reshape_box(mode, floatx, helpers):
         x_, y_, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
 
-
-def test_Decomon_reshape_box_nodc(mode, floatx, helpers):
+def test_Decomon_reshape_box_nodc(mode, floatx, decimal, helpers):
     odd, m_0, m_1 = 0, 0, 1
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 1
 
     inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd, dc_decomp=False)
     inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1, dc_decomp=False)
@@ -106,19 +89,9 @@ def test_Decomon_reshape_box_nodc(mode, floatx, helpers):
         x_, y_, None, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
 
-
-def test_Decomon_reshape_to_decomon_box(shared, floatx, helpers):
+def test_Decomon_reshape_to_decomon_box(shared, floatx, decimal, helpers):
     odd, m_0, m_1 = 0, 0, 1
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 4
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 1
 
     inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd)
     inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
@@ -146,20 +119,10 @@ def test_Decomon_reshape_to_decomon_box(shared, floatx, helpers):
         x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
-
 
 # permute
-def test_Decomon_permute_box(mode, floatx, helpers):
+def test_Decomon_permute_box(mode, floatx, decimal, helpers):
     odd, m_0, m_1 = 0, 0, 1
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 1
 
     inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd)
     inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
@@ -201,19 +164,9 @@ def test_Decomon_permute_box(mode, floatx, helpers):
         x_, y_, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
 
-
-def test_Decomon_permute_box_nodc(mode, floatx, helpers):
+def test_Decomon_permute_box_nodc(mode, floatx, decimal, helpers):
     odd, m_0, m_1 = 0, 0, 1
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 1
 
     inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd, dc_decomp=False)
     inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1, dc_decomp=False)
@@ -255,19 +208,9 @@ def test_Decomon_permute_box_nodc(mode, floatx, helpers):
         x_, y_, None, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
 
-
-def test_Decomon_permute_to_decomon_box(shared, floatx, helpers):
+def test_Decomon_permute_to_decomon_box(shared, floatx, decimal, helpers):
     odd, m_0, m_1 = 0, 0, 1
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 4
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 1
 
     inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd)
     inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
@@ -294,6 +237,3 @@ def test_Decomon_permute_to_decomon_box(shared, floatx, helpers):
     helpers.assert_output_properties_box(
         x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
-
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
