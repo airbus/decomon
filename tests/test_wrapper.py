@@ -49,7 +49,7 @@ def test_get_lower_1d_box(n, method, mode, helpers):
     sequential.add(Dense(1, activation="linear"))
     ibp = get_ibp(mode)
     affine = get_affine(mode)
-    backward_model = convert(sequential, method=method, ibp=ibp, affine=affine, mode=mode)
+    backward_model = convert(sequential, method=method, final_ibp=ibp, final_affine=affine)
 
     lower = get_lower_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
@@ -76,7 +76,7 @@ def test_get_range_1d_box(n, method, mode, helpers):
     sequential.add(Dense(1, activation="linear"))
     ibp = get_ibp(mode)
     affine = get_affine(mode)
-    backward_model = convert(sequential, method=method, ibp=ibp, affine=affine, mode=mode)
+    backward_model = convert(sequential, method=method, final_ibp=ibp, final_affine=affine)
 
     upper, lower = get_range_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
@@ -104,7 +104,7 @@ def test_get_upper_multid_box(odd, method, mode, helpers):
     sequential.add(Dense(1, activation="linear"))
     ibp = get_ibp(mode)
     affine = get_affine(mode)
-    backward_model = convert(sequential, method=method, ibp=ibp, affine=affine)
+    backward_model = convert(sequential, method=method, final_ibp=ibp, final_affine=affine)
     upper = get_upper_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
 
@@ -126,7 +126,7 @@ def test_get_lower_multid_box(odd, method, mode, helpers):
     sequential.add(Dense(1, activation="linear"))
     ibp = get_ibp(mode)
     affine = get_affine(mode)
-    backward_model = convert(sequential, method=method, ibp=ibp, affine=affine)
+    backward_model = convert(sequential, method=method, final_ibp=ibp, final_affine=affine)
     lower = get_lower_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
 
@@ -148,7 +148,7 @@ def test_get_range_multid_box(odd, method, mode, helpers):
     sequential.add(Dense(1, activation="linear"))
     ibp = get_ibp(mode)
     affine = get_affine(mode)
-    backward_model = convert(sequential, method=method, ibp=ibp, affine=affine)
+    backward_model = convert(sequential, method=method, final_ibp=ibp, final_affine=affine)
     upper, lower = get_range_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
 
