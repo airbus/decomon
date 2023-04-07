@@ -37,8 +37,8 @@ def include_dim_layer_fn(
     slope: Union[str, Slope] = Slope.V_SLOPE,
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
-    IBP: bool = True,
-    forward: bool = True,
+    ibp: bool = True,
+    affine: bool = True,
     finetune: bool = False,
     shared: bool = True,
 ) -> Callable[[Layer], List[DecomonLayer]]:
@@ -66,8 +66,8 @@ def include_dim_layer_fn(
                 slope=slope,
                 convex_domain=convex_domain,
                 dc_decomp=dc_decomp,
-                IBP=IBP,
-                forward=forward,
+                ibp=ibp,
+                affine=affine,
                 finetune=finetune,
                 shared=shared,
             )
@@ -92,8 +92,8 @@ def convert_forward(
     input_dim: int = -1,
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
-    IBP: bool = True,
-    forward: bool = True,
+    ibp: bool = True,
+    affine: bool = True,
     finetune: bool = False,
     shared: bool = True,
     softmax_to_linear: bool = True,
@@ -114,8 +114,8 @@ def convert_forward(
         input_dim=input_dim,
         dc_decomp=dc_decomp,
         convex_domain=convex_domain,
-        IBP=IBP,
-        forward=forward,
+        ibp=ibp,
+        affine=affine,
         finetune=finetune,
         shared=shared,
         softmax_to_linear=softmax_to_linear,
@@ -134,8 +134,8 @@ def convert_forward_functional_model(
     input_dim: int = 1,
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
-    IBP: bool = True,
-    forward: bool = True,
+    ibp: bool = True,
+    affine: bool = True,
     finetune: bool = False,
     shared: bool = True,
     softmax_to_linear: bool = True,
@@ -162,7 +162,7 @@ def convert_forward_functional_model(
         input_tensors = []
         for i in range(len(model._input_layers)):
 
-            tmp = check_input_tensors_sequential(model, None, input_dim, input_dim, IBP, forward, False, convex_domain)
+            tmp = check_input_tensors_sequential(model, None, input_dim, input_dim, ibp, affine, False, convex_domain)
             input_tensors += tmp
 
     if softmax_to_linear:
@@ -178,8 +178,8 @@ def convert_forward_functional_model(
             input_dim=input_dim,
             slope=slope,
             convex_domain=convex_domain,
-            IBP=IBP,
-            forward=forward,
+            ibp=ibp,
+            affine=affine,
             finetune=finetune,
             shared=shared,
         )  # return a list of Decomon layers
@@ -217,8 +217,8 @@ def convert_forward_functional_model(
                     layer_fn=layer_fn,
                     input_dim=input_dim_init,
                     convex_domain=convex_domain,
-                    IBP=IBP,
-                    forward=forward,
+                    ibp=ibp,
+                    affine=affine,
                     finetune=finetune,
                     shared=shared,
                     softmax_to_linear=softmax_to_linear,

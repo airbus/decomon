@@ -83,8 +83,8 @@ def retrieve_layer(
 
 def crown_(
     node: Node,
-    IBP: bool,
-    forward: bool,
+    ibp: bool,
+    affine: bool,
     convex_domain: Optional[Dict[str, Any]],
     input_map: Dict[int, List[tf.Tensor]],
     layer_fn: Callable[[Layer], BackwardLayer],
@@ -101,8 +101,8 @@ def crown_(
 
 
     :param node:
-    :param IBP:
-    :param forward:
+    :param ibp:
+    :param affine:
     :param input_map:
     :param layer_fn:
     :param backward_bounds:
@@ -124,13 +124,13 @@ def crown_(
 
     if isinstance(node.outbound_layer, Model):
 
-        inputs_ = get_disconnected_input(get_mode(IBP, forward), convex_domain, dtype=inputs[0].dtype)(inputs)
+        inputs_ = get_disconnected_input(get_mode(ibp, affine), convex_domain, dtype=inputs[0].dtype)(inputs)
         _, backward_bounds_, _, _ = crown_model(
             model=node.outbound_layer,
             input_tensors=inputs_,
             backward_bounds=backward_bounds,
-            IBP=IBP,
-            forward=forward,
+            ibp=ibp,
+            affine=affine,
             convex_domain=None,
             finetune=False,
             joint=joint,
@@ -172,16 +172,16 @@ def crown_(
                 for (backward_bound, parent) in zip(backward_bounds, parents):
 
                     crown_bound_i, _ = crown_(
-                        parent,
-                        IBP,
-                        forward,
-                        convex_domain,
-                        input_map,
-                        layer_fn,
-                        backward_bound,
-                        backward_map,
-                        joint,
-                        fuse,
+                        node=parent,
+                        ibp=ibp,
+                        affine=affine,
+                        convex_domain=convex_domain,
+                        input_map=input_map,
+                        layer_fn=layer_fn,
+                        backward_bounds=backward_bound,
+                        backward_map=backward_map,
+                        joint=joint,
+                        fuse=fuse,
                     )
 
                     crown_bound_list.append(crown_bound_i)
@@ -196,16 +196,16 @@ def crown_(
                 raise NotImplementedError()
         else:
             crown_bound, fuse_layer_ = crown_(
-                parents[0],
-                IBP,
-                forward,
-                convex_domain,
-                input_map,
-                layer_fn,
-                backward_bounds,
-                backward_map,
-                joint,
-                fuse,
+                node=parents[0],
+                ibp=ibp,
+                affine=affine,
+                convex_domain=convex_domain,
+                input_map=input_map,
+                layer_fn=layer_fn,
+                backward_bounds=backward_bounds,
+                backward_map=backward_map,
+                joint=joint,
+                fuse=fuse,
                 output_map=output_map,
                 merge_layers=None,  # AKA merge_layers
                 fuse_layer=fuse_layer,
@@ -217,8 +217,7 @@ def crown_(
         # do something
         if fuse:
             if fuse_layer is None:
-                # fuse_layer = get_fuse(get_mode(IBP=IBP, forward=forward), dtype=inputs[0].dtype)
-                fuse_layer = Fuse(get_mode(IBP=IBP, forward=forward))
+                fuse_layer = Fuse(get_mode(ibp=ibp, affine=affine))
             result = fuse_layer(inputs + backward_bounds)
 
             return result, fuse_layer
@@ -230,8 +229,8 @@ def crown_(
 def get_input_nodes(
     model: Model,
     dico_nodes: Dict[int, List[Node]],
-    IBP: bool,
-    forward: bool,
+    ibp: bool,
+    affine: bool,
     input_tensors: List[tf.Tensor],
     output_map: OutputMapDict,
     layer_fn: Callable[[Layer], BackwardLayer],
@@ -267,9 +266,9 @@ def get_input_nodes(
                         output += output_map[id(parent)]
                     else:
                         output_crown, fuse_layer_ = crown_(
-                            parent,
-                            IBP=IBP,
-                            forward=forward,
+                            node=parent,
+                            ibp=ibp,
+                            affine=affine,
                             input_map=input_map,
                             layer_fn=layer_fn,
                             backward_bounds=[],
@@ -286,10 +285,7 @@ def get_input_nodes(
 
                         # convert output_crown in the right mode
                         if set_mode_layer is None:
-                            # set_mode_layer = convert_backward_2_mode(
-                            #    get_mode(IBP, forward), convex_domain, dtype=input_tensors[0].dtype
-                            # )
-                            set_mode_layer = Convert2BackwardMode(get_mode(IBP, forward), convex_domain)
+                            set_mode_layer = Convert2BackwardMode(get_mode(ibp, affine), convex_domain)
                         output_crown_ = set_mode_layer(input_tensors + output_crown)
                         output += to_list(output_crown_)
                         # crown_map[id(parent)]=output_crown_
@@ -304,8 +300,8 @@ def crown_model(
     back_bounds: Optional[List[tf.Tensor]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
-    IBP: bool = True,
-    forward: bool = True,
+    ibp: bool = True,
+    affine: bool = True,
     convex_domain: Optional[Dict[str, Any]] = None,
     finetune: bool = False,
     forward_map: Optional[OutputMapDict] = None,
@@ -337,7 +333,7 @@ def crown_model(
         input_tensors = []
         for i in range(len(model._input_layers)):
 
-            tmp = check_input_tensors_sequential(model, None, input_dim, input_dim, IBP, forward, False, convex_domain)
+            tmp = check_input_tensors_sequential(model, None, input_dim, input_dim, ibp, affine, False, convex_domain)
             input_tensors += tmp
 
     # layer_fn
@@ -351,7 +347,7 @@ def crown_model(
 
         def func(layer: Layer) -> Layer:
             return layer_fn_copy(
-                layer, mode=get_mode(IBP, forward), finetune=finetune, convex_domain=convex_domain, slope=slope
+                layer, mode=get_mode(ibp, affine), finetune=finetune, convex_domain=convex_domain, slope=slope
             )
 
         layer_fn = func
@@ -371,14 +367,13 @@ def crown_model(
     # generate input_map
     if not finetune:
         joint = True
-    # set_mode_layer = convert_backward_2_mode(get_mode(IBP, forward), convex_domain, dtype=input_tensors[0].dtype)
-    set_mode_layer = Convert2BackwardMode(get_mode(IBP, forward), convex_domain)
+    set_mode_layer = Convert2BackwardMode(get_mode(ibp, affine), convex_domain)
 
     input_map, backward_map, crown_map = get_input_nodes(
         model=model,
         dico_nodes=dico_nodes,
-        IBP=IBP,
-        forward=forward,
+        ibp=ibp,
+        affine=affine,
         input_tensors=input_tensors,
         output_map=forward_map,
         layer_fn=layer_fn,
@@ -400,9 +395,9 @@ def crown_model(
             if node.outbound_layer.name == output_name:
                 # compute with crown
                 output_crown, fuse_layer = crown_(
-                    node,
-                    IBP=IBP,
-                    forward=forward,
+                    node=node,
+                    ibp=ibp,
+                    affine=affine,
                     input_map=input_map,
                     layer_fn=layer_fn,
                     backward_bounds=back_bounds,
@@ -430,8 +425,8 @@ def convert_backward(
     back_bounds: Optional[List[tf.Tensor]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
-    IBP: bool = True,
-    forward: bool = True,
+    ibp: bool = True,
+    affine: bool = True,
     convex_domain: Optional[Dict[str, Any]] = None,
     finetune: bool = False,
     forward_map: Optional[OutputMapDict] = None,
@@ -439,7 +434,7 @@ def convert_backward(
     joint: bool = True,
     layer_fn: Callable[..., BackwardLayer] = to_backward,
     final_ibp: bool = True,
-    final_forward: bool = False,
+    final_affine: bool = False,
     **kwargs: Any,
 ) -> Tuple[List[tf.Tensor], List[tf.Tensor], Dict[int, BackwardLayer], None]:
     if back_bounds is None:
@@ -457,8 +452,8 @@ def convert_backward(
         back_bounds=back_bounds,
         slope=slope,
         input_dim=input_dim,
-        IBP=IBP,
-        forward=forward,
+        ibp=ibp,
+        affine=affine,
         convex_domain=convex_domain,
         finetune=finetune,
         forward_map=forward_map,
@@ -470,8 +465,8 @@ def convert_backward(
     )
 
     input_tensors, output, backward_map, toto = result
-    mode_from = get_mode(IBP, forward)
-    mode_to = get_mode(final_ibp, final_forward)
+    mode_from = get_mode(ibp, affine)
+    mode_to = get_mode(final_ibp, final_affine)
     output = Convert2Mode(
         mode_from=mode_from,
         mode_to=mode_to,

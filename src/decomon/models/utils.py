@@ -41,8 +41,8 @@ def check_input_tensors_sequential(
     input_tensors: Optional[List[tf.Tensor]],
     input_dim: int,
     input_dim_init: int,
-    IBP: bool,
-    forward: bool,
+    ibp: bool,
+    affine: bool,
     dc_decomp: bool,
     convex_domain: Optional[Dict[str, Any]],
 ) -> List[tf.Tensor]:
@@ -69,7 +69,7 @@ def check_input_tensors_sequential(
         if dc_decomp:
             h_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
             g_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
-        if forward:
+        if affine:
             b_u_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
             b_l_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
             if input_dim_init > 0:
@@ -79,10 +79,10 @@ def check_input_tensors_sequential(
                 w_u_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
                 w_l_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
 
-        if IBP:
+        if ibp:
             u_c_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
             l_c_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
-            if forward:  # hybrid mode
+            if affine:  # hybrid mode
                 input_tensors = [
                     z_tensor,
                     u_c_tensor,
@@ -93,13 +93,13 @@ def check_input_tensors_sequential(
                     b_l_tensor,
                 ]
             else:
-                # only IBP
+                # only ibp
                 input_tensors = [
                     u_c_tensor,
                     l_c_tensor,
                 ]
-        elif forward:
-            # forward mode
+        elif affine:
+            # affine mode
             input_tensors = [
                 z_tensor,
                 w_u_tensor,
@@ -108,7 +108,7 @@ def check_input_tensors_sequential(
                 b_l_tensor,
             ]
         else:
-            raise NotImplementedError("not IBP and not forward not implemented")
+            raise NotImplementedError("not ibp and not affine not implemented")
 
         if dc_decomp:
             input_tensors += [h_tensor, g_tensor]
@@ -122,28 +122,28 @@ def check_input_tensors_sequential(
         )
 
         if dc_decomp:
-            if IBP and forward:
+            if ibp and affine:
                 assert len(input_tensors) == 9, "wrong number of inputs, expexted 10 but got {}".format(
                     len(input_tensors)
                 )
-            if IBP and not forward:
+            if ibp and not affine:
                 assert len(input_tensors) == 4, "wrong number of inputs, expexted 6 but got {}".format(
                     len(input_tensors)
                 )
-            if not IBP and forward:
+            if not ibp and affine:
                 assert len(input_tensors) == 5, "wrong number of inputs, expexted 8 but got {}".format(
                     len(input_tensors)
                 )
         else:
-            if IBP and forward:
+            if ibp and affine:
                 assert len(input_tensors) == 7, "wrong number of inputs, expexted 10 but got {}".format(
                     len(input_tensors)
                 )
-            if IBP and not forward:
+            if ibp and not affine:
                 assert len(input_tensors) == 2, "wrong number of inputs, expexted 10 but got {}".format(
                     len(input_tensors)
                 )
-            if not IBP and forward:
+            if not ibp and affine:
                 assert len(input_tensors) == 5, "wrong number of inputs, expexted 10 but got {}".format(
                     len(input_tensors)
                 )
@@ -178,8 +178,8 @@ def check_input_tensors_functionnal(
     input_tensors: Optional[List[tf.Tensor]],
     input_dim: int,
     input_dim_init: int,
-    IBP: bool,
-    forward: bool,
+    ibp: bool,
+    affine: bool,
     dc_decomp: bool,
     convex_domain: Optional[Dict[str, Any]],
 ) -> List[tf.Tensor]:
@@ -187,10 +187,10 @@ def check_input_tensors_functionnal(
     raise NotImplementedError()
 
 
-def get_mode(IBP: bool = True, forward: bool = True) -> ForwardMode:
+def get_mode(ibp: bool = True, affine: bool = True) -> ForwardMode:
 
-    if IBP:
-        if forward:
+    if ibp:
+        if affine:
             return ForwardMode.HYBRID
         else:
             return ForwardMode.IBP

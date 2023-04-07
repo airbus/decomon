@@ -1045,7 +1045,7 @@ def get_linear_hull_s_shape(
         func: the function (sigmoid, tanh, softsign...)
         f_prime: the derivative of the function (sigmoid_prime...)
         convex_domain: the type of convex input domain
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
 
     Returns:
         the updated list of tensors

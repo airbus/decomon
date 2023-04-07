@@ -673,7 +673,7 @@ def multiply(
         inputs_1: list of tensors
         dc_decomp: boolean that indicates
         convex_domain: the type of convex domain
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
     whether we return a difference of convex decomposition of our layer
     whether we propagate upper and lower bounds on the values of the gradient
 
@@ -751,7 +751,7 @@ def permute_dimensions(
     Args:
         x: list of input tensors
         axis: axis on which we apply the permutation
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         axis_perm: see DecomonPermute operator
 
     Returns:
@@ -1226,7 +1226,7 @@ def log(
         x: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: the type of convex input domain
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         **kwargs: extra parameters
     whether we return a difference of convex decomposition of our layer
 
@@ -1288,7 +1288,7 @@ def exp(
         x: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: the type of convex input domain
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: extra parameters
     whether we return a difference of convex decomposition of our layer

@@ -345,19 +345,19 @@ def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared, helpers):
     input_dim = x.shape[-1]
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
-        IBP = True
-        forward = True
+        ibp = True
+        affine = True
     elif mode == ForwardMode.AFFINE:
-        IBP = False
-        forward = True
+        ibp = False
+        affine = True
     elif mode == ForwardMode.IBP:
-        IBP = True
-        forward = False
+        ibp = True
+        affine = False
     else:
         raise ValueError("Unknown mode.")
 
     monotonic_dense = to_decomon(
-        dense_ref, input_dim, dc_decomp=True, IBP=IBP, forward=forward, shared=shared
+        dense_ref, input_dim, dc_decomp=True, ibp=ibp, affine=affine, shared=shared
     )  # ATTENTION: it will be a list
 
     W_, bias = monotonic_dense[0].get_weights()
@@ -466,18 +466,18 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode, helpers):
 
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
-        IBP = True
-        forward = True
+        ibp = True
+        affine = True
     elif mode == ForwardMode.AFFINE:
-        IBP = False
-        forward = True
+        ibp = False
+        affine = True
     elif mode == ForwardMode.IBP:
-        IBP = True
-        forward = False
+        ibp = True
+        affine = False
     else:
         raise ValueError("Unknown mode.")
 
-    monotonic_dense = to_decomon(dense_ref, input_dim, dc_decomp=True, IBP=IBP, forward=forward)
+    monotonic_dense = to_decomon(dense_ref, input_dim, dc_decomp=True, ibp=ibp, affine=affine)
 
     W_, bias = monotonic_dense[0].get_weights()
     W_0, b_0 = dense_ref.get_weights()

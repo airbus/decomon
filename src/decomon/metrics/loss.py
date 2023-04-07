@@ -13,10 +13,10 @@ from decomon.utils import ConvexDomainType, get_lower, get_upper, set_mode
 
 
 def get_model(model: DecomonModel) -> DecomonModel:
-    IBP = model.IBP
-    forward = model.forward
+    ibp = model.ibp
+    affine = model.affine
 
-    mode = get_mode(IBP, forward)
+    mode = get_mode(ibp, affine)
     convex_domain = model.convex_domain
 
     inputs = model.input
@@ -82,21 +82,21 @@ def get_model(model: DecomonModel) -> DecomonModel:
         input=inputs,
         output=output_,
         convex_domain=model.convex_domain,
-        IBP=IBP,
-        forward=forward,
+        ibp=ibp,
+        affine=affine,
         finetune=model.finetune,
     )
 
 
 def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.Tensor]:
 
-    IBP = model.IBP
-    forward = model.forward
+    ibp = model.ibp
+    affine = model.affine
 
-    mode = get_mode(IBP, forward)
+    mode = get_mode(ibp, affine)
     convex_domain = model.convex_domain
 
-    if forward:
+    if affine:
         if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BALL:
             n_comp = 2
         else:
@@ -108,7 +108,7 @@ def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
         # minimize the upper bound compared to the reference
         return K.max(u_c - u_ref, -1)
 
-    def upper_forward(x: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, u_ref: tf.Tensor) -> tf.Tensor:
+    def upper_affine(x: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, u_ref: tf.Tensor) -> tf.Tensor:
 
         upper = get_upper(x, w_u, b_u, convex_domain=convex_domain)
 
@@ -142,17 +142,17 @@ def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
         else:
             raise ValueError(f"Unknown mode {mode}")
 
-        if IBP:
+        if ibp:
             score_ibp = upper_ibp(u_c, y_true)
-        if forward:
-            score_forward = upper_forward(x_0, w_u, b_u, y_true)
+        if affine:
+            score_affine = upper_affine(x_0, w_u, b_u, y_true)
 
         if mode == ForwardMode.IBP:
             return K.mean(score_ibp)
         elif mode == ForwardMode.AFFINE:
-            return K.mean(score_forward)
+            return K.mean(score_affine)
         elif mode == ForwardMode.HYBRID:
-            return K.mean(K.minimum(score_ibp, score_forward))
+            return K.mean(K.minimum(score_ibp, score_affine))
 
         raise NotImplementedError()
 
@@ -161,13 +161,13 @@ def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
 
 def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.Tensor]:
 
-    IBP = model.IBP
-    forward = model.forward
+    ibp = model.ibp
+    affine = model.affine
 
-    mode = get_mode(IBP, forward)
+    mode = get_mode(ibp, affine)
     convex_domain = model.convex_domain
 
-    if forward:
+    if affine:
         if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BALL:
             n_comp = 2
         else:
@@ -179,7 +179,7 @@ def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
         # minimize the upper bound compared to the reference
         return K.max(l_ref - l_c, -1)
 
-    def lower_forward(x: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor, l_ref: tf.Tensor) -> tf.Tensor:
+    def lower_affine(x: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor, l_ref: tf.Tensor) -> tf.Tensor:
 
         lower = get_lower(x, w_l, b_l, convex_domain=convex_domain)
 
@@ -213,17 +213,17 @@ def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
         else:
             raise ValueError(f"Unknown mode {mode}")
 
-        if IBP:
+        if ibp:
             score_ibp = lower_ibp(l_c, y_true)
-        if forward:
-            score_forward = lower_forward(x_0, w_l, b_l, y_true)
+        if affine:
+            score_affine = lower_affine(x_0, w_l, b_l, y_true)
 
         if mode == ForwardMode.IBP:
             return K.mean(score_ibp)
         elif mode == ForwardMode.AFFINE:
-            return K.mean(score_forward)
+            return K.mean(score_affine)
         elif mode == ForwardMode.HYBRID:
-            return K.mean(K.minimum(score_ibp, score_forward))
+            return K.mean(K.minimum(score_ibp, score_affine))
 
         raise NotImplementedError()
 
@@ -234,13 +234,13 @@ def get_adv_loss(
     model: DecomonModel, sigmoid: bool = False, clip_value: Optional[float] = None, softmax: bool = False
 ) -> Callable[[tf.Tensor, tf.Tensor], tf.Tensor]:
 
-    IBP = model.IBP
-    forward = model.forward
+    ibp = model.ibp
+    affine = model.affine
 
-    mode = get_mode(IBP, forward)
+    mode = get_mode(ibp, affine)
     convex_domain = model.convex_domain
 
-    if forward:
+    if affine:
         if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BALL:
             n_comp = 2
         else:
@@ -261,7 +261,7 @@ def get_adv_loss(
         upper = upper - (const + K.cast(1, const.dtype)) * (1 - M)
         return K.max(upper, (-1, -2))
 
-    def adv_forward(
+    def adv_affine(
         x: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor, y_tensor: tf.Tensor
     ) -> tf.Tensor:
 
@@ -330,14 +330,14 @@ def get_adv_loss(
         else:
             raise ValueError(f"Unknown mode {mode}")
 
-        if IBP:
+        if ibp:
             score_ibp = adv_ibp(u_c, l_c, y_true)
             if clip_value is not None:
                 score_ibp = K.maximum(score_ibp, clip_value)
-        if forward:
-            score_forward = adv_forward(x_0, w_u, b_u, w_l, b_l, y_true)
+        if affine:
+            score_affine = adv_affine(x_0, w_u, b_u, w_l, b_l, y_true)
             if clip_value is not None:
-                score_forward = K.maximum(score_forward, clip_value)
+                score_affine = K.maximum(score_affine, clip_value)
 
         if mode == ForwardMode.IBP:
             if sigmoid:
@@ -346,14 +346,14 @@ def get_adv_loss(
                 return K.mean(score_ibp)
         elif mode == ForwardMode.AFFINE:
             if sigmoid:
-                return K.mean(K.sigmoid(score_forward))
+                return K.mean(K.sigmoid(score_affine))
             else:
-                return K.mean(score_forward)
+                return K.mean(score_affine)
         elif mode == ForwardMode.HYBRID:
             if sigmoid:
-                return K.mean(K.sigmoid(K.minimum(score_ibp, score_forward)))
+                return K.mean(K.sigmoid(K.minimum(score_ibp, score_affine)))
             else:
-                return K.mean(K.minimum(score_ibp, score_forward))
+                return K.mean(K.minimum(score_ibp, score_affine))
 
         raise NotImplementedError()
 
@@ -564,10 +564,10 @@ class DecomonRadiusRobust(DecomonLayer):
 
 
 def build_radius_robust_model(model: DecomonModel) -> DecomonModel:
-    IBP = model.IBP
-    forward = model.forward
+    ibp = model.ibp
+    affine = model.affine
 
-    mode = get_mode(IBP, forward)
+    mode = get_mode(ibp, affine)
     convex_domain = model.convex_domain
 
     inputs = model.input
@@ -580,18 +580,18 @@ def build_radius_robust_model(model: DecomonModel) -> DecomonModel:
         input=inputs,
         output=output_robust,
         convex_domain=model.convex_domain,
-        IBP=IBP,
-        forward=forward,
+        ibp=ibp,
+        affine=affine,
         finetune=model.finetune,
     )
 
 
 ##### DESIGN LOSS FUNCTIONS
 def build_crossentropy_model(model: DecomonModel) -> DecomonModel:
-    IBP = model.IBP
-    forward = model.forward
+    ibp = model.ibp
+    affine = model.affine
 
-    mode = get_mode(IBP, forward)
+    mode = get_mode(ibp, affine)
     convex_domain = model.convex_domain
 
     inputs = model.input
@@ -604,18 +604,18 @@ def build_crossentropy_model(model: DecomonModel) -> DecomonModel:
         input=inputs,
         output=output_fusion,
         convex_domain=model.convex_domain,
-        IBP=IBP,
-        forward=forward,
+        ibp=ibp,
+        affine=affine,
         finetune=model.finetune,
     )
 
 
 ##### DESIGN LOSS FUNCTIONS
 def build_asymptotic_crossentropy_model(model: DecomonModel) -> DecomonModel:
-    IBP = model.IBP
-    forward = model.forward
+    ibp = model.ibp
+    affine = model.affine
 
-    mode = get_mode(IBP, forward)
+    mode = get_mode(ibp, affine)
     convex_domain = model.convex_domain
 
     inputs = model.input
@@ -628,7 +628,7 @@ def build_asymptotic_crossentropy_model(model: DecomonModel) -> DecomonModel:
         input=inputs,
         output=output_fusion,
         convex_domain=model.convex_domain,
-        IBP=IBP,
-        forward=forward,
+        ibp=ibp,
+        affine=affine,
         finetune=model.finetune,
     )

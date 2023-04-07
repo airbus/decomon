@@ -35,7 +35,7 @@ class StaticVariables:
         Args:
             dc_decomp: boolean that indicates whether we return a
                 difference of convex decomposition of our layer
-            mode: type of Forward propagation (IBP, Forward or Hybrid)
+            mode: type of Forward propagation (ibp, affine, or hybrid)
         gradient
         """
 
@@ -75,7 +75,7 @@ class DecomonLayer(ABC, Layer):
         Args:
             convex_domain: type of convex input domain (None or dict)
             dc_decomp: boolean that indicates whether we return a
-            mode: type of Forward propagation (IBP, Forward or Hybrid)
+            mode: type of Forward propagation (ibp, affine, or hybrid)
             **kwargs: extra parameters
         difference of convex decomposition of our layer
         """

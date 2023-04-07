@@ -27,13 +27,13 @@ def test_convert_backward_1D(n, mode, floatx, helpers):
     ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
     ref_nn(inputs[1])
 
-    IBP = True
-    forward = True
+    ibp = True
+    affine = True
     mode = ForwardMode(mode)
     if mode == ForwardMode.AFFINE:
-        IBP = False
+        ibp = False
     if mode == ForwardMode.IBP:
-        forward = False
+        affine = False
 
     input_tensors = inputs[2:]
     if mode == ForwardMode.IBP:
@@ -42,17 +42,17 @@ def test_convert_backward_1D(n, mode, floatx, helpers):
         input_tensors = [z, W_u, b_u, W_l, b_l]
 
     _, _, layer_map, forward_map = convert_forward(
-        ref_nn, IBP=IBP, forward=forward, shared=True, input_tensors=input_tensors, final_ibp=IBP, final_forward=forward
+        ref_nn, ibp=ibp, affine=affine, shared=True, input_tensors=input_tensors, final_ibp=ibp, final_affine=affine
     )
     _, output, _, _ = convert_backward(
         ref_nn,
         input_tensors=input_tensors,
-        IBP=IBP,
-        forward=forward,
+        ibp=ibp,
+        affine=affine,
         layer_map=layer_map,
         forward_map=forward_map,
-        final_ibp=IBP,
-        final_forward=forward,
+        final_ibp=ibp,
+        final_affine=affine,
     )
 
     f_dense = K.function(inputs[2:], output)

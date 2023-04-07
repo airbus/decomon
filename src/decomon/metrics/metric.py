@@ -83,7 +83,7 @@ class AdversarialCheck(MetricLayer):
         Args:
             ibp: boolean that indicates whether we propagate constant
                 bounds
-            forward: boolean that indicates whether we propagate affine
+            affine: boolean that indicates whether we propagate affine
                 bounds
             mode: str: 'backward' or 'forward' whether we doforward or
                 backward linear relaxation
@@ -122,12 +122,12 @@ class AdversarialCheck(MetricLayer):
         elif self.ibp and not self.affine:
             _, z, u_c, l_c = inputs[:4]
         else:
-            raise NotImplementedError("not IBP and not forward not implemented")
+            raise NotImplementedError("not ibp and not affine not implemented")
 
         if self.ibp:
             adv_ibp = _get_ibp_score(u_c, l_c, y_tensor)
         if self.affine:
-            adv_f = _get_forward_score(z, w_u_f, b_u_f, w_l_f, b_l_f, y_tensor)
+            adv_f = _get_affine_score(z, w_u_f, b_u_f, w_l_f, b_l_f, y_tensor)
 
         if self.ibp and not self.affine:
             adv_score = adv_ibp
@@ -136,7 +136,7 @@ class AdversarialCheck(MetricLayer):
         elif not self.ibp and self.affine:
             adv_score = adv_f
         else:
-            raise NotImplementedError("not IBP and not forward not implemented")
+            raise NotImplementedError("not ibp and not affine not implemented")
 
         if self.mode == MetricMode.BACKWARD:
             w_u_b, b_u_b, w_l_b, b_l_b, _ = inputs[-5:]
@@ -161,7 +161,7 @@ class AdversarialScore(AdversarialCheck):
         Args:
             ibp: boolean that indicates whether we propagate constant
                 bounds
-            forward: boolean that indicates whether we propagate affine
+            affine: boolean that indicates whether we propagate affine
                 bounds
             mode: str: 'backward' or 'forward' whether we doforward or
                 backward linear relaxation
@@ -190,12 +190,12 @@ class AdversarialScore(AdversarialCheck):
         elif self.ibp and not self.affine:
             _, z, u_c, l_c = inputs[:4]
         else:
-            raise NotImplementedError("not IBP and not forward not implemented")
+            raise NotImplementedError("not ibp and not affine not implemented")
 
         if self.ibp:
             adv_ibp = _get_ibp_score(u_c=l_c, l_c=u_c, source_tensor=y_tensor)
         if self.affine:
-            adv_f = _get_forward_score(z, w_u=w_l_f, b_u=b_l_f, w_l=w_u_f, b_l=b_u_f, source_tensor=y_tensor)
+            adv_f = _get_affine_score(z, w_u=w_l_f, b_u=b_l_f, w_l=w_u_f, b_l=b_u_f, source_tensor=y_tensor)
 
         if self.ibp and not self.affine:
             adv_score = adv_ibp
@@ -204,7 +204,7 @@ class AdversarialScore(AdversarialCheck):
         elif not self.ibp and self.affine:
             adv_score = adv_f
         else:
-            raise NotImplementedError("not IBP and not forward not implemented")
+            raise NotImplementedError("not ibp and not affine not implemented")
 
         if self.mode == MetricMode.BACKWARD:
             w_u_b, b_u_b, w_l_b, b_l_b, _ = inputs[-5:]
@@ -226,7 +226,7 @@ def build_formal_adv_check_model(decomon_model: DecomonModel) -> tf.keras.Model:
     # check type and that backward pass is available
 
     convex_domain = decomon_model.convex_domain
-    layer = AdversarialCheck(decomon_model.IBP, decomon_model.forward, decomon_model.mode, convex_domain)
+    layer = AdversarialCheck(decomon_model.ibp, decomon_model.affine, decomon_model.mode, convex_domain)
     output = decomon_model.output
     input = decomon_model.input
     n_out = decomon_model.output[0].shape[1:]
@@ -249,7 +249,7 @@ def build_formal_adv_model(decomon_model: DecomonModel) -> tf.keras.Model:
     # check type and that backward pass is available
 
     convex_domain = decomon_model.convex_domain
-    layer = AdversarialScore(decomon_model.IBP, decomon_model.forward, decomon_model.mode, convex_domain)
+    layer = AdversarialScore(decomon_model.ibp, decomon_model.affine, decomon_model.mode, convex_domain)
     output = decomon_model.output
     input = decomon_model.input
     n_out = decomon_model.output[0].shape[1:]
@@ -275,7 +275,7 @@ class UpperScore(MetricLayer):
         Args:
             ibp: boolean that indicates whether we propagate constant
                 bounds
-            forward: boolean that indicates whether we propagate affine
+            affine: boolean that indicates whether we propagate affine
                 bounds
             mode: str: 'backward' or 'forward' whether we doforward or
                 backward linear relaxation
@@ -310,8 +310,8 @@ class UpperScore(MetricLayer):
             _, _, u_c, w_u_f, b_u_f, _, _, _ = inputs[:8]
 
             upper_ibp = K.sum(u_c * y_tensor, -1)
-            upper_forward = self.linear_upper(z_tensor, y_tensor, w_u_f, b_u_f)
-            upper_score = K.minimum(upper_ibp, upper_forward)
+            upper_affine = self.linear_upper(z_tensor, y_tensor, w_u_f, b_u_f)
+            upper_score = K.minimum(upper_ibp, upper_affine)
         elif not self.ibp and self.affine:
             _, _, w_u_f, b_u_f = inputs[:6]
             upper_score = self.linear_upper(z_tensor, y_tensor, w_u_f, b_u_f)
@@ -319,7 +319,7 @@ class UpperScore(MetricLayer):
             _, _, u_c, l_c = inputs[:4]
             upper_score = K.sum(u_c * y_tensor, -1)
         else:
-            raise NotImplementedError("not IBP and not forward not implemented")
+            raise NotImplementedError("not ibp and not affine not implemented")
 
         if self.mode == MetricMode.BACKWARD:
             w_u_b, b_u_b, _, _, _ = inputs[-5:]
@@ -341,7 +341,7 @@ def build_formal_upper_model(decomon_model: DecomonModel) -> tf.keras.Model:
     # check type and that backward pass is available
 
     convex_domain = decomon_model.convex_domain
-    layer = UpperScore(decomon_model.IBP, decomon_model.forward, decomon_model.mode, convex_domain)
+    layer = UpperScore(decomon_model.ibp, decomon_model.affine, decomon_model.mode, convex_domain)
     output = decomon_model.output
     input = decomon_model.input
     n_out = decomon_model.output[0].shape[1:]
@@ -367,7 +367,7 @@ def _get_ibp_score(
     return K.max(score_u, -1)
 
 
-def _get_forward_score(
+def _get_affine_score(
     z_tensor: tf.Tensor,
     w_u: tf.Tensor,
     b_u: tf.Tensor,
@@ -406,4 +406,4 @@ def _get_backward_score(
     source_tensor: tf.Tensor,
     target_tensor: Optional[tf.Tensor] = None,
 ) -> tf.Tensor:
-    return _get_forward_score(z_tensor, w_u[:, 0], b_u[:, 0], w_l[:, 0], b_l[:, 0], source_tensor, target_tensor)
+    return _get_affine_score(z_tensor, w_u[:, 0], b_u[:, 0], w_l[:, 0], b_l[:, 0], source_tensor, target_tensor)
