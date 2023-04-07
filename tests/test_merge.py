@@ -60,15 +60,7 @@ def concatenate_op(x, y):
         (DecomonMultiply, multiply_op, {}),
     ],
 )
-def test_DecomonOp_1D_box(decomon_op_class, tensor_op, decomon_op_kwargs, n, mode, floatx, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
-
+def test_DecomonOp_1D_box(decomon_op_class, tensor_op, decomon_op_kwargs, n, mode, floatx, decimal, helpers):
     decomon_op = decomon_op_class(dc_decomp=False, mode=mode, dtype=K.floatx(), **decomon_op_kwargs)
 
     inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
@@ -94,7 +86,6 @@ def test_DecomonOp_1D_box(decomon_op_class, tensor_op, decomon_op_kwargs, n, mod
 
     model = Model(inputs_0[2:] + inputs_1[2:], output_decomon)
     y_ = tensor_op(y0_, y1_)
-    # output_ = K.function(inputs_0[1:]+inputs_1[1:], output_decomon)(inputs_0_[1:]+inputs_1_[1:])
     output_ = model.predict(inputs_0_[2:] + inputs_1_[2:])
     u_, w_u_, b_u_, l_, w_l_, b_l_ = [None] * 6
     z_ = z0_
@@ -111,9 +102,6 @@ def test_DecomonOp_1D_box(decomon_op_class, tensor_op, decomon_op_kwargs, n, mod
         inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, decimal=decimal
     )
 
-    K.set_epsilon(eps)
-    K.set_floatx("float32")
-
 
 @pytest.mark.parametrize(
     "decomon_op_class, tensor_op, decomon_op_kwargs",
@@ -127,15 +115,7 @@ def test_DecomonOp_1D_box(decomon_op_class, tensor_op, decomon_op_kwargs, n, mod
         (DecomonMultiply, multiply_op, {}),
     ],
 )
-def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, odd, mode, floatx, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
-
+def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, odd, mode, floatx, decimal, helpers):
     decomon_op = decomon_op_class(dc_decomp=False, mode=mode, dtype=K.floatx(), **decomon_op_kwargs)
 
     inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
@@ -161,7 +141,6 @@ def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, od
 
     model = Model(inputs_0[2:] + inputs_1[2:], output_decomon)
     y_ = tensor_op(y0_, y1_)
-    # output_ = K.function(inputs_0[1:]+inputs_1[1:], output_decomon)(inputs_0_[1:]+inputs_1_[1:])
     output_ = model.predict(inputs_0_[2:] + inputs_1_[2:])
     u_, w_u_, b_u_, l_, w_l_, b_l_ = [None] * 6
     z_ = z0_
@@ -177,12 +156,6 @@ def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, od
     helpers.assert_output_properties_box(
         inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, decimal=decimal
     )
-
-    K.set_epsilon(eps)
-    K.set_floatx("float32")
-
-
-### to decomon
 
 
 @pytest.mark.parametrize(
@@ -217,7 +190,6 @@ def test_Decomon_1D_box_to_decomon(layer_class, tensor_op, layer_kwargs, n, help
 
     model = Model(inputs_0[2:] + inputs_1[2:], output_decomon)
 
-    # output_ = K.function(inputs_0[1:]+inputs_1[1:], output_decomon)(inputs_0_[1:]+inputs_1_[1:])
     output_ = model.predict(inputs_0_[2:] + inputs_1_[2:])
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = tensor_op(inputs_0_[1], inputs_1_[1])
@@ -258,9 +230,7 @@ def test_Decomon_multiD_box_to_decomon(layer_class, tensor_op, layer_kwargs, odd
     output_decomon = decomon_op(inputs_0[2:] + inputs_1[2:])
     model = Model(inputs_0[2:] + inputs_1[2:], output_decomon)
 
-    # output_ = K.function(inputs_0[1:]+inputs_1[1:], output_decomon)(inputs_0_[1:]+inputs_1_[1:])
     output_ = model.predict(inputs_0_[2:] + inputs_1_[2:])
-    # output_ = K.function(inputs_0[1:]+inputs_1[1:], output_decomon)(inputs_0_[1:]+inputs_1_[1:])
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = tensor_op(y0, y1)
     helpers.assert_output_properties_box_linear(inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_)

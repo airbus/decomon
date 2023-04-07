@@ -17,14 +17,7 @@ from decomon.utils import Slope
         (softsign, backward_softsign),
     ],
 )
-def test_activation_backward_1D_box(n, mode, floatx, activation_func, tensor_func, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 1
+def test_activation_backward_1D_box(n, mode, floatx, decimal, activation_func, tensor_func, helpers):
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
@@ -66,9 +59,6 @@ def test_activation_backward_1D_box(n, mode, floatx, activation_func, tensor_fun
     helpers.assert_output_properties_box_linear(
         x_, None, z_[:, 0], z_[:, 1], None, w_u_b, b_u_b, None, w_l_b, b_l_b, decimal=decimal
     )
-
-    K.set_epsilon(eps)
-    K.set_floatx("float32")
 
 
 @pytest.mark.parametrize(

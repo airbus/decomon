@@ -13,11 +13,6 @@ from decomon.utils import subtract
 
 def test_get_upper_multi_box(odd, floatx, helpers):
 
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    if floatx == 16:
-        K.set_epsilon(1e-4)
-
     inputs = helpers.get_tensor_decomposition_multid_box(odd)
     inputs_ = helpers.get_standard_values_multid_box(odd)
 
@@ -36,15 +31,9 @@ def test_get_upper_multi_box(odd, floatx, helpers):
     upper_ = f_upper([x_0_, W_u_, b_u_])
 
     assert_allclose(upper_pred, upper_)
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
 
 
 def test_get_upper_box_numpy(n, floatx, helpers):
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    if floatx == 16:
-        K.set_epsilon(1e-4)
     inputs = helpers.get_tensor_decomposition_1d_box()
     inputs_ = helpers.get_standard_values_1d_box(n)
 
@@ -65,16 +54,9 @@ def test_get_upper_box_numpy(n, floatx, helpers):
     upper_ = f_upper([x_0_, W_u_, b_u_]).max()
 
     assert_allclose(upper_pred, upper_)
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
 
 
 def test_get_upper_box(n, floatx, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    if floatx == 16:
-        K.set_epsilon(1e-4)
     inputs = helpers.get_tensor_decomposition_1d_box()
     inputs_ = helpers.get_standard_values_1d_box(n)
 
@@ -105,16 +87,9 @@ def test_get_upper_box(n, floatx, helpers):
         decimal=6,
         err_msg="upper_<y_ in call {}".format(n),
     )
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
 
 
 def test_get_lower_box(n, floatx, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    if floatx == 16:
-        K.set_epsilon(1e-4)
     inputs = helpers.get_tensor_decomposition_1d_box()
     inputs_ = helpers.get_standard_values_1d_box(n)
     x, y, x_0, _, _, _, l_c, W_l, b_l, _, _ = inputs
@@ -141,16 +116,9 @@ def test_get_lower_box(n, floatx, helpers):
         decimal=6,
         err_msg="lower_> y_ in call {}".format(n),
     )
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
 
 
 def test_get_lower_upper_box(n, floatx, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    if floatx == 16:
-        K.set_epsilon(1e-4)
     inputs = helpers.get_tensor_decomposition_1d_box()
     inputs_ = helpers.get_standard_values_1d_box(n)
     x, y, x_0, _, W_u, b_u, _, W_l, b_l, _, _ = inputs
@@ -170,21 +138,9 @@ def test_get_lower_upper_box(n, floatx, helpers):
         decimal=6,
         err_msg="lower_> upper_ in call {}".format(n),
     )
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
 
 
-def test_relu_1D_box(n, mode, floatx, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-
-    if floatx == 16:
-        decimal = 2
-    else:
-        decimal = 5
+def test_relu_1D_box(n, mode, floatx, decimal, helpers):
     inputs = helpers.get_tensor_decomposition_1d_box()
     inputs_ = helpers.get_standard_values_1d_box(n)
 
@@ -231,8 +187,6 @@ def test_relu_1D_box(n, mode, floatx, helpers):
     f_relu_ = K.function(x_vec, output)
     f_ref = K.function(y, K.relu(y))
     y_ = f_ref(y_0)
-
-    # y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_relu_(inputs_[1:])
 
     if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_relu_(x_vec_)
@@ -347,21 +301,8 @@ def test_relu_1D_box(n, mode, floatx, helpers):
     else:
         raise ValueError("Unknown mode.")
 
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
 
-
-def test_add(odd, mode, floatx, helpers):
-
-    K.set_floatx("float{}".format(32))
-    eps = K.epsilon()
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-    if floatx == 16:
-        decimal = 2
-    else:
-        decimal = 5
-
+def test_add(odd, mode, floatx, decimal, helpers):
     inputs_0 = helpers.get_tensor_decomposition_multid_box(odd)
     inputs_1 = helpers.get_tensor_decomposition_multid_box(odd)
 
@@ -392,7 +333,6 @@ def test_add(odd, mode, floatx, helpers):
     f_ref = K.function(inputs_0 + inputs_1, inputs_0[1] + inputs_1[1])
     f_add = K.function(inputs_0 + inputs_1, output)
 
-    # y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_add(inputs_ + inputs_)
     y_ = f_ref(inputs_ + inputs_)
     if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_add(inputs_ + inputs_)
@@ -425,21 +365,8 @@ def test_add(odd, mode, floatx, helpers):
     else:
         raise ValueError("Unknown mode.")
 
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
 
-
-def test_minus(odd, mode, floatx, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-    if floatx == 16:
-        decimal = 2
-    else:
-        decimal = 5
-
+def test_minus(odd, mode, floatx, decimal, helpers):
     inputs_0 = helpers.get_tensor_decomposition_multid_box(odd)
     inputs_ = helpers.get_standard_values_multid_box(odd)
 
@@ -477,29 +404,15 @@ def test_minus(odd, mode, floatx, helpers):
     else:
         raise ValueError("Unknown mode.")
 
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)
 
-
-def test_subtract(odd, mode, floatx, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-    if floatx == 16:
-        decimal = 2
-    else:
-        decimal = 5
+def test_subtract(odd, mode, floatx, decimal, helpers):
     inputs_0 = helpers.get_tensor_decomposition_multid_box(odd)
     inputs_1 = helpers.get_tensor_decomposition_multid_box(odd)
 
     inputs_ = helpers.get_standard_values_multid_box(odd)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_0
 
     x_0, y_0, z_0, u_c_0, W_u_0, b_u_0, l_c_0, W_l_0, b_l_0, h_0, g_0 = inputs_0
     x_1, y_1, z_1, u_c_1, W_u_1, b_u_1, l_c_1, W_l_1, b_l_1, h_1, g_1 = inputs_1
-    # x_, y_, z_, u_c_, W_u_, b_u_, l_c_, W_l_, b_l_, h_, g_ = inputs_
 
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
@@ -521,7 +434,6 @@ def test_subtract(odd, mode, floatx, helpers):
     f_ref = K.function(inputs_0 + inputs_1, inputs_0[1] - inputs_1[1])
     f_sub = K.function(inputs_0 + inputs_1, output)
 
-    # y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_add(inputs_ + inputs_)
     y_ = f_ref(inputs_ + inputs_)
     if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_sub(inputs_ + inputs_)
@@ -554,20 +466,8 @@ def test_subtract(odd, mode, floatx, helpers):
     else:
         raise ValueError("Unknown mode.")
 
-    K.set_floatx("float{}".format(floatx))
-    K.set_epsilon(eps)
 
-
-def test_maximum(odd, mode, floatx, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-    if floatx == 16:
-        decimal = 2
-    else:
-        decimal = 5
+def test_maximum(odd, mode, floatx, decimal, helpers):
     inputs_0 = helpers.get_tensor_decomposition_multid_box(odd)
     inputs_1 = helpers.get_tensor_decomposition_multid_box(odd)
 
@@ -618,20 +518,8 @@ def test_maximum(odd, mode, floatx, helpers):
     else:
         raise ValueError("Unknown mode.")
 
-    K.set_floatx("float{}".format(floatx))
-    K.set_epsilon(eps)
 
-
-def test_max_(odd, mode, floatx, helpers):
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-    if floatx == 16:
-        decimal = 2
-    else:
-        decimal = 5
+def test_max_(odd, mode, floatx, decimal, helpers):
 
     inputs = helpers.get_tensor_decomposition_multid_box(odd)
     inputs_ = helpers.get_standard_values_multid_box(odd)
@@ -676,9 +564,6 @@ def test_max_(odd, mode, floatx, helpers):
         )
     else:
         raise ValueError("Unknown mode.")
-
-    K.set_epsilon(eps)
-    K.set_floatx("float{}".format(32))
 
 
 # DC_DECOMP = FALSE

@@ -17,13 +17,6 @@ def test_Backward_Dense_1D_box(n, use_bias, mode, floatx, helpers):
 
     slope = Slope.V_SLOPE
 
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
-
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
@@ -100,25 +93,18 @@ def test_Backward_Dense_1D_box(n, use_bias, mode, floatx, helpers):
         + np.sum(np.minimum(w_l_[:, 0], 0) * b_u[:, :, None], 1),
     )
 
-    K.set_epsilon(eps)
-    K.set_floatx("float32")
 
-
-def test_Backward_DecomonDense_multiD_box(odd, floatx, mode, helpers):
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
+def test_Backward_DecomonDense_multiD_box(odd, floatx, decimal, mode, helpers):
 
     inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     input_dim = x.shape[-1]
-    layer_ = Dense(1, use_bias=True, dtype=K.floatx())
-    layer_(inputs[1])
+
+    layer_keras = Dense(1, use_bias=True, dtype=K.floatx())
+    layer_keras(inputs[1])
     mode = ForwardMode(mode)
+
     if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
     elif mode == ForwardMode.AFFINE:
@@ -129,10 +115,9 @@ def test_Backward_DecomonDense_multiD_box(odd, floatx, mode, helpers):
         raise ValueError("Unknown mode.")
 
     # get backward layer
-    layer_backward = to_backward(layer_, input_dim=input_dim, mode=mode, convex_domain={})
+    layer_backward = to_backward(layer_keras, input_dim=input_dim, mode=mode, convex_domain={})
     w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
     f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
-    # import pdb; pdb.set_trace()
     output_ = f_dense(inputs_)
     w_u_, b_u_, w_l_, b_l_ = output_
 
@@ -149,8 +134,6 @@ def test_Backward_DecomonDense_multiD_box(odd, floatx, mode, helpers):
         b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
         decimal=decimal,
     )
-    K.set_floatx("float32")
-    K.set_epsilon(eps)
 
 
 def test_Backward_DecomonDense_1D_box_model(n, helpers):

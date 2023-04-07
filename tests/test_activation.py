@@ -21,18 +21,13 @@ from decomon.utils import Slope
         (relu, K.relu, 4),
     ],
 )
-def test_activation_1D_box(n, mode, floatx, helpers, activation_func, tensor_func, decimal):
+def test_activation_1D_box(n, mode, floatx, decimal, helpers, activation_func, tensor_func):
     # softmax: test only n=0,3
     if activation_func is softmax:
         if n not in {0, 3}:
             pytest.skip("softmax activation only possible for n=0 or 3")
 
     mode = ForwardMode(mode)
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    if floatx == 16:
-        K.set_epsilon(1e-4)
-        decimal = 2
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
@@ -76,9 +71,6 @@ def test_activation_1D_box(n, mode, floatx, helpers, activation_func, tensor_fun
     helpers.assert_output_properties_box(
         x_0, y_, None, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
-
-    K.set_floatx("float32")
-    K.set_epsilon(eps)
 
 
 @pytest.mark.parametrize(

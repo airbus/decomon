@@ -12,19 +12,12 @@ from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonConv2D
 
 
-def test_Decomon_conv_box(data_format, padding, use_bias, mode, floatx, helpers):
+def test_Decomon_conv_box(data_format, padding, use_bias, mode, floatx, decimal, helpers):
 
     if data_format == "channels_first" and not len(_get_available_gpus()):
         pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     odd, m_0, m_1 = 0, 0, 1
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
 
     layer = DecomonConv2D(
         10,
@@ -100,6 +93,3 @@ def test_Decomon_conv_box(data_format, padding, use_bias, mode, floatx, helpers)
     )
 
     helpers.assert_output_properties_box_linear(x, None, z_[:, 0], z_[:, 1], None, w_r_u, b_r_u, None, w_r_l, b_r_l)
-
-    K.set_floatx("float32")
-    K.set_epsilon(eps)

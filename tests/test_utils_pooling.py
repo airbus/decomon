@@ -18,7 +18,9 @@ from decomon.layers.utils_pooling import (
         (get_upper_linear_hull_max, np.min, 0.0, np.inf),
     ],
 )
-def test_get_lower_upper_linear_hull_max(func, minmax, clipmin, clipmax, mode, floatx, axis, finetune_odd, helpers):
+def test_get_lower_upper_linear_hull_max(
+    func, minmax, clipmin, clipmax, mode, floatx, decimal, axis, finetune_odd, helpers
+):
 
     if finetune_odd is not None and func is not get_lower_linear_hull_max:
         # skip test with finetune if not get_lower
@@ -26,13 +28,6 @@ def test_get_lower_upper_linear_hull_max(func, minmax, clipmin, clipmax, mode, f
 
     odd, m_0, m_1 = 0, 0, 1
     data_format = "channels_last"
-
-    K.set_floatx("float{}".format(floatx))
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
 
     inputs = helpers.get_tensor_decomposition_images_box(data_format, odd)
     inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1)
@@ -66,6 +61,3 @@ def test_get_lower_upper_linear_hull_max(func, minmax, clipmin, clipmax, mode, f
         decimal=decimal,
         err_msg=f"linear hull for bounding max",
     )
-
-    K.set_floatx("float{}".format(32))
-    K.set_epsilon(eps)

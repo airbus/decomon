@@ -13,14 +13,7 @@ from decomon.layers.decomon_layers import DecomonDense
 from decomon.models.utils import split_activation
 
 
-def test_DecomonDense_1D_box(n, mode, shared, floatx, helpers):
-
-    K.set_floatx(f"float{floatx}")
-    eps = K.epsilon()
-    decimal = 5
-    if floatx == 16:
-        K.set_epsilon(1e-2)
-        decimal = 2
+def test_DecomonDense_1D_box(n, mode, shared, floatx, decimal, helpers):
 
     decomon_dense = DecomonDense(1, use_bias=True, dc_decomp=True, mode=mode, shared=shared, dtype=K.floatx())
 
@@ -101,9 +94,6 @@ def test_DecomonDense_1D_box(n, mode, shared, floatx, helpers):
         )
     else:
         raise ValueError("Unknown mode.")
-
-    K.set_epsilon(eps)
-    K.set_floatx("float32")
 
 
 def test_DecomonDense_multiD_box(odd, mode, helpers):
