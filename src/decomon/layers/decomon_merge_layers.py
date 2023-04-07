@@ -621,8 +621,8 @@ def to_decomon_merge(
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     finetune: bool = False,
-    IBP: bool = True,
-    forward: bool = True,
+    ibp: bool = True,
+    affine: bool = True,
 ) -> List[DecomonLayer]:
     """Transform a standard Merge layer into a Decomon layer.
 
@@ -636,8 +636,8 @@ def to_decomon_merge(
         dc_decomp: boolean that indicates whether we return a difference
             of convex decomposition of our layer
         convex_domain: the type of convex domain
-        IBP: boolean that indicates whether we propagate constant bounds
-        forward: boolean that indicates whether we propagate affine
+        ibp: boolean that indicates whether we propagate constant bounds
+        affine: boolean that indicates whether we propagate affine
             bounds
 
     Returns:
@@ -660,9 +660,9 @@ def to_decomon_merge(
     config_layer["convex_domain"] = convex_domain
 
     mode = ForwardMode.HYBRID
-    if IBP and not forward:
+    if ibp and not affine:
         mode = ForwardMode.IBP
-    if not IBP and forward:
+    if not ibp and affine:
         mode = ForwardMode.AFFINE
 
     config_layer["mode"] = mode

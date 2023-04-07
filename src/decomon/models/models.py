@@ -17,8 +17,8 @@ class DecomonModel(tf.keras.Model):
         convex_domain: Optional[Dict[str, Any]] = None,
         dc_decomp: bool = False,
         method: Union[str, ConvertMethod] = ConvertMethod.FORWARD_AFFINE,
-        IBP: bool = True,
-        forward: bool = True,
+        ibp: bool = True,
+        affine: bool = True,
         finetune: bool = False,
         shared: bool = True,
         backward_bounds: bool = False,
@@ -31,8 +31,8 @@ class DecomonModel(tf.keras.Model):
         self.nb_tensors = StaticVariables(dc_decomp).nb_tensors
         self.dc_decomp = dc_decomp
         self.method = ConvertMethod(method)
-        self.IBP = IBP
-        self.forward = forward
+        self.ibp = ibp
+        self.affine = affine
         self.finetune = finetune
         self.backward_bounds = backward_bounds
         self.shared = shared

@@ -10,7 +10,7 @@ from decomon.models import clone
 
 def test_convert_1D(n, method, mode, floatx, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
-        # skip method=ibp/crown-ibp with mode=forward/hybrid
+        # skip method=ibp/crown-ibp with mode=affine/hybrid
         return
 
     K.set_floatx("float{}".format(floatx))
@@ -29,15 +29,15 @@ def test_convert_1D(n, method, mode, floatx, helpers):
     ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
     ref_nn(inputs[1])
 
-    IBP = True
-    forward = True
+    ibp = True
+    affine = True
     mode = ForwardMode(mode)
     if mode == ForwardMode.AFFINE:
-        IBP = False
+        ibp = False
     if mode == ForwardMode.IBP:
-        forward = False
+        affine = False
 
-    f_dense = clone(ref_nn, method=method, final_ibp=IBP, final_forward=forward)
+    f_dense = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
 
     f_ref = K.function(inputs, ref_nn(inputs[1]))
     y_ref = f_ref(inputs_)

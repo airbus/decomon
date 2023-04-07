@@ -6,7 +6,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Layer
 
 from decomon.backward_layers.core import BackwardLayer
-from decomon.backward_layers.utils import get_FORWARD, get_IBP
+from decomon.backward_layers.utils import get_affine, get_ibp
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonLayer, to_decomon
 from decomon.utils import Slope
@@ -51,8 +51,8 @@ class BackwardGroupSort2(BackwardLayer):
                 dc_decomp=False,
                 convex_domain=self.convex_domain,
                 finetune=False,
-                IBP=get_IBP(self.mode),
-                forward=get_FORWARD(self.mode),
+                ibp=get_ibp(self.mode),
+                affine=get_affine(self.mode),
                 shared=True,
                 fast=False,
             )[0]

@@ -33,18 +33,18 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, mode, floatx, helpers):
     layer_(inputs[1])
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
-        IBP = True
-        forward = True
+        ibp = True
+        affine = True
     elif mode == ForwardMode.IBP:
-        IBP = True
-        forward = False
+        ibp = True
+        affine = False
     elif mode == ForwardMode.AFFINE:
-        IBP = False
-        forward = True
+        ibp = False
+        affine = True
     else:
         raise ValueError("Unknown mode.")
 
-    layer = to_decomon(layer_, input_dim, dc_decomp=False, IBP=IBP, forward=forward, shared=True)[0]
+    layer = to_decomon(layer_, input_dim, dc_decomp=False, ibp=ibp, affine=affine, shared=True)[0]
 
     if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
@@ -159,18 +159,18 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, helpers
     layer_(inputs[1])
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
-        IBP = True
-        forward = True
+        ibp = True
+        affine = True
     elif mode == ForwardMode.IBP:
-        IBP = True
-        forward = False
+        ibp = True
+        affine = False
     elif mode == ForwardMode.AFFINE:
-        IBP = False
-        forward = True
+        ibp = False
+        affine = True
     else:
         raise ValueError("Unknown mode.")
 
-    layer = to_decomon(layer_, input_dim, dc_decomp=False, IBP=IBP, forward=forward, shared=True)[0]
+    layer = to_decomon(layer_, input_dim, dc_decomp=False, ibp=ibp, affine=affine, shared=True)[0]
 
     if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]

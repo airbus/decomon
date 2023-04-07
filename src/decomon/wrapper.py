@@ -72,7 +72,7 @@ def get_adv_box(
     # check that the model is a DecomonModel, else do the conversion
     model_: DecomonModel
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, ibp=True, forward=True, slope=slope)
+        model_ = convert(model, slope=slope)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
             ConvexDomainType.BOX,
@@ -135,8 +135,8 @@ def get_adv_box(
 
     else:
 
-        IBP = model_.IBP
-        forward = model_.forward
+        ibp = model_.ibp
+        affine = model_.affine
         n_label = source_labels.shape[-1]
 
         # two possitible cases: the model improves the bound based on the knowledge of the labels
@@ -175,7 +175,7 @@ def get_adv_box(
 
             return np.max(np.max(upper, -2), -1)
 
-        def get_forward_score(
+        def get_affine_score(
             z_tensor: npt.NDArray[np.float_],
             w_u: npt.NDArray[np.float_],
             b_u: npt.NDArray[np.float_],
@@ -225,30 +225,30 @@ def get_adv_box(
 
             return np.max(np.max(upper, -2), -1)
 
-        if IBP and forward:
+        if ibp and affine:
             z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = output[:7]
-        elif not IBP and forward:
+        elif not ibp and affine:
             z, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
-        elif IBP and not forward:
+        elif ibp and not affine:
             u_c, l_c = output[:2]
         else:
-            raise NotImplementedError("not IBP and not forward not implemented")
+            raise NotImplementedError("not ibp and not affine not implemented")
 
-        if IBP:
+        if ibp:
             adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels, backward=model_.backward_bounds)
-        if forward:
-            adv_f = get_forward_score(
+        if affine:
+            adv_f = get_affine_score(
                 z, w_u_f, b_u_f, w_l_f, b_l_f, source_labels, target_labels, backward=model_.backward_bounds
             )
 
-        if IBP and not forward:
+        if ibp and not affine:
             adv_score = adv_ibp
-        elif IBP and forward:
+        elif ibp and affine:
             adv_score = np.minimum(adv_ibp, adv_f)
-        elif not IBP and forward:
+        elif not ibp and affine:
             adv_score = adv_f
         else:
-            raise NotImplementedError("not IBP and not forward not implemented")
+            raise NotImplementedError("not ibp and not affine not implemented")
 
     if n_split > 1:
         adv_score = np.max(np.reshape(adv_score, (-1, n_split)), -1)
@@ -289,7 +289,7 @@ def check_adv_box(
 
     # check that the model is a DecomonModel, else do the conversion
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, ibp=True, forward=True, slope=slope)
+        model_ = convert(model, slope=slope)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
             ConvexDomainType.BOX,
@@ -297,8 +297,8 @@ def check_adv_box(
         ]
         model_ = model
 
-    IBP = model_.IBP
-    forward = model_.forward
+    ibp = model_.ibp
+    affine = model_.affine
 
     n_split = 1
     n_batch = len(x_min)
@@ -357,15 +357,15 @@ def check_adv_box(
 
         output = model_.predict(z)
 
-        if not forward:
-            # translate  into forward information
+        if not affine:
+            # translate  into affine information
             u_c = output[0]
             w_u = 0 * u_c[:, None] + np.zeros((1, input_dim, 1))
             output = [z, w_u, u_c, w_u, output[-1]]
-            IBP = False
-            forward = True
+            ibp = False
+            affine = True
 
-        def get_forward_sample(
+        def get_affine_sample(
             z_tensor: npt.NDArray[np.float_],
             w_u: npt.NDArray[np.float_],
             b_u: npt.NDArray[np.float_],
@@ -404,12 +404,12 @@ def check_adv_box(
 
             return np.max(np.max(upper, -2), -1)
 
-        if IBP:
+        if ibp:
             z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = output[:7]
         else:
             z, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
 
-        return get_forward_sample(z, w_l_f, b_l_f, w_u_f, b_u_f, source_labels)
+        return get_affine_sample(z, w_l_f, b_l_f, w_u_f, b_u_f, source_labels)
 
 
 #### FORMAL BOUNDS ######
@@ -487,7 +487,7 @@ def get_range_box(
 
     # check that the model is a DecomonModel, else do the conversion
     if not (isinstance(model, DecomonModel)):
-        model_ = convert(model, ibp=True, forward=True, slope=slope)
+        model_ = convert(model, slope=slope)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
             ConvexDomainType.BOX,
@@ -529,15 +529,15 @@ def get_range_box(
         l_ = np.concatenate([r[1] for r in results])
 
     else:
-        IBP = model_.IBP
-        forward = model_.forward
+        ibp = model_.ibp
+        affine = model_.affine
 
         output = model_.predict(z)
         shape = list(output[-1].shape[1:])
         shape_ = np.prod(shape)
 
-        if forward:
-            if IBP:
+        if affine:
+            if ibp:
                 _, u_i, w_u_f, b_u_f, l_i, w_l_f, b_l_f = output[:7]
                 if len(u_i.shape) > 2:
                     u_i = np.reshape(u_i, (-1, shape_))
@@ -570,17 +570,17 @@ def get_range_box(
                 u_i = np.reshape(u_i, (-1, shape_))
                 l_i = np.reshape(l_i, (-1, shape_))
 
-        if IBP and forward:
+        if ibp and affine:
             u_ = np.minimum(u_i, u_f)
             l_ = np.maximum(l_i, l_f)
-        elif IBP and not forward:
+        elif ibp and not affine:
             u_ = u_i
             l_ = l_i
-        elif not IBP and forward:
+        elif not ibp and affine:
             u_ = u_f
             l_ = l_f
         else:
-            raise NotImplementedError("not IBP and not forward not implemented")
+            raise NotImplementedError("not ibp and not affine not implemented")
 
         #####
         if len(shape) > 1:
@@ -678,8 +678,6 @@ def get_range_noise(
             model,
             method=ConvertMethod.CROWN_FORWARD_HYBRID,
             convex_domain=convex_domain,
-            ibp=True,
-            forward=False,
             slope=slope,
         )
     else:
@@ -703,8 +701,8 @@ def get_range_noise(
 
         return np.concatenate([r[0] for r in results]), np.concatenate([r[1] for r in results])
 
-    IBP = model_.IBP
-    forward = model_.forward
+    ibp = model_.ibp
+    affine = model_.affine
 
     output = model_.predict(x_)
     shape = list(output[-1].shape[1:])
@@ -713,8 +711,8 @@ def get_range_noise(
     x_ = x_.reshape((len(x_), -1))
     ord = _get_dual_ord(p)
 
-    if forward:
-        if IBP:
+    if affine:
+        if ibp:
             _, u_i, w_u_f, b_u_f, l_i, w_l_f, b_l_f = output[:7]
             if len(u_i.shape) > 2:
                 u_i = np.reshape(u_i, (-1, shape_))
@@ -740,17 +738,17 @@ def get_range_noise(
             l_i = np.reshape(l_i, (-1, shape_))
             ######
 
-    if IBP and forward:
+    if ibp and affine:
         u_ = np.minimum(u_i, u_f)
         l_ = np.maximum(l_i, l_f)
-    elif IBP and not forward:
+    elif ibp and not affine:
         u_ = u_i
         l_ = l_i
-    elif not IBP and forward:
+    elif not ibp and affine:
         u_ = u_f
         l_ = l_f
     else:
-        raise NotImplementedError("not IBP and not forward not implemented")
+        raise NotImplementedError("not ibp and not affine not implemented")
 
     if len(shape) > 1:
         u_ = np.reshape(u_, [-1] + shape)
@@ -1011,8 +1009,8 @@ def get_adv_noise(
         return np.concatenate(results)
     else:
 
-        IBP = model_.IBP
-        forward = model_.forward
+        ibp = model_.ibp
+        affine = model_.affine
         output = model_.predict(x_)
 
         def get_ibp_score(
@@ -1039,7 +1037,7 @@ def get_adv_noise(
 
             return np.max(np.max(upper, -2), -1)
 
-        def get_forward_score(
+        def get_affine_score(
             z_tensor: npt.NDArray[np.float_],
             w_u: npt.NDArray[np.float_],
             b_u: npt.NDArray[np.float_],
@@ -1091,28 +1089,28 @@ def get_adv_noise(
 
             return np.max(np.max(upper, -2), -1)
 
-        if IBP and forward:
+        if ibp and affine:
             z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = output[:7]
-        if not IBP and forward:
+        if not ibp and affine:
             z, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
-        if IBP and not forward:
+        if ibp and not affine:
             u_c, l_c = output[:2]
         else:
-            raise NotImplementedError("not IBP and not forward not implemented")
+            raise NotImplementedError("not ibp and not affine not implemented")
 
-        if IBP:
+        if ibp:
             adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels)
-        if forward:
-            adv_f = get_forward_score(z, w_u_f, b_u_f, w_l_f, b_l_f, source_labels, target_labels)
+        if affine:
+            adv_f = get_affine_score(z, w_u_f, b_u_f, w_l_f, b_l_f, source_labels, target_labels)
 
-        if IBP and not forward:
+        if ibp and not affine:
             adv_score = adv_ibp
-        elif IBP and forward:
+        elif ibp and affine:
             adv_score = np.minimum(adv_ibp, adv_f)
-        elif not IBP and forward:
+        elif not ibp and affine:
             adv_score = adv_f
         else:
-            raise NotImplementedError("not IBP and not forward not implemented")
+            raise NotImplementedError("not ibp and not affine not implemented")
 
         if n_split > 1:
             adv_score = np.max(np.reshape(adv_score, (-1, n_split)), -1)

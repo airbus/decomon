@@ -53,7 +53,7 @@ def relu(
         alpha: see Keras official documentation
         max_value: see Keras official documentation
         threshold: see Keras official documentation
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
@@ -91,7 +91,7 @@ def linear_hull_s_shape(
         f_prime: the derivative of the function (sigmoid_prime...)
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
     whether we return a difference of convex decomposition of our layer
 
@@ -169,7 +169,7 @@ def sigmoid(
         x: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
 
@@ -201,7 +201,7 @@ def tanh(
         x: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
@@ -234,7 +234,7 @@ def hard_sigmoid(
         x: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
@@ -265,7 +265,7 @@ def elu(
         x: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
@@ -303,7 +303,7 @@ def selu(
         x: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
@@ -333,7 +333,7 @@ def linear(
         x: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
@@ -360,7 +360,7 @@ def exponential(
         x: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
@@ -388,7 +388,7 @@ def softplus(
         x: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
@@ -418,7 +418,7 @@ def softsign(
         x: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
@@ -452,7 +452,7 @@ def softmax(
         x: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
-        mode: type of Forward propagation (IBP, Forward or Hybrid)
+        mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer

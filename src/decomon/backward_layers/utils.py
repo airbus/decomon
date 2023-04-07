@@ -846,14 +846,14 @@ def get_identity_lirpa(inputs: List[tf.Tensor]) -> List[tf.Tensor]:
     return [w_out_u, b_out_u, w_out_l, b_out_l]
 
 
-def get_IBP(mode: Union[str, ForwardMode] = ForwardMode.HYBRID) -> bool:
+def get_ibp(mode: Union[str, ForwardMode] = ForwardMode.HYBRID) -> bool:
     mode = ForwardMode(mode)
     if mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
         return True
     return False
 
 
-def get_FORWARD(mode: Union[str, ForwardMode] = ForwardMode.HYBRID) -> bool:
+def get_affine(mode: Union[str, ForwardMode] = ForwardMode.HYBRID) -> bool:
     mode = ForwardMode(mode)
     if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
         return True

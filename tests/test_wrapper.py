@@ -3,13 +3,13 @@ from tensorflow.keras.layers import Activation, Dense
 from tensorflow.keras.models import Sequential
 
 from decomon import get_lower_box, get_range_box, get_upper_box
-from decomon.backward_layers.utils import get_FORWARD, get_IBP
+from decomon.backward_layers.utils import get_affine, get_ibp
 from decomon.models import clone as convert
 
 
 def test_get_upper_1d_box(n, method, mode, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
-        # skip method=ibp/crown-ibp with mode=forward/hybrid
+        # skip method=ibp/crown-ibp with mode=affine/hybrid
         return
 
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
@@ -20,9 +20,9 @@ def test_get_upper_1d_box(n, method, mode, helpers):
     sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1]))
     sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
-    ibp = get_IBP(mode)
-    forward = get_FORWARD(mode)
-    backward_model = convert(sequential, method=method, ibp=ibp, forward=forward, mode=mode)
+    ibp = get_ibp(mode)
+    affine = get_affine(mode)
+    backward_model = convert(sequential, method=method, ibp=ibp, affine=affine, mode=mode)
 
     upper = get_upper_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
@@ -36,7 +36,7 @@ def test_get_upper_1d_box(n, method, mode, helpers):
 
 def test_get_lower_1d_box(n, method, mode, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
-        # skip method=ibp/crown-ibp with mode=forward/hybrid
+        # skip method=ibp/crown-ibp with mode=affine/hybrid
         return
 
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
@@ -47,9 +47,9 @@ def test_get_lower_1d_box(n, method, mode, helpers):
     sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1]))
     sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
-    ibp = get_IBP(mode)
-    forward = get_FORWARD(mode)
-    backward_model = convert(sequential, method=method, ibp=ibp, forward=forward, mode=mode)
+    ibp = get_ibp(mode)
+    affine = get_affine(mode)
+    backward_model = convert(sequential, method=method, ibp=ibp, affine=affine, mode=mode)
 
     lower = get_lower_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
@@ -63,7 +63,7 @@ def test_get_lower_1d_box(n, method, mode, helpers):
 
 def test_get_range_1d_box(n, method, mode, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
-        # skip method=ibp/crown-ibp with mode=forward/hybrid
+        # skip method=ibp/crown-ibp with mode=affine/hybrid
         return
 
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
@@ -74,9 +74,9 @@ def test_get_range_1d_box(n, method, mode, helpers):
     sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1]))
     sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
-    ibp = get_IBP(mode)
-    forward = get_FORWARD(mode)
-    backward_model = convert(sequential, method=method, ibp=ibp, forward=forward, mode=mode)
+    ibp = get_ibp(mode)
+    affine = get_affine(mode)
+    backward_model = convert(sequential, method=method, ibp=ibp, affine=affine, mode=mode)
 
     upper, lower = get_range_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
@@ -91,7 +91,7 @@ def test_get_range_1d_box(n, method, mode, helpers):
 
 def test_get_upper_multid_box(odd, method, mode, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
-        # skip method=ibp/crown-ibp with mode=forward/hybrid
+        # skip method=ibp/crown-ibp with mode=affine/hybrid
         return
 
     inputs_ = helpers.get_standard_values_multid_box_convert(odd, dc_decomp=False)
@@ -102,9 +102,9 @@ def test_get_upper_multid_box(odd, method, mode, helpers):
     sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1]))  #
     sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
-    ibp = get_IBP(mode)
-    forward = get_FORWARD(mode)
-    backward_model = convert(sequential, method=method, ibp=ibp, forward=forward)
+    ibp = get_ibp(mode)
+    affine = get_affine(mode)
+    backward_model = convert(sequential, method=method, ibp=ibp, affine=affine)
     upper = get_upper_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
 
@@ -113,7 +113,7 @@ def test_get_upper_multid_box(odd, method, mode, helpers):
 
 def test_get_lower_multid_box(odd, method, mode, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
-        # skip method=ibp/crown-ibp with mode=forward/hybrid
+        # skip method=ibp/crown-ibp with mode=affine/hybrid
         return
 
     inputs_ = helpers.get_standard_values_multid_box_convert(odd, dc_decomp=False)
@@ -124,9 +124,9 @@ def test_get_lower_multid_box(odd, method, mode, helpers):
     sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1]))  #
     sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
-    ibp = get_IBP(mode)
-    forward = get_FORWARD(mode)
-    backward_model = convert(sequential, method=method, ibp=ibp, forward=forward)
+    ibp = get_ibp(mode)
+    affine = get_affine(mode)
+    backward_model = convert(sequential, method=method, ibp=ibp, affine=affine)
     lower = get_lower_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
 
@@ -135,7 +135,7 @@ def test_get_lower_multid_box(odd, method, mode, helpers):
 
 def test_get_range_multid_box(odd, method, mode, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
-        # skip method=ibp/crown-ibp with mode=forward/hybrid
+        # skip method=ibp/crown-ibp with mode=affine/hybrid
         return
 
     inputs_ = helpers.get_standard_values_multid_box_convert(odd, dc_decomp=False)
@@ -146,9 +146,9 @@ def test_get_range_multid_box(odd, method, mode, helpers):
     sequential.add(Dense(1, activation="linear", input_dim=y.shape[-1]))  #
     sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
-    ibp = get_IBP(mode)
-    forward = get_FORWARD(mode)
-    backward_model = convert(sequential, method=method, ibp=ibp, forward=forward)
+    ibp = get_ibp(mode)
+    affine = get_affine(mode)
+    backward_model = convert(sequential, method=method, ibp=ibp, affine=affine)
     upper, lower = get_range_box(backward_model, z[:, 0], z[:, 1])
     y_ref = sequential.predict(y)
 

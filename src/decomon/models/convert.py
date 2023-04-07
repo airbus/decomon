@@ -29,7 +29,7 @@ def get_direction(method: Union[str, ConvertMethod]) -> FeedDirection:
         return FeedDirection.BACKWARD
 
 
-def get_ibp_forward_from_method(method: Union[str, ConvertMethod]) -> Tuple[bool, bool]:
+def get_ibp_affine_from_method(method: Union[str, ConvertMethod]) -> Tuple[bool, bool]:
     method = ConvertMethod(method)
     if method in [ConvertMethod.FORWARD_IBP, ConvertMethod.CROWN_FORWARD_IBP]:
         return True, False
@@ -42,9 +42,7 @@ def get_ibp_forward_from_method(method: Union[str, ConvertMethod]) -> Tuple[bool
     return True, True
 
 
-def switch_mode_mapping(
-    forward_map: OutputMapDict, IBP: bool, forward: bool, method: Union[str, ConvertMethod]
-) -> None:
+def switch_mode_mapping(forward_map: OutputMapDict, ibp: bool, affine: bool, method: Union[str, ConvertMethod]) -> None:
     raise NotImplementedError()
 
 
@@ -54,7 +52,7 @@ def convert(
     input_tensors: List[tf.Tensor],
     method: Union[str, ConvertMethod] = ConvertMethod.CROWN,
     ibp: bool = False,
-    forward: bool = False,
+    affine: bool = False,
     back_bounds: Optional[List[tf.Tensor]] = None,
     layer_fn: Callable[..., List[Layer]] = to_decomon,
     slope: Union[str, Slope] = Slope.V_SLOPE,
@@ -67,7 +65,7 @@ def convert(
     finetune_forward: bool = False,
     finetune_backward: bool = False,
     final_ibp: bool = False,
-    final_forward: bool = False,
+    final_affine: bool = False,
     **kwargs: Any,
 ) -> Tuple[List[tf.Tensor], List[tf.Tensor], Union[LayerMapDict, Dict[int, BackwardLayer]], Optional[OutputMapDict],]:
 
@@ -86,7 +84,7 @@ def convert(
 
     if method != ConvertMethod.CROWN:
 
-        ibp_, forward_ = ibp, forward
+        ibp_, affine_ = ibp, affine
 
         results = convert_forward(
             model=model,
@@ -96,8 +94,8 @@ def convert(
             input_dim=input_dim,
             dc_decomp=False,
             convex_domain=convex_domain,
-            IBP=ibp_,
-            forward=forward_,
+            ibp=ibp_,
+            affine=affine_,
             finetune=finetune_forward,
             shared=shared,
             softmax_to_linear=softmax_to_linear,
@@ -113,19 +111,19 @@ def convert(
             slope=slope,
             input_dim=input_dim,
             convex_domain=convex_domain,
-            IBP=ibp,
-            forward=forward,
+            ibp=ibp,
+            affine=affine,
             finetune=finetune_backward,
             forward_map=forward_map,
             final_ibp=final_ibp,
-            final_forward=final_forward,
+            final_affine=final_affine,
             **kwargs,
         )
     else:
 
-        # check final_ibp and final_forward
-        mode_from = get_mode(ibp, forward)
-        mode_to = get_mode(final_ibp, final_forward)
+        # check final_ibp and final_affine
+        mode_from = get_mode(ibp, affine)
+        mode_to = get_mode(final_ibp, final_affine)
         output = Convert2Mode(
             mode_from=mode_from, mode_to=mode_to, convex_domain=convex_domain, dtype=model.layers[0].dtype
         )(results[1])
@@ -147,6 +145,8 @@ def clone(
     finetune_backward: bool = False,
     extra_inputs: Optional[List[tf.Tensor]] = None,
     to_keras: bool = True,
+    final_ibp: Optional[bool] = None,
+    final_affine: Optional[bool] = None,
     **kwargs: Any,
 ) -> DecomonModel:
 
@@ -159,16 +159,11 @@ def clone(
     if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
 
-    ibp_, forward_ = get_ibp_forward_from_method(method)
-    if "final_ibp" not in kwargs:
+    ibp_, affine_ = get_ibp_affine_from_method(method)
+    if final_ibp is None:
         final_ibp = ibp_
-    else:
-        final_ibp = kwargs["final_ibp"]
-
-    if "final_forward" not in kwargs:
-        final_forward = forward_
-    else:
-        final_forward = kwargs["final_forward"]
+    if final_affine is None:
+        final_affine = affine_
 
     if isinstance(method, str):
         method = ConvertMethod(method.lower())
@@ -212,7 +207,7 @@ def clone(
             u_c_tensor = Lambda(lambda z: z[:, 1], dtype=z_tensor.dtype)(z_tensor)
             l_c_tensor = Lambda(lambda z: z[:, 0], dtype=z_tensor.dtype)(z_tensor)
 
-        if forward_:
+        if affine_:
             z_value = K.cast(0.0, z_tensor.dtype)
             o_value = K.cast(1.0, z_tensor.dtype)
             W = Lambda(lambda z: tf.linalg.diag(z_value * z[:, 0] + o_value), dtype=z_tensor.dtype)(z_tensor)
@@ -229,7 +224,7 @@ def clone(
                 l_c_tensor = Lambda(
                     lambda var: var - K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
                 )(z_tensor)
-            if forward_:
+            if affine_:
                 z_value = K.cast(0.0, model.layers[0].dtype)
                 o_value = K.cast(1.0, model.layers[0].dtype)
 
@@ -242,7 +237,7 @@ def clone(
 
             def get_bounds(z: tf.Tensor) -> List[tf.Tensor]:
                 output = []
-                if forward_:
+                if affine_:
                     W = tf.linalg.diag(z_value * z + o_value)
                     b = z_value * z
                     output += [W, b]
@@ -255,17 +250,17 @@ def clone(
             output_ = get_bounds(z_tensor)
             if ibp_:
                 u_c_tensor, l_c_tensor = output_[-2:]
-            if forward_:
+            if affine_:
                 W, b = output_[:2]
 
-    if ibp_ and forward_:
+    if ibp_ and affine_:
         input_tensors = [z_tensor] + [u_c_tensor, W, b] + [l_c_tensor, W, b]
-    elif ibp_ and not forward_:
+    elif ibp_ and not affine_:
         input_tensors = [u_c_tensor, l_c_tensor]
-    elif not ibp_ and forward_:
+    elif not ibp_ and affine_:
         input_tensors = [z_tensor] + [W, b] + [W, b]
     else:
-        raise NotImplementedError("not IBP and not forward not implemented")
+        raise NotImplementedError("not ibp and not affine not implemented")
 
     _, output, _, _ = convert(
         model,
@@ -275,7 +270,7 @@ def clone(
         back_bounds=back_bounds,
         method=method,
         ibp=ibp_,
-        forward=forward_,
+        affine=affine_,
         input_dim=-1,
         convex_domain=convex_domain,
         finetune=finetune,
@@ -286,7 +281,7 @@ def clone(
         finetune_forward=finetune_forward,
         finetune_backward=finetune_backward,
         final_ibp=final_ibp,
-        final_forward=final_forward,
+        final_affine=final_affine,
     )
 
     back_bounds_ = []
@@ -300,8 +295,8 @@ def clone(
         convex_domain=convex_domain,
         dc_decomp=False,
         method=method,
-        IBP=final_ibp,
-        forward=final_forward,
+        ibp=final_ibp,
+        affine=final_affine,
         finetune=finetune,
         shared=shared,
         backward_bounds=(len(back_bounds) > 0),

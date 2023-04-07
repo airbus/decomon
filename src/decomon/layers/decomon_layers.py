@@ -1653,8 +1653,8 @@ def to_decomon(
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     finetune: bool = False,
-    IBP: bool = True,
-    forward: bool = True,
+    ibp: bool = True,
+    affine: bool = True,
     shared: bool = True,
     fast: bool = True,
 ) -> List[DecomonLayer]:
@@ -1671,8 +1671,8 @@ def to_decomon(
         dc_decomp: boolean that indicates whether we return a difference
             of convex decomposition of our layer
         convex_domain: the type of convex domain
-        IBP: boolean that indicates whether we propagate constant bounds
-        forward: boolean that indicates whether we propagate affine
+        ibp: boolean that indicates whether we propagate constant bounds
+        affine: boolean that indicates whether we propagate affine
             bounds
 
     Returns:
@@ -1693,7 +1693,7 @@ def to_decomon(
             raise ValueError(f"the layer {layer.name} has not been built yet")
 
     if isinstance(layer, Merge):
-        return to_decomon_merge(layer, input_dim, dc_decomp, convex_domain, finetune, IBP, forward)
+        return to_decomon_merge(layer, input_dim, dc_decomp, convex_domain, finetune, ibp, affine)
 
     # do case by case for optimizing
 
@@ -1711,9 +1711,9 @@ def to_decomon(
             config_layer["convex_domain"] = convex_domain
 
             mode = ForwardMode.HYBRID
-            if IBP and not forward:
+            if ibp and not affine:
                 mode = ForwardMode.IBP
-            if not IBP and forward:
+            if not ibp and affine:
                 mode = ForwardMode.AFFINE
 
             config_layer["mode"] = mode
@@ -1753,8 +1753,8 @@ def to_decomon(
                         dc_decomp=dc_decomp,
                         convex_domain=convex_domain,
                         finetune=finetune,
-                        IBP=IBP,
-                        forward=forward,
+                        ibp=ibp,
+                        affine=affine,
                         shared=shared,
                         fast=fast,
                     )
