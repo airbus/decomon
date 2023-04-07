@@ -134,38 +134,38 @@ class Helpers:
             h_ = np.linspace(-2, -1, nb)
             g_ = np.zeros_like(x_)
 
-        if n == 1:
+        elif n == 1:
             y_ = np.linspace(1, 2, nb)
             x_ = np.linspace(1, 2, nb)
             h_ = np.linspace(1, 2, nb)
             g_ = np.zeros_like(x_)
 
-        if n == 2:
+        elif n == 2:
             y_ = np.linspace(-1, 1, nb)
             x_ = np.linspace(-1, 1, nb)
             h_ = np.linspace(-1, 1, nb)
             g_ = np.zeros_like(x_)
 
-        if n == 3:
+        elif n == 3:
             # identity
             y_ = np.linspace(-2, -1, nb)
             x_ = np.linspace(-2, -1, nb)
             h_ = 2 * np.linspace(-2, -1, nb)
             g_ = -np.linspace(-2, -1, nb)
 
-        if n == 4:
+        elif n == 4:
             y_ = np.linspace(1, 2, nb)
             x_ = np.linspace(1, 2, nb)
             h_ = 2 * np.linspace(1, 2, nb)
             g_ = -np.linspace(1, 2, nb)
 
-        if n == 5:
+        elif n == 5:
             y_ = np.linspace(-1, 1, nb)
             x_ = np.linspace(-1, 1, nb)
             h_ = 2 * np.linspace(-1, 1, nb)
             g_ = -np.linspace(-1, 1, nb)
 
-        if n == 6:
+        elif n == 6:
 
             assert nb == 100, "expected nb=100 samples"
             # cosine function
@@ -178,14 +178,14 @@ class Helpers:
             b_u_ = np.ones_like(x_)
             b_l_ = -np.ones_like(x_)
 
-        if n == 7:
+        elif n == 7:
             # h and g >0
             h_ = np.linspace(0.5, 2, nb)
             g_ = np.linspace(1, 2, nb)[::-1]
             x_ = h_ + g_
             y_ = h_ + g_
 
-        if n == 8:
+        elif n == 8:
             # h <0 and g <0
             # h_max+g_max <=0
             h_ = np.linspace(-2, -1, nb)
@@ -193,13 +193,16 @@ class Helpers:
             y_ = h_ + g_
             x_ = h_ + g_
 
-        if n == 9:
+        elif n == 9:
             # h >0 and g <0
             # h_min+g_min >=0
             h_ = np.linspace(4, 5, nb)
             g_ = np.linspace(-2, -1, nb)[::-1]
             y_ = h_ + g_
             x_ = h_ + g_
+
+        else:
+            raise ValueError("n must be between 0 and 9.")
 
         x_min_ = x_.min() + np.zeros_like(x_)
         x_max_ = x_.max() + np.zeros_like(x_)
