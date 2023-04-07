@@ -57,7 +57,7 @@ def test_with_lirpa(path, onnx_filename, method, eps, N):
     onnx_model = onnx.load(onnx_filename)
     k_model = onnx_to_keras(onnx_model, ["0"])
 
-    decomon_model = convert(k_model, method=equ_method[method], ibp=True, affine=False)
+    decomon_model = convert(k_model, method=equ_method[method], final_ibp=True, final_affine=False)
 
     image_ = image.detach().numpy()
     box = np.concatenate([image_[:, None] - eps, image_[:, None] + eps], 1)
