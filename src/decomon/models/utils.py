@@ -6,6 +6,7 @@ import tensorflow as tf
 import tensorflow.python.keras.backend as K
 from keras.engine.node import Node
 from tensorflow.keras.layers import (
+    Activation,
     Concatenate,
     Flatten,
     Input,
@@ -55,6 +56,35 @@ def get_input_dim(model: Model) -> int:
         return np.prod(model.input_shape[0][1:])
     else:
         return np.prod(model.input_shape[1:])
+
+
+def split_activation(layer: Layer) -> List[Layer]:
+    config = layer.get_config()
+    activation = config.pop("activation", None)
+    if activation is None or activation == "linear" or isinstance(layer, Activation):
+        return [layer]
+    else:
+        # layer without activation
+        config["name"] = f"{layer.name}_wo_activation"
+        layer_wo_activation = layer.__class__.from_config(config)
+        # build the layer
+        if not hasattr(layer, "input_shape"):
+            raise RuntimeError("The layer should properly initialized so that layer.input_shape is defined.")
+        inputs = Input(layer.input_shape, dtype=layer.dtype)
+        outputs = layer_wo_activation(inputs)
+        # use same weights
+        layer_wo_activation.set_weights(layer.get_weights())
+        # even share the object themselves if possible
+        # (dense and conv2d have kernel and bias weight attributes)
+        if hasattr(layer_wo_activation, "kernel"):
+            layer_wo_activation.kernel = layer.kernel
+        if hasattr(layer_wo_activation, "bias"):
+            layer_wo_activation.bias = layer.bias
+        # activation layer
+        activation_layer = Activation(activation=activation, dtype=layer.dtype, name=f"{layer.name}_activation")
+        # build activation layer
+        activation_layer(outputs)
+        return [layer_wo_activation, activation_layer]
 
 
 def check_input_tensors_sequential(
