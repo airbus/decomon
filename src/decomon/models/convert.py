@@ -13,7 +13,13 @@ from decomon.layers.decomon_layers import to_decomon
 from decomon.models.backward_cloning import convert_backward
 from decomon.models.forward_cloning import LayerMapDict, OutputMapDict, convert_forward
 from decomon.models.models import DecomonModel
-from decomon.models.utils import ConvertMethod, get_mode
+from decomon.models.utils import (
+    ConvertMethod,
+    get_input_dim,
+    get_input_tensors_keras_only,
+    get_mode,
+    split_activation,
+)
 from decomon.utils import ConvexDomainType, Slope, get_lower, get_upper
 
 
@@ -44,6 +50,38 @@ def get_ibp_affine_from_method(method: Union[str, ConvertMethod]) -> Tuple[bool,
 
 def switch_mode_mapping(forward_map: OutputMapDict, ibp: bool, affine: bool, method: Union[str, ConvertMethod]) -> None:
     raise NotImplementedError()
+
+
+def split_activations_in_keras_model(
+    model: Model,
+    input_shape: Optional[Tuple[int, ...]] = None,
+    input_tensors: Optional[List[tf.Tensor]] = None,
+) -> Model:
+    if input_shape is None:
+        try:
+            model_input_shape = model.input_shape
+        except:
+            raise ValueError("model.input_shape must be defined if input_shape argument is None")
+        else:
+            input_shape = model_input_shape[1:]
+
+    if input_tensors is None:
+        input_tensors = get_input_tensors_keras_only(
+            model=model,
+            input_shape=input_shape,
+        )
+
+    _, output, _, _ = convert_forward(
+        model=model,
+        input_tensors=input_tensors,
+        softmax_to_linear=False,
+        layer_fn=split_activation,
+    )
+
+    return Model(
+        inputs=input_tensors,
+        outputs=output,
+    )
 
 
 # create status
@@ -79,6 +117,9 @@ def convert(
 
     if isinstance(method, str):
         method = ConvertMethod(method.lower())
+
+    # prepare the Keras Model: split non-linear activation functions into separate Activation layers
+    model = split_activations_in_keras_model(model)
 
     layer_map: Union[LayerMapDict, Dict[int, BackwardLayer]]
 
