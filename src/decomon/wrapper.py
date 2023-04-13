@@ -4,7 +4,7 @@ import numpy as np
 import numpy.typing as npt
 import tensorflow as tf
 
-from decomon.models.convert import clone as convert
+from decomon.models.convert import clone
 from decomon.models.models import DecomonModel
 from decomon.models.utils import ConvertMethod
 from decomon.utils import ConvexDomainType
@@ -70,7 +70,7 @@ def get_adv_box(
     # check that the model is a DecomonModel, else do the conversion
     model_: DecomonModel
     if not isinstance(model, DecomonModel):
-        model_ = convert(model)
+        model_ = clone(model)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
             ConvexDomainType.BOX,
@@ -285,7 +285,7 @@ def check_adv_box(
 
     # check that the model is a DecomonModel, else do the conversion
     if not isinstance(model, DecomonModel):
-        model_ = convert(model)
+        model_ = clone(model)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
             ConvexDomainType.BOX,
@@ -481,7 +481,7 @@ def get_range_box(
 
     # check that the model is a DecomonModel, else do the conversion
     if not (isinstance(model, DecomonModel)):
-        model_ = convert(model)
+        model_ = clone(model)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
             ConvexDomainType.BOX,
@@ -666,7 +666,7 @@ def get_range_noise(
     convex_domain = {"name": ConvexDomainType.BALL, "p": p, "eps": max(0, eps)}
 
     if not isinstance(model, DecomonModel):
-        model_ = convert(
+        model_ = clone(
             model,
             method=ConvertMethod.CROWN_FORWARD_HYBRID,
             convex_domain=convex_domain,
@@ -817,7 +817,7 @@ def refine_box(
 
     # check that the model is a DecomonModel, else do the conversion
     if not isinstance(model, DecomonModel):
-        model_ = convert(model)
+        model_ = clone(model)
     else:
         assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
             ConvexDomainType.BOX,
@@ -944,7 +944,7 @@ def get_adv_noise(
 
     # check that the model is a DecomonModel, else do the conversion
     if not isinstance(model, DecomonModel):
-        model_ = convert(model, convex_domain=convex_domain)
+        model_ = clone(model, convex_domain=convex_domain)
     else:
         model_ = model
         if eps >= 0:
