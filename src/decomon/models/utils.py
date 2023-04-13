@@ -51,6 +51,16 @@ def get_input_tensors(
     return input_tensors
 
 
+def get_input_tensors_keras_only(
+    model: Model,
+    input_shape: Tuple[int, ...],
+) -> List[tf.Tensor]:
+    input_tensors = []
+    for i in range(len(model._input_layers)):
+        input_tensors.append(Input(input_shape, dtype=model.layers[0].dtype))
+    return input_tensors
+
+
 def get_input_dim(model: Model) -> int:
     if isinstance(model.input_shape, list):
         return np.prod(model.input_shape[0][1:])
