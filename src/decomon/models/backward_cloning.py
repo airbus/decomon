@@ -27,6 +27,8 @@ from decomon.models.forward_cloning import OutputMapDict
 from decomon.models.utils import (
     check_input_tensors_sequential,
     get_depth_dict,
+    get_input_dim,
+    get_input_tensors,
     get_mode,
 )
 from decomon.utils import Slope, get_lower, get_upper
@@ -324,17 +326,16 @@ def crown_model(
         model, has_softmax = softmax_2_linear(model)  # do better because you modify the model eventually
 
     if input_dim == -1:
-        if isinstance(model.input_shape, list):
-            input_dim = np.prod(model.input_shape[0][1:])
-        else:
-            input_dim = np.prod(model.input_shape[1:])
-    if input_tensors is None:
-        # check that the model has one input else
-        input_tensors = []
-        for i in range(len(model._input_layers)):
+        input_dim = get_input_dim(model)
 
-            tmp = check_input_tensors_sequential(model, None, input_dim, input_dim, ibp, affine, False, convex_domain)
-            input_tensors += tmp
+    if input_tensors is None:
+        input_tensors = get_input_tensors(
+            model=model,
+            input_dim=input_dim,
+            convex_domain=convex_domain,
+            ibp=ibp,
+            affine=affine,
+        )
 
     # layer_fn
     ##########

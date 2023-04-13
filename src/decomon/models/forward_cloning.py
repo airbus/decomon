@@ -20,6 +20,8 @@ from decomon.models.utils import (
     check_input_tensors_sequential,
     get_depth_dict,
     get_inner_layers,
+    get_input_dim,
+    get_input_tensors,
 )
 from decomon.utils import Slope
 
@@ -147,23 +149,18 @@ def convert_forward_functional_model(
     if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
 
-    input_dim_init: int
+    input_dim_init = input_dim
     if input_dim == -1:
-        input_dim_init = -1
-        if isinstance(model.input_shape, list):
-            input_dim = np.prod(model.input_shape[0][1:])
-        else:
-            input_dim = np.prod(model.input_shape[1:])
-    else:
-        input_dim_init = input_dim
+        input_dim = get_input_dim(model)
 
     if input_tensors is None:
-        # check that the model has one input else
-        input_tensors = []
-        for i in range(len(model._input_layers)):
-
-            tmp = check_input_tensors_sequential(model, None, input_dim, input_dim, ibp, affine, False, convex_domain)
-            input_tensors += tmp
+        input_tensors = get_input_tensors(
+            model=model,
+            input_dim=input_dim,
+            convex_domain=convex_domain,
+            ibp=ibp,
+            affine=affine,
+        )
 
     if softmax_to_linear:
         model, has_softmax = softmax_2_linear(model)

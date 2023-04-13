@@ -36,6 +36,27 @@ class ConvertMethod(Enum):
     FORWARD_HYBRID = "forward-hybrid"
 
 
+def get_input_tensors(
+    model: Model,
+    input_dim: int,
+    convex_domain: Optional[Dict[str, Any]] = None,
+    ibp: bool = True,
+    affine: bool = True,
+) -> List[tf.Tensor]:
+    input_tensors = []
+    for i in range(len(model._input_layers)):
+        tmp = check_input_tensors_sequential(model, None, input_dim, input_dim, ibp, affine, False, convex_domain)
+        input_tensors += tmp
+    return input_tensors
+
+
+def get_input_dim(model: Model) -> int:
+    if isinstance(model.input_shape, list):
+        return np.prod(model.input_shape[0][1:])
+    else:
+        return np.prod(model.input_shape[1:])
+
+
 def check_input_tensors_sequential(
     model: Model,
     input_tensors: Optional[List[tf.Tensor]],
