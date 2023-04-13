@@ -9,7 +9,7 @@ from numpy.testing import assert_almost_equal
 from onnx2keras import onnx_to_keras
 from onnx2torch import convert
 
-from decomon.models.convert import clone as convert
+from decomon.models.convert import clone
 from decomon.models.utils import ConvertMethod
 
 
@@ -34,7 +34,7 @@ def test_with_lirpa(path, onnx_filename, method, eps, N):
 
     # use use onnx2torch to load the network in torch
     onnx_model = onnx.load(onnx_filename)
-    torch_model = convert(onnx_model)
+    torch_model = clone(onnx_model)
 
     ## Step 2: Prepare dataset as usual
     test_data = torchvision.datasets.MNIST(
@@ -57,7 +57,7 @@ def test_with_lirpa(path, onnx_filename, method, eps, N):
     onnx_model = onnx.load(onnx_filename)
     k_model = onnx_to_keras(onnx_model, ["0"])
 
-    decomon_model = convert(k_model, method=equ_method[method], final_ibp=True, final_affine=False)
+    decomon_model = clone(k_model, method=equ_method[method], final_ibp=True, final_affine=False)
 
     image_ = image.detach().numpy()
     box = np.concatenate([image_[:, None] - eps, image_[:, None] + eps], 1)
