@@ -58,8 +58,10 @@ def include_dim_layer_fn(
     """
     if convex_domain is None:
         convex_domain = {}
+
+    layer_fn_copy = deepcopy(layer_fn)
+
     if "input_dim" in inspect.signature(layer_fn).parameters:
-        layer_fn_copy = deepcopy(layer_fn)
 
         def func(layer: Layer) -> List[DecomonLayer]:
             return layer_fn_copy(
@@ -74,16 +76,12 @@ def include_dim_layer_fn(
                 shared=shared,
             )
 
-        layer_fn = func
-
     else:
 
         def func(layer: Layer) -> List[DecomonLayer]:
-            return layer_fn(layer)
+            return layer_fn_copy(layer)
 
-        layer_fn = func
-
-    return layer_fn
+    return func
 
 
 def convert_forward(
