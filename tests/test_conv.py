@@ -162,7 +162,7 @@ def test_Decomon_conv_to_monotonic_box(shared, floatx, helpers):
         K.set_epsilon(1e-2)
         decimal = 1
 
-    conv_ref = Conv2D(10, kernel_size=(3, 3), activation="relu", dtype=K.floatx())
+    conv_ref = Conv2D(10, kernel_size=(3, 3), dtype=K.floatx())
     inputs = helpers.get_tensor_decomposition_images_box(data_format, odd)
     inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
@@ -208,7 +208,7 @@ def test_Decomon_conv_to_monotonic_box_nodc(helpers):
     data_format = "channels_last"
     odd, m_0, m_1 = 0, 0, 1
 
-    conv_ref = Conv2D(10, kernel_size=(3, 3), activation="relu")
+    conv_ref = Conv2D(10, kernel_size=(3, 3))
     inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)
     inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_

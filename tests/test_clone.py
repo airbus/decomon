@@ -90,7 +90,7 @@ def test_convert_1D_forward_slope(slope, helpers):
 
     # check slope of activation layers
     for layer in f_dense.layers:
-        if layer.__class__.__name__.lower().endswith("activation"):
+        if layer.__class__.__name__.endswith("Activation"):
             assert layer.slope == Slope(slope)
 
 
@@ -113,6 +113,4 @@ def test_convert_1D_backward_slope(slope, helpers):
     for layer in f_dense.layers:
         layer_class_name = layer.__class__.__name__
         if layer_class_name.endswith("Activation"):
-            assert layer.slope == Slope(slope)
-        if layer_class_name in ("BackwardDense", "BackwardConv2D"):
             assert layer.slope == Slope(slope)
