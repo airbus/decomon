@@ -2,8 +2,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Flatten
-from tensorflow.python.keras import backend as K
 
 from decomon.layers.core import ForwardMode, StaticVariables
 from decomon.layers.utils import sort

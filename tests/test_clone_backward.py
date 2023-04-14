@@ -2,7 +2,7 @@
 
 
 import pytest
-import tensorflow.python.keras.backend as K
+import tensorflow.keras.backend as K
 
 from decomon.layers.core import ForwardMode
 from decomon.models.backward_cloning import convert_backward

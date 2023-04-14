@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
-import tensorflow.python.keras.backend as K
+import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Input, InputLayer, Lambda, Layer
 from tensorflow.keras.models import Model
 

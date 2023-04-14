@@ -3,7 +3,7 @@
 
 import numpy as np
 import pytest
-import tensorflow.python.keras.backend as K
+import tensorflow.keras.backend as K
 from tensorflow.keras.layers import (
     Add,
     Average,

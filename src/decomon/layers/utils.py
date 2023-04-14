@@ -3,9 +3,9 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras as keras
+from tensorflow.keras import backend as K
 from tensorflow.keras.constraints import Constraint
 from tensorflow.keras.initializers import Initializer
-from tensorflow.python.keras import backend as K
 
 from decomon.layers.core import ForwardMode, StaticVariables
 from decomon.utils import (

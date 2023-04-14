@@ -3,9 +3,10 @@
 
 import numpy as np
 import pytest
-import tensorflow.python.keras.backend as K
+import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Input
 from tensorflow.keras.models import Model
+from tensorflow.python.keras.backend import _get_available_gpus
 
 from decomon.backward_layers.backward_layers import to_backward
 from decomon.layers.core import ForwardMode
@@ -186,7 +187,7 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, helpers):
 
 def test_Backward_Flatten_multiD_box(odd, floatx, mode, data_format, helpers):
 
-    if data_format == "channels_first" and not len(K._get_available_gpus()):
+    if data_format == "channels_first" and not len(_get_available_gpus()):
         return
 
     K.set_floatx("float{}".format(floatx))
@@ -250,7 +251,7 @@ def test_Backward_Flatten_multiD_box(odd, floatx, mode, data_format, helpers):
 
 
 def test_Backward_Reshape_multiD_box(odd, floatx, mode, data_format, helpers):
-    if data_format == "channels_first" and not len(K._get_available_gpus()):
+    if data_format == "channels_first" and not len(_get_available_gpus()):
         return
 
     K.set_floatx("float{}".format(floatx))
