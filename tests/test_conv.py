@@ -3,8 +3,9 @@
 
 import numpy as np
 import pytest
-import tensorflow.python.keras.backend as K
+import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Conv2D
+from tensorflow.python.keras.backend import _get_available_gpus
 
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonConv2D, to_decomon
@@ -12,7 +13,7 @@ from decomon.layers.decomon_layers import DecomonConv2D, to_decomon
 
 def test_Decomon_conv_box(data_format, mode, floatx, helpers):
 
-    if data_format == "channels_first" and not len(K._get_available_gpus()):
+    if data_format == "channels_first" and not len(_get_available_gpus()):
         return
 
     odd, m_0, m_1 = 0, 0, 1
@@ -112,7 +113,7 @@ def test_Decomon_conv_box(data_format, mode, floatx, helpers):
 
 def test_Decomon_conv_box_nodc(data_format, floatx, helpers):
 
-    if data_format == "channels_first" and not len(K._get_available_gpus()):
+    if data_format == "channels_first" and not len(_get_available_gpus()):
         return
 
     odd, m_0, m_1 = 0, 0, 1

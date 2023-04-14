@@ -3,9 +3,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Lambda, Layer
 from tensorflow.math import greater_equal
-from tensorflow.python.keras import backend as K
 from tensorflow.types.experimental import TensorLike
 
 from decomon.layers.core import ForwardMode, StaticVariables

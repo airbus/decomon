@@ -3,7 +3,7 @@
 
 import numpy as np
 import pytest
-import tensorflow.python.keras.backend as K
+import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Input
 
 from decomon.backward_layers.utils import (
