@@ -86,7 +86,7 @@ def convert(
 
         ibp_, affine_ = ibp, affine
 
-        results = convert_forward(
+        input_tensors, output, layer_map, forward_map = convert_forward(
             model=model,
             input_tensors=input_tensors,
             layer_fn=layer_fn,
@@ -101,7 +101,6 @@ def convert(
             softmax_to_linear=softmax_to_linear,
             back_bounds=back_bounds,
         )
-        input_tensors, _, layer_map, forward_map = results
 
     if get_direction(method) == FeedDirection.BACKWARD:
         input_tensors, output, layer_map, forward_map = convert_backward(
@@ -126,7 +125,7 @@ def convert(
         mode_to = get_mode(final_ibp, final_affine)
         output = Convert2Mode(
             mode_from=mode_from, mode_to=mode_to, convex_domain=convex_domain, dtype=model.layers[0].dtype
-        )(results[1])
+        )(output)
 
     # build decomon model
     return input_tensors, output, layer_map, forward_map
