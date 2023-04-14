@@ -1543,7 +1543,7 @@ def to_decomon(
 ) -> List[DecomonLayer]:
     """Transform a standard keras layer into a Decomon layer.
 
-    Type of layer is tested to know how to transform it into a MonotonicLayer of the good type.
+    Type of layer is tested to know how to transform it into a DecomonLayer of the good type.
     If type is not treated yet, raises an TypeError
 
     Args:
@@ -1587,9 +1587,9 @@ def to_decomon(
             raise KeyError(f"unknown class {class_name}")
         try:
 
-            monotonic_class_name = f"Decomon{class_name}"
+            decomon_class_name = f"Decomon{class_name}"
             config_layer = layer.get_config()
-            config_layer["name"] = layer.name + "_monotonic"
+            config_layer["name"] = layer.name + "_decomon"
             config_layer["dc_decomp"] = dc_decomp
             config_layer["convex_domain"] = convex_domain
 
@@ -1613,9 +1613,9 @@ def to_decomon(
                 if not (activation is None) and not isinstance(layer, Activation):
                     config_layer["activation"] = "linear"
 
-            layer_monotonic = globals()[monotonic_class_name].from_config(config_layer)
-            layer_monotonic.share_weights(layer)
-            layer_list.append(layer_monotonic)
+            layer_decomon = globals()[decomon_class_name].from_config(config_layer)
+            layer_decomon.share_weights(layer)
+            layer_list.append(layer_decomon)
             if not activation is None and not isinstance(layer, Activation) and not isinstance(activation, dict):
                 layer_next = DecomonActivation(
                     activation,
@@ -1679,9 +1679,5 @@ def to_decomon(
     except:
         pass
 
-    # return layer_monotonic
+    # return layer_decomon
     return layer_list
-
-
-# Aliases
-MonotonicConvolution2D = DecomonConv2D

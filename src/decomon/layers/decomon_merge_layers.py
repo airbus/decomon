@@ -626,7 +626,7 @@ def to_decomon_merge(
 ) -> List[DecomonLayer]:
     """Transform a standard Merge layer into a Decomon layer.
 
-    Type of layer is tested to know how to transform it into a MonotonicLayer of the good type.
+    Type of layer is tested to know how to transform it into a DecomonLayer of the good type.
     If type is not treated yet, raises an TypeError
 
     Args:
@@ -653,9 +653,9 @@ def to_decomon_merge(
         if not layer.built:
             raise ValueError(f"the layer {layer.name} has not been built yet")
 
-    monotonic_class_name = f"Decomon{class_name}"
+    decomon_class_name = f"Decomon{class_name}"
     config_layer = layer.get_config()
-    config_layer["name"] = layer.name + "_monotonic"
+    config_layer["name"] = layer.name + "_decomon"
     config_layer["dc_decomp"] = dc_decomp
     config_layer["convex_domain"] = convex_domain
 
@@ -668,7 +668,7 @@ def to_decomon_merge(
     config_layer["mode"] = mode
     config_layer["finetune"] = finetune
 
-    layer_monotonic = globals()[monotonic_class_name].from_config(config_layer)
+    layer_decomon = globals()[decomon_class_name].from_config(config_layer)
 
     input_shape_list = []
     for input_shape in layer.input_shape:
@@ -701,7 +701,7 @@ def to_decomon_merge(
     for i in range(n_input):
         input_list += input_[i]
 
-    layer_monotonic(input_list)
-    layer_monotonic.reset_layer(layer)
+    layer_decomon(input_list)
+    layer_decomon.reset_layer(layer)
 
-    return [layer_monotonic]
+    return [layer_decomon]

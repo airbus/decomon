@@ -25,7 +25,7 @@ def test_Decomon_conv_box(data_format, mode, floatx, helpers):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    monotonic_layer = DecomonConv2D(
+    decomon_layer = DecomonConv2D(
         10, kernel_size=(3, 3), dc_decomp=True, mode=mode, data_format=data_format, dtype=K.floatx()
     )
 
@@ -37,16 +37,16 @@ def test_Decomon_conv_box(data_format, mode, floatx, helpers):
 
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
-        output = monotonic_layer(inputs[2:])
+        output = decomon_layer(inputs[2:])
     elif mode == ForwardMode.AFFINE:
-        output = monotonic_layer([z, W_u, b_u, W_l, b_l, h, g])
+        output = decomon_layer([z, W_u, b_u, W_l, b_l, h, g])
     elif mode == ForwardMode.IBP:
-        output = monotonic_layer([u_c, l_c, h, g])
+        output = decomon_layer([u_c, l_c, h, g])
     else:
         raise ValueError("Unknown mode.")
 
-    W_, bias = monotonic_layer.get_weights()
-    monotonic_layer.set_weights([np.maximum(0.0, W_), bias])
+    W_, bias = decomon_layer.get_weights()
+    decomon_layer.set_weights([np.maximum(0.0, W_), bias])
     f_conv = K.function(inputs[2:], output)
     if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_conv(inputs_[2:])
@@ -76,7 +76,7 @@ def test_Decomon_conv_box(data_format, mode, floatx, helpers):
         "conv_{}_{}_{}_{}".format(data_format, odd, m_0, m_1),
         decimal=decimal,
     )
-    monotonic_layer.set_weights([np.minimum(0.0, W_), bias])
+    decomon_layer.set_weights([np.minimum(0.0, W_), bias])
 
     if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_conv(inputs_[2:])
@@ -125,23 +125,23 @@ def test_Decomon_conv_box_nodc(data_format, floatx, helpers):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    monotonic_layer = DecomonConv2D(10, kernel_size=(3, 3), dc_decomp=False, dtype=K.floatx())
+    decomon_layer = DecomonConv2D(10, kernel_size=(3, 3), dc_decomp=False, dtype=K.floatx())
 
     inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)
     inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
-    output = monotonic_layer(inputs[2:])
+    output = decomon_layer(inputs[2:])
 
-    W_, bias = monotonic_layer.get_weights()
-    monotonic_layer.set_weights([np.maximum(0.0, W_), bias])
+    W_, bias = decomon_layer.get_weights()
+    decomon_layer.set_weights([np.maximum(0.0, W_), bias])
     f_conv = K.function(inputs[2:], output)
 
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_conv(inputs_[2:])
     helpers.assert_output_properties_box_linear(
         x, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc", decimal=decimal
     )
-    monotonic_layer.set_weights([np.minimum(0.0, W_), bias])
+    decomon_layer.set_weights([np.minimum(0.0, W_), bias])
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_conv(inputs_[2:])
     helpers.assert_output_properties_box_linear(
         x, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc", decimal=decimal
@@ -151,7 +151,7 @@ def test_Decomon_conv_box_nodc(data_format, floatx, helpers):
     K.set_epsilon(eps)
 
 
-def test_Decomon_conv_to_monotonic_box(shared, floatx, helpers):
+def test_Decomon_conv_to_decomon_box(shared, floatx, helpers):
     data_format = "channels_last"
     odd, m_0, m_1 = 0, 0, 1
 
@@ -170,11 +170,11 @@ def test_Decomon_conv_to_monotonic_box(shared, floatx, helpers):
     output_ref = conv_ref(inputs[1])
 
     input_dim = x.shape[-1]
-    monotonic_layer = to_decomon(conv_ref, input_dim, dc_decomp=True, shared=shared)
+    decomon_layer = to_decomon(conv_ref, input_dim, dc_decomp=True, shared=shared)
 
-    output = monotonic_layer[0](inputs[2:])
-    if len(monotonic_layer) > 1:
-        output = monotonic_layer[1](output)
+    output = decomon_layer[0](inputs[2:])
+    if len(decomon_layer) > 1:
+        output = decomon_layer[1](output)
 
     f_ref = K.function(inputs, output_ref)
 
@@ -204,7 +204,7 @@ def test_Decomon_conv_to_monotonic_box(shared, floatx, helpers):
     K.set_epsilon(eps)
 
 
-def test_Decomon_conv_to_monotonic_box_nodc(helpers):
+def test_Decomon_conv_to_decomon_box_nodc(helpers):
     data_format = "channels_last"
     odd, m_0, m_1 = 0, 0, 1
 
@@ -216,11 +216,11 @@ def test_Decomon_conv_to_monotonic_box_nodc(helpers):
     output_ref = conv_ref(inputs[1])
 
     input_dim = x.shape[-1]
-    monotonic_layer = to_decomon(conv_ref, input_dim, dc_decomp=False)
+    decomon_layer = to_decomon(conv_ref, input_dim, dc_decomp=False)
 
-    output = monotonic_layer[0](inputs[2:])
-    if len(monotonic_layer) > 1:
-        output = monotonic_layer[1](output)
+    output = decomon_layer[0](inputs[2:])
+    if len(decomon_layer) > 1:
+        output = decomon_layer[1](output)
 
     f_ref = K.function(inputs, output_ref)
 

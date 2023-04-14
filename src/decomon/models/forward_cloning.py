@@ -1,4 +1,4 @@
-"""Module for MonotonicSequential.
+"""Module for DecomonSequential.
 
 It inherits from keras Sequential class.
 

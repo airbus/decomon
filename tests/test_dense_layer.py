@@ -20,7 +20,7 @@ def test_DecomonDense_1D_box(n, mode, shared, floatx, helpers):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    monotonic_dense = DecomonDense(1, use_bias=True, dc_decomp=True, mode=mode, shared=shared, dtype=K.floatx())
+    decomon_dense = DecomonDense(1, use_bias=True, dc_decomp=True, mode=mode, shared=shared, dtype=K.floatx())
 
     ref_dense = Dense(1, use_bias=True, dtype=K.floatx())
 
@@ -31,21 +31,21 @@ def test_DecomonDense_1D_box(n, mode, shared, floatx, helpers):
     z_ = inputs_[2]
 
     ref_dense(inputs[1])
-    monotonic_dense.share_weights(ref_dense)
+    decomon_dense.share_weights(ref_dense)
 
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
-        output = monotonic_dense(inputs[2:])
+        output = decomon_dense(inputs[2:])
     elif mode == ForwardMode.AFFINE:
-        output = monotonic_dense([z, W_u, b_u, W_l, b_l, h, g])
+        output = decomon_dense([z, W_u, b_u, W_l, b_l, h, g])
     elif mode == ForwardMode.IBP:
-        output = monotonic_dense([u_c, l_c, h, g])
+        output = decomon_dense([u_c, l_c, h, g])
     else:
         raise ValueError("Unknown mode.")
 
-    W_, bias = monotonic_dense.get_weights()
+    W_, bias = decomon_dense.get_weights()
     if not shared:
-        monotonic_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
+        decomon_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
     ref_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
 
     f_dense = K.function(inputs[2:], output)
@@ -114,7 +114,7 @@ def test_DecomonDense_1D_box(n, mode, shared, floatx, helpers):
         raise ValueError("Unknown mode.")
 
     if not shared:
-        monotonic_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
+        decomon_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
     ref_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
     y_ref = f_ref(inputs_)
     if mode == ForwardMode.HYBRID:
@@ -184,7 +184,7 @@ def test_DecomonDense_1D_box(n, mode, shared, floatx, helpers):
 
 def test_DecomonDense_multiD_box(odd, mode, helpers):
 
-    monotonic_dense = DecomonDense(1, use_bias=True, dc_decomp=True, mode=mode, dtype=K.floatx())
+    decomon_dense = DecomonDense(1, use_bias=True, dc_decomp=True, mode=mode, dtype=K.floatx())
     ref_dense = Dense(1, use_bias=True, dtype=K.floatx())
 
     inputs = helpers.get_tensor_decomposition_multid_box(odd)
@@ -194,19 +194,19 @@ def test_DecomonDense_multiD_box(odd, mode, helpers):
     z_ = inputs_[2]
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
-        output = monotonic_dense(inputs[2:])
+        output = decomon_dense(inputs[2:])
     elif mode == ForwardMode.AFFINE:
-        output = monotonic_dense([z, W_u, b_u, W_l, b_l, h, g])
+        output = decomon_dense([z, W_u, b_u, W_l, b_l, h, g])
     elif mode == ForwardMode.IBP:
-        output = monotonic_dense([u_c, l_c, h, g])
+        output = decomon_dense([u_c, l_c, h, g])
     else:
         raise ValueError("Unknown mode.")
 
     ref_dense(inputs[1])
 
-    W_, bias = monotonic_dense.get_weights()
+    W_, bias = decomon_dense.get_weights()
 
-    monotonic_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
+    decomon_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
     ref_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
     f_dense = K.function(inputs[2:], output)
     f_ref = K.function(inputs, ref_dense(inputs[1]))
@@ -267,7 +267,7 @@ def test_DecomonDense_multiD_box(odd, mode, helpers):
     else:
         raise ValueError("Unknown mode.")
 
-    monotonic_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
+    decomon_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
     ref_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
     y_ref = f_ref(inputs_)
 
@@ -328,7 +328,7 @@ def test_DecomonDense_multiD_box(odd, mode, helpers):
         raise ValueError("Unknown mode.")
 
 
-def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared, helpers):
+def test_DecomonDense_1D_to_decomon_box(n, activation, mode, shared, helpers):
 
     dense_ref = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
 
@@ -354,27 +354,27 @@ def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared, helpers):
     else:
         raise ValueError("Unknown mode.")
 
-    monotonic_dense = to_decomon(
+    decomon_dense = to_decomon(
         dense_ref, input_dim, dc_decomp=True, ibp=ibp, affine=affine, shared=shared
     )  # ATTENTION: it will be a list
 
-    W_, bias = monotonic_dense[0].get_weights()
+    W_, bias = decomon_dense[0].get_weights()
     W_0, b_0 = dense_ref.get_weights()
 
     assert_almost_equal(W_, W_0, decimal=6, err_msg="wrong decomposition")
     assert_almost_equal(bias, b_0, decimal=6, err_msg="wrong decomposition")
 
     if mode == ForwardMode.HYBRID:
-        output = monotonic_dense[0](inputs[2:])
+        output = decomon_dense[0](inputs[2:])
     elif mode == ForwardMode.AFFINE:
-        output = monotonic_dense[0]([z, W_u, b_u, W_l, b_l, h, g])
+        output = decomon_dense[0]([z, W_u, b_u, W_l, b_l, h, g])
     elif mode == ForwardMode.IBP:
-        output = monotonic_dense[0]([u_c, l_c, h, g])
+        output = decomon_dense[0]([u_c, l_c, h, g])
     else:
         raise ValueError("Unknown mode.")
 
-    if len(monotonic_dense) > 1:
-        output = monotonic_dense[1](output)
+    if len(decomon_dense) > 1:
+        output = decomon_dense[1](output)
 
     f_dense = K.function(inputs[2:], output)
     y_ref = f_ref(inputs_)
@@ -393,7 +393,7 @@ def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared, helpers):
             l_c_,
             w_l_,
             b_l_,
-            "dense_to_monotonic_{}".format(n),
+            "dense_to_decomon_{}".format(n),
             decimal=5,
         )
 
@@ -412,7 +412,7 @@ def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared, helpers):
             None,
             w_l_,
             b_l_,
-            "dense_to_monotonic_{}".format(n),
+            "dense_to_decomon_{}".format(n),
             decimal=5,
         )
 
@@ -431,14 +431,14 @@ def test_DecomonDense_1D_to_monotonic_box(n, activation, mode, shared, helpers):
             l_c_,
             None,
             None,
-            "dense_to_monotonic_{}".format(n),
+            "dense_to_decomon_{}".format(n),
             decimal=5,
         )
     else:
         raise ValueError("Unknown mode.")
 
 
-def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode, helpers):
+def test_DecomonDense_multiD_to_decomon_box(odd, activation, mode, helpers):
 
     dense_ref = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
 
@@ -475,25 +475,25 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode, helpers):
     else:
         raise ValueError("Unknown mode.")
 
-    monotonic_dense = to_decomon(dense_ref, input_dim, dc_decomp=True, ibp=ibp, affine=affine)
+    decomon_dense = to_decomon(dense_ref, input_dim, dc_decomp=True, ibp=ibp, affine=affine)
 
-    W_, bias = monotonic_dense[0].get_weights()
+    W_, bias = decomon_dense[0].get_weights()
     W_0, b_0 = dense_ref.get_weights()
 
     assert_almost_equal(W_, W_0, decimal=6, err_msg="wrong decomposition")
     assert_almost_equal(bias, b_0, decimal=6, err_msg="wrong decomposition")
 
     if mode == ForwardMode.HYBRID:
-        output = monotonic_dense[0](inputs[2:])
+        output = decomon_dense[0](inputs[2:])
     elif mode == ForwardMode.AFFINE:
-        output = monotonic_dense[0]([z, W_u, b_u, W_l, b_l, h, g])
+        output = decomon_dense[0]([z, W_u, b_u, W_l, b_l, h, g])
     elif mode == ForwardMode.IBP:
-        output = monotonic_dense[0]([u_c, l_c, h, g])
+        output = decomon_dense[0]([u_c, l_c, h, g])
     else:
         raise ValueError("Unknown mode.")
 
-    if len(monotonic_dense) > 1:
-        output = monotonic_dense[1](output)
+    if len(decomon_dense) > 1:
+        output = decomon_dense[1](output)
 
     f_dense = K.function(inputs[2:], output)
 
@@ -512,7 +512,7 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode, helpers):
             l_c_,
             w_l_,
             b_l_,
-            "dense_to_monotonic_{}".format(0),
+            "dense_to_decomon_{}".format(0),
             decimal=5,
         )
 
@@ -531,7 +531,7 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode, helpers):
             None,
             w_l_,
             b_l_,
-            "dense_to_monotonic_{}".format(0),
+            "dense_to_decomon_{}".format(0),
             decimal=5,
         )
 
@@ -550,7 +550,7 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode, helpers):
             l_c_,
             None,
             None,
-            "dense_to_monotonic_{}".format(0),
+            "dense_to_decomon_{}".format(0),
             decimal=5,
         )
     else:
@@ -559,19 +559,19 @@ def test_DecomonDense_multiD_to_monotonic_box(odd, activation, mode, helpers):
 
 def test_DecomonDense_1D_box_nodc(n, helpers):
 
-    monotonic_dense = DecomonDense(1, use_bias=True, dc_decomp=False)
+    decomon_dense = DecomonDense(1, use_bias=True, dc_decomp=False)
     ref_dense = Dense(1, use_bias=True)
 
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
-    output = monotonic_dense(inputs[2:])
+    output = decomon_dense(inputs[2:])
     ref_dense(inputs[1])
 
-    W_, bias = monotonic_dense.get_weights()
+    W_, bias = decomon_dense.get_weights()
 
-    monotonic_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
+    decomon_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
     ref_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
 
     f_dense = K.function(inputs[2:], output)
@@ -584,7 +584,7 @@ def test_DecomonDense_1D_box_nodc(n, helpers):
     )
 
 
-def test_DecomonDense_multiD_to_monotonic_box_nodc(odd, activation, mode, helpers):
+def test_DecomonDense_multiD_to_decomon_box_nodc(odd, activation, mode, helpers):
 
     dense_ref = Dense(1, use_bias=True, activation=activation)
 
@@ -611,17 +611,17 @@ def test_DecomonDense_multiD_to_monotonic_box_nodc(odd, activation, mode, helper
 
     y_ref = f_ref(inputs_)
 
-    monotonic_dense = to_decomon(dense_ref, input_dim, dc_decomp=False)
+    decomon_dense = to_decomon(dense_ref, input_dim, dc_decomp=False)
 
-    W_, bias = monotonic_dense[0].get_weights()
+    W_, bias = decomon_dense[0].get_weights()
     W_0, b_0 = dense_ref.get_weights()
 
     assert_almost_equal(W_, W_0, decimal=6, err_msg="wrong decomposition")
     assert_almost_equal(bias, b_0, decimal=6, err_msg="wrong decomposition")
 
-    output = monotonic_dense[0](inputs[2:])
-    if len(monotonic_dense) > 1:
-        output = monotonic_dense[1](output)
+    output = decomon_dense[0](inputs[2:])
+    if len(decomon_dense) > 1:
+        output = decomon_dense[1](output)
 
     f_dense = K.function(inputs[2:], output)
 
@@ -634,19 +634,19 @@ def test_DecomonDense_multiD_to_monotonic_box_nodc(odd, activation, mode, helper
 
 def test_DecomonDense_multiD_box_dc(odd, helpers):
 
-    monotonic_dense = DecomonDense(1, use_bias=True, dc_decomp=False)
+    decomon_dense = DecomonDense(1, use_bias=True, dc_decomp=False)
     ref_dense = Dense(1, use_bias=True)
 
     inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
-    output = monotonic_dense(inputs[2:])
+    output = decomon_dense(inputs[2:])
     ref_dense(inputs[1])
 
-    W_, bias = monotonic_dense.get_weights()
+    W_, bias = decomon_dense.get_weights()
 
-    monotonic_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
+    decomon_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
     ref_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
     f_dense = K.function(inputs[2:], output)
     f_ref = K.function(inputs, ref_dense(inputs[1]))
@@ -658,7 +658,7 @@ def test_DecomonDense_multiD_box_dc(odd, helpers):
         x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc"
     )
 
-    monotonic_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
+    decomon_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
     ref_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
     y_ref = f_ref(inputs_)
