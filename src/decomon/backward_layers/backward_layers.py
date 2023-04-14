@@ -8,7 +8,19 @@ from tensorflow.keras.layers import Flatten, Layer
 from tensorflow.python.ops import array_ops
 
 from decomon.backward_layers.activations import get
+from decomon.backward_layers.backward_maxpooling import BackwardMaxPooling2D
+from decomon.backward_layers.backward_merge import (
+    BackwardAdd,
+    BackwardAverage,
+    BackwardConcatenate,
+    BackwardDot,
+    BackwardMaximum,
+    BackwardMinimum,
+    BackwardMultiply,
+    BackwardSubtract,
+)
 from decomon.backward_layers.core import BackwardLayer
+from decomon.backward_layers.deel_lip import BackwardGroupSort2
 from decomon.backward_layers.utils import get_affine, get_ibp, get_identity_lirpa
 from decomon.layers.core import DecomonLayer, ForwardMode, Option
 from decomon.layers.decomon_layers import (  # add some layers to module namespace `globals()`
