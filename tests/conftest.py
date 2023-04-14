@@ -1066,6 +1066,33 @@ class Helpers:
         return model
 
     @staticmethod
+    def toy_network_tutorial_with_embedded_activation(dtype="float32"):
+        layers = []
+        layers.append(
+            Dense(100, input_dim=1, activation="relu", dtype=dtype)
+        )  # specify the dimension of the input space
+        layers.append(Dense(100, dtype=dtype))
+        layers.append(Dense(1, activation="linear", dtype=dtype))
+        model = Sequential(layers)
+        return model
+
+    @staticmethod
+    def toy_embedded_sequential(dtype="float32"):
+        layers = []
+        units = 10
+        layers.append(
+            Dense(units, input_dim=1, activation="relu", dtype=dtype)
+        )  # specify the dimension of the input space
+        layers.append(
+            Helpers.dense_NN_1D(
+                dtype=dtype, archi=[2, 3, 2], sequential=True, input_dim=units, activation="relu", use_bias=False
+            )
+        )
+        layers.append(Dense(1, activation="linear", dtype=dtype))
+        model = Sequential(layers)
+        return model
+
+    @staticmethod
     def dense_NN_1D(input_dim, archi, sequential, activation, use_bias, dtype="float32"):
 
         layers = [Dense(archi[0], use_bias=use_bias, activation=activation, input_dim=input_dim, dtype=dtype)]
@@ -1081,43 +1108,59 @@ class Helpers:
             return Model(x, output)
 
     @staticmethod
-    def toy_struct_v0_1D(input_dim, archi, activation, use_bias, merge_op="average", dtype="float32"):
+    def toy_struct_v0_1D(input_dim, archi, activation, use_bias, merge_op=Add, dtype="float32"):
 
-        nnet_0 = Helpers.dense_NN_1D(input_dim, archi, False, activation, use_bias, dtype=dtype)
+        nnet_0 = Helpers.dense_NN_1D(
+            input_dim=input_dim, archi=archi, sequential=False, activation=activation, use_bias=use_bias, dtype=dtype
+        )
         nnet_1 = Dense(archi[-1], use_bias=use_bias, activation="linear", input_dim=input_dim, name="toto", dtype=dtype)
 
         x = Input(input_dim, dtype=dtype)
         h_0 = nnet_0(x)
         h_1 = nnet_1(x)
 
-        merge_op = "add"
-        if merge_op == "average":
-            y = Average(dtype=dtype)([h_0, h_1])
-        if merge_op == "add":
-            y = Add(dtype=dtype)([h_0, h_1])
+        y = merge_op(dtype=dtype)([h_0, h_1])
 
         return Model(x, y)
 
     @staticmethod
-    def toy_struct_v1_1D(input_dim, archi, sequential, activation, use_bias, merge_op="average", dtype="float32"):
+    def toy_struct_v1_1D(input_dim, archi, sequential, activation, use_bias, merge_op=Add, dtype="float32"):
 
-        nnet_0 = Helpers.dense_NN_1D(input_dim, archi, sequential, activation, use_bias, dtype=dtype)
+        nnet_0 = Helpers.dense_NN_1D(
+            input_dim=input_dim,
+            archi=archi,
+            sequential=sequential,
+            activation=activation,
+            use_bias=use_bias,
+            dtype=dtype,
+        )
 
         x = Input(input_dim, dtype=dtype)
         h_0 = nnet_0(x)
         h_1 = nnet_0(x)
-        if merge_op == "average":
-            y = Average(dtype=dtype)([h_0, h_1])
-        if merge_op == "add":
-            y = Add(dtype=dtype)([h_0, h_1])
+        y = merge_op(dtype=dtype)([h_0, h_1])
 
         return Model(x, y)
 
     @staticmethod
-    def toy_struct_v2_1D(input_dim, archi, sequential, activation, use_bias, merge_op="average", dtype="float32"):
+    def toy_struct_v2_1D(input_dim, archi, sequential, activation, use_bias, merge_op=Add, dtype="float32"):
 
-        nnet_0 = Helpers.dense_NN_1D(input_dim, archi, sequential, activation, use_bias, dtype=dtype)
-        nnet_1 = Helpers.dense_NN_1D(input_dim, archi, sequential, activation, use_bias, dtype=dtype)
+        nnet_0 = Helpers.dense_NN_1D(
+            input_dim=input_dim,
+            archi=archi,
+            sequential=sequential,
+            activation=activation,
+            use_bias=use_bias,
+            dtype=dtype,
+        )
+        nnet_1 = Helpers.dense_NN_1D(
+            input_dim=input_dim,
+            archi=archi,
+            sequential=sequential,
+            activation=activation,
+            use_bias=use_bias,
+            dtype=dtype,
+        )
         nnet_2 = Dense(archi[-1], use_bias=use_bias, activation="linear", input_dim=input_dim, dtype=dtype)
 
         x = Input(input_dim, dtype=dtype)
@@ -1126,10 +1169,7 @@ class Helpers:
         nnet_1.set_weights([-p for p in nnet_0.get_weights()])  # be sure that the produced output will differ
         h_0 = nnet_2(nnet_0(x))
         h_1 = nnet_2(nnet_1(x))
-        if merge_op == "average":
-            y = Average(dtype=dtype)([h_0, h_1])
-        if merge_op == "add":
-            y = Add(dtype=dtype)([h_0, h_1])
+        y = merge_op(dtype=dtype)([h_0, h_1])
 
         return Model(x, y)
 
@@ -1137,7 +1177,14 @@ class Helpers:
     def toy_struct_cnn(dtype="float32"):
 
         layers = [
-            Conv2D(10, kernel_size=(3, 3), activation="relu", data_format="channels_last", dtype=dtype),
+            Conv2D(
+                10,
+                kernel_size=(3, 3),
+                activation="relu",
+                data_format="channels_last",
+                dtype=dtype,
+                input_shape=(28, 28, 3),
+            ),
             Flatten(dtype=dtype),
             Dense(1, dtype=dtype),
         ]
@@ -1147,3 +1194,50 @@ class Helpers:
 @pytest.fixture
 def helpers():
     return Helpers
+
+
+@pytest.fixture(
+    params=[
+        "tutorial",
+        "tutorial_activation_embedded",
+        "merge_v0",
+        "merge_v1",
+        "merge_v1_seq",
+        "merge_v1_2",
+        "merge_v2",
+        "cnn",
+        "embedded_model",
+    ]
+)
+def toy_model(request, floatx, helpers):
+    model_name = request.param
+    if model_name == "tutorial":
+        return helpers.toy_network_tutorial(dtype=K.floatx())
+    elif model_name == "tutorial_activation_embedded":
+        return helpers.toy_network_tutorial_with_embedded_activation(dtype=K.floatx())
+    elif model_name == "merge_v0":
+        return helpers.toy_struct_v0_1D(
+            dtype=K.floatx(), input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True
+        )
+    elif model_name == "merge_v1":
+        return helpers.toy_struct_v1_1D(
+            dtype=K.floatx(), input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
+        )
+    elif model_name == "merge_v1_seq":
+        return helpers.toy_struct_v1_1D(
+            dtype=K.floatx(), input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=True
+        )
+    elif model_name == "merge_v1_2":
+        return helpers.toy_struct_v1_1D(
+            dtype=K.floatx(), input_dim=2, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
+        )
+    elif model_name == "merge_v2":
+        return helpers.toy_struct_v2_1D(
+            dtype=K.floatx(), input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
+        )
+    elif model_name == "cnn":
+        return helpers.toy_struct_cnn(dtype=K.floatx())
+    elif model_name == "embedded_model":
+        return helpers.toy_embedded_sequential(dtype=K.floatx())
+    else:
+        raise ValueError(f"model_name {model_name} unknown")
