@@ -32,8 +32,6 @@ class BackwardDense(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        slope: Union[str, Slope] = Slope.V_SLOPE,
-        finetune: bool = False,
         input_dim: int = -1,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -53,15 +51,10 @@ class BackwardDense(BackwardLayer):
         self.use_bias = self.layer.use_bias
         if self.layer.use_bias:
             self.bias = self.layer.bias
-        self.activation = get(layer.get_config()["activation"])
-        self.activation_name = layer.get_config()["activation"]
-        self.slope = Slope(slope)
-        self.finetune = finetune
         if not isinstance(self.layer, DecomonLayer):
             self.layer = to_decomon(
                 layer,
                 input_dim,
-                slope=slope,
                 dc_decomp=False,
                 convex_domain=self.convex_domain,
                 finetune=False,
@@ -72,16 +65,6 @@ class BackwardDense(BackwardLayer):
             )[0]
         self.frozen_weights = False
 
-    def get_config(self) -> Dict[str, Any]:
-        config = super().get_config()
-        config.update(
-            {
-                "slope": self.slope,
-                "finetune": self.finetune,
-            }
-        )
-        return config
-
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         if len(inputs):
@@ -91,63 +74,14 @@ class BackwardDense(BackwardLayer):
 
         # start with the activation: determine the upper and lower bounds before the weights
         weights = self.kernel
-        if self.activation_name != "linear":
-            x = self.layer.call(x_)
-            if self.finetune:
-                if self.activation_name[:4] != "relu":
-                    w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                        x,
-                        convex_domain=self.convex_domain,
-                        slope=self.slope,
-                        mode=self.mode,
-                        finetune=[self.alpha_b_u, self.alpha_b_l],
-                    )
-                else:
-                    w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                        x,
-                        convex_domain=self.convex_domain,
-                        slope=self.slope,
-                        mode=self.mode,
-                        finetune=self.alpha_b_l,
-                    )
-            else:
-                w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                    x,
-                    convex_domain=self.convex_domain,
-                    slope=self.slope,
-                    mode=self.mode,
-                )
-
-            # w_out_u (None, n_out)  b_out_u (None, n_back)
-
-            if len(w_out_u.shape) == 2:
-                w_out_u = tf.linalg.diag(w_out_u)  # (None, n_out, n_back=n_out)
-            if len(w_out_l.shape) == 2:
-                w_out_l = tf.linalg.diag(w_out_l)
-            weights = K.expand_dims(K.expand_dims(weights, 0), -1)  # (1, n_in, n_out, 1)
-            if self.use_bias:
-                bias = self.bias
-                bias = K.expand_dims(K.expand_dims(bias, 0), -1)  # (None, n_out, 1)
-                b_out_u_ = K.sum(w_out_u * bias, 1) + b_out_u  # (None, n_back)
-                b_out_l_ = K.sum(w_out_l * bias, 1) + b_out_l
-            else:
-                b_out_u_ = b_out_u
-                b_out_l_ = b_out_l
-            if len(w_out_u.shape) == 3:
-                w_out_u = K.expand_dims(w_out_u, 1)  # (None,  1, n_in, n_back)
-            if len(w_out_l.shape) == 3:
-                w_out_l = K.expand_dims(w_out_l, 1)
-            w_out_u_ = K.sum(w_out_u * weights, 2)  # (None, n_in,  n_back)
-            w_out_l_ = K.sum(w_out_l * weights, 2)
+        y_ = x_[-1]
+        z_value = K.cast(0.0, self.dtype)
+        w_out_u_, w_out_l_ = [weights[None] + z_value * K.expand_dims(y_, -1)] * 2
+        if self.use_bias:
+            bias = self.bias
+            b_out_u_, b_out_l_ = [bias[None] + z_value * w_out_u_[:, 0]] * 2
         else:
-            y_ = x_[-1]
-            z_value = K.cast(0.0, self.dtype)
-            w_out_u_, w_out_l_ = [weights[None] + z_value * K.expand_dims(y_, -1)] * 2
-            if self.use_bias:
-                bias = self.bias
-                b_out_u_, b_out_l_ = [bias[None] + z_value * w_out_u_[:, 0]] * 2
-            else:
-                b_out_u_, b_out_l_ = [z_value * w_out_u_[:, 0]] * 2
+            b_out_u_, b_out_l_ = [z_value * w_out_u_[:, 0]] * 2
         return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
 
     def build(self, input_shape: List[tf.TensorShape]) -> None:
@@ -161,49 +95,13 @@ class BackwardDense(BackwardLayer):
         self._trainable_weights = [self.kernel]
         if self.use_bias:
             self._trainable_weights.append(self.bias)
-        if self.finetune and self.activation_name != "linear":
-            units = self.layer.units
-            self.alpha_b_l = self.add_weight(
-                shape=(units,), initializer="ones", name="alpha_l_b", regularizer=None, constraint=ClipAlpha()
-            )
-
-            if self.activation_name[:4] != "relu":
-                self.alpha_b_u = self.add_weight(
-                    shape=(units,), initializer="ones", name="alpha_u_b", regularizer=None, constraint=ClipAlpha()
-                )
-
         self.built = True
 
-    def freeze_alpha(self) -> None:
-        if self.finetune:
-            self.trainable = False
-
-    def unfreeze_alpha(self) -> None:
-        if self.finetune:
-            self.trainable = True
-
-    def reset_finetuning(self) -> None:
-        if self.finetune and self.activation_name != "linear":
-            K.set_value(self.alpha_b_l, np.ones_like(self.alpha_b_l.value()))
-
-            if self.activation_name[:4] != "relu":
-                K.set_value(self.alpha_b_u, np.ones_like(self.alpha_b_u.value()))
-
     def freeze_weights(self) -> None:
-
         if not self.frozen_weights:
-
-            if self.finetune and self.mode == ForwardMode.HYBRID:
-                if self.layer.use_bias:
-                    self._trainable_weights = self._trainable_weights[2:]
-                else:
-                    self._trainable_weights = self._trainable_weights[1:]
-            else:
-                self._trainable_weights = []
-
+            self._trainable_weights = []
             if getattr(self.layer, "freeze_weights"):
                 self.layer.freeze_weights()
-
             self.frozen_weights = True
 
     def unfreeze_weights(self) -> None:
@@ -219,8 +117,6 @@ class BackwardConv2D(BackwardLayer):
     def __init__(
         self,
         layer: Layer,
-        slope: Union[str, Slope] = Slope.V_SLOPE,
-        finetune: bool = False,
         input_dim: int = -1,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -236,15 +132,10 @@ class BackwardConv2D(BackwardLayer):
             dc_decomp=dc_decomp,
             **kwargs,
         )
-        self.activation = get(layer.get_config()["activation"])
-        self.activation_name = layer.get_config()["activation"]
-        self.slope = Slope(slope)
-        self.finetune = finetune
         if not isinstance(self.layer, DecomonLayer):
             self.layer = to_decomon(
                 layer,
                 input_dim,
-                slope=slope,
                 dc_decomp=False,
                 convex_domain=self.convex_domain,
                 finetune=False,
@@ -254,16 +145,6 @@ class BackwardConv2D(BackwardLayer):
                 fast=False,
             )[0]
         self.frozen_weights = False
-
-    def get_config(self) -> Dict[str, Any]:
-        config = super().get_config()
-        config.update(
-            {
-                "slope": self.slope,
-                "finetune": self.finetune,
-            }
-        )
-        return config
 
     def get_bounds_linear(
         self, w_out_u: tf.Tensor, b_out_u: tf.Tensor, w_out_l: tf.Tensor, b_out_l: tf.Tensor
@@ -345,94 +226,30 @@ class BackwardConv2D(BackwardLayer):
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         x = inputs
 
-        if self.activation_name != "linear":
-            x_output = self.layer.call(x)
-            y_ = x_output[-1]
+        weight, bias = self.layer.get_backward_weights(x)
 
-            if self.finetune:
-                w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                    x_output,
-                    convex_domain=self.convex_domain,
-                    slope=self.slope,
-                    mode=self.mode,
-                    finetune=self.alpha_b_l,
-                )
-
-            else:
-                w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
-                    x_output, convex_domain=self.convex_domain, slope=self.slope, mode=self.mode
-                )
-
-            return self.get_bounds_linear(w_out_u, b_out_u, w_out_l, b_out_l)
-
-        else:
-            weight, bias = self.layer.get_backward_weights(x)
-
-            z_value = K.cast(0.0, self.dtype)
-            y_ = x[-1]
-            shape = np.prod(y_.shape[1:])
-            y_flatten = K.reshape(z_value * y_, (-1, np.prod(shape), 1))  # (None, n_in, 1)
-            w_out_u_ = y_flatten + K.expand_dims(weight, 0)
-            w_out_l_ = w_out_u_
-            b_out_u_ = K.sum(y_flatten, 1) + bias
-            b_out_l_ = b_out_u_
+        z_value = K.cast(0.0, self.dtype)
+        y_ = x[-1]
+        shape = np.prod(y_.shape[1:])
+        y_flatten = K.reshape(z_value * y_, (-1, np.prod(shape), 1))  # (None, n_in, 1)
+        w_out_u_ = y_flatten + K.expand_dims(weight, 0)
+        w_out_l_ = w_out_u_
+        b_out_u_ = K.sum(y_flatten, 1) + bias
+        b_out_l_ = b_out_u_
 
         return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
 
-    def build(self, input_shape: List[tf.TensorShape]) -> None:
-        """
-        Args:
-            input_shape: list of input shape
-
-        Returns:
-
-        """
-
-        if self.finetune and self.activation_name != "linear":
-            output_shape = self.layer.compute_output_shape(input_shape[:-4])[0]
-
-            units = np.prod(output_shape[1:])
-            self.alpha_b_l = self.add_weight(
-                shape=(units,), initializer="ones", name="alpha_l_b", regularizer=None, constraint=ClipAlpha()
-            )
-
-        self.built = True
-
-    def freeze_alpha(self) -> None:
-        if self.finetune:
-            self.trainable = False
-
-    def unfreeze_alpha(self) -> None:
-        if self.finetune:
-            self.trainable = True
-
-    def reset_finetuning(self) -> None:
-        if self.finetune and self.activation_name != "linear":
-
-            K.set_value(self.alpha_b_l, np.ones_like(self.alpha_b_l.value()))
-
     def freeze_weights(self) -> None:
-
         if not self.frozen_weights:
-
-            if self.finetune and self.mode == ForwardMode.HYBRID:
-                if self.layer.use_bias:
-                    self._trainable_weights = self._trainable_weights[2:]
-                else:
-                    self._trainable_weights = self._trainable_weights[1:]
-            else:
-                self._trainable_weights = []
-
+            self._trainable_weights = []
             if getattr(self.layer, "freeze_weights"):
                 self.layer.freeze_weights()
-
             self.frozen_weights = True
 
     def unfreeze_weights(self) -> None:
         if self.frozen_weights:
-            if self.finetune and self.mode == ForwardMode.HYBRID:
-                if getattr(self.layer, "unfreeze_weights"):
-                    self.layer.unfreeze_weights()
+            if getattr(self.layer, "unfreeze_weights"):
+                self.layer.unfreeze_weights()
             self.frozen_weights = False
 
 
