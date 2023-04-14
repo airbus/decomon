@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Input
+from tensorflow.keras.layers import Input, Layer
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.backend import _get_available_gpus
 
@@ -310,3 +310,12 @@ def test_Backward_Reshape_multiD_box(odd, floatx, mode, data_format, helpers):
     )
     K.set_floatx("float32")
     K.set_epsilon(eps)
+
+
+def test_to_backward_ko():
+    class MyLayer(Layer):
+        ...
+
+    layer = MyLayer()
+    with pytest.raises(NotImplementedError):
+        to_backward(layer)

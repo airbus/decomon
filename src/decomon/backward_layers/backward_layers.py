@@ -743,7 +743,10 @@ def to_backward(
         class_name = "".join(layer.__class__.__name__.split("Decomon")[1:])
 
     backward_class_name = f"Backward{class_name}"
-    class_ = globals()[backward_class_name]
+    try:
+        class_ = globals()[backward_class_name]
+    except KeyError:
+        raise NotImplementedError(f"The backward version of {class_name} is not yet implemented.")
     return class_(
         layer,
         slope=slope,
