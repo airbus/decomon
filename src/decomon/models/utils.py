@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
@@ -56,6 +56,33 @@ def get_input_dim(model: Model) -> int:
         return np.prod(model.input_shape[0][1:])
     else:
         return np.prod(model.input_shape[1:])
+
+
+def prepare_inputs_for_layer(
+    inputs: Union[Tuple[tf.Tensor, ...], List[tf.Tensor], tf.Tensor]
+) -> Union[Tuple[tf.Tensor, ...], List[tf.Tensor], tf.Tensor]:
+    """Prepare inputs for keras/decomon layers.
+
+    Some Keras layers do not like list of tensors even with one single tensor.
+    So we keep only the tensor in this case.
+
+    """
+    if isinstance(inputs, list) or isinstance(inputs, tuple):
+        if len(inputs) == 1:
+            return inputs[0]
+    return inputs
+
+
+def wrap_outputs_from_layer_in_list(
+    outputs: Union[Tuple[tf.Tensor, ...], List[tf.Tensor], tf.Tensor]
+) -> List[tf.Tensor]:
+    if not isinstance(outputs, list):
+        if isinstance(outputs, tuple):
+            return list(outputs)
+        else:
+            return [outputs]
+    else:
+        return outputs
 
 
 def split_activation(layer: Layer) -> List[Layer]:

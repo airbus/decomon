@@ -17,11 +17,12 @@ from decomon.layers.core import DecomonLayer
 from decomon.layers.decomon_layers import to_decomon
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.utils import (
-    check_input_tensors_sequential,
     get_depth_dict,
     get_inner_layers,
     get_input_dim,
     get_input_tensors,
+    prepare_inputs_for_layer,
+    wrap_outputs_from_layer_in_list,
 )
 from decomon.utils import Slope
 
@@ -34,7 +35,7 @@ LayerMapDict = Dict[int, LayerMapVal]
 
 
 def include_dim_layer_fn(
-    layer_fn: Callable[..., List[DecomonLayer]],
+    layer_fn: Callable[..., List[Layer]],
     input_dim: int,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     dc_decomp: bool = False,
@@ -43,7 +44,7 @@ def include_dim_layer_fn(
     affine: bool = True,
     finetune: bool = False,
     shared: bool = True,
-) -> Callable[[Layer], List[DecomonLayer]]:
+) -> Callable[[Layer], List[Layer]]:
     """include external parameters inside the translation of a layer to its decomon counterpart
 
     Args:
@@ -63,7 +64,7 @@ def include_dim_layer_fn(
 
     if "input_dim" in inspect.signature(layer_fn).parameters:
 
-        def func(layer: Layer) -> List[DecomonLayer]:
+        def func(layer: Layer) -> List[Layer]:
             return layer_fn_copy(
                 layer,
                 input_dim=input_dim,
@@ -78,7 +79,7 @@ def include_dim_layer_fn(
 
     else:
 
-        def func(layer: Layer) -> List[DecomonLayer]:
+        def func(layer: Layer) -> List[Layer]:
             return layer_fn_copy(layer)
 
     return func
@@ -87,7 +88,7 @@ def include_dim_layer_fn(
 def convert_forward(
     model: Model,
     input_tensors: Optional[List[tf.Tensor]] = None,
-    layer_fn: Callable[..., List[DecomonLayer]] = to_decomon,
+    layer_fn: Callable[..., List[Layer]] = to_decomon,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
     dc_decomp: bool = False,
@@ -150,7 +151,7 @@ def convert_forward(
 
 def convert_forward_functional_model(
     model: Model,
-    layer_fn: Callable[[Layer], List[DecomonLayer]],
+    layer_fn: Callable[[Layer], List[Layer]],
     input_tensors: List[tf.Tensor],
     softmax_to_linear: bool = True,
     count: int = 0,
@@ -196,17 +197,15 @@ def convert_forward_functional_model(
                 output_map[id(node)] = output_map_
             else:
 
-                list_layer_decomon = layer_fn(layer)
-                layer_list: List[DecomonLayer] = []
-                for layer_decomon in list_layer_decomon:
-                    layer_decomon._name = f"{layer_decomon.name}_{count}"
+                converted_layers = layer_fn(layer)
+                for converted_layer in converted_layers:
+                    converted_layer._name = f"{converted_layer.name}_{count}"
                     count += 1
-                    output = layer_decomon(output)
-                    layer_list.append(layer_decomon)
-                    if len(list_layer_decomon) > 1:
-                        output_map[f"{id(node)}_{layer_decomon.name}"] = output
-                layer_map[id(node)] = layer_list
-            output_map[id(node)] = output
+                    output = converted_layer(prepare_inputs_for_layer(output))
+                    if len(converted_layers) > 1:
+                        output_map[f"{id(node)}_{converted_layer.name}"] = wrap_outputs_from_layer_in_list(output)
+                layer_map[id(node)] = converted_layers
+            output_map[id(node)] = wrap_outputs_from_layer_in_list(output)
 
     output = []
     output_nodes = dico_nodes[0]
