@@ -208,7 +208,7 @@ def test_Decomon_1D_box_to_decomon(layer_class, tensor_op, layer_kwargs, n, help
 
     ref_op([inputs_0[0], inputs_1[0]])
 
-    decomon_op = to_decomon(ref_op, input_dim=1, dc_decomp=False)[0]
+    decomon_op = to_decomon(ref_op, input_dim=1, dc_decomp=False)
 
     x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0_
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1_
@@ -255,7 +255,7 @@ def test_Decomon_multiD_box_to_decomon(layer_class, tensor_op, layer_kwargs, odd
     x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1_
 
     ref_op([inputs_0[0], inputs_1[0]])
-    decomon_op = to_decomon(ref_op, input_dim=x0.shape[-1], dc_decomp=False)[0]
+    decomon_op = to_decomon(ref_op, input_dim=x0.shape[-1], dc_decomp=False)
 
     output_decomon = decomon_op(inputs_0[2:] + inputs_1[2:])
     model = Model(inputs_0[2:] + inputs_1[2:], output_decomon)

@@ -35,7 +35,7 @@ LayerMapDict = Dict[int, LayerMapVal]
 
 
 def include_dim_layer_fn(
-    layer_fn: Callable[..., List[Layer]],
+    layer_fn: Callable[..., Layer],
     input_dim: int,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     dc_decomp: bool = False,
@@ -60,27 +60,32 @@ def include_dim_layer_fn(
     if convex_domain is None:
         convex_domain = {}
 
+    if not callable(layer_fn):
+        raise ValueError("Expected `layer_fn` argument to be a callable.")
+
     layer_fn_copy = deepcopy(layer_fn)
 
     if "input_dim" in inspect.signature(layer_fn).parameters:
 
         def func(layer: Layer) -> List[Layer]:
-            return layer_fn_copy(
-                layer,
-                input_dim=input_dim,
-                slope=slope,
-                convex_domain=convex_domain,
-                dc_decomp=dc_decomp,
-                ibp=ibp,
-                affine=affine,
-                finetune=finetune,
-                shared=shared,
-            )
+            return [
+                layer_fn_copy(
+                    layer,
+                    input_dim=input_dim,
+                    slope=slope,
+                    convex_domain=convex_domain,
+                    dc_decomp=dc_decomp,
+                    ibp=ibp,
+                    affine=affine,
+                    finetune=finetune,
+                    shared=shared,
+                )
+            ]
 
     else:
 
         def func(layer: Layer) -> List[Layer]:
-            return layer_fn_copy(layer)
+            return [layer_fn_copy(layer)]
 
     return func
 
@@ -88,7 +93,7 @@ def include_dim_layer_fn(
 def convert_forward(
     model: Model,
     input_tensors: Optional[List[tf.Tensor]] = None,
-    layer_fn: Callable[..., List[Layer]] = to_decomon,
+    layer_fn: Callable[..., Layer] = to_decomon,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
     dc_decomp: bool = False,
@@ -104,6 +109,7 @@ def convert_forward(
 
     if convex_domain is None:
         convex_domain = {}
+
     if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
 
@@ -119,29 +125,21 @@ def convert_forward(
             affine=affine,
         )
 
-    has_iter = False
-    if layer_fn is not None and len(layer_fn.__code__.co_varnames) == 1 and "layer" in layer_fn.__code__.co_varnames:
-        has_iter = True
-
-    if not has_iter:
-        layer_fn = include_dim_layer_fn(
-            layer_fn,
-            input_dim=input_dim,
-            slope=slope,
-            convex_domain=convex_domain,
-            ibp=ibp,
-            affine=affine,
-            finetune=finetune,
-            shared=shared,
-        )  # return a list of Decomon layers
-
-    if not callable(layer_fn):
-        raise ValueError("Expected `layer_fn` argument to be a callable.")
+    layer_fn_to_list = include_dim_layer_fn(
+        layer_fn,
+        input_dim=input_dim,
+        slope=slope,
+        convex_domain=convex_domain,
+        ibp=ibp,
+        affine=affine,
+        finetune=finetune,
+        shared=shared,
+    )  # return a list of Decomon layers
 
     f_output = convert_forward_functional_model(
         model=model,
         input_tensors=input_tensors,
-        layer_fn=layer_fn,
+        layer_fn=layer_fn_to_list,
         softmax_to_linear=softmax_to_linear,
         joint=joint,
     )

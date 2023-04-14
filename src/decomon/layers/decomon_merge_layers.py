@@ -623,7 +623,7 @@ def to_decomon_merge(
     finetune: bool = False,
     ibp: bool = True,
     affine: bool = True,
-) -> List[DecomonLayer]:
+) -> DecomonLayer:
     """Transform a standard Merge layer into a Decomon layer.
 
     Type of layer is tested to know how to transform it into a DecomonLayer of the good type.
@@ -668,7 +668,10 @@ def to_decomon_merge(
     config_layer["mode"] = mode
     config_layer["finetune"] = finetune
 
-    layer_decomon = globals()[decomon_class_name].from_config(config_layer)
+    try:
+        layer_decomon = globals()[decomon_class_name].from_config(config_layer)
+    except:
+        raise NotImplementedError(f"The decomon version of {class_name} is not yet implemented.")
 
     input_shape_list = []
     for input_shape in layer.input_shape:
@@ -704,4 +707,4 @@ def to_decomon_merge(
     layer_decomon(input_list)
     layer_decomon.reset_layer(layer)
 
-    return [layer_decomon]
+    return layer_decomon

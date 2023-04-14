@@ -171,10 +171,7 @@ def test_Decomon_conv_to_decomon_box(shared, floatx, helpers):
 
     input_dim = x.shape[-1]
     decomon_layer = to_decomon(conv_ref, input_dim, dc_decomp=True, shared=shared)
-
-    output = decomon_layer[0](inputs[2:])
-    if len(decomon_layer) > 1:
-        output = decomon_layer[1](output)
+    output = decomon_layer(inputs[2:])
 
     f_ref = K.function(inputs, output_ref)
 
@@ -217,13 +214,9 @@ def test_Decomon_conv_to_decomon_box_nodc(helpers):
 
     input_dim = x.shape[-1]
     decomon_layer = to_decomon(conv_ref, input_dim, dc_decomp=False)
-
-    output = decomon_layer[0](inputs[2:])
-    if len(decomon_layer) > 1:
-        output = decomon_layer[1](output)
+    output = decomon_layer(inputs[2:])
 
     f_ref = K.function(inputs, output_ref)
-
     f_conv = K.function(inputs[2:], output)
     y_ref = f_ref(inputs_)
 
