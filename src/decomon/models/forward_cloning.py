@@ -104,50 +104,8 @@ def convert_forward(
     if convex_domain is None:
         convex_domain = {}
     if not isinstance(model, Model):
-        raise ValueError()
-
-    f_output = convert_forward_functional_model(
-        model,
-        input_tensors,
-        layer_fn,
-        slope=slope,
-        input_dim=input_dim,
-        dc_decomp=dc_decomp,
-        convex_domain=convex_domain,
-        ibp=ibp,
-        affine=affine,
-        finetune=finetune,
-        shared=shared,
-        softmax_to_linear=softmax_to_linear,
-        joint=joint,
-        **kwargs,
-    )
-
-    return f_output
-
-
-def convert_forward_functional_model(
-    model: Model,
-    input_tensors: Optional[List[tf.Tensor]] = None,
-    layer_fn: Callable[..., List[DecomonLayer]] = to_decomon,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
-    input_dim: int = 1,
-    dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
-    ibp: bool = True,
-    affine: bool = True,
-    finetune: bool = False,
-    shared: bool = True,
-    softmax_to_linear: bool = True,
-    count: int = 0,
-    joint: bool = True,
-    **kwargs: Any,
-) -> Tuple[List[tf.Tensor], List[tf.Tensor], LayerMapDict, OutputMapDict]:
-
-    if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
 
-    input_dim_init = input_dim
     if input_dim == -1:
         input_dim = get_input_dim(model)
 
@@ -159,9 +117,6 @@ def convert_forward_functional_model(
             ibp=ibp,
             affine=affine,
         )
-
-    if softmax_to_linear:
-        model, has_softmax = softmax_2_linear(model)
 
     has_iter = False
     if layer_fn is not None and len(layer_fn.__code__.co_varnames) == 1 and "layer" in layer_fn.__code__.co_varnames:
@@ -181,6 +136,29 @@ def convert_forward_functional_model(
 
     if not callable(layer_fn):
         raise ValueError("Expected `layer_fn` argument to be a callable.")
+
+    f_output = convert_forward_functional_model(
+        model=model,
+        input_tensors=input_tensors,
+        layer_fn=layer_fn,
+        softmax_to_linear=softmax_to_linear,
+        joint=joint,
+    )
+
+    return f_output
+
+
+def convert_forward_functional_model(
+    model: Model,
+    layer_fn: Callable[[Layer], List[DecomonLayer]],
+    input_tensors: List[tf.Tensor],
+    softmax_to_linear: bool = True,
+    count: int = 0,
+    joint: bool = True,
+) -> Tuple[List[tf.Tensor], List[tf.Tensor], LayerMapDict, OutputMapDict]:
+
+    if softmax_to_linear:
+        model, has_softmax = softmax_2_linear(model)
 
     # create input tensors
 
@@ -210,15 +188,8 @@ def convert_forward_functional_model(
                     model=layer,
                     input_tensors=output,
                     layer_fn=layer_fn,
-                    input_dim=input_dim_init,
-                    convex_domain=convex_domain,
-                    ibp=ibp,
-                    affine=affine,
-                    finetune=finetune,
-                    shared=shared,
                     softmax_to_linear=softmax_to_linear,
                     count=count,
-                    **kwargs,
                 )
                 count = count + get_inner_layers(layer)
                 layer_map[id(node)] = layer_map_
