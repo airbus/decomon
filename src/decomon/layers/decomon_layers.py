@@ -38,6 +38,8 @@ from decomon.layers.decomon_reshape import (  # add some layers to module namesp
     DecomonPermute,
     DecomonReshape,
 )
+from decomon.layers.deel_lip import DecomonGroupSort, DecomonGroupSort2
+from decomon.layers.maxpooling import DecomonMaxPooling2D
 from decomon.layers.utils import (
     ClipAlpha,
     ClipAlphaAndSumtoOne,
