@@ -182,7 +182,7 @@ def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, od
     K.set_floatx("float32")
 
 
-### to monotonic
+### to decomon
 
 
 @pytest.mark.parametrize(
@@ -197,7 +197,7 @@ def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, od
         (Multiply, multiply_op, {}),
     ],
 )
-def test_Decomon_1D_box_to_monotonic(layer_class, tensor_op, layer_kwargs, n, helpers):
+def test_Decomon_1D_box_to_decomon(layer_class, tensor_op, layer_kwargs, n, helpers):
 
     ref_op = layer_class(dtype=K.floatx(), **layer_kwargs)
 
@@ -227,7 +227,7 @@ def test_Decomon_1D_box_to_monotonic(layer_class, tensor_op, layer_kwargs, n, he
     )
 
 
-#### to_monotonic multiD
+#### to_decomon multiD
 
 
 @pytest.mark.parametrize(
@@ -242,7 +242,7 @@ def test_Decomon_1D_box_to_monotonic(layer_class, tensor_op, layer_kwargs, n, he
         (Multiply, multiply_op, {}),
     ],
 )
-def test_Decomon_multiD_box_to_monotonic(layer_class, tensor_op, layer_kwargs, odd, helpers):
+def test_Decomon_multiD_box_to_decomon(layer_class, tensor_op, layer_kwargs, odd, helpers):
 
     ref_op = layer_class(dtype=K.floatx(), **layer_kwargs)
 

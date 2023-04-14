@@ -26,15 +26,15 @@ def test_Decomon_reshape_box(mode, floatx, helpers):
     target_shape = (np.prod(y.shape[1:]),)
     y_ = np.reshape(inputs_[1], (-1, target_shape[0]))
 
-    monotonic_layer = DecomonReshape((target_shape), dc_decomp=True, mode=mode, dtype=K.floatx())
+    decomon_layer = DecomonReshape((target_shape), dc_decomp=True, mode=mode, dtype=K.floatx())
 
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
-        output = monotonic_layer(inputs[2:])
+        output = decomon_layer(inputs[2:])
     elif mode == ForwardMode.AFFINE:
-        output = monotonic_layer([z, W_u, b_u, W_l, b_l, h, g])
+        output = decomon_layer([z, W_u, b_u, W_l, b_l, h, g])
     elif mode == ForwardMode.IBP:
-        output = monotonic_layer([u_c, l_c, h, g])
+        output = decomon_layer([u_c, l_c, h, g])
     else:
         raise ValueError("Unknown mode.")
 
@@ -90,15 +90,15 @@ def test_Decomon_reshape_box_nodc(mode, floatx, helpers):
     target_shape = (np.prod(y.shape[1:]),)
     y_ = np.reshape(inputs_[1], (-1, target_shape[0]))
 
-    monotonic_layer = DecomonReshape((target_shape), dc_decomp=False, mode=mode, dtype=K.floatx())
+    decomon_layer = DecomonReshape((target_shape), dc_decomp=False, mode=mode, dtype=K.floatx())
 
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
-        output = monotonic_layer(inputs[2:])
+        output = decomon_layer(inputs[2:])
     elif mode == ForwardMode.AFFINE:
-        output = monotonic_layer([z, W_u, b_u, W_l, b_l])
+        output = decomon_layer([z, W_u, b_u, W_l, b_l])
     elif mode == ForwardMode.IBP:
-        output = monotonic_layer([u_c, l_c])
+        output = decomon_layer([u_c, l_c])
     else:
         raise ValueError("Unknown mode.")
 
@@ -136,7 +136,7 @@ def test_Decomon_reshape_box_nodc(mode, floatx, helpers):
     K.set_epsilon(eps)
 
 
-def test_Decomon_reshape_to_monotonic_box(shared, floatx, helpers):
+def test_Decomon_reshape_to_decomon_box(shared, floatx, helpers):
     odd, m_0, m_1 = 0, 0, 1
 
     K.set_floatx("float{}".format(floatx))
@@ -157,11 +157,11 @@ def test_Decomon_reshape_to_monotonic_box(shared, floatx, helpers):
     output_ref = reshape_ref(inputs[1])
 
     input_dim = x_.shape[-1]
-    monotonic_layer = to_decomon(reshape_ref, input_dim, dc_decomp=True, shared=shared)
+    decomon_layer = to_decomon(reshape_ref, input_dim, dc_decomp=True, shared=shared)
 
-    output = monotonic_layer[0](inputs[2:])
-    if len(monotonic_layer) > 1:
-        output = monotonic_layer[1](output)
+    output = decomon_layer[0](inputs[2:])
+    if len(decomon_layer) > 1:
+        output = decomon_layer[1](output)
 
     f_ref = K.function(inputs, output_ref)
 
@@ -213,15 +213,15 @@ def test_Decomon_permute_box(mode, floatx, helpers):
 
     y_ = np.transpose(inputs_[1], target_shape_)
 
-    monotonic_layer = DecomonPermute(target_shape, dc_decomp=True, mode=mode, dtype=K.floatx())
+    decomon_layer = DecomonPermute(target_shape, dc_decomp=True, mode=mode, dtype=K.floatx())
 
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
-        output = monotonic_layer(inputs[2:])
+        output = decomon_layer(inputs[2:])
     elif mode == ForwardMode.AFFINE:
-        output = monotonic_layer([z, W_u, b_u, W_l, b_l, h, g])
+        output = decomon_layer([z, W_u, b_u, W_l, b_l, h, g])
     elif mode == ForwardMode.IBP:
-        output = monotonic_layer([u_c, l_c, h, g])
+        output = decomon_layer([u_c, l_c, h, g])
     else:
         raise ValueError("Unknown mode.")
 
@@ -280,15 +280,15 @@ def test_Decomon_permute_box_nodc(mode, floatx, helpers):
 
     y_ = np.transpose(inputs_[1], target_shape_)
 
-    monotonic_layer = DecomonPermute(target_shape, dc_decomp=False, mode=mode, dtype=K.floatx())
+    decomon_layer = DecomonPermute(target_shape, dc_decomp=False, mode=mode, dtype=K.floatx())
 
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
-        output = monotonic_layer(inputs[2:])
+        output = decomon_layer(inputs[2:])
     elif mode == ForwardMode.AFFINE:
-        output = monotonic_layer([z, W_u, b_u, W_l, b_l])
+        output = decomon_layer([z, W_u, b_u, W_l, b_l])
     elif mode == ForwardMode.IBP:
-        output = monotonic_layer([u_c, l_c])
+        output = decomon_layer([u_c, l_c])
     else:
         raise ValueError("Unknown mode.")
 
@@ -326,7 +326,7 @@ def test_Decomon_permute_box_nodc(mode, floatx, helpers):
     K.set_epsilon(eps)
 
 
-def test_Decomon_permute_to_monotonic_box(shared, floatx, helpers):
+def test_Decomon_permute_to_decomon_box(shared, floatx, helpers):
     odd, m_0, m_1 = 0, 0, 1
 
     K.set_floatx("float{}".format(floatx))
@@ -348,11 +348,11 @@ def test_Decomon_permute_to_monotonic_box(shared, floatx, helpers):
     output_ref = permute_ref(inputs[1])
 
     input_dim = x_.shape[-1]
-    monotonic_layer = to_decomon(permute_ref, input_dim, dc_decomp=True, shared=shared)
+    decomon_layer = to_decomon(permute_ref, input_dim, dc_decomp=True, shared=shared)
 
-    output = monotonic_layer[0](inputs[2:])
-    if len(monotonic_layer) > 1:
-        output = monotonic_layer[1](output)
+    output = decomon_layer[0](inputs[2:])
+    if len(decomon_layer) > 1:
+        output = decomon_layer[1](output)
 
     f_ref = K.function(inputs, output_ref)
 
