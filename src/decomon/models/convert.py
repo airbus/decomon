@@ -11,7 +11,12 @@ from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.crown import Convert2Mode
 from decomon.layers.decomon_layers import to_decomon
 from decomon.models.backward_cloning import convert_backward
-from decomon.models.forward_cloning import LayerMapDict, OutputMapDict, convert_forward
+from decomon.models.forward_cloning import (
+    LayerMapDict,
+    OutputMapDict,
+    convert_forward,
+    convert_forward_functional_model,
+)
 from decomon.models.models import DecomonModel
 from decomon.models.utils import (
     ConvertMethod,
@@ -71,7 +76,7 @@ def split_activations_in_keras_model(
             input_shape=input_shape,
         )
 
-    _, output, _, _ = convert_forward(
+    _, output, _, _ = convert_forward_functional_model(
         model=model,
         input_tensors=input_tensors,
         softmax_to_linear=False,
@@ -92,7 +97,7 @@ def convert(
     ibp: bool = False,
     affine: bool = False,
     back_bounds: Optional[List[tf.Tensor]] = None,
-    layer_fn: Callable[..., List[Layer]] = to_decomon,
+    layer_fn: Callable[..., Layer] = to_decomon,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
     convex_domain: Optional[Dict[str, Any]] = None,
@@ -174,7 +179,7 @@ def convert(
 
 def clone(
     model: Model,
-    layer_fn: Callable[..., List[Layer]] = to_decomon,
+    layer_fn: Callable[..., Layer] = to_decomon,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     convex_domain: Optional[Dict[str, Any]] = None,
     method: Union[str, ConvertMethod] = ConvertMethod.CROWN,

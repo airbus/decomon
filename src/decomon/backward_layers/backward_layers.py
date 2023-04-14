@@ -62,7 +62,7 @@ class BackwardDense(BackwardLayer):
                 affine=get_affine(self.mode),
                 shared=True,
                 fast=False,
-            )[0]
+            )
         self.frozen_weights = False
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
@@ -143,7 +143,7 @@ class BackwardConv2D(BackwardLayer):
                 affine=get_affine(self.mode),
                 shared=True,
                 fast=False,
-            )[0]
+            )
         self.frozen_weights = False
 
     def get_bounds_linear(

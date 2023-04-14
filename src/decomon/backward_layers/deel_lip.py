@@ -55,6 +55,6 @@ class BackwardGroupSort2(BackwardLayer):
                 affine=get_affine(self.mode),
                 shared=True,
                 fast=False,
-            )[0]
+            )
 
         self.frozen_weights = False

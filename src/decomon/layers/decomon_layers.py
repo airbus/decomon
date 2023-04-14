@@ -1540,7 +1540,7 @@ def to_decomon(
     affine: bool = True,
     shared: bool = True,
     fast: bool = True,
-) -> List[DecomonLayer]:
+) -> DecomonLayer:
     """Transform a standard keras layer into a Decomon layer.
 
     Type of layer is tested to know how to transform it into a DecomonLayer of the good type.
@@ -1566,6 +1566,7 @@ def to_decomon(
     if convex_domain is None:
         convex_domain = {}
     class_name = layer.__class__.__name__
+    original_class_name = class_name
     # remove deel-lip dependency
     if class_name[: len(DEEL_LIP)] == DEEL_LIP:
         class_name = class_name[len(DEEL_LIP) :]
@@ -1579,12 +1580,8 @@ def to_decomon(
         return to_decomon_merge(layer, input_dim, dc_decomp, convex_domain, finetune, ibp, affine)
 
     # do case by case for optimizing
-
-    for k in range(3):
-        # two runs before sending a failure
-        if k == 2:
-            # the immediate parent is not a native Keras class
-            raise KeyError(f"unknown class {class_name}")
+    layer_decomon: Optional[DecomonLayer] = None
+    for k in range(2):  # two runs before sending a failure
         try:
 
             decomon_class_name = f"Decomon{class_name}"
@@ -1604,44 +1601,13 @@ def to_decomon(
             config_layer["slope"] = slope
             config_layer["shared"] = shared
             config_layer["fast"] = fast
-            layer_list: List[DecomonLayer] = []
-            activation = None
-            if "activation" in config_layer.keys():
-                activation = config_layer["activation"]
-                if activation == "linear":
-                    activation = None
-                if not (activation is None) and not isinstance(layer, Activation):
-                    config_layer["activation"] = "linear"
+            if not isinstance(layer, Activation):
+                config_layer.pop("activation", None)  # Hyp: no non-linear activation in dense or conv2d layers
 
             layer_decomon = globals()[decomon_class_name].from_config(config_layer)
+            if layer_decomon is None:  # for mypy
+                raise RuntimeError("layer_decomon should not be None at this point")
             layer_decomon.share_weights(layer)
-            layer_list.append(layer_decomon)
-            if not activation is None and not isinstance(layer, Activation) and not isinstance(activation, dict):
-                layer_next = DecomonActivation(
-                    activation,
-                    slope=slope,
-                    mode=mode,
-                    finetune=finetune,
-                    dc_decomp=dc_decomp,
-                    convex_domain=convex_domain,
-                    dtype=layer.dtype,
-                )
-                layer_list.append(layer_next)
-            else:
-                if isinstance(activation, dict):
-                    layer_next_list = to_decomon(
-                        layer.activation,
-                        input_dim,
-                        slope=slope,
-                        dc_decomp=dc_decomp,
-                        convex_domain=convex_domain,
-                        finetune=finetune,
-                        ibp=ibp,
-                        affine=affine,
-                        shared=shared,
-                        fast=fast,
-                    )
-                    layer_list += layer_next_list
             break
         except KeyError:
             if hasattr(layer, "vanilla_export"):
@@ -1650,6 +1616,9 @@ def to_decomon(
                 layer_(layer.input)
                 layer = layer_
                 class_name = layer.__class__.__name__
+
+    if layer_decomon is None:
+        raise NotImplementedError(f"The decomon version of {original_class_name} is not yet implemented.")
 
     try:
         input_shape = list(layer.input_shape)[1:]
@@ -1674,10 +1643,10 @@ def to_decomon(
         if dc_decomp:
             input_ += [y_shape, y_shape]
 
-        layer_list[0](input_)
-        layer_list[0].reset_layer(layer)
+        layer_decomon(input_)
+        layer_decomon.reset_layer(layer)
     except:
         pass
 
     # return layer_decomon
-    return layer_list
+    return layer_decomon

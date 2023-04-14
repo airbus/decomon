@@ -9,6 +9,7 @@ from tensorflow.keras.layers import Dense
 
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonDense, to_decomon
+from decomon.models.utils import split_activation
 
 
 def test_DecomonDense_1D_box(n, mode, shared, floatx, helpers):
@@ -354,27 +355,28 @@ def test_DecomonDense_1D_to_decomon_box(n, activation, mode, shared, helpers):
     else:
         raise ValueError("Unknown mode.")
 
-    decomon_dense = to_decomon(
-        dense_ref, input_dim, dc_decomp=True, ibp=ibp, affine=affine, shared=shared
-    )  # ATTENTION: it will be a list
+    layers_ref = split_activation(dense_ref)
+    decomon_layers = []
+    for layer in layers_ref:
+        decomon_layers.append(to_decomon(layer, input_dim, dc_decomp=True, ibp=ibp, affine=affine, shared=shared))
 
-    W_, bias = decomon_dense[0].get_weights()
+    W_, bias = decomon_layers[0].get_weights()
     W_0, b_0 = dense_ref.get_weights()
 
     assert_almost_equal(W_, W_0, decimal=6, err_msg="wrong decomposition")
     assert_almost_equal(bias, b_0, decimal=6, err_msg="wrong decomposition")
 
     if mode == ForwardMode.HYBRID:
-        output = decomon_dense[0](inputs[2:])
+        output = decomon_layers[0](inputs[2:])
     elif mode == ForwardMode.AFFINE:
-        output = decomon_dense[0]([z, W_u, b_u, W_l, b_l, h, g])
+        output = decomon_layers[0]([z, W_u, b_u, W_l, b_l, h, g])
     elif mode == ForwardMode.IBP:
-        output = decomon_dense[0]([u_c, l_c, h, g])
+        output = decomon_layers[0]([u_c, l_c, h, g])
     else:
         raise ValueError("Unknown mode.")
 
-    if len(decomon_dense) > 1:
-        output = decomon_dense[1](output)
+    if len(decomon_layers) > 1:
+        output = decomon_layers[1](output)
 
     f_dense = K.function(inputs[2:], output)
     y_ref = f_ref(inputs_)
@@ -475,25 +477,27 @@ def test_DecomonDense_multiD_to_decomon_box(odd, activation, mode, helpers):
     else:
         raise ValueError("Unknown mode.")
 
-    decomon_dense = to_decomon(dense_ref, input_dim, dc_decomp=True, ibp=ibp, affine=affine)
-
-    W_, bias = decomon_dense[0].get_weights()
+    layers_ref = split_activation(dense_ref)
+    decomon_layers = []
+    for layer in layers_ref:
+        decomon_layers.append(to_decomon(layer, input_dim, dc_decomp=True, ibp=ibp, affine=affine))
+    W_, bias = decomon_layers[0].get_weights()
     W_0, b_0 = dense_ref.get_weights()
 
     assert_almost_equal(W_, W_0, decimal=6, err_msg="wrong decomposition")
     assert_almost_equal(bias, b_0, decimal=6, err_msg="wrong decomposition")
 
     if mode == ForwardMode.HYBRID:
-        output = decomon_dense[0](inputs[2:])
+        output = decomon_layers[0](inputs[2:])
     elif mode == ForwardMode.AFFINE:
-        output = decomon_dense[0]([z, W_u, b_u, W_l, b_l, h, g])
+        output = decomon_layers[0]([z, W_u, b_u, W_l, b_l, h, g])
     elif mode == ForwardMode.IBP:
-        output = decomon_dense[0]([u_c, l_c, h, g])
+        output = decomon_layers[0]([u_c, l_c, h, g])
     else:
         raise ValueError("Unknown mode.")
 
-    if len(decomon_dense) > 1:
-        output = decomon_dense[1](output)
+    if len(decomon_layers) > 1:
+        output = decomon_layers[1](output)
 
     f_dense = K.function(inputs[2:], output)
 
@@ -611,17 +615,19 @@ def test_DecomonDense_multiD_to_decomon_box_nodc(odd, activation, mode, helpers)
 
     y_ref = f_ref(inputs_)
 
-    decomon_dense = to_decomon(dense_ref, input_dim, dc_decomp=False)
-
-    W_, bias = decomon_dense[0].get_weights()
+    layers_ref = split_activation(dense_ref)
+    decomon_layers = []
+    for layer in layers_ref:
+        decomon_layers.append(to_decomon(layer, input_dim, dc_decomp=False))
+    W_, bias = decomon_layers[0].get_weights()
     W_0, b_0 = dense_ref.get_weights()
 
     assert_almost_equal(W_, W_0, decimal=6, err_msg="wrong decomposition")
     assert_almost_equal(bias, b_0, decimal=6, err_msg="wrong decomposition")
 
-    output = decomon_dense[0](inputs[2:])
-    if len(decomon_dense) > 1:
-        output = decomon_dense[1](output)
+    output = decomon_layers[0](inputs[2:])
+    if len(decomon_layers) > 1:
+        output = decomon_layers[1](output)
 
     f_dense = K.function(inputs[2:], output)
 
