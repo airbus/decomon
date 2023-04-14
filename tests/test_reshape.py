@@ -18,9 +18,6 @@ def test_Decomon_reshape_box(mode, floatx, helpers):
         K.set_epsilon(1e-2)
         decimal = 1
 
-    # monotonic_layer = DecomonConv2D(10, kernel_size=(3, 3), activation="relu", dc_decomp=True, mode=mode,
-    #                                data_format=data_format)
-
     inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd)
     inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
@@ -84,9 +81,6 @@ def test_Decomon_reshape_box_nodc(mode, floatx, helpers):
     if floatx == 16:
         K.set_epsilon(1e-2)
         decimal = 1
-
-    # monotonic_layer = DecomonConv2D(10, kernel_size=(3, 3), activation="relu", dc_decomp=True, mode=mode,
-    #                                data_format=data_format)
 
     inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd, dc_decomp=False)
     inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1, dc_decomp=False)

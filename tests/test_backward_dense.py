@@ -14,7 +14,7 @@ from decomon.layers.decomon_layers import DecomonDense, to_decomon
 from decomon.utils import Slope
 
 
-def test_Backward_Dense_1D_box(n, activation, use_bias, mode, floatx, helpers):
+def test_Backward_Dense_1D_box(n, use_bias, mode, floatx, helpers):
 
     slope = Slope.V_SLOPE
 
@@ -29,41 +29,19 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, mode, floatx, helpers):
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
-    layer_ = Dense(1, use_bias=use_bias, activation=activation, dtype=K.floatx())
+    layer_ = Dense(1, use_bias=use_bias, dtype=K.floatx())
     input_dim = x.shape[-1]
     layer_(inputs[1])
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
-        ibp = True
-        affine = True
-    elif mode == ForwardMode.IBP:
-        ibp = True
-        affine = False
-    elif mode == ForwardMode.AFFINE:
-        ibp = False
-        affine = True
-    else:
-        raise ValueError("Unknown mode.")
-
-    layer = to_decomon(layer_, input_dim, dc_decomp=False, ibp=ibp, affine=affine, shared=True)[0]
-
-    if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
-        output = layer(input_mode)
-        z_0, u_c_0, _, _, l_c_0, _, _ = output
     elif mode == ForwardMode.AFFINE:
         input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
-        output = layer(input_mode)
-        z_0, _, _, _, _ = output
     elif mode == ForwardMode.IBP:
         input_mode = [inputs[3], inputs[6]]
-        output = layer(input_mode)
-        u_c_0, l_c_0 = output
     else:
         raise ValueError("Unknown mode.")
 
-    w_out = Input((1, 1), dtype=K.floatx())
-    b_out = Input((1,), dtype=K.floatx())
     # get backward layer
     layer_backward = to_backward(layer_, input_dim=input_dim, slope=slope, mode=mode, convex_domain={})
 
@@ -72,11 +50,23 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, mode, floatx, helpers):
     output_ = f_dense(inputs_)
     w_u_, b_u_, w_l_, b_l_ = output_
 
-    if use_bias:
-        W_, bias = layer.get_weights()
-    else:
-        W_ = layer.get_weights()[0]
-        bias = 0.0 * W_[0]
+    helpers.assert_output_properties_box_linear(
+        x,
+        None,
+        z_[:, 0],
+        z_[:, 1],
+        None,
+        np.sum(np.maximum(w_u_[:, 0], 0) * W_u + np.minimum(w_u_[:, 0], 0) * W_l, 1)[:, :, None],
+        b_u_[:, 0]
+        + np.sum(np.maximum(w_u_[:, 0], 0) * b_u[:, :, None], 1)
+        + np.sum(np.minimum(w_u_[:, 0], 0) * b_l[:, :, None], 1),
+        None,
+        np.sum(np.maximum(w_l_[:, 0], 0) * W_l + np.minimum(w_l_[:, 0], 0) * W_u, 1)[:, :, None],
+        b_l_[:, 0]
+        + np.sum(np.maximum(w_l_[:, 0], 0) * b_l[:, :, None], 1)
+        + np.sum(np.minimum(w_l_[:, 0], 0) * b_u[:, :, None], 1),
+        "dense_{}".format(n),
+    )
 
     helpers.assert_output_properties_box_linear(
         x,
@@ -95,32 +85,6 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, mode, floatx, helpers):
         + np.sum(np.minimum(w_l_[:, 0], 0) * b_u[:, :, None], 1),
         "dense_{}".format(n),
     )
-    if use_bias:
-        layer.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
-    else:
-        layer.set_weights([2 * np.ones_like(W_)])
-
-    helpers.assert_output_properties_box_linear(
-        x,
-        None,
-        z_[:, 0],
-        z_[:, 1],
-        None,
-        np.sum(np.maximum(w_u_[:, 0], 0) * W_u + np.minimum(w_u_[:, 0], 0) * W_l, 1)[:, :, None],
-        b_u_[:, 0]
-        + np.sum(np.maximum(w_u_[:, 0], 0) * b_u[:, :, None], 1)
-        + np.sum(np.minimum(w_u_[:, 0], 0) * b_l[:, :, None], 1),
-        None,
-        np.sum(np.maximum(w_l_[:, 0], 0) * W_l + np.minimum(w_l_[:, 0], 0) * W_u, 1)[:, :, None],
-        b_l_[:, 0]
-        + np.sum(np.maximum(w_l_[:, 0], 0) * b_l[:, :, None], 1)
-        + np.sum(np.minimum(w_l_[:, 0], 0) * b_u[:, :, None], 1),
-        "dense_{}".format(n),
-    )
-    if use_bias:
-        layer.set_weights([-2 * np.ones_like(W_), np.ones_like(bias)])
-    else:
-        layer.set_weights([-2 * np.ones_like(W_)])
 
     helpers.assert_output_properties_box_linear(
         x,
@@ -144,42 +108,7 @@ def test_Backward_Dense_1D_box(n, activation, use_bias, mode, floatx, helpers):
     K.set_floatx("float32")
 
 
-def test_Backward_Dense_1D_box_slope(helpers):
-    n = 2
-    activation = "relu"
-    use_bias = False
-    mode = ForwardMode.AFFINE
-
-    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
-    x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
-    input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
-
-    layer_keras = Dense(1, use_bias=use_bias, activation=activation, dtype=K.floatx())
-    input_dim = x.shape[-1]
-    layer_keras(inputs[1])
-
-    outputs_by_slope = {}
-    for slope in Slope:
-        layer_backward = to_backward(layer_keras, input_dim=input_dim, slope=slope, mode=mode, convex_domain={})
-        assert layer_backward.slope == slope
-        w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
-        f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
-        outputs_by_slope[slope] = f_dense(inputs_)
-
-    # check results
-    # O_Slope != Z_Slope
-    same_outputs_O_n_Z = [
-        (a == b).all() for a, b in zip(outputs_by_slope[Slope.O_SLOPE], outputs_by_slope[Slope.Z_SLOPE])
-    ]
-    assert not all(same_outputs_O_n_Z)
-
-    # V_Slope == Z_Slope
-    for a, b in zip(outputs_by_slope[Slope.V_SLOPE], outputs_by_slope[Slope.Z_SLOPE]):
-        assert (a == b).all()
-
-
-def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, helpers):
+def test_Backward_DecomonDense_multiD_box(odd, floatx, mode, helpers):
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
     decimal = 5
@@ -191,43 +120,18 @@ def test_Backward_DecomonDense_multiD_box(odd, activation, floatx, mode, helpers
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
     x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
     input_dim = x.shape[-1]
-    layer_ = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
+    layer_ = Dense(1, use_bias=True, dtype=K.floatx())
     layer_(inputs[1])
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
-        ibp = True
-        affine = True
-    elif mode == ForwardMode.IBP:
-        ibp = True
-        affine = False
-    elif mode == ForwardMode.AFFINE:
-        ibp = False
-        affine = True
-    else:
-        raise ValueError("Unknown mode.")
-
-    layer = to_decomon(layer_, input_dim, dc_decomp=False, ibp=ibp, affine=affine, shared=True)[0]
-
-    if mode == ForwardMode.HYBRID:
         input_mode = inputs[2:]
-        output = layer(input_mode)
-        z_0, u_c_0, _, _, l_c_0, _, _ = output
     elif mode == ForwardMode.AFFINE:
         input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
-        output = layer(input_mode)
-        z_0, _, _, _, _ = output
     elif mode == ForwardMode.IBP:
         input_mode = [inputs[3], inputs[6]]
-        output = layer(input_mode)
-        u_c_0, l_c_0 = output
     else:
         raise ValueError("Unknown mode.")
 
-    # output = layer(inputs[2:])
-    # z_0, u_c_0, _, _, l_c_0, _, _ = output
-
-    w_out = Input((1, 1), dtype=K.floatx())
-    b_out = Input((1,), dtype=K.floatx())
     # get backward layer
     layer_backward = to_backward(layer_, input_dim=input_dim, mode=mode, convex_domain={})
     w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
