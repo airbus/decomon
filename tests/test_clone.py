@@ -11,7 +11,12 @@ from decomon.backward_layers.utils import get_affine, get_ibp
 from decomon.layers.core import ForwardMode, get_mode
 from decomon.layers.decomon_reshape import DecomonReshape
 from decomon.models import clone
-from decomon.models.utils import ConvertMethod, get_ibp_affine_from_method
+from decomon.models.convert import FeedDirection, get_direction
+from decomon.models.utils import (
+    ConvertMethod,
+    get_ibp_affine_from_method,
+    has_merge_layers,
+)
 from decomon.utils import Slope
 
 try:
@@ -210,3 +215,90 @@ def test_clone_full_deellip_model_forward(helpers):
     decomon_model = clone(model, method=method, final_ibp=ibp, final_affine=affine)
 
     # check bounds: todo
+
+
+def test_convert_toy_models_1d(toy_model_1d, method, mode, helpers):
+    if not helpers.is_method_mode_compatible(method=method, mode=mode):
+        # skip method=ibp/crown-ibp with mode=affine/hybrid
+        pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
+
+    decimal = 4
+    n = 6
+    dc_decomp = False
+    ibp = get_ibp(mode=mode)
+    affine = get_affine(mode=mode)
+
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
+    input_decomon_ = helpers.get_inputs_np_for_decomon_model_from_full_inputs(inputs=inputs_)
+
+    #  keras model and output of reference
+    ref_nn = toy_model_1d
+    output_ref_ = ref_nn.predict(input_ref_)
+
+    # decomon conversion
+    if (get_direction(method) == FeedDirection.BACKWARD) and has_merge_layers(ref_nn):
+        # skip models with merge layers in backward direction as not yet implemented
+        with pytest.raises(NotImplementedError):
+            decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
+        return
+
+    decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
+
+    #  decomon outputs
+    outputs_ = decomon_model.predict(input_decomon_)
+
+    #  check bounds consistency
+    helpers.assert_decomon_model_output_properties_box(
+        full_inputs=inputs_,
+        output_ref=output_ref_,
+        outputs_for_mode=outputs_,
+        mode=mode,
+        dc_decomp=dc_decomp,
+        decimal=decimal,
+    )
+
+
+@pytest.mark.skip("test not ready yet")
+def test_convert_cnn(method, mode, helpers):
+    if not helpers.is_method_mode_compatible(method=method, mode=mode):
+        # skip method=ibp/crown-ibp with mode=affine/hybrid
+        pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
+
+    if get_direction(method) == FeedDirection.BACKWARD:
+        # skip as BackwardConv2D not yet ready
+        pytest.skip(f"BackwardConv2D not yet fully implemented")
+
+    decimal = 4
+    data_format = "channels_last"
+    odd, m_0, m_1 = 0, 0, 1
+
+    dc_decomp = False
+    ibp = get_ibp(mode=mode)
+    affine = get_affine(mode=mode)
+
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
+    input_decomon_ = helpers.get_inputs_np_for_decomon_model_from_full_inputs(inputs=inputs_)
+
+    #  keras model and output of reference
+    ref_nn = helpers.toy_struct_cnn(dtype=K.floatx())
+    output_ref_ = ref_nn.predict(input_ref_)
+
+    # decomon conversion
+    decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
+
+    #  decomon outputs
+    outputs_ = decomon_model.predict(input_decomon_)
+
+    #  check bounds consistency
+    helpers.assert_decomon_model_output_properties_box(
+        full_inputs=inputs_,
+        output_ref=output_ref_,
+        outputs_for_mode=outputs_,
+        mode=mode,
+        dc_decomp=dc_decomp,
+        decimal=decimal,
+    )
