@@ -23,17 +23,7 @@ from tensorflow.python.keras.utils.generic_utils import to_list
 
 from decomon.layers import activations
 from decomon.layers.core import DEEL_LIP, DecomonLayer, ForwardMode
-from decomon.layers.decomon_merge_layers import (  # add some layers to module namespace `globals()`
-    DecomonAdd,
-    DecomonAverage,
-    DecomonConcatenate,
-    DecomonDot,
-    DecomonMaximum,
-    DecomonMinimum,
-    DecomonMultiply,
-    DecomonSubtract,
-    to_decomon_merge,
-)
+from decomon.layers.decomon_merge_layers import to_decomon_merge
 from decomon.layers.decomon_reshape import (  # add some layers to module namespace `globals()`
     DecomonPermute,
     DecomonReshape,
@@ -45,13 +35,9 @@ from decomon.layers.utils import (
     ClipAlphaAndSumtoOne,
     NonPos,
     Project_initializer_pos,
+    is_a_merge_layer,
 )
 from decomon.utils import ConvexDomainType, Slope, get_lower, get_upper
-
-try:
-    from keras.layers.merge import _Merge as Merge
-except ModuleNotFoundError:
-    from tensorflow.python.keras.layers.merge import _Merge as Merge
 
 try:
     # add deel-lip layers to global namespace, if available
@@ -1578,7 +1564,7 @@ def to_decomon(
         if not layer.built:
             raise ValueError(f"the layer {layer.name} has not been built yet")
 
-    if isinstance(layer, Merge):
+    if is_a_merge_layer(layer):
         return to_decomon_merge(layer, input_dim, dc_decomp, convex_domain, finetune, ibp, affine)
 
     # do case by case for optimizing
