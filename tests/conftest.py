@@ -1474,6 +1474,37 @@ class Helpers:
         ]
         return Sequential(layers)
 
+    @staticmethod
+    def toy_model(model_name, dtype="float32"):
+        if model_name == "tutorial":
+            return Helpers.toy_network_tutorial(dtype=dtype)
+        elif model_name == "tutorial_activation_embedded":
+            return Helpers.toy_network_tutorial_with_embedded_activation(dtype=dtype)
+        elif model_name == "merge_v0":
+            return Helpers.toy_struct_v0_1D(dtype=dtype, input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True)
+        elif model_name == "merge_v1":
+            return Helpers.toy_struct_v1_1D(
+                dtype=dtype, input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
+            )
+        elif model_name == "merge_v1_seq":
+            return Helpers.toy_struct_v1_1D(
+                dtype=dtype, input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=True
+            )
+        elif model_name == "merge_v1_2":
+            return Helpers.toy_struct_v1_1D(
+                dtype=dtype, input_dim=2, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
+            )
+        elif model_name == "merge_v2":
+            return Helpers.toy_struct_v2_1D(
+                dtype=dtype, input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
+            )
+        elif model_name == "cnn":
+            return Helpers.toy_struct_cnn(dtype=dtype)
+        elif model_name == "embedded_model":
+            return Helpers.toy_embedded_sequential(dtype=dtype)
+        else:
+            raise ValueError(f"model_name {model_name} unknown")
+
 
 @pytest.fixture
 def helpers():
@@ -1493,35 +1524,22 @@ def helpers():
         "embedded_model",
     ]
 )
-def toy_model(request, floatx, helpers):
+def toy_model(request, helpers):
     model_name = request.param
-    if model_name == "tutorial":
-        return helpers.toy_network_tutorial(dtype=K.floatx())
-    elif model_name == "tutorial_activation_embedded":
-        return helpers.toy_network_tutorial_with_embedded_activation(dtype=K.floatx())
-    elif model_name == "merge_v0":
-        return helpers.toy_struct_v0_1D(
-            dtype=K.floatx(), input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True
-        )
-    elif model_name == "merge_v1":
-        return helpers.toy_struct_v1_1D(
-            dtype=K.floatx(), input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
-        )
-    elif model_name == "merge_v1_seq":
-        return helpers.toy_struct_v1_1D(
-            dtype=K.floatx(), input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=True
-        )
-    elif model_name == "merge_v1_2":
-        return helpers.toy_struct_v1_1D(
-            dtype=K.floatx(), input_dim=2, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
-        )
-    elif model_name == "merge_v2":
-        return helpers.toy_struct_v2_1D(
-            dtype=K.floatx(), input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
-        )
-    elif model_name == "cnn":
-        return helpers.toy_struct_cnn(dtype=K.floatx())
-    elif model_name == "embedded_model":
-        return helpers.toy_embedded_sequential(dtype=K.floatx())
-    else:
-        raise ValueError(f"model_name {model_name} unknown")
+    return helpers.toy_model(model_name, dtype=K.floatx())
+
+
+@pytest.fixture(
+    params=[
+        "tutorial",
+        "tutorial_activation_embedded",
+        "merge_v0",
+        "merge_v1",
+        "merge_v1_seq",
+        "merge_v2",
+        "embedded_model",
+    ]
+)
+def toy_model_1d(request, helpers):
+    model_name = request.param
+    return helpers.toy_model(model_name, dtype=K.floatx())
