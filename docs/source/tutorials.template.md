@@ -5,7 +5,6 @@ available in the `tutorials/` folder of the repository.
 
 ```{contents}
 ---
-depth: 1
 local: true
 ---
 ```
