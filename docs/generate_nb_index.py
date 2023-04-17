@@ -27,7 +27,7 @@ def extract_notebook_title_n_description(
     notebook_filepath: str,
 ) -> Tuple[str, List[str]]:
     # load notebook
-    with open(notebook_filepath, "rt") as f:
+    with open(notebook_filepath, "rt", encoding="utf-8") as f:
         notebook = json.load(f)
 
     # find title + description: from first cell,  h1 title + remaining text.
@@ -36,7 +36,8 @@ def extract_notebook_title_n_description(
     description_lines: List[str] = []
     cell = notebook["cells"][0]
     if cell["cell_type"] == "markdown":
-        if cell["source"][0].startswith("# "):
+        firstline = cell["source"][0].strip()
+        if firstline.startswith("# "):
             title = cell["source"][0][2:].strip()
             description_lines = cell["source"][1:]
         else:
