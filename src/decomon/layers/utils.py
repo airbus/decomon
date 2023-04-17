@@ -6,6 +6,7 @@ import tensorflow.keras as keras
 from tensorflow.keras import backend as K
 from tensorflow.keras.constraints import Constraint
 from tensorflow.keras.initializers import Initializer
+from tensorflow.keras.layers import Layer
 
 from decomon.layers.core import ForwardMode, StaticVariables
 from decomon.utils import (
@@ -20,6 +21,10 @@ from decomon.utils import (
     minus,
     relu_,
 )
+
+
+def is_a_merge_layer(layer: Layer) -> bool:
+    return hasattr(layer, "_merge_function")
 
 
 #####

@@ -18,6 +18,7 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.models import Model
 
 from decomon.layers.core import ForwardMode
+from decomon.layers.utils import is_a_merge_layer
 from decomon.utils import (
     ConvexDomainType,
     get_lower,
@@ -35,6 +36,10 @@ class ConvertMethod(Enum):
     FORWARD_IBP = "forward-ibp"
     FORWARD_AFFINE = "forward-affine"
     FORWARD_HYBRID = "forward-hybrid"
+
+
+def has_merge_layers(model: Model) -> bool:
+    return any(is_a_merge_layer(layer) for layer in model.layers)
 
 
 def get_input_tensors(
