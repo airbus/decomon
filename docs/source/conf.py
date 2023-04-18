@@ -80,7 +80,9 @@ html_static_path = ["_static"]
 html_show_sourcelink = False
 html_theme_options = {
     "style_external_links": True,
+    # "logo_only": True,
 }
+html_logo = "_static/decomon_logo_with_transparency_100.png"
 
 html_js_files = ["versions.js"]
 AUTODOC_SHOW_VERSIONS = os.environ.get("AUTODOC_SHOW_VERSIONS", "True").lower() != "false"
