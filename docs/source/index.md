@@ -1,7 +1,7 @@
 # Decomon: Automatic Certified Perturbation Analysis of Neural Networks
 
 <div align="center">
-    <img src="_static/banner.jpg" width="55%" alt="decomon" align="center" />
+    <img src="_static/decomon.png" width="55%" alt="decomon" align="center" />
 </div>
 
 `decomon` is a library that allows the derivation of upper and lower bounds
