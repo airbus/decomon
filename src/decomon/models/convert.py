@@ -20,7 +20,7 @@ from decomon.models.forward_cloning import (
 from decomon.models.models import DecomonModel
 from decomon.models.utils import (
     ConvertMethod,
-    get_input_dim,
+    get_input_tensors,
     get_input_tensors_keras_only,
     get_mode,
     split_activation,
@@ -154,7 +154,6 @@ def convert(
             input_tensors=input_tensors,
             back_bounds=back_bounds,
             slope=slope,
-            input_dim=input_dim,
             convex_domain=convex_domain,
             ibp=ibp,
             affine=affine,
@@ -220,92 +219,12 @@ def clone(
         finetune_forward = True
         finetune_backward = True
 
-    input_dim: int = np.prod(model.input_shape[1:])
-    input_shape = None
-    input_shape_vec = None
-
-    for input_layer in model._input_layers:
-        if len(input_layer.input_shape) > 1:
-            raise ValueError(f"Expected one input tensor but got {len(input_layer.input_shape)}")
-        input_shape_vec_ = input_layer.input_shape[0]
-        input_shape_ = tuple(list(input_shape_vec_)[1:])
-
-        if input_shape_vec is None:
-            input_shape_vec = input_shape_vec_
-        if input_shape is None:
-            input_shape = input_shape_
-        else:
-            if not np.allclose(input_shape, input_shape_):
-                raise ValueError("Expected that every input layers use the same input_tensor")
-
-    input_shape_x: Tuple[int, ...]
-    if len(convex_domain) == 0 or convex_domain["name"] != ConvexDomainType.BALL:
-        input_shape_x = (2, input_dim)
-    else:
-        input_shape_x = (input_dim,)
-
-    z_tensor = Input(shape=input_shape_x, dtype=model.layers[0].dtype)
-
-    if len(convex_domain) == 0 or convex_domain["name"] != ConvexDomainType.BALL:
-
-        if ibp_:
-            u_c_tensor = Lambda(lambda z: z[:, 1], dtype=z_tensor.dtype)(z_tensor)
-            l_c_tensor = Lambda(lambda z: z[:, 0], dtype=z_tensor.dtype)(z_tensor)
-
-        if affine_:
-            z_value = K.cast(0.0, z_tensor.dtype)
-            o_value = K.cast(1.0, z_tensor.dtype)
-            W = Lambda(lambda z: tf.linalg.diag(z_value * z[:, 0] + o_value), dtype=z_tensor.dtype)(z_tensor)
-            b = Lambda(lambda z: z_value * z[:, 1], dtype=z_tensor.dtype)(z_tensor)
-
-    else:
-
-        if convex_domain["p"] == np.inf:
-            radius = convex_domain["eps"]
-            if ibp_:
-                u_c_tensor = Lambda(
-                    lambda var: var + K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
-                )(z_tensor)
-                l_c_tensor = Lambda(
-                    lambda var: var - K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
-                )(z_tensor)
-            if affine_:
-                z_value = K.cast(0.0, model.layers[0].dtype)
-                o_value = K.cast(1.0, model.layers[0].dtype)
-
-                W = tf.linalg.diag(z_value * u_c_tensor + o_value)
-                b = z_value * u_c_tensor
-
-        else:
-            z_value = K.cast(0.0, model.layers[0].dtype)
-            o_value = K.cast(1.0, model.layers[0].dtype)
-
-            def get_bounds(z: tf.Tensor) -> List[tf.Tensor]:
-                output = []
-                if affine_:
-                    W = tf.linalg.diag(z_value * z + o_value)
-                    b = z_value * z
-                    output += [W, b]
-                if ibp_:
-                    u_c_ = get_upper(z, W, b, convex_domain)
-                    l_c_ = get_lower(z, W, b, convex_domain)
-                    output += [u_c_, l_c_]
-                return output
-
-            output_ = get_bounds(z_tensor)
-            if ibp_:
-                u_c_tensor, l_c_tensor = output_[-2:]
-            if affine_:
-                W, b = output_[:2]
-
-    if ibp_ and affine_:
-        input_tensors = [z_tensor] + [u_c_tensor, W, b] + [l_c_tensor, W, b]
-    elif ibp_ and not affine_:
-        input_tensors = [u_c_tensor, l_c_tensor]
-    elif not ibp_ and affine_:
-        input_tensors = [z_tensor] + [W, b] + [W, b]
-    else:
-        raise NotImplementedError("not ibp and not affine not implemented")
+    z_tensor, input_tensors = get_input_tensors(
+        model=model,
+        convex_domain=convex_domain,
+        ibp=ibp_,
+        affine=affine_,
+    )
 
     _, output, _, _ = convert(
         model,

@@ -24,13 +24,7 @@ from decomon.backward_layers.utils import merge_with_previous
 from decomon.layers.core import ForwardMode
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.forward_cloning import OutputMapDict
-from decomon.models.utils import (
-    check_input_tensors_sequential,
-    get_depth_dict,
-    get_input_dim,
-    get_input_tensors,
-    get_mode,
-)
+from decomon.models.utils import get_depth_dict, get_mode
 from decomon.utils import Slope, get_lower, get_upper
 
 
@@ -298,10 +292,9 @@ def get_input_nodes(
 
 def crown_model(
     model: Model,
-    input_tensors: Optional[List[tf.Tensor]] = None,
+    input_tensors: List[tf.Tensor],
     back_bounds: Optional[List[tf.Tensor]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
-    input_dim: int = -1,
     ibp: bool = True,
     affine: bool = True,
     convex_domain: Optional[Dict[str, Any]] = None,
@@ -324,18 +317,6 @@ def crown_model(
     has_softmax = False
     if softmax_to_linear:
         model, has_softmax = softmax_2_linear(model)  # do better because you modify the model eventually
-
-    if input_dim == -1:
-        input_dim = get_input_dim(model)
-
-    if input_tensors is None:
-        input_tensors = get_input_tensors(
-            model=model,
-            input_dim=input_dim,
-            convex_domain=convex_domain,
-            ibp=ibp,
-            affine=affine,
-        )
 
     # layer_fn
     ##########
@@ -422,10 +403,9 @@ def crown_model(
 
 def convert_backward(
     model: Model,
-    input_tensors: Optional[List[tf.Tensor]] = None,
+    input_tensors: List[tf.Tensor],
     back_bounds: Optional[List[tf.Tensor]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
-    input_dim: int = -1,
     ibp: bool = True,
     affine: bool = True,
     convex_domain: Optional[Dict[str, Any]] = None,
@@ -452,7 +432,6 @@ def convert_backward(
         input_tensors=input_tensors,
         back_bounds=back_bounds,
         slope=slope,
-        input_dim=input_dim,
         ibp=ibp,
         affine=affine,
         convex_domain=convex_domain,
