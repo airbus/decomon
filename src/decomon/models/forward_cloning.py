@@ -20,7 +20,6 @@ from decomon.models.utils import (
     get_depth_dict,
     get_inner_layers,
     get_input_dim,
-    get_input_tensors,
     prepare_inputs_for_layer,
     wrap_outputs_from_layer_in_list,
 )
@@ -92,7 +91,7 @@ def include_dim_layer_fn(
 
 def convert_forward(
     model: Model,
-    input_tensors: Optional[List[tf.Tensor]] = None,
+    input_tensors: List[tf.Tensor],
     layer_fn: Callable[..., Layer] = to_decomon,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
@@ -115,15 +114,6 @@ def convert_forward(
 
     if input_dim == -1:
         input_dim = get_input_dim(model)
-
-    if input_tensors is None:
-        input_tensors = get_input_tensors(
-            model=model,
-            input_dim=input_dim,
-            convex_domain=convex_domain,
-            ibp=ibp,
-            affine=affine,
-        )
 
     layer_fn_to_list = include_dim_layer_fn(
         layer_fn,

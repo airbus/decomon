@@ -39,16 +39,98 @@ class ConvertMethod(Enum):
 
 def get_input_tensors(
     model: Model,
-    input_dim: int,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    convex_domain: Dict[str, Any],
     ibp: bool = True,
     affine: bool = True,
-) -> List[tf.Tensor]:
-    input_tensors = []
-    for i in range(len(model._input_layers)):
-        tmp = check_input_tensors_sequential(model, None, input_dim, input_dim, ibp, affine, False, convex_domain)
-        input_tensors += tmp
-    return input_tensors
+) -> Tuple[tf.Tensor, List[tf.Tensor]]:
+    input_dim = get_input_dim(model)
+    input_shape = None
+    input_shape_vec = None
+
+    for input_layer in model._input_layers:
+        if len(input_layer.input_shape) > 1:
+            raise ValueError(f"Expected one input tensor but got {len(input_layer.input_shape)}")
+        input_shape_vec_ = input_layer.input_shape[0]
+        input_shape_ = tuple(list(input_shape_vec_)[1:])
+
+        if input_shape_vec is None:
+            input_shape_vec = input_shape_vec_
+        if input_shape is None:
+            input_shape = input_shape_
+        else:
+            if not np.allclose(input_shape, input_shape_):
+                raise ValueError("Expected that every input layers use the same input_tensor")
+
+    input_shape_x: Tuple[int, ...]
+    if len(convex_domain) == 0 or convex_domain["name"] != ConvexDomainType.BALL:
+        input_shape_x = (2, input_dim)
+    else:
+        input_shape_x = (input_dim,)
+
+    z_tensor = Input(shape=input_shape_x, dtype=model.layers[0].dtype)
+
+    if len(convex_domain) == 0 or convex_domain["name"] != ConvexDomainType.BALL:
+
+        if ibp:
+            u_c_tensor = Lambda(lambda z: z[:, 1], dtype=z_tensor.dtype)(z_tensor)
+            l_c_tensor = Lambda(lambda z: z[:, 0], dtype=z_tensor.dtype)(z_tensor)
+
+        if affine:
+            z_value = K.cast(0.0, z_tensor.dtype)
+            o_value = K.cast(1.0, z_tensor.dtype)
+            W = Lambda(lambda z: tf.linalg.diag(z_value * z[:, 0] + o_value), dtype=z_tensor.dtype)(z_tensor)
+            b = Lambda(lambda z: z_value * z[:, 1], dtype=z_tensor.dtype)(z_tensor)
+
+    else:
+
+        if convex_domain["p"] == np.inf:
+            radius = convex_domain["eps"]
+            if ibp:
+                u_c_tensor = Lambda(
+                    lambda var: var + K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
+                )(z_tensor)
+                l_c_tensor = Lambda(
+                    lambda var: var - K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
+                )(z_tensor)
+            if affine:
+                z_value = K.cast(0.0, model.layers[0].dtype)
+                o_value = K.cast(1.0, model.layers[0].dtype)
+
+                W = tf.linalg.diag(z_value * u_c_tensor + o_value)
+                b = z_value * u_c_tensor
+
+        else:
+            z_value = K.cast(0.0, model.layers[0].dtype)
+            o_value = K.cast(1.0, model.layers[0].dtype)
+
+            def get_bounds(z: tf.Tensor) -> List[tf.Tensor]:
+                output = []
+                if affine:
+                    W = tf.linalg.diag(z_value * z + o_value)
+                    b = z_value * z
+                    output += [W, b]
+                if ibp:
+                    u_c_ = get_upper(z, W, b, convex_domain)
+                    l_c_ = get_lower(z, W, b, convex_domain)
+                    output += [u_c_, l_c_]
+                return output
+
+            output_ = get_bounds(z_tensor)
+            if ibp:
+                u_c_tensor, l_c_tensor = output_[-2:]
+            if affine:
+                W, b = output_[:2]
+
+    if ibp and affine:
+        input_tensors = [z_tensor] + [u_c_tensor, W, b] + [l_c_tensor, W, b]
+    elif ibp and not affine:
+        input_tensors = [u_c_tensor, l_c_tensor]
+    elif not ibp and affine:
+        input_tensors = [z_tensor] + [W, b] + [W, b]
+    else:
+        raise NotImplementedError("not ibp and not affine not implemented")
+
+    return z_tensor, input_tensors
 
 
 def get_input_tensors_keras_only(
@@ -124,121 +206,6 @@ def split_activation(layer: Layer) -> List[Layer]:
         return [layer_wo_activation, activation_layer]
 
 
-def check_input_tensors_sequential(
-    model: Model,
-    input_tensors: Optional[List[tf.Tensor]],
-    input_dim: int,
-    input_dim_init: int,
-    ibp: bool,
-    affine: bool,
-    dc_decomp: bool,
-    convex_domain: Optional[Dict[str, Any]],
-) -> List[tf.Tensor]:
-
-    if convex_domain is None:
-        convex_domain = {}
-    if input_tensors is None:  # no predefined input tensors
-
-        input_shape = list(K.int_shape(model.input)[1:])
-
-        if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
-            input_dim_ = (2, input_dim)
-            z_tensor = Input(input_dim_, dtype=model.layers[0].dtype)
-        elif convex_domain["name"] == ConvexDomainType.BOX and not isinstance(input_dim, tuple):
-            input_dim_ = (2, input_dim)
-            z_tensor = Input(input_dim_, dtype=model.layers[0].dtype)
-        else:
-
-            if isinstance(input_dim, tuple):
-                z_tensor = Input(input_dim, dtype=model.layers[0].dtype)
-            else:
-                z_tensor = Input((input_dim,), dtype=model.layers[0].dtype)
-
-        if dc_decomp:
-            h_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
-            g_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
-        if affine:
-            b_u_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
-            b_l_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
-            if input_dim_init > 0:
-                w_u_tensor = Input(tuple([input_dim] + input_shape), dtype=model.layers[0].dtype)
-                w_l_tensor = Input(tuple([input_dim] + input_shape), dtype=model.layers[0].dtype)
-            else:
-                w_u_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
-                w_l_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
-
-        if ibp:
-            u_c_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
-            l_c_tensor = Input(tuple(input_shape), dtype=model.layers[0].dtype)
-            if affine:  # hybrid mode
-                input_tensors = [
-                    z_tensor,
-                    u_c_tensor,
-                    w_u_tensor,
-                    b_u_tensor,
-                    l_c_tensor,
-                    w_l_tensor,
-                    b_l_tensor,
-                ]
-            else:
-                # only ibp
-                input_tensors = [
-                    u_c_tensor,
-                    l_c_tensor,
-                ]
-        elif affine:
-            # affine mode
-            input_tensors = [
-                z_tensor,
-                w_u_tensor,
-                b_u_tensor,
-                w_l_tensor,
-                b_l_tensor,
-            ]
-        else:
-            raise NotImplementedError("not ibp and not affine not implemented")
-
-        if dc_decomp:
-            input_tensors += [h_tensor, g_tensor]
-
-    else:
-        # assert that input_tensors is a List of 6 InputLayer objects
-        # If input tensors are provided, the original model's InputLayer is
-        # overwritten with a different InputLayer.
-        assert isinstance(input_tensors, list), "expected input_tensors to be a List or None, but got {}".format(
-            type(input_tensors)
-        )
-
-        if dc_decomp:
-            if ibp and affine:
-                assert len(input_tensors) == 9, "wrong number of inputs, expexted 10 but got {}".format(
-                    len(input_tensors)
-                )
-            if ibp and not affine:
-                assert len(input_tensors) == 4, "wrong number of inputs, expexted 6 but got {}".format(
-                    len(input_tensors)
-                )
-            if not ibp and affine:
-                assert len(input_tensors) == 5, "wrong number of inputs, expexted 8 but got {}".format(
-                    len(input_tensors)
-                )
-        else:
-            if ibp and affine:
-                assert len(input_tensors) == 7, "wrong number of inputs, expexted 10 but got {}".format(
-                    len(input_tensors)
-                )
-            if ibp and not affine:
-                assert len(input_tensors) == 2, "wrong number of inputs, expexted 10 but got {}".format(
-                    len(input_tensors)
-                )
-            if not ibp and affine:
-                assert len(input_tensors) == 5, "wrong number of inputs, expexted 10 but got {}".format(
-                    len(input_tensors)
-                )
-
-    return input_tensors
-
-
 def get_input_tensor_x(
     model: Model,
     input_tensors: Optional[List[tf.Tensor]],
@@ -259,20 +226,6 @@ def get_input_tensor_x(
         else:
             z_tensor = Input((input_dim,), dtype=model.layers[0].dtype)
     return z_tensor
-
-
-def check_input_tensors_functionnal(
-    model: Model,
-    input_tensors: Optional[List[tf.Tensor]],
-    input_dim: int,
-    input_dim_init: int,
-    ibp: bool,
-    affine: bool,
-    dc_decomp: bool,
-    convex_domain: Optional[Dict[str, Any]],
-) -> List[tf.Tensor]:
-
-    raise NotImplementedError()
 
 
 def get_mode(ibp: bool = True, affine: bool = True) -> ForwardMode:
