@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="https://raw.githubusercontent.com/airbus/decomon/main/docs/source/_static/banner.jpg" width="55%" alt="decomon" align="center" />
+    <img src="https://raw.githubusercontent.com/nhuet/decomon/new-logo/docs/source/_static/decomon.png" width="55%" alt="decomon" align="center" />
 </div>
 <br>
 
