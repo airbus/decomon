@@ -79,8 +79,8 @@ def backward_relu(
             upper, lower = x[:nb_tensors]
         elif mode == ForwardMode.AFFINE:
             z_, w_u_, b_u_, w_l_, b_l_ = x[:nb_tensors]
-            upper = get_upper(z_, w_u_, b_u_)
-            lower = get_lower(z_, w_l_, b_l_)
+            upper = get_upper(z_, w_u_, b_u_, convex_domain=convex_domain)
+            lower = get_lower(z_, w_l_, b_l_, convex_domain=convex_domain)
         elif mode == ForwardMode.HYBRID:
             _, upper, _, _, lower, _, _ = x[:nb_tensors]
         else:
