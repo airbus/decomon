@@ -3,9 +3,12 @@
 
 import pytest
 import tensorflow.keras.backend as K
+from tensorflow.keras.layers import Activation, Dense
+from tensorflow.keras.models import Sequential
 
 from decomon.layers.core import ForwardMode
 from decomon.models import clone
+from decomon.models.convert import ConvertMethod
 from decomon.utils import Slope
 
 
@@ -114,3 +117,33 @@ def test_convert_1D_backward_slope(slope, helpers):
         layer_class_name = layer.__class__.__name__
         if layer_class_name.endswith("Activation"):
             assert layer.slope == Slope(slope)
+
+
+def test_name_forward():
+    layers = []
+    layers.append(Dense(1, input_dim=1))
+    layers.append(Dense(1, name="superman"))  # specify the dimension of the input space
+    layers.append(Activation("relu"))
+    layers.append(Dense(1, activation="relu", name="batman"))
+    model = Sequential(layers)
+
+    decomon_model_f = clone(model=model, method=ConvertMethod.FORWARD_HYBRID)
+    nb_superman_layers = len([layer for layer in decomon_model_f.layers if layer.name.startswith("superman_")])
+    assert nb_superman_layers == 1
+    nb_batman_layers = len([layer for layer in decomon_model_f.layers if layer.name.startswith("batman_")])
+    assert nb_batman_layers == 2
+
+
+def test_name_backward():
+    layers = []
+    layers.append(Dense(1, input_dim=1))
+    layers.append(Dense(1, name="superman"))  # specify the dimension of the input space
+    layers.append(Activation("relu"))
+    layers.append(Dense(1, activation="relu", name="batman"))
+    model = Sequential(layers)
+
+    decomon_model_b = clone(model=model, method=ConvertMethod.CROWN_FORWARD_HYBRID)
+    nb_superman_layers = len([layer for layer in decomon_model_b.layers if layer.name.startswith("superman_")])
+    assert nb_superman_layers == 2
+    nb_batman_layers = len([layer for layer in decomon_model_b.layers if layer.name.startswith("batman_")])
+    assert nb_batman_layers == 3
