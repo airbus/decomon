@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Input, Layer
+from tensorflow.keras.layers import Input, Layer, Reshape
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.backend import _get_available_gpus
 
@@ -319,3 +319,9 @@ def test_to_backward_ko():
     layer = MyLayer()
     with pytest.raises(NotImplementedError):
         to_backward(layer)
+
+
+def test_name():
+    layer = Reshape((1, 2))
+    backward_layer = to_backward(layer)
+    backward_layer.name.startswith(f"{layer.name}_")

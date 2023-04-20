@@ -759,6 +759,7 @@ def to_backward(
         class_ = globals()[backward_class_name]
     except KeyError:
         raise NotImplementedError(f"The backward version of {class_name} is not yet implemented.")
+    backward_layer_name = f"{layer.name}_backward"
     return class_(
         layer,
         slope=slope,
@@ -766,5 +767,6 @@ def to_backward(
         convex_domain=convex_domain,
         finetune=finetune,
         dtype=layer.dtype,
+        name=backward_layer_name,
         **kwargs,
     )
