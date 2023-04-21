@@ -12,7 +12,6 @@ from tensorflow.keras.layers import (
     Dot,
     Dropout,
     Flatten,
-    Input,
     InputLayer,
     InputSpec,
     Lambda,
@@ -22,30 +21,14 @@ from tensorflow.python.keras.utils import conv_utils
 from tensorflow.python.keras.utils.generic_utils import to_list
 
 from decomon.layers import activations
-from decomon.layers.core import DEEL_LIP, DecomonLayer, ForwardMode
-from decomon.layers.decomon_merge_layers import to_decomon_merge
-from decomon.layers.decomon_reshape import (  # add some layers to module namespace `globals()`
-    DecomonPermute,
-    DecomonReshape,
-)
-from decomon.layers.deel_lip import DecomonGroupSort, DecomonGroupSort2
-from decomon.layers.maxpooling import DecomonMaxPooling2D
+from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.utils import (
     ClipAlpha,
     ClipAlphaAndSumtoOne,
     NonPos,
     Project_initializer_pos,
-    is_a_merge_layer,
 )
 from decomon.utils import ConvexDomainType, Slope, get_lower, get_upper
-
-try:
-    # add deel-lip layers to global namespace, if available
-    from decomon.layers.deel_lip import DecomonGroupSort, DecomonGroupSort2
-
-    pass
-except ModuleNotFoundError:
-    pass
 
 
 class DecomonConv2D(Conv2D, DecomonLayer):
@@ -1512,126 +1495,3 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
 
     def get_linear(self) -> bool:
         return self.linear_layer
-
-
-# conditional import for deel-lip
-
-
-def to_decomon(
-    layer: Layer,
-    input_dim: int,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
-    dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
-    finetune: bool = False,
-    ibp: bool = True,
-    affine: bool = True,
-    shared: bool = True,
-    fast: bool = True,
-) -> DecomonLayer:
-    """Transform a standard keras layer into a Decomon layer.
-
-    Type of layer is tested to know how to transform it into a DecomonLayer of the good type.
-    If type is not treated yet, raises an TypeError
-
-    Args:
-        layer: a Keras Layer
-        input_dim: an integer that represents the dim
-            of the input convex domain
-        slope:
-        dc_decomp: boolean that indicates whether we return a difference
-            of convex decomposition of our layer
-        convex_domain: the type of convex domain
-        ibp: boolean that indicates whether we propagate constant bounds
-        affine: boolean that indicates whether we propagate affine
-            bounds
-
-    Returns:
-        the associated DecomonLayer
-    """
-
-    # get class name
-    if convex_domain is None:
-        convex_domain = {}
-    class_name = layer.__class__.__name__
-    original_class_name = class_name
-    # remove deel-lip dependency
-    if class_name[: len(DEEL_LIP)] == DEEL_LIP:
-        class_name = class_name[len(DEEL_LIP) :]
-
-    # check if layer has a built argument that built is set to True
-    if hasattr(layer, "built"):
-        if not layer.built:
-            raise ValueError(f"the layer {layer.name} has not been built yet")
-
-    if is_a_merge_layer(layer):
-        return to_decomon_merge(layer, input_dim, dc_decomp, convex_domain, finetune, ibp, affine)
-
-    # do case by case for optimizing
-    layer_decomon: Optional[DecomonLayer] = None
-    for k in range(2):  # two runs before sending a failure
-        try:
-
-            decomon_class_name = f"Decomon{class_name}"
-            config_layer = layer.get_config()
-            config_layer["name"] = layer.name + "_decomon"
-            config_layer["dc_decomp"] = dc_decomp
-            config_layer["convex_domain"] = convex_domain
-
-            mode = ForwardMode.HYBRID
-            if ibp and not affine:
-                mode = ForwardMode.IBP
-            if not ibp and affine:
-                mode = ForwardMode.AFFINE
-
-            config_layer["mode"] = mode
-            config_layer["finetune"] = finetune
-            config_layer["slope"] = slope
-            config_layer["shared"] = shared
-            config_layer["fast"] = fast
-            if not isinstance(layer, Activation):
-                config_layer.pop("activation", None)  # Hyp: no non-linear activation in dense or conv2d layers
-
-            layer_decomon = globals()[decomon_class_name].from_config(config_layer)
-            if layer_decomon is None:  # for mypy
-                raise RuntimeError("layer_decomon should not be None at this point")
-            layer_decomon.share_weights(layer)
-            break
-        except KeyError:
-            if hasattr(layer, "vanilla_export"):
-                shared = False  # checking with Deel-LIP
-                layer_ = layer.vanilla_export()
-                layer_(layer.input)
-                layer = layer_
-                class_name = layer.__class__.__name__
-
-    if layer_decomon is None:
-        raise NotImplementedError(f"The decomon version of {original_class_name} is not yet implemented.")
-
-    input_shape = list(layer.input_shape)[1:]
-    if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BOX:
-        x_shape = Input((2, input_dim), dtype=layer.dtype)
-    else:
-        x_shape = Input((input_dim,), dtype=layer.dtype)
-
-    if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-        w_shape = Input(tuple([input_dim] + input_shape))
-    y_shape = Input(tuple(input_shape), dtype=layer.dtype)
-
-    if mode == ForwardMode.HYBRID:
-        input_ = [x_shape, y_shape, w_shape, y_shape, y_shape, w_shape, y_shape]
-    elif mode == ForwardMode.IBP:
-        input_ = [y_shape, y_shape]
-    elif mode == ForwardMode.AFFINE:
-        input_ = [x_shape, w_shape, y_shape, w_shape, y_shape]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
-
-    if dc_decomp:
-        input_ += [y_shape, y_shape]
-
-    layer_decomon(input_)
-    layer_decomon.reset_layer(layer)
-
-    # return layer_decomon
-    return layer_decomon

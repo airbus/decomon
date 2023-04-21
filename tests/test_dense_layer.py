@@ -7,8 +7,9 @@ import tensorflow.keras.backend as K
 from numpy.testing import assert_almost_equal
 from tensorflow.keras.layers import Dense
 
+from decomon.layers.convert import to_decomon
 from decomon.layers.core import ForwardMode
-from decomon.layers.decomon_layers import DecomonDense, to_decomon
+from decomon.layers.decomon_layers import DecomonDense
 from decomon.models.utils import split_activation
 
 

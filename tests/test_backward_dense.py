@@ -8,9 +8,8 @@ from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.models import Model
 
 from decomon.backward_layers.backward_layers import to_backward
-from decomon.layers.activations import relu
 from decomon.layers.core import ForwardMode
-from decomon.layers.decomon_layers import DecomonDense, to_decomon
+from decomon.layers.decomon_layers import DecomonDense
 from decomon.utils import Slope
 
 

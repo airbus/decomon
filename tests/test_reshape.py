@@ -3,8 +3,8 @@ import pytest
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Permute, Reshape
 
+from decomon.layers.convert import to_decomon
 from decomon.layers.core import ForwardMode
-from decomon.layers.decomon_layers import to_decomon
 from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
 
 

@@ -15,7 +15,7 @@ from tensorflow.keras.layers import (
 
 from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.utils import broadcast, multiply, permute_dimensions
-from decomon.utils import ConvexDomainType, maximum, minus, substract
+from decomon.utils import maximum, minus, substract
 
 ##### Merge Layer ####
 
@@ -613,98 +613,3 @@ class DecomonDot(Dot, DecomonLayer):
             raise ValueError(f"Unknown mode {self.mode}")
 
         return outputs
-
-
-def to_decomon_merge(
-    layer: Layer,
-    input_dim: int,
-    dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
-    finetune: bool = False,
-    ibp: bool = True,
-    affine: bool = True,
-) -> DecomonLayer:
-    """Transform a standard Merge layer into a Decomon layer.
-
-    Type of layer is tested to know how to transform it into a DecomonLayer of the good type.
-    If type is not treated yet, raises an TypeError
-
-    Args:
-        layer: a Keras Layer
-        input_dim: an integer that represents the dim
-            of the input convex domain
-        dc_decomp: boolean that indicates whether we return a difference
-            of convex decomposition of our layer
-        convex_domain: the type of convex domain
-        ibp: boolean that indicates whether we propagate constant bounds
-        affine: boolean that indicates whether we propagate affine
-            bounds
-
-    Returns:
-        the associated DecomonLayer
-    """
-
-    # get class name
-    if convex_domain is None:
-        convex_domain = {}
-    class_name = layer.__class__.__name__
-    # check if layer has a built argument that built is set to True
-    if hasattr(layer, "built"):
-        if not layer.built:
-            raise ValueError(f"the layer {layer.name} has not been built yet")
-
-    decomon_class_name = f"Decomon{class_name}"
-    config_layer = layer.get_config()
-    config_layer["name"] = layer.name + "_decomon"
-    config_layer["dc_decomp"] = dc_decomp
-    config_layer["convex_domain"] = convex_domain
-
-    mode = ForwardMode.HYBRID
-    if ibp and not affine:
-        mode = ForwardMode.IBP
-    if not ibp and affine:
-        mode = ForwardMode.AFFINE
-
-    config_layer["mode"] = mode
-    config_layer["finetune"] = finetune
-
-    try:
-        layer_decomon = globals()[decomon_class_name].from_config(config_layer)
-    except:
-        raise NotImplementedError(f"The decomon version of {class_name} is not yet implemented.")
-
-    input_shape_list = []
-    for input_shape in layer.input_shape:
-        input_shape_list.append(list(input_shape[1:]))
-    input_shape = input_shape_list
-
-    n_input = len(input_shape_list)
-    if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BOX:
-        x_shape = Input((2, input_dim), dtype=layer.dtype)
-    else:
-        x_shape = Input((input_dim,), dtype=layer.dtype)
-
-    w_shape = [Input(tuple([input_dim] + input_shape[i])) for i in range(n_input)]
-    y_shape = [Input(tuple(input_shape[i])) for i in range(n_input)]
-
-    if mode == ForwardMode.HYBRID:
-        input_ = [
-            [x_shape, y_shape[i], w_shape[i], y_shape[i], y_shape[i], w_shape[i], y_shape[i]] for i in range(n_input)
-        ]
-    elif mode == ForwardMode.IBP:
-        input_ = [[y_shape[i], y_shape[i]] for i in range(n_input)]
-    elif mode == ForwardMode.AFFINE:
-        input_ = [[x_shape, w_shape[i], y_shape[i], w_shape[i], y_shape[i]] for i in range(n_input)]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
-    if dc_decomp:
-        raise NotImplementedError()
-
-    input_list = []
-    for i in range(n_input):
-        input_list += input_[i]
-
-    layer_decomon(input_list)
-    layer_decomon.reset_layer(layer)
-
-    return layer_decomon
