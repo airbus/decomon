@@ -22,6 +22,7 @@ from decomon.backward_layers.backward_merge import (
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.deel_lip import BackwardGroupSort2
 from decomon.backward_layers.utils import get_affine, get_ibp, get_identity_lirpa
+from decomon.layers.convert import to_decomon
 from decomon.layers.core import DecomonLayer, ForwardMode, Option
 from decomon.layers.decomon_layers import (  # add some layers to module namespace `globals()`
     DecomonActivation,
@@ -32,7 +33,6 @@ from decomon.layers.decomon_layers import (  # add some layers to module namespa
     DecomonFlatten,
     DecomonPermute,
     DecomonReshape,
-    to_decomon,
 )
 from decomon.layers.utils import ClipAlpha, NonNeg, NonPos
 from decomon.models.utils import get_input_dim
@@ -68,8 +68,8 @@ class BackwardDense(BackwardLayer):
             if input_dim < 0:
                 input_dim = get_input_dim(self.layer)
             self.layer = to_decomon(
-                layer,
-                input_dim,
+                layer=layer,
+                input_dim=input_dim,
                 dc_decomp=False,
                 convex_domain=self.convex_domain,
                 finetune=False,
@@ -151,8 +151,8 @@ class BackwardConv2D(BackwardLayer):
             if input_dim < 0:
                 input_dim = get_input_dim(self.layer)
             self.layer = to_decomon(
-                layer,
-                input_dim,
+                layer=layer,
+                input_dim=input_dim,
                 dc_decomp=False,
                 convex_domain=self.convex_domain,
                 finetune=False,

@@ -7,14 +7,13 @@ import inspect
 from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Layer
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.utils.generic_utils import to_list
 
+from decomon.layers.convert import to_decomon
 from decomon.layers.core import DecomonLayer
-from decomon.layers.decomon_layers import to_decomon
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.utils import (
     get_depth_dict,

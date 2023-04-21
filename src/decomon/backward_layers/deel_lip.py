@@ -1,15 +1,13 @@
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional, Union
 
-import tensorflow as tf
-import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Layer
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import get_affine, get_ibp
+from decomon.layers.convert import to_decomon
 from decomon.layers.core import ForwardMode
-from decomon.layers.decomon_layers import DecomonLayer, to_decomon
-from decomon.utils import Slope
+from decomon.layers.decomon_layers import DecomonLayer
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +44,8 @@ class BackwardGroupSort2(BackwardLayer):
 
         if not isinstance(layer, DecomonLayer):
             self.layer = to_decomon(
-                layer,
-                input_dim,
+                layer=layer,
+                input_dim=input_dim,
                 dc_decomp=False,
                 convex_domain=self.convex_domain,
                 finetune=False,

@@ -1,7 +1,7 @@
 import pytest
 from tensorflow.keras.layers import Add, Conv2D, Dense, Input, Layer, Reshape
 
-from decomon.layers.decomon_layers import to_decomon
+from decomon.layers.convert import to_decomon
 from decomon.layers.utils import is_a_merge_layer
 
 
