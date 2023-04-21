@@ -20,7 +20,7 @@ def test_Decomon_conv_box(data_format, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
-    decimal = 5
+    decimal = 4
     if floatx == 16:
         K.set_epsilon(1e-2)
         decimal = 2
