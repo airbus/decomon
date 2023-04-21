@@ -1608,33 +1608,30 @@ def to_decomon(
     if layer_decomon is None:
         raise NotImplementedError(f"The decomon version of {original_class_name} is not yet implemented.")
 
-    try:
-        input_shape = list(layer.input_shape)[1:]
-        if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BOX:
-            x_shape = Input((2, input_dim), dtype=layer.dtype)
-        else:
-            x_shape = Input((input_dim,), dtype=layer.dtype)
+    input_shape = list(layer.input_shape)[1:]
+    if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BOX:
+        x_shape = Input((2, input_dim), dtype=layer.dtype)
+    else:
+        x_shape = Input((input_dim,), dtype=layer.dtype)
 
-        if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-            w_shape = Input(tuple([input_dim] + input_shape))
-        y_shape = Input(tuple(input_shape), dtype=layer.dtype)
+    if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
+        w_shape = Input(tuple([input_dim] + input_shape))
+    y_shape = Input(tuple(input_shape), dtype=layer.dtype)
 
-        if mode == ForwardMode.HYBRID:
-            input_ = [x_shape, y_shape, w_shape, y_shape, y_shape, w_shape, y_shape]
-        elif mode == ForwardMode.IBP:
-            input_ = [y_shape, y_shape]
-        elif mode == ForwardMode.AFFINE:
-            input_ = [x_shape, w_shape, y_shape, w_shape, y_shape]
-        else:
-            raise ValueError(f"Unknown mode {mode}")
+    if mode == ForwardMode.HYBRID:
+        input_ = [x_shape, y_shape, w_shape, y_shape, y_shape, w_shape, y_shape]
+    elif mode == ForwardMode.IBP:
+        input_ = [y_shape, y_shape]
+    elif mode == ForwardMode.AFFINE:
+        input_ = [x_shape, w_shape, y_shape, w_shape, y_shape]
+    else:
+        raise ValueError(f"Unknown mode {mode}")
 
-        if dc_decomp:
-            input_ += [y_shape, y_shape]
+    if dc_decomp:
+        input_ += [y_shape, y_shape]
 
-        layer_decomon(input_)
-        layer_decomon.reset_layer(layer)
-    except:
-        pass
+    layer_decomon(input_)
+    layer_decomon.reset_layer(layer)
 
     # return layer_decomon
     return layer_decomon
