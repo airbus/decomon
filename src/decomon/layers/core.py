@@ -22,6 +22,17 @@ class ForwardMode(Enum):
 DEEL_LIP = "deel-lip>"
 
 
+def get_mode(ibp: bool = True, affine: bool = True) -> ForwardMode:
+
+    if ibp:
+        if affine:
+            return ForwardMode.HYBRID
+        else:
+            return ForwardMode.IBP
+    else:
+        return ForwardMode.AFFINE
+
+
 class Option(Enum):
     lagrangian = "lagrangian"
     milp = "milp"

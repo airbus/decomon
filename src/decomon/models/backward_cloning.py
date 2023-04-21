@@ -1,13 +1,10 @@
 from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from keras.engine.node import Node
-from tensorflow.keras.layers import Add, Average, Concatenate
-from tensorflow.keras.layers import Conv2D as Conv
-from tensorflow.keras.layers import Dense, Dropout, Lambda, Layer, Permute, Reshape
+from tensorflow.keras.layers import Average, Concatenate, Lambda, Layer
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
 
@@ -20,11 +17,10 @@ from decomon.backward_layers.crown import (
     Fuse,
     MergeWithPrevious,
 )
-from decomon.backward_layers.utils import merge_with_previous
-from decomon.layers.core import ForwardMode
+from decomon.layers.core import ForwardMode, get_mode
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.forward_cloning import OutputMapDict
-from decomon.models.utils import get_depth_dict, get_mode
+from decomon.models.utils import get_depth_dict
 from decomon.utils import Slope, get_lower, get_upper
 
 

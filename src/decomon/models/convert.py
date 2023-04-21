@@ -9,6 +9,7 @@ from tensorflow.keras.models import Model
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.crown import Convert2Mode
+from decomon.layers.core import get_mode
 from decomon.layers.decomon_layers import to_decomon
 from decomon.models.backward_cloning import convert_backward
 from decomon.models.forward_cloning import (
@@ -22,7 +23,6 @@ from decomon.models.utils import (
     ConvertMethod,
     get_input_tensors,
     get_input_tensors_keras_only,
-    get_mode,
     split_activation,
 )
 from decomon.utils import ConvexDomainType, Slope, get_lower, get_upper
