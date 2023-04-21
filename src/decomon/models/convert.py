@@ -213,6 +213,9 @@ def clone(
     if isinstance(method, str):
         method = ConvertMethod(method.lower())
 
+    if len(convex_domain) and isinstance(convex_domain["name"], str):
+        convex_domain["name"] = ConvexDomainType(convex_domain["name"].lower())
+
     if not to_keras:
         raise NotImplementedError("Only convert to Keras for now.")
 
@@ -262,10 +265,10 @@ def clone(
 
         if convex_domain["p"] == np.inf:
             radius = convex_domain["eps"]
+            u_c_tensor = Lambda(
+                lambda var: var + K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
+            )(z_tensor)
             if ibp_:
-                u_c_tensor = Lambda(
-                    lambda var: var + K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
-                )(z_tensor)
                 l_c_tensor = Lambda(
                     lambda var: var - K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
                 )(z_tensor)
@@ -282,9 +285,9 @@ def clone(
 
             def get_bounds(z: tf.Tensor) -> List[tf.Tensor]:
                 output = []
+                W = tf.linalg.diag(z_value * z + o_value)
+                b = z_value * z
                 if affine_:
-                    W = tf.linalg.diag(z_value * z + o_value)
-                    b = z_value * z
                     output += [W, b]
                 if ibp_:
                     u_c_ = get_upper(z, W, b, convex_domain)

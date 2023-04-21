@@ -1190,6 +1190,85 @@ class Helpers:
         ]
         return Sequential(layers)
 
+    def assert_output_properties_ball(
+        x_, y_, h_, g_, x_center_, radius, p, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, name, decimal=5
+    ):
+
+        if y_ is None:
+            y_ = h_ + g_
+        if h_ is not None:
+
+            assert_almost_equal(
+                h_ + g_,
+                y_,
+                decimal=decimal,
+                err_msg="decomposition error for function {}".format(name),
+            )
+
+        if w_u_ is not None or w_l_ is not None:
+
+            x_expand = x_ + np.zeros_like(x_)
+            n_expand = len(w_u_.shape) - len(x_expand.shape)
+            for i in range(n_expand):
+                x_expand = np.expand_dims(x_expand, -1)
+
+            if p == 2:
+                norm = lambda x: np.sqrt(np.sum(x**2))
+            if p == np.inf:
+                norm = lambda x: np.max(np.abs(x))
+
+            if w_l_ is not None:
+                lower_ = np.sum(w_l_ * x_expand, 1) + b_l_ - radius * norm(w_l_)
+            if w_u_ is not None:
+                upper_ = np.sum(w_u_ * x_expand, 1) + b_u_ + radius * norm(w_u_)
+
+        # check that the functions h_ and g_ remains monotonic
+        if h_ is not None:
+            assert_almost_equal(
+                np.clip(h_[:-1] - h_[1:], 0, np.inf),
+                np.zeros_like(h_[1:]),
+                decimal=decimal,
+                err_msg="h is not increasing for function {}".format(name),
+            )
+            assert_almost_equal(
+                np.clip(g_[1:] - g_[:-1], 0, np.inf),
+                np.zeros_like(g_[1:]),
+                decimal=decimal,
+                err_msg="g is not increasing for function {}".format(name),
+            )
+
+        #
+        if w_u_ is not None:
+            if K.floatx() == "float32":
+                assert_almost_equal(
+                    np.clip(y_ - upper_, 0.0, 1e6),
+                    np.zeros_like(y_),
+                    decimal=decimal,
+                    err_msg="upper <y",
+                )
+        if w_l_ is not None:
+            if K.floatx() == "float32":
+                assert_almost_equal(
+                    np.clip(lower_ - y_, 0.0, np.inf),
+                    np.zeros_like(y_),
+                    decimal=decimal,
+                    err_msg="lower_ >y",
+                )
+
+        if l_c_ is not None:
+            assert_almost_equal(
+                np.clip(l_c_ - y_, 0.0, np.inf),
+                np.zeros_like(y_),
+                decimal=decimal,
+                err_msg="l_c >y",
+            )
+            assert_almost_equal(
+                np.clip(y_ - u_c_, 0.0, 1e6),
+                np.zeros_like(y_),
+                decimal=decimal,
+                err_msg="u_c <y",
+            )
+
 
 @pytest.fixture
 def helpers():
