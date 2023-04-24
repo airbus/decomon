@@ -28,6 +28,11 @@ from decomon.utils import (
     get_upper_layer,
 )
 
+try:
+    from deel.lip.layers import LipschitzLayer
+except ImportError:
+    LipschitzLayer = type(None)
+
 
 class ConvertMethod(Enum):
     CROWN = "crown"
@@ -223,6 +228,33 @@ def split_activation(layer: Layer) -> List[Layer]:
         # build activation layer
         activation_layer(outputs)
         return [layer_wo_activation, activation_layer]
+
+
+def convert_deellip_to_keras(layer: Layer) -> Layer:
+    # init deel-lip attributes (keep exisiting ones)
+    share_deellip_attributes(layer, layer)
+    # update is_lipschitz
+    if isinstance(layer, LipschitzLayer) or hasattr(layer, "vanilla_export"):
+        layer.is_lipschitz = True
+    if hasattr(layer, "vanilla_export"):
+        if not hasattr(layer, "input_shape"):
+            raise RuntimeError("The layer should properly initialized so that layer.input_shape is defined.")
+        type_spec = layer.input.type_spec
+        new_layer = layer.vanilla_export()
+        # build layer
+        inputs = Input(type_spec=type_spec)
+        new_layer(inputs)
+        # share deel-lip attributes of original layer
+        share_deellip_attributes(new_layer, layer)
+        layer = new_layer
+
+    return layer
+
+
+def share_deellip_attributes(new_layer: Layer, old_layer: Optional[Layer] = None) -> None:
+    new_layer.is_lipschitz = getattr(old_layer, "is_lipschitz", False)
+    new_layer.deellip_classname = getattr(old_layer, "deellip_classname", new_layer.__class__.__name__)
+    new_layer.k_coef_lip = getattr(old_layer, "k_coef_lip", -1.0)
 
 
 def get_input_tensor_x(
