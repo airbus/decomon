@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
+from keras.backend import observe_object_name
 from keras.engine.node import Node
 from tensorflow.keras.layers import (
     Activation,
@@ -197,7 +198,10 @@ def split_activation(layer: Layer) -> List[Layer]:
         inputs = Input(type_spec=layer.input.type_spec)
         outputs = layer_wo_activation(inputs)
         # use same weights
+        actual_activation = layer.activation  # store activation
+        layer.activation = None  # remove activation in case of a layer having weights (would be in layer.get_weights())
         layer_wo_activation.set_weights(layer.get_weights())
+        layer.activation = actual_activation  # put back the actual activation
         # even share the object themselves if possible
         # (dense and conv2d have kernel and bias weight attributes)
         if hasattr(layer_wo_activation, "kernel"):
@@ -205,7 +209,17 @@ def split_activation(layer: Layer) -> List[Layer]:
         if hasattr(layer_wo_activation, "bias"):
             layer_wo_activation.bias = layer.bias
         # activation layer
-        activation_layer = Activation(activation=activation, dtype=layer.dtype, name=f"{layer.name}_activation")
+        if isinstance(activation, dict):
+            if isinstance(layer.activation, Layer):  # can be an Activation, a PReLU, or a deel.lip.activations layer
+                activation_layer = layer.activation
+                # update the name to starts with main layer name
+                activation_layer_name = f"{layer.name}_activation_{layer.activation.name}"
+                observe_object_name(activation_layer_name)
+                activation_layer._name = activation_layer_name
+            else:
+                raise RuntimeError("Cannot construct activation layer from layer.activation!")
+        else:
+            activation_layer = Activation(activation=activation, dtype=layer.dtype, name=f"{layer.name}_activation")
         # build activation layer
         activation_layer(outputs)
         return [layer_wo_activation, activation_layer]

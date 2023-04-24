@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
 from tensorflow.keras import Input
-from tensorflow.keras.layers import Activation, Conv2D, Dense, Permute
+from tensorflow.keras.layers import Activation, Conv2D, Dense, Permute, PReLU
 
 from decomon.models.utils import split_activation
 
@@ -67,3 +67,37 @@ def test_split_activation_uninitialized_layer_ko():
     layer = Dense(3, activation="relu")
     with pytest.raises(RuntimeError):
         layers = split_activation(layer)
+
+
+def test_split_activation_embedded_layer():
+    # init layer
+    prelu_layer = PReLU()
+    layer = Dense(units=3, activation=prelu_layer)
+    # build layer
+    input_shape_wo_batchsize = (1,)
+    input_tensor = Input(input_shape_wo_batchsize)
+    layer(input_tensor)
+    # split
+    layers = split_activation(layer)
+    # check layer split
+    assert len(layers) == 2
+    layer_wo_activation, activation_layer = layers
+    assert isinstance(layer_wo_activation, layer.__class__)
+    assert layer_wo_activation.get_config()["activation"] == "linear"
+    assert activation_layer is prelu_layer
+    # check names starts with with original name + "_"
+    assert layer_wo_activation.name.startswith(f"{layer.name}_")
+    assert activation_layer.name.startswith(f"{layer.name}_")
+    # check already built
+    assert layer_wo_activation.built
+    assert activation_layer.built
+    # check same outputs
+    input_shape_with_batch_size = (5,) + input_shape_wo_batchsize
+    flatten_dim = np.prod(input_shape_with_batch_size)
+    inputs_np = np.linspace(-1, 1, flatten_dim).reshape(input_shape_with_batch_size)
+    output_np_ref = layer(inputs_np).numpy()
+    output_np_new = activation_layer(layer_wo_activation(inputs_np)).numpy()
+    assert_almost_equal(output_np_new, output_np_ref)
+    # check same trainable weights
+    for i in range(len(layer._trainable_weights)):
+        assert layer._trainable_weights[i] is layer_wo_activation._trainable_weights[i]
