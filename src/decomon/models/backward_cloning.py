@@ -8,8 +8,8 @@ from tensorflow.keras.layers import Average, Concatenate, Lambda, Layer
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
 
-from decomon.backward_layers.backward_layers import to_backward
 from decomon.backward_layers.backward_merge import BackwardMerge
+from decomon.backward_layers.convert import to_backward
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.crown import (
     Convert2BackwardMode,

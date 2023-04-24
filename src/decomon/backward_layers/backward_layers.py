@@ -8,32 +8,11 @@ from tensorflow.keras.layers import Flatten, Layer
 from tensorflow.python.ops import array_ops
 
 from decomon.backward_layers.activations import get
-from decomon.backward_layers.backward_maxpooling import BackwardMaxPooling2D
-from decomon.backward_layers.backward_merge import (
-    BackwardAdd,
-    BackwardAverage,
-    BackwardConcatenate,
-    BackwardDot,
-    BackwardMaximum,
-    BackwardMinimum,
-    BackwardMultiply,
-    BackwardSubtract,
-)
 from decomon.backward_layers.core import BackwardLayer
-from decomon.backward_layers.deel_lip import BackwardGroupSort2
 from decomon.backward_layers.utils import get_affine, get_ibp, get_identity_lirpa
 from decomon.layers.convert import to_decomon
 from decomon.layers.core import DecomonLayer, ForwardMode, Option
-from decomon.layers.decomon_layers import (  # add some layers to module namespace `globals()`
-    DecomonActivation,
-    DecomonBatchNormalization,
-    DecomonConv2D,
-    DecomonDense,
-    DecomonDropout,
-    DecomonFlatten,
-    DecomonPermute,
-    DecomonReshape,
-)
+from decomon.layers.decomon_layers import DecomonBatchNormalization
 from decomon.layers.utils import ClipAlpha, NonNeg, NonPos
 from decomon.models.utils import get_input_dim
 from decomon.utils import ConvexDomainType, Slope
@@ -743,35 +722,3 @@ class BackwardInputLayer(BackwardLayer):
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         return get_identity_lirpa(inputs)
-
-
-def to_backward(
-    layer: Layer,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
-    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    convex_domain: Optional[Dict[str, Any]] = None,
-    finetune: bool = False,
-    **kwargs: Any,
-) -> BackwardLayer:
-    if convex_domain is None:
-        convex_domain = {}
-    class_name = layer.__class__.__name__
-    if class_name[:7] == "Decomon":
-        class_name = "".join(layer.__class__.__name__.split("Decomon")[1:])
-
-    backward_class_name = f"Backward{class_name}"
-    try:
-        class_ = globals()[backward_class_name]
-    except KeyError:
-        raise NotImplementedError(f"The backward version of {class_name} is not yet implemented.")
-    backward_layer_name = f"{layer.name}_backward"
-    return class_(
-        layer,
-        slope=slope,
-        mode=mode,
-        convex_domain=convex_domain,
-        finetune=finetune,
-        dtype=layer.dtype,
-        name=backward_layer_name,
-        **kwargs,
-    )

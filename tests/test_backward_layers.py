@@ -8,7 +8,7 @@ from tensorflow.keras.layers import Input, Layer, Reshape
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.backend import _get_available_gpus
 
-from decomon.backward_layers.backward_layers import to_backward
+from decomon.backward_layers.convert import to_backward
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonActivation, DecomonFlatten
 from decomon.layers.decomon_reshape import DecomonReshape
