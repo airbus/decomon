@@ -144,6 +144,8 @@ def convert_forward_functional_model(
     softmax_to_linear: bool = True,
     count: int = 0,
     joint: bool = True,
+    output_map: Optional[OutputMapDict] = None,
+    layer_map: Optional[LayerMapDict] = None,
 ) -> Tuple[List[tf.Tensor], List[tf.Tensor], LayerMapDict, OutputMapDict]:
 
     if softmax_to_linear:
@@ -156,8 +158,10 @@ def convert_forward_functional_model(
     keys = [e for e in dico_nodes.keys()]
     keys.sort(reverse=True)
 
-    output_map: OutputMapDict = {}
-    layer_map: LayerMapDict = {}
+    if output_map is None:
+        output_map = {}
+    if layer_map is None:
+        layer_map = {}
     output: List[tf.Tensor] = input_tensors
     for depth in keys:
         nodes = dico_nodes[depth]

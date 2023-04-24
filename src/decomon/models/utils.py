@@ -144,7 +144,7 @@ def get_input_tensors_keras_only(
 ) -> List[tf.Tensor]:
     input_tensors = []
     for i in range(len(model._input_layers)):
-        input_tensors.append(Input(input_shape, dtype=model.layers[0].dtype))
+        input_tensors.append(Input(input_shape[1:], dtype=model.layers[0].dtype))
     return input_tensors
 
 
@@ -194,7 +194,7 @@ def split_activation(layer: Layer) -> List[Layer]:
         # build the layer
         if not hasattr(layer, "input_shape"):
             raise RuntimeError("The layer should properly initialized so that layer.input_shape is defined.")
-        inputs = Input(layer.input_shape, dtype=layer.dtype)
+        inputs = Input(type_spec=layer.input.type_spec)
         outputs = layer_wo_activation(inputs)
         # use same weights
         layer_wo_activation.set_weights(layer.get_weights())

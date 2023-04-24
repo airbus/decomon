@@ -57,34 +57,26 @@ def switch_mode_mapping(forward_map: OutputMapDict, ibp: bool, affine: bool, met
     raise NotImplementedError()
 
 
-def split_activations_in_keras_model(
-    model: Model,
-    input_shape: Optional[Tuple[int, ...]] = None,
-    input_tensors: Optional[List[tf.Tensor]] = None,
-) -> Model:
-    if input_shape is None:
-        try:
-            model_input_shape = model.input_shape
-        except:
-            raise ValueError("model.input_shape must be defined if input_shape argument is None")
-        else:
-            input_shape = model_input_shape[1:]
+def split_activations_in_keras_model(model: Model) -> Model:
+    if model.inputs is None:
+        raise ValueError("model.inputs must be not None. You should call the model on a batch of data.")
 
-    if input_tensors is None:
-        input_tensors = get_input_tensors_keras_only(
-            model=model,
-            input_shape=input_shape,
-        )
-
+    # initialize output_map and layer_map to avoid
+    #   - recreating input layers
+    #   - and converting input layers and have a cycle around them
+    output_map: OutputMapDict = {id(input_tensor.node): [input_tensor] for input_tensor in model.inputs}
+    layer_map: LayerMapDict = {id(input_tensor.node): input_tensor.node.outbound_layer for input_tensor in model.inputs}
     _, output, _, _ = convert_forward_functional_model(
         model=model,
-        input_tensors=input_tensors,
+        input_tensors=model.inputs,
         softmax_to_linear=False,
         layer_fn=split_activation,
+        output_map=output_map,
+        layer_map=layer_map,
     )
 
     return Model(
-        inputs=input_tensors,
+        inputs=model.inputs,
         outputs=output,
     )
 
