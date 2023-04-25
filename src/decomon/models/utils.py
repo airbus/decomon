@@ -148,11 +148,11 @@ def get_input_tensors_keras_only(
     return input_tensors
 
 
-def get_input_dim(model: Model) -> int:
-    if isinstance(model.input_shape, list):
-        return np.prod(model.input_shape[0][1:])
+def get_input_dim(layer: Layer) -> int:
+    if isinstance(layer.input_shape, list):
+        return np.prod(layer.input_shape[0][1:])
     else:
-        return np.prod(model.input_shape[1:])
+        return np.prod(layer.input_shape[1:])
 
 
 def prepare_inputs_for_layer(

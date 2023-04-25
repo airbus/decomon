@@ -35,6 +35,7 @@ from decomon.layers.decomon_layers import (  # add some layers to module namespa
     to_decomon,
 )
 from decomon.layers.utils import ClipAlpha, NonNeg, NonPos
+from decomon.models.utils import get_input_dim
 from decomon.utils import ConvexDomainType, Slope
 
 
@@ -64,6 +65,8 @@ class BackwardDense(BackwardLayer):
         if self.layer.use_bias:
             self.bias = self.layer.bias
         if not isinstance(self.layer, DecomonLayer):
+            if input_dim < 0:
+                input_dim = get_input_dim(self.layer)
             self.layer = to_decomon(
                 layer,
                 input_dim,
@@ -145,6 +148,8 @@ class BackwardConv2D(BackwardLayer):
             **kwargs,
         )
         if not isinstance(self.layer, DecomonLayer):
+            if input_dim < 0:
+                input_dim = get_input_dim(self.layer)
             self.layer = to_decomon(
                 layer,
                 input_dim,
