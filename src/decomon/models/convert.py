@@ -21,41 +21,15 @@ from decomon.models.forward_cloning import (
 from decomon.models.models import DecomonModel
 from decomon.models.utils import (
     ConvertMethod,
+    FeedDirection,
     convert_deellip_to_keras,
+    get_direction,
+    get_ibp_affine_from_method,
     get_input_tensors,
     preprocess_layer,
     split_activation,
 )
 from decomon.utils import Slope
-
-
-class FeedDirection(Enum):
-    FORWARD = "feed_forward"
-    BACKWARD = "feed_backward"
-
-
-def get_direction(method: Union[str, ConvertMethod]) -> FeedDirection:
-    if ConvertMethod(method) in [ConvertMethod.FORWARD_IBP, ConvertMethod.FORWARD_AFFINE, ConvertMethod.FORWARD_HYBRID]:
-        return FeedDirection.FORWARD
-    else:
-        return FeedDirection.BACKWARD
-
-
-def get_ibp_affine_from_method(method: Union[str, ConvertMethod]) -> Tuple[bool, bool]:
-    method = ConvertMethod(method)
-    if method in [ConvertMethod.FORWARD_IBP, ConvertMethod.CROWN_FORWARD_IBP]:
-        return True, False
-    if method in [ConvertMethod.FORWARD_AFFINE, ConvertMethod.CROWN_FORWARD_AFFINE]:
-        return False, True
-    if method in [ConvertMethod.FORWARD_HYBRID, ConvertMethod.CROWN_FORWARD_HYBRID]:
-        return True, True
-    if method == ConvertMethod.CROWN:
-        return True, False
-    return True, True
-
-
-def switch_mode_mapping(forward_map: OutputMapDict, ibp: bool, affine: bool, method: Union[str, ConvertMethod]) -> None:
-    raise NotImplementedError()
 
 
 def _clone_keras_model(model: Model, layer_fn: Callable[[Layer], List[Layer]]) -> Model:

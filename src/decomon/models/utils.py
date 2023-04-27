@@ -44,6 +44,31 @@ class ConvertMethod(Enum):
     FORWARD_HYBRID = "forward-hybrid"
 
 
+def get_ibp_affine_from_method(method: Union[str, ConvertMethod]) -> Tuple[bool, bool]:
+    method = ConvertMethod(method)
+    if method in [ConvertMethod.FORWARD_IBP, ConvertMethod.CROWN_FORWARD_IBP]:
+        return True, False
+    if method in [ConvertMethod.FORWARD_AFFINE, ConvertMethod.CROWN_FORWARD_AFFINE]:
+        return False, True
+    if method in [ConvertMethod.FORWARD_HYBRID, ConvertMethod.CROWN_FORWARD_HYBRID]:
+        return True, True
+    if method == ConvertMethod.CROWN:
+        return True, False
+    return True, True
+
+
+class FeedDirection(Enum):
+    FORWARD = "feed_forward"
+    BACKWARD = "feed_backward"
+
+
+def get_direction(method: Union[str, ConvertMethod]) -> FeedDirection:
+    if ConvertMethod(method) in [ConvertMethod.FORWARD_IBP, ConvertMethod.FORWARD_AFFINE, ConvertMethod.FORWARD_HYBRID]:
+        return FeedDirection.FORWARD
+    else:
+        return FeedDirection.BACKWARD
+
+
 def has_merge_layers(model: Model) -> bool:
     return any(is_a_merge_layer(layer) for layer in model.layers)
 
