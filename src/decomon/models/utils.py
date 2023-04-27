@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
@@ -188,15 +188,27 @@ def wrap_outputs_from_layer_in_list(
         return outputs
 
 
-def split_activation(layer: Layer) -> List[Layer]:
+def _share_no_attributes(new_layer: Layer, old_layer: Layer) -> None:
+    return
+
+
+def split_activation(
+    layer: Layer, share_some_attributes: Optional[Callable[[Layer, Layer], None]] = None
+) -> List[Layer]:
+    # init
+    if share_some_attributes is None:
+        share_some_attributes = _share_no_attributes
+    # get activation
     config = layer.get_config()
     activation = config.pop("activation", None)
+    # split if needed
     if activation is None or activation == "linear" or isinstance(layer, Activation):
         return [layer]
     else:
         # layer without activation
         config["name"] = f"{layer.name}_wo_activation"
         layer_wo_activation = layer.__class__.from_config(config)
+        share_some_attributes(layer_wo_activation, layer)  # share (deel-lip) attributes
         # build the layer
         if not hasattr(layer, "input_shape"):
             raise RuntimeError("The layer should properly initialized so that layer.input_shape is defined.")
@@ -251,10 +263,17 @@ def convert_deellip_to_keras(layer: Layer) -> Layer:
     return layer
 
 
-def share_deellip_attributes(new_layer: Layer, old_layer: Optional[Layer] = None) -> None:
+def share_deellip_attributes(new_layer: Layer, old_layer: Layer = None) -> None:
     new_layer.is_lipschitz = getattr(old_layer, "is_lipschitz", False)
     new_layer.deellip_classname = getattr(old_layer, "deellip_classname", new_layer.__class__.__name__)
     new_layer.k_coef_lip = getattr(old_layer, "k_coef_lip", -1.0)
+
+
+def preprocess_layer(layer: Layer) -> List[Layer]:
+    layer = convert_deellip_to_keras(layer)
+    layers = split_activation(layer, share_some_attributes=share_deellip_attributes)
+    # convert activation layers (if were embedded deel-lip layers)
+    return [convert_deellip_to_keras(l) for l in layers]
 
 
 def get_input_tensor_x(
