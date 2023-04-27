@@ -19,8 +19,14 @@ from decomon.models.forward_cloning import (
     convert_forward_functional_model,
 )
 from decomon.models.models import DecomonModel
-from decomon.models.utils import ConvertMethod, get_input_tensors, split_activation
-from decomon.utils import ConvexDomainType, Slope, get_lower, get_upper
+from decomon.models.utils import (
+    ConvertMethod,
+    convert_deellip_to_keras,
+    get_input_tensors,
+    preprocess_layer,
+    split_activation,
+)
+from decomon.utils import Slope
 
 
 class FeedDirection(Enum):
@@ -52,7 +58,7 @@ def switch_mode_mapping(forward_map: OutputMapDict, ibp: bool, affine: bool, met
     raise NotImplementedError()
 
 
-def split_activations_in_keras_model(model: Model) -> Model:
+def _clone_keras_model(model: Model, layer_fn: Callable[[Layer], List[Layer]]) -> Model:
     if model.inputs is None:
         raise ValueError("model.inputs must be not None. You should call the model on a batch of data.")
 
@@ -65,7 +71,7 @@ def split_activations_in_keras_model(model: Model) -> Model:
         model=model,
         input_tensors=model.inputs,
         softmax_to_linear=False,
-        layer_fn=split_activation,
+        layer_fn=layer_fn,
         output_map=output_map,
         layer_map=layer_map,
     )
@@ -74,6 +80,28 @@ def split_activations_in_keras_model(model: Model) -> Model:
         inputs=model.inputs,
         outputs=output,
     )
+
+
+def split_activations_in_keras_model(
+    model: Model,
+) -> Model:
+    return _clone_keras_model(model=model, layer_fn=split_activation)
+
+
+def convert_deellip_layers_in_keras_model(
+    model: Model,
+) -> Model:
+    return _clone_keras_model(model=model, layer_fn=_convert_deellip_to_keras)
+
+
+def _convert_deellip_to_keras(layer: Layer) -> List[Layer]:
+    return [convert_deellip_to_keras(layer=layer)]
+
+
+def preprocess_keras_model(
+    model: Model,
+) -> Model:
+    return _clone_keras_model(model=model, layer_fn=preprocess_layer)
 
 
 # create status
@@ -111,7 +139,7 @@ def convert(
         method = ConvertMethod(method.lower())
 
     # prepare the Keras Model: split non-linear activation functions into separate Activation layers
-    model = split_activations_in_keras_model(model)
+    model = preprocess_keras_model(model)
 
     layer_map: Union[LayerMapDict, Dict[int, BackwardLayer]]
 
