@@ -35,7 +35,7 @@ deel_lip_skip_reason = "deel-lip is not available"
 def test_convert_1D(n, method, mode, floatx, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
         # skip method=ibp/crown-ibp with mode=affine/hybrid
-        return
+        pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()

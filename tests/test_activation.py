@@ -25,7 +25,7 @@ def test_activation_1D_box(n, mode, floatx, helpers, activation_func, tensor_fun
     # softmax: test only n=0,3
     if funcname == "softmax":
         if n not in {0, 3}:
-            return
+            pytest.skip("softmax activation only possible for n=0 or 3")
 
     mode = ForwardMode(mode)
     K.set_floatx("float{}".format(floatx))

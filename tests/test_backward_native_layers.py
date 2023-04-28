@@ -134,7 +134,7 @@ def test_Backward_NativeActivation_multiD_box(odd, activation, floatx, mode, hel
 
 def test_Backward_NativeFlatten_multiD_box(odd, floatx, mode, data_format, helpers):
     if data_format == "channels_first" and not len(_get_available_gpus()):
-        return
+        pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -198,7 +198,7 @@ def test_Backward_NativeFlatten_multiD_box(odd, floatx, mode, data_format, helpe
 
 def test_Backward_NativeReshape_multiD_box(odd, floatx, mode, data_format, helpers):
     if data_format == "channels_first" and not len(_get_available_gpus()):
-        return
+        pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
