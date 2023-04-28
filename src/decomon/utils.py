@@ -19,6 +19,11 @@ class ConvexDomainType(Enum):
     # (no verification is proceeded to assess that the set is convex)
 
 
+class Option(Enum):
+    lagrangian = "lagrangian"
+    milp = "milp"
+
+
 class Slope(Enum):
     V_SLOPE = "volume-slope"
     A_SLOPE = "adaptative-slope"
@@ -376,22 +381,25 @@ def get_upper(
         x_max = x[:, 1]
         return get_upper_box(x_min, x_max, w, b, **kwargs)
 
-    elif convex_domain["name"] in {ConvexDomainType.BOX, ConvexDomainType.GRID}:
-        x_min = x[:, 0]
-        x_max = x[:, 1]
-        return get_upper_box(x_min, x_max, w, b, **kwargs)
-
-    elif convex_domain["name"] == ConvexDomainType.BALL:
-
-        eps = convex_domain["eps"]
-        p = convex_domain["p"]
-        return get_upper_ball(x, eps, p, w, b, **kwargs)
-
-    elif convex_domain["name"] == ConvexDomainType.VERTEX:
-        raise NotImplementedError()
-
     else:
-        raise NotImplementedError()
+
+        convex_domain_type = ConvexDomainType(convex_domain["name"])
+        if convex_domain_type in {ConvexDomainType.BOX, ConvexDomainType.GRID}:
+            x_min = x[:, 0]
+            x_max = x[:, 1]
+            return get_upper_box(x_min, x_max, w, b, **kwargs)
+
+        elif convex_domain_type == ConvexDomainType.BALL:
+
+            eps = convex_domain["eps"]
+            p = convex_domain["p"]
+            return get_upper_ball(x, eps, p, w, b, **kwargs)
+
+        elif convex_domain_type == ConvexDomainType.VERTEX:
+            raise NotImplementedError()
+
+        else:
+            raise NotImplementedError()
 
 
 def get_lower(
@@ -411,21 +419,23 @@ def get_lower(
         x_max = x[:, 1]
         return get_lower_box(x_min, x_max, w, b, **kwargs)
 
-    elif convex_domain["name"] in {ConvexDomainType.BOX, ConvexDomainType.GRID}:
-        x_min = x[:, 0]
-        x_max = x[:, 1]
-        return get_lower_box(x_min, x_max, w, b, **kwargs)
-
-    elif convex_domain["name"] == ConvexDomainType.BALL:
-        eps = convex_domain["eps"]
-        p = convex_domain["p"]
-        return get_lower_ball(x, eps, p, w, b, **kwargs)
-
-    elif convex_domain["name"] == ConvexDomainType.VERTEX:
-        raise NotImplementedError()
-
     else:
-        raise NotImplementedError()
+        convex_domain_type = ConvexDomainType(convex_domain["name"])
+        if convex_domain_type in {ConvexDomainType.BOX, ConvexDomainType.GRID}:
+            x_min = x[:, 0]
+            x_max = x[:, 1]
+            return get_lower_box(x_min, x_max, w, b, **kwargs)
+
+        elif convex_domain_type == ConvexDomainType.BALL:
+            eps = convex_domain["eps"]
+            p = convex_domain["p"]
+            return get_lower_ball(x, eps, p, w, b, **kwargs)
+
+        elif convex_domain_type == ConvexDomainType.VERTEX:
+            raise NotImplementedError()
+
+        else:
+            raise NotImplementedError()
 
 
 def get_lower_layer(convex_domain: Optional[Dict[str, Any]] = None) -> Layer:
@@ -875,7 +885,7 @@ def relu_(
 
     if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
 
-        if len(convex_domain) and convex_domain["name"] == ConvexDomainType.GRID:
+        if len(convex_domain) and ConvexDomainType(convex_domain["name"]) == ConvexDomainType.GRID:
             upper_g, lower_g = get_bound_grid(x_0, w_u, b_u, w_l, b_l, 1)
             kwargs.update({"upper_grid": upper_g, "lower_grid": lower_g})
 

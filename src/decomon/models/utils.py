@@ -98,14 +98,14 @@ def get_input_tensors(
                 raise ValueError("Expected that every input layers use the same input_tensor")
 
     input_shape_x: Tuple[int, ...]
-    if len(convex_domain) == 0 or convex_domain["name"] != ConvexDomainType.BALL:
+    if len(convex_domain) == 0 or ConvexDomainType(convex_domain["name"]) != ConvexDomainType.BALL:
         input_shape_x = (2, input_dim)
     else:
         input_shape_x = (input_dim,)
 
     z_tensor = Input(shape=input_shape_x, dtype=model.layers[0].dtype)
 
-    if len(convex_domain) == 0 or convex_domain["name"] != ConvexDomainType.BALL:
+    if len(convex_domain) == 0 or ConvexDomainType(convex_domain["name"]) != ConvexDomainType.BALL:
 
         if ibp:
             u_c_tensor = Lambda(lambda z: z[:, 1], dtype=z_tensor.dtype)(z_tensor)
@@ -311,7 +311,7 @@ def get_input_tensor_x(
     if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
         input_dim_ = (2, input_dim)
         z_tensor = Input(input_dim_, dtype=model.layers[0].dtype)
-    elif convex_domain["name"] == ConvexDomainType.BOX and not isinstance(input_dim, tuple):
+    elif ConvexDomainType(convex_domain["name"]) == ConvexDomainType.BOX and not isinstance(input_dim, tuple):
         input_dim_ = (2, input_dim)
         z_tensor = Input(input_dim_, dtype=model.layers[0].dtype)
     else:

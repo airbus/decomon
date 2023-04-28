@@ -6,7 +6,7 @@ from keras.engine.functional import get_network_config
 
 from decomon.layers.core import StaticVariables
 from decomon.models.utils import ConvertMethod
-from decomon.utils import ConvexDomainType
+from decomon.utils import ConvexDomainType, Option
 
 
 class DecomonModel(tf.keras.Model):
@@ -82,12 +82,12 @@ def _check_domain(convex_domain_prev: Dict[str, Any], convex_domain: Dict[str, A
     if convex_domain == {}:
         convex_domain = {"name": ConvexDomainType.BOX}
 
-    if len(convex_domain_prev) == 0 or convex_domain_prev["name"] == ConvexDomainType.BOX:
+    if len(convex_domain_prev) == 0 or ConvexDomainType(convex_domain_prev["name"]) == ConvexDomainType.BOX:
         # Box
-        if convex_domain["name"] != ConvexDomainType.BOX:
+        if ConvexDomainType(convex_domain["name"]) != ConvexDomainType.BOX:
             raise NotImplementedError(msg)
 
-    if convex_domain_prev["name"] != convex_domain["name"]:
+    if ConvexDomainType(convex_domain_prev["name"]) != ConvexDomainType(convex_domain["name"]):
         raise NotImplementedError(msg)
 
     return convex_domain_
@@ -97,7 +97,9 @@ def get_AB(model_: DecomonModel) -> Dict[str, List[tf.Variable]]:
     dico_AB: Dict[str, List[tf.Variable]] = {}
     convex_domain = model_.convex_domain
     if not (
-        len(convex_domain) and convex_domain["name"] == ConvexDomainType.GRID and convex_domain["option"] == "milp"
+        len(convex_domain)
+        and ConvexDomainType(convex_domain["name"]) == ConvexDomainType.GRID
+        and Option(convex_domain["option"]) == Option.milp
     ):
         return dico_AB
 
@@ -115,7 +117,9 @@ def get_AB_finetune(model_: DecomonModel) -> Dict[str, tf.Variable]:
     dico_AB: Dict[str, tf.Variable] = {}
     convex_domain = model_.convex_domain
     if not (
-        len(convex_domain) and convex_domain["name"] == ConvexDomainType.GRID and convex_domain["option"] == "milp"
+        len(convex_domain)
+        and ConvexDomainType(convex_domain["name"]) == ConvexDomainType.GRID
+        and Option(convex_domain["option"]) == Option.milp
     ):
         return dico_AB
 

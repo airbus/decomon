@@ -83,14 +83,16 @@ def compute_R(z: tf.Tensor, convex_domain: Dict[str, Any]) -> tf.Tensor:
     if len(convex_domain) == 0:
         # compute the L2 distance z[:, 0], z[:, 1]
         dist_ = K.sqrt(K.sum(K.pow((z[:, 1] - z[:, 0]) / 2.0, 2), -1))
-    elif convex_domain["name"] == ConvexDomainType.BOX:
-        dist_ = K.sqrt(K.sum(K.pow((z[:, 1] - z[:, 0]) / 2.0, 2), -1))
-    elif convex_domain["name"] == ConvexDomainType.BALL and convex_domain["p"] == np.inf:
-        dist_ = K.sqrt(K.sum(K.pow(z - z + convex_domain["eps"], 2), -1))
-    elif convex_domain["name"] == ConvexDomainType.BALL and convex_domain["p"] == 2:
-        dist_ = convex_domain["eps"] * (0 * z + 1.0)
     else:
-        raise NotImplementedError()
+        convex_domain_type = ConvexDomainType(convex_domain["name"])
+        if convex_domain_type == ConvexDomainType.BOX:
+            dist_ = K.sqrt(K.sum(K.pow((z[:, 1] - z[:, 0]) / 2.0, 2), -1))
+        elif convex_domain_type == ConvexDomainType.BALL and convex_domain["p"] == np.inf:
+            dist_ = K.sqrt(K.sum(K.pow(z - z + convex_domain["eps"], 2), -1))
+        elif convex_domain_type == ConvexDomainType.BALL and convex_domain["p"] == 2:
+            dist_ = convex_domain["eps"] * (0 * z + 1.0)
+        else:
+            raise NotImplementedError()
 
     return dist_
 
@@ -109,14 +111,16 @@ def get_start_point(z: tf.Tensor, convex_domain: Dict[str, Any]) -> tf.Tensor:
 
     if len(convex_domain) == 0:
         return z[:, 0]
-    elif convex_domain["name"] == ConvexDomainType.BOX:
-        return (z[:, 0] + z[:, 1]) / 2.0
-    elif convex_domain["name"] == ConvexDomainType.BALL and convex_domain["p"] == np.inf:
-        return z
-    elif convex_domain["name"] == ConvexDomainType.BALL and convex_domain["p"] == 2:
-        return z
     else:
-        raise NotImplementedError()
+        convex_domain_type = ConvexDomainType(convex_domain["name"])
+        if convex_domain_type == ConvexDomainType.BOX:
+            return (z[:, 0] + z[:, 1]) / 2.0
+        elif convex_domain_type and convex_domain["p"] == np.inf:
+            return z
+        elif convex_domain_type and convex_domain["p"] == 2:
+            return z
+        else:
+            raise NotImplementedError()
 
 
 def get_coeff_grad(R: tf.Tensor, k: int, g: tf.Tensor) -> tf.Tensor:
