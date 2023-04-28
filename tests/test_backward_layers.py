@@ -188,7 +188,7 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, helpers):
 def test_Backward_Flatten_multiD_box(odd, floatx, mode, data_format, helpers):
 
     if data_format == "channels_first" and not len(_get_available_gpus()):
-        return
+        pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -252,7 +252,7 @@ def test_Backward_Flatten_multiD_box(odd, floatx, mode, data_format, helpers):
 
 def test_Backward_Reshape_multiD_box(odd, floatx, mode, data_format, helpers):
     if data_format == "channels_first" and not len(_get_available_gpus()):
-        return
+        pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()

@@ -24,7 +24,7 @@ def test_get_lower_upper_linear_hull_max(
 
     if finetune_odd is not None and name == "upper":
         # skip test with finetune if not get_lower
-        return
+        pytest.skip("finetune_odd is only intended for get_lower_linear_hull_max()")
 
     odd, m_0, m_1 = 0, 0, 1
     data_format = "channels_last"

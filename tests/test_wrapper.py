@@ -12,7 +12,7 @@ from decomon.models import clone
 def test_get_upper_1d_box(n, method, mode, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
         # skip method=ibp/crown-ibp with mode=affine/hybrid
-        return
+        pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
 
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
@@ -39,7 +39,7 @@ def test_get_upper_1d_box(n, method, mode, helpers):
 def test_get_lower_1d_box(n, method, mode, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
         # skip method=ibp/crown-ibp with mode=affine/hybrid
-        return
+        pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
 
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
@@ -66,7 +66,7 @@ def test_get_lower_1d_box(n, method, mode, helpers):
 def test_get_range_1d_box(n, method, mode, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
         # skip method=ibp/crown-ibp with mode=affine/hybrid
-        return
+        pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
 
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
@@ -94,7 +94,7 @@ def test_get_range_1d_box(n, method, mode, helpers):
 def test_get_upper_multid_box(odd, method, mode, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
         # skip method=ibp/crown-ibp with mode=affine/hybrid
-        return
+        pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
 
     inputs_ = helpers.get_standard_values_multid_box_convert(odd, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
@@ -116,7 +116,7 @@ def test_get_upper_multid_box(odd, method, mode, helpers):
 def test_get_lower_multid_box(odd, method, mode, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
         # skip method=ibp/crown-ibp with mode=affine/hybrid
-        return
+        pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
 
     inputs_ = helpers.get_standard_values_multid_box_convert(odd, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
@@ -138,7 +138,7 @@ def test_get_lower_multid_box(odd, method, mode, helpers):
 def test_get_range_multid_box(odd, method, mode, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
         # skip method=ibp/crown-ibp with mode=affine/hybrid
-        return
+        pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
 
     inputs_ = helpers.get_standard_values_multid_box_convert(odd, dc_decomp=False)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_

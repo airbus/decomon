@@ -15,7 +15,7 @@ from decomon.layers.decomon_layers import DecomonConv2D
 def test_Decomon_conv_box(data_format, mode, floatx, helpers):
 
     if data_format == "channels_first" and not len(_get_available_gpus()):
-        return
+        pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     odd, m_0, m_1 = 0, 0, 1
 
@@ -115,7 +115,7 @@ def test_Decomon_conv_box(data_format, mode, floatx, helpers):
 def test_Decomon_conv_box_nodc(data_format, floatx, helpers):
 
     if data_format == "channels_first" and not len(_get_available_gpus()):
-        return
+        pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     odd, m_0, m_1 = 0, 0, 1
 
