@@ -72,7 +72,7 @@ def get_adv_box(
     if not isinstance(model, DecomonModel):
         model_ = clone(model)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
+        assert len(model.convex_domain) == 0 or ConvexDomainType(model.convex_domain["name"]) in [
             ConvexDomainType.BOX,
             ConvexDomainType.GRID,
         ]
@@ -287,7 +287,7 @@ def check_adv_box(
     if not isinstance(model, DecomonModel):
         model_ = clone(model)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
+        assert len(model.convex_domain) == 0 or ConvexDomainType(model.convex_domain["name"]) in [
             ConvexDomainType.BOX,
             ConvexDomainType.GRID,
         ]
@@ -483,7 +483,7 @@ def get_range_box(
     if not (isinstance(model, DecomonModel)):
         model_ = clone(model)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
+        assert len(model.convex_domain) == 0 or ConvexDomainType(model.convex_domain["name"]) in [
             ConvexDomainType.BOX,
             ConvexDomainType.GRID,
         ]
@@ -819,7 +819,7 @@ def refine_box(
     if not isinstance(model, DecomonModel):
         model_ = clone(model)
     else:
-        assert len(model.convex_domain) == 0 or model.convex_domain["name"] in [
+        assert len(model.convex_domain) == 0 or ConvexDomainType(model.convex_domain["name"]) in [
             ConvexDomainType.BOX,
             ConvexDomainType.GRID,
         ]

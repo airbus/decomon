@@ -807,7 +807,7 @@ class DecomonDense(Dense, DecomonLayer):
             else:
 
                 # check convex_domain
-                if len(self.convex_domain) and self.convex_domain["name"] == ConvexDomainType.BALL:
+                if len(self.convex_domain) and ConvexDomainType(self.convex_domain["name"]) == ConvexDomainType.BALL:
 
                     if self.mode == ForwardMode.IBP:
                         x_0 = (u_c + l_c) / 2.0

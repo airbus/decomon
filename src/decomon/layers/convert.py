@@ -149,7 +149,7 @@ def _prepare_input_tensors(
     decomon_input_shapes = [list(input_shape[1:]) for input_shape in original_input_shapes]
     n_input = len(decomon_input_shapes)
 
-    if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BOX:
+    if len(convex_domain) == 0 or ConvexDomainType(convex_domain["name"]) == ConvexDomainType.BOX:
         x_input = Input((2, input_dim), dtype=layer.dtype)
     else:
         x_input = Input((input_dim,), dtype=layer.dtype)

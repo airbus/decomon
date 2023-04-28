@@ -11,11 +11,11 @@ from decomon.backward_layers.activations import get
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import get_affine, get_ibp, get_identity_lirpa
 from decomon.layers.convert import to_decomon
-from decomon.layers.core import DecomonLayer, ForwardMode, Option
+from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.decomon_layers import DecomonBatchNormalization
 from decomon.layers.utils import ClipAlpha, NonNeg, NonPos
 from decomon.models.utils import get_input_dim
-from decomon.utils import ConvexDomainType, Slope
+from decomon.utils import ConvexDomainType, Option, Slope
 
 
 class BackwardDense(BackwardLayer):
@@ -301,7 +301,7 @@ class BackwardActivation(BackwardLayer):
 
         if self.finetune and self.activation_name != "linear":
 
-            if len(self.convex_domain) and self.convex_domain["name"] == ConvexDomainType.GRID:
+            if len(self.convex_domain) and ConvexDomainType(self.convex_domain["name"]) == ConvexDomainType.GRID:
                 if self.activation_name[:4] == "relu":
                     self.alpha_b_l = self.add_weight(
                         shape=(
@@ -348,8 +348,8 @@ class BackwardActivation(BackwardLayer):
         if self.activation_name[:4] == "relu":
             if (
                 len(self.convex_domain)
-                and self.convex_domain["name"] == ConvexDomainType.GRID
-                and self.convex_domain["option"] == Option.lagrangian
+                and ConvexDomainType(self.convex_domain["name"]) == ConvexDomainType.GRID
+                and Option(self.convex_domain["option"]) == Option.lagrangian
                 and self.mode != ForwardMode.IBP
             ):
 
@@ -373,8 +373,8 @@ class BackwardActivation(BackwardLayer):
 
         if (
             len(self.convex_domain)
-            and self.convex_domain["name"] == ConvexDomainType.GRID
-            and self.convex_domain["option"] == Option.milp
+            and ConvexDomainType(self.convex_domain["name"]) == ConvexDomainType.GRID
+            and Option(self.convex_domain["option"]) == Option.milp
             and self.mode != ForwardMode.IBP
         ):
 

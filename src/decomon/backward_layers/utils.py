@@ -189,7 +189,11 @@ def backward_relu_(
     else:
         raise ValueError(f"Unknown mode {mode}")
 
-    if len(convex_domain) and convex_domain["name"] == ConvexDomainType.GRID and mode != ForwardMode.IBP:
+    if (
+        len(convex_domain)
+        and ConvexDomainType(convex_domain["name"] == ConvexDomainType.GRID)
+        and mode != ForwardMode.IBP
+    ):
 
         raise NotImplementedError()
 

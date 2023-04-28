@@ -33,11 +33,6 @@ def get_mode(ibp: bool = True, affine: bool = True) -> ForwardMode:
         return ForwardMode.AFFINE
 
 
-class Option(Enum):
-    lagrangian = "lagrangian"
-    milp = "milp"
-
-
 class StaticVariables:
     """Storing static values on the number of input tensors for our layers"""
 

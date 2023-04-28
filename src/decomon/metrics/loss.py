@@ -96,7 +96,7 @@ def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
     convex_domain = model.convex_domain
 
     if affine:
-        if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BALL:
+        if len(convex_domain) == 0 or ConvexDomainType(convex_domain["name"]) == ConvexDomainType.BALL:
             n_comp = 2
         else:
             n_comp = 1
@@ -167,7 +167,7 @@ def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
     convex_domain = model.convex_domain
 
     if affine:
-        if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BALL:
+        if len(convex_domain) == 0 or ConvexDomainType(convex_domain["name"]) == ConvexDomainType.BALL:
             n_comp = 2
         else:
             n_comp = 1
@@ -240,7 +240,7 @@ def get_adv_loss(
     convex_domain = model.convex_domain
 
     if affine:
-        if len(convex_domain) == 0 or convex_domain["name"] == ConvexDomainType.BALL:
+        if len(convex_domain) == 0 or ConvexDomainType(convex_domain["name"]) == ConvexDomainType.BALL:
             n_comp = 2
         else:
             n_comp = 1
