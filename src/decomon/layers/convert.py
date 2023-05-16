@@ -57,37 +57,21 @@ def to_decomon(
         convex_domain = {}
 
     mode = get_mode(ibp=ibp, affine=affine)
-    original_class_name = layer.__class__.__name__
-    layer_decomon: Optional[DecomonLayer] = None
-    for k in range(2):  # two runs before sending a failure
-        try:
-            layer_decomon = _to_decomon_wo_input_init(
-                layer=layer,
-                namespace=_mapping_name2class,
-                slope=slope,
-                dc_decomp=dc_decomp,
-                convex_domain=convex_domain,
-                finetune=finetune,
-                mode=mode,
-                shared=shared,
-                fast=fast,
-            )
-
-            break
-        except NotImplementedError:
-            if hasattr(layer, "vanilla_export"):
-                shared = False  # checking with Deel-LIP
-                layer_ = layer.vanilla_export()
-                layer_(layer.input)
-                layer = layer_
-
-    if layer_decomon is None:
-        raise NotImplementedError(f"The decomon version of {original_class_name} is not yet implemented.")
+    layer_decomon = _to_decomon_wo_input_init(
+        layer=layer,
+        namespace=_mapping_name2class,
+        slope=slope,
+        dc_decomp=dc_decomp,
+        convex_domain=convex_domain,
+        finetune=finetune,
+        mode=mode,
+        shared=shared,
+        fast=fast,
+    )
 
     input_tensors = _prepare_input_tensors(
         layer=layer, input_dim=input_dim, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode
     )
-
     layer_decomon(input_tensors)
     layer_decomon.reset_layer(layer)
 
@@ -109,9 +93,6 @@ def _to_decomon_wo_input_init(
     if convex_domain is None:
         convex_domain = {}
     class_name = layer.__class__.__name__
-    # remove deel-lip dependency
-    if class_name[: len(DEEL_LIP)] == DEEL_LIP:
-        class_name = class_name[len(DEEL_LIP) :]
     # check if layer has a built argument that built is set to True
     if hasattr(layer, "built"):
         if not layer.built:
@@ -129,7 +110,6 @@ def _to_decomon_wo_input_init(
     config_layer["fast"] = fast
     if not isinstance(layer, Activation):
         config_layer.pop("activation", None)  # Hyp: no non-linear activation in dense or conv2d layers
-
     try:
         layer_decomon = namespace[decomon_class_name].from_config(config_layer)
     except:
