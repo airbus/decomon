@@ -796,34 +796,12 @@ class DecomonDense(Dense, DecomonLayer):
             raise ValueError(f"Unknown mode {self.mode}")
 
         if self.mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
-            if not self.linear_layer:
-                if not self.has_backward_bounds:
-                    u_c_ = self.op_dot(u_c, kernel_pos) + self.op_dot(l_c, kernel_neg)
-                    l_c_ = self.op_dot(l_c, kernel_pos) + self.op_dot(u_c, kernel_neg)
-                else:
-                    u_c_ = self.op_dot(u_c, kernel_pos_back) + self.op_dot(l_c, kernel_neg_back)
-                    l_c_ = self.op_dot(l_c, kernel_pos_back) + self.op_dot(u_c, kernel_neg_back)
-
+            if not self.has_backward_bounds:
+                u_c_ = self.op_dot(u_c, kernel_pos) + self.op_dot(l_c, kernel_neg)
+                l_c_ = self.op_dot(l_c, kernel_pos) + self.op_dot(u_c, kernel_neg)
             else:
-
-                # check convex_domain
-                if len(self.convex_domain) and ConvexDomainType(self.convex_domain["name"]) == ConvexDomainType.BALL:
-
-                    if self.mode == ForwardMode.IBP:
-                        x_0 = (u_c + l_c) / 2.0
-                    b_ = (0 * self.kernel[0])[None]
-                    if self.has_backward_bounds:
-                        raise NotImplementedError()
-                    u_c_ = get_upper(x_0, self.kernel[None], b_, convex_domain=self.convex_domain)
-                    l_c_ = get_lower(x_0, self.kernel[None], b_, convex_domain=self.convex_domain)
-
-                else:
-                    if not self.has_backward_bounds:
-                        u_c_ = self.op_dot(u_c, kernel_pos) + self.op_dot(l_c, kernel_neg)
-                        l_c_ = self.op_dot(l_c, kernel_pos) + self.op_dot(u_c, kernel_neg)
-                    else:
-                        u_c_ = self.op_dot(u_c, kernel_pos_back) + self.op_dot(l_c, kernel_neg_back)
-                        l_c_ = self.op_dot(l_c, kernel_pos_back) + self.op_dot(u_c, kernel_neg_back)
+                u_c_ = self.op_dot(u_c, kernel_pos_back) + self.op_dot(l_c, kernel_neg_back)
+                l_c_ = self.op_dot(l_c, kernel_pos_back) + self.op_dot(u_c, kernel_neg_back)
 
         if self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
 
@@ -1492,6 +1470,3 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
 
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         return input_shape
-
-    def get_linear(self) -> bool:
-        return self.linear_layer
