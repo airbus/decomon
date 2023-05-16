@@ -5,6 +5,8 @@ from typing import Any, Dict, List, Optional, Type, Union
 import tensorflow as tf
 from tensorflow.keras.layers import Layer
 
+from decomon.keras_utils import get_weight_index_from_name
+
 
 class ForwardMode(Enum):
     """The different forward (from input to output) linear based relaxation perturbation analysis."""
@@ -156,13 +158,28 @@ class DecomonLayer(ABC, Layer):
         return self.original_keras_layer_class.compute_output_shape(self, input_shape)
 
     def reset_layer(self, layer: Layer) -> None:
-        """
+        """Reset the weights by using the weights of another (a priori non-decomon) layer.
+
+        It set the weights whose names are listed by `keras_weights_names`.
+
         Args:
             layer
 
         Returns:
 
         """
+        weight_names = self.keras_weights_names
+        if len(weight_names) > 0:
+            reset_layer(decomon_layer=self, keras_layer=layer, weight_names=weight_names)
+
+    @property
+    def keras_weights_names(self) -> List[str]:
+        """Weights names of the corresponding Keras layer.
+
+        Will be used to decide which weight to take from the keras layer in `reset_layer()`
+
+        """
+        return []
 
     def join(self, bounds: List[tf.Tensor]) -> List[tf.Tensor]:
         """
@@ -198,3 +215,28 @@ class DecomonLayer(ABC, Layer):
 
     def set_back_bounds(self, has_backward_bounds: bool) -> None:
         pass
+
+
+def reset_layer(decomon_layer: DecomonLayer, keras_layer: Layer, weight_names: List[str]) -> None:
+    """Reset the weights of a decomon layer by using the weights of another (a priori non-decomon) layer.
+
+    Args:
+        decomon_layer: the decomon layer whose weights will be updated
+        keras_layer: the layer used to update the weights
+        weight_names: the names of the weights to update
+
+    Returns:
+
+    """
+    if not keras_layer.built:
+        raise ValueError(f"the layer {keras_layer.name} has not been built yet")
+    if not decomon_layer.built:
+        raise ValueError(f"the layer {decomon_layer.name} has not been built yet")
+    else:
+        decomon_params = decomon_layer.get_weights()
+        original_params = keras_layer.get_weights()
+        for weight_name in weight_names:
+            decomon_params[get_weight_index_from_name(decomon_layer, weight_name)] = original_params[
+                get_weight_index_from_name(keras_layer, weight_name)
+            ]
+        decomon_layer.set_weights(decomon_params)

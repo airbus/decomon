@@ -20,6 +20,7 @@ from tensorflow.keras.layers import (
 from tensorflow.python.keras.utils import conv_utils
 from tensorflow.python.keras.utils.generic_utils import to_list
 
+from decomon.keras_utils import get_weight_index
 from decomon.layers import activations
 from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.utils import (
@@ -532,20 +533,17 @@ class DecomonConv2D(DecomonLayer, Conv2D):
 
         return output_shape_
 
-    def reset_layer(self, layer: Layer) -> None:
-        """
-        Args:
-            layer
+    @property
+    def keras_weights_names(self) -> List[str]:
+        """Weights names of the corresponding Keras layer.
 
-        Returns:
+        Will be used to decide which weight to take from the keras layer in `reset_layer()`
 
         """
-        # assert than we have the same configuration
-        assert isinstance(layer, Conv2D), "wrong type of layers..."
-        params = layer.get_weights()
-        if self.finetune:
-            params += self.get_weights()[2:]
-        self.set_weights(params)
+        weight_names = ["kernel"]
+        if self.use_bias:
+            weight_names.append("bias")
+        return weight_names
 
     def freeze_weights(self) -> None:
 
@@ -942,24 +940,17 @@ class DecomonDense(DecomonLayer, Dense):
 
         return [tf.TensorShape(shape) for shape in output_shape]
 
-    def reset_layer(self, dense: Layer) -> None:
+    @property
+    def keras_weights_names(self) -> List[str]:
+        """Weights names of the corresponding Keras layer.
+
+        Will be used to decide which weight to take from the keras layer in `reset_layer()`
+
         """
-        Args:
-            dense
-
-        Returns:
-
-        """
-        # assert than we have the same configuration
-        assert isinstance(dense, Dense), "wrong type of layers..."
-        if dense.built:
-
-            params = dense.get_weights()
-            if self.finetune:
-                params += self.get_weights()[2:]
-            self.set_weights(params)
-        else:
-            raise ValueError(f"the layer {dense.name} has not been built yet")
+        weight_names = ["kernel"]
+        if self.use_bias:
+            weight_names.append("bias")
+        return weight_names
 
     def freeze_weights(self) -> None:
 
@@ -1379,17 +1370,19 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
 
         return output
 
-    def reset_layer(self, layer: Layer) -> None:
-        """
-        Args:
-            layer
+    @property
+    def keras_weights_names(self) -> List[str]:
+        """Weights names of the corresponding Keras layer.
 
-        Returns:
+        Will be used to decide which weight to take from the keras layer in `reset_layer()`
 
         """
-        assert isinstance(layer, BatchNormalization), "wrong type of layers..."
-        params = layer.get_weights()
-        self.set_weights(params)
+        weight_names = ["moving_mean", "moving_variance"]
+        if self.center:
+            weight_names.append("beta")
+        if self.scale:
+            weight_names.append("gamma")
+        return weight_names
 
 
 class DecomonDropout(DecomonLayer, Dropout):
