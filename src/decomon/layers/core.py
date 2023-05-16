@@ -107,8 +107,6 @@ class DecomonLayer(ABC, Layer):
         self.frozen_alpha = False
         self.shared = shared
         self.fast = fast
-        self.init_layer = False
-        self.linear_layer = False
         self.has_backward_bounds = False  # optimizing Forward LiRPA for adversarial perturbation
 
     def get_config(self) -> Dict[str, Any]:
