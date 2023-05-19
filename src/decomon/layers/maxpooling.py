@@ -12,11 +12,13 @@ from decomon.utils import get_lower, get_upper
 
 
 # step 1: compute the maximum
-class DecomonMaxPooling2D(MaxPooling2D, DecomonLayer):
+class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
     """LiRPA implementation of MaxPooling2D layers.
     See Keras official documentation for further details on the MaxPooling2D operator
 
     """
+
+    original_keras_layer_class = MaxPooling2D
 
     pool_size: Tuple[int, int]
     strides: Tuple[int, int]

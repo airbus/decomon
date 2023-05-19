@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 import tensorflow as tf
 from tensorflow.keras.layers import Layer
@@ -67,6 +67,12 @@ class DecomonLayer(ABC, Layer):
 
     _trainable_weights: List[tf.Variable]
 
+    @property
+    @abstractmethod
+    def original_keras_layer_class(self) -> Type[Layer]:
+        """The keras layer class from which this class is the decomon equivalent."""
+        pass
+
     def __init__(
         self,
         convex_domain: Optional[Dict[str, Any]] = None,
@@ -125,8 +131,9 @@ class DecomonLayer(ABC, Layer):
         Returns:
 
         """
-        # generic case: nothing to do before call
-        pass
+        # generic case: call build from underlying keras layer with the proper intput_shape
+        y_input_shape = input_shape[-1]
+        self.original_keras_layer_class.build(self, y_input_shape)
 
     @abstractmethod
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
@@ -138,7 +145,6 @@ class DecomonLayer(ABC, Layer):
 
         """
 
-    @abstractmethod
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         """
         Args:
@@ -147,6 +153,7 @@ class DecomonLayer(ABC, Layer):
         Returns:
 
         """
+        return self.original_keras_layer_class.compute_output_shape(self, input_shape)
 
     def reset_layer(self, layer: Layer) -> None:
         """

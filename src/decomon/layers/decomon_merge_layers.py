@@ -7,10 +7,11 @@ from tensorflow.keras.layers import (
     Average,
     Concatenate,
     Dot,
-    Input,
     Lambda,
-    Layer,
+    Maximum,
+    Minimum,
     Multiply,
+    Subtract,
 )
 
 from decomon.layers.core import DecomonLayer, ForwardMode
@@ -20,11 +21,25 @@ from decomon.utils import maximum, minus, substract
 ##### Merge Layer ####
 
 
-class DecomonAdd(Add, DecomonLayer):
+class DecomonMerge(DecomonLayer):
+    """Base class for Decomon layers based on Mergind Keras layers."""
+
+    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
+        return input_shape
+
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
+        n_comp = self.nb_tensors
+        input_shape_y = input_shape[n_comp - 1 :: n_comp]
+        self.original_keras_layer_class.build(self, input_shape_y)
+
+
+class DecomonAdd(DecomonMerge, Add):
     """LiRPA implementation of Add layers.
     See Keras official documentation for further details on the Add operator
 
     """
+
+    original_keras_layer_class = Add
 
     def __init__(
         self,
@@ -45,14 +60,6 @@ class DecomonAdd(Add, DecomonLayer):
             fast=fast,
             **kwargs,
         )
-
-    def build(self, input_shape: List[tf.TensorShape]) -> None:
-        n_comp = self.nb_tensors
-        input_shape_y = input_shape[::n_comp]
-        super().build(input_shape_y)
-
-    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
-        return input_shape
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
@@ -106,11 +113,13 @@ class DecomonAdd(Add, DecomonLayer):
         return output
 
 
-class DecomonAverage(Average, DecomonLayer):
+class DecomonAverage(DecomonMerge, Average):
     """LiRPA implementation of Average layers.
     See Keras official documentation for further details on the Average operator
 
     """
+
+    original_keras_layer_class = Average
 
     def __init__(
         self,
@@ -132,15 +141,6 @@ class DecomonAverage(Average, DecomonLayer):
             **kwargs,
         )
         self.op = Lambda(lambda x: sum(x) / len(x))
-
-    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
-
-        return input_shape
-
-    def build(self, input_shape: List[tf.TensorShape]) -> None:
-        n_comp = self.nb_tensors
-        input_shape_y = input_shape[::n_comp]
-        super().build(input_shape_y)
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
@@ -192,11 +192,13 @@ class DecomonAverage(Average, DecomonLayer):
         return output
 
 
-class DecomonSubtract(DecomonLayer):
+class DecomonSubtract(DecomonMerge, Subtract):
     """LiRPA implementation of Subtract layers.
     See Keras official documentation for further details on the Subtract operator
 
     """
+
+    original_keras_layer_class = Subtract
 
     def __init__(
         self,
@@ -217,10 +219,6 @@ class DecomonSubtract(DecomonLayer):
             fast=fast,
             **kwargs,
         )
-
-    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
-
-        return input_shape
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
@@ -237,11 +235,13 @@ class DecomonSubtract(DecomonLayer):
         return output
 
 
-class DecomonMinimum(DecomonLayer):
+class DecomonMinimum(DecomonMerge, Minimum):
     """LiRPA implementation of Minimum layers.
     See Keras official documentation for further details on the Minimum operator
 
     """
+
+    original_keras_layer_class = Minimum
 
     def __init__(
         self,
@@ -262,10 +262,6 @@ class DecomonMinimum(DecomonLayer):
             fast=fast,
             **kwargs,
         )
-
-    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
-
-        return input_shape
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
@@ -294,11 +290,13 @@ class DecomonMinimum(DecomonLayer):
         return minus(output, mode=self.mode)
 
 
-class DecomonMaximum(DecomonLayer):
+class DecomonMaximum(DecomonMerge, Maximum):
     """LiRPA implementation of Maximum layers.
     See Keras official documentation for further details on the Maximum operator
 
     """
+
+    original_keras_layer_class = Maximum
 
     def __init__(
         self,
@@ -319,9 +317,6 @@ class DecomonMaximum(DecomonLayer):
             fast=fast,
             **kwargs,
         )
-
-    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
-        return input_shape
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
@@ -347,11 +342,13 @@ class DecomonMaximum(DecomonLayer):
         return output
 
 
-class DecomonConcatenate(Concatenate, DecomonLayer):
+class DecomonConcatenate(DecomonMerge, Concatenate):
     """LiRPA implementation of Concatenate layers.
     See Keras official documentation for further details on the Concatenate operator
 
     """
+
+    original_keras_layer_class = Concatenate
 
     def __init__(
         self,
@@ -383,22 +380,6 @@ class DecomonConcatenate(Concatenate, DecomonLayer):
             self.op_w = self.op
         else:
             self.op_w = Concatenate(axis=self.axis + 1)
-
-    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
-
-        return input_shape
-
-    def build(self, input_shape: List[tf.TensorShape]) -> None:
-        n_comp = self.nb_tensors
-        if self.mode == ForwardMode.IBP:
-            input_shape_y = input_shape[::n_comp]
-        elif self.mode == ForwardMode.HYBRID:
-            input_shape_y = input_shape[1::n_comp]
-        elif self.mode == ForwardMode.AFFINE:
-            input_shape_y = input_shape[2::n_comp]
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
-        super().build(input_shape_y)
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         if self.dc_decomp:
@@ -449,11 +430,13 @@ class DecomonConcatenate(Concatenate, DecomonLayer):
         return output
 
 
-class DecomonMultiply(Multiply, DecomonLayer):
+class DecomonMultiply(DecomonMerge, Multiply):
     """LiRPA implementation of Multiply layers.
     See Keras official documentation for further details on the Multiply operator
 
     """
+
+    original_keras_layer_class = Multiply
 
     def __init__(
         self,
@@ -474,19 +457,6 @@ class DecomonMultiply(Multiply, DecomonLayer):
             fast=fast,
             **kwargs,
         )
-
-    def build(self, input_shape: List[tf.TensorShape]) -> None:
-
-        n_comp = self.nb_tensors
-        if self.mode == ForwardMode.IBP:
-            input_shape_ = input_shape[::n_comp]
-        elif self.mode == ForwardMode.HYBRID:
-            input_shape_ = input_shape[1::n_comp]
-        elif self.mode == ForwardMode.AFFINE:
-            input_shape_ = input_shape[2::n_comp]
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
-        super().build(input_shape_)
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
@@ -509,11 +479,13 @@ class DecomonMultiply(Multiply, DecomonLayer):
         return output
 
 
-class DecomonDot(Dot, DecomonLayer):
+class DecomonDot(DecomonMerge, Dot):
     """LiRPA implementation of Dot layers.
     See Keras official documentation for further details on the Dot operator
 
     """
+
+    original_keras_layer_class = Dot
 
     def __init__(
         self,
@@ -540,19 +512,6 @@ class DecomonDot(Dot, DecomonLayer):
             self.axes = (axes, axes)
         else:
             self.axes = axes
-
-    def build(self, input_shape: List[tf.TensorShape]) -> None:
-
-        n_comp = self.nb_tensors
-        if self.mode == ForwardMode.IBP:
-            input_shape_ = input_shape[::n_comp]
-        elif self.mode == ForwardMode.HYBRID:
-            input_shape_ = input_shape[1::n_comp]
-        elif self.mode == ForwardMode.AFFINE:
-            input_shape_ = input_shape[2::n_comp]
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
-        super().build(input_shape_)
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 

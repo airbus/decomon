@@ -1,3 +1,5 @@
+import pytest
+
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import (
     DecomonActivation,
@@ -19,8 +21,16 @@ from decomon.layers.decomon_merge_layers import (
     DecomonSubtract,
 )
 from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
-from decomon.layers.deel_lip import DecomonGroupSort, DecomonGroupSort2
 from decomon.layers.maxpooling import DecomonMaxPooling2D
+
+try:
+    from decomon.layers.deel_lip import DecomonGroupSort, DecomonGroupSort2
+except ImportError:
+    deel_lip_available = False
+else:
+    deel_lip_available = True
+
+deel_lip_skip_reason = "deel-lip is not available"
 
 
 def test_decomon_reshape():
@@ -38,6 +48,7 @@ def test_decomon_reshape():
     assert config["mode"] == mode
 
 
+@pytest.mark.skipif(not (deel_lip_available), reason=deel_lip_skip_reason)
 def test_deel_lip():
     layer = DecomonGroupSort()
     config = layer.get_config()
