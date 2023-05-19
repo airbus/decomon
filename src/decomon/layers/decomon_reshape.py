@@ -1,16 +1,18 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import InputSpec, Permute, Reshape
+from tensorflow.keras.layers import InputSpec, Layer, Permute, Reshape
 
 from decomon.layers.core import DecomonLayer, ForwardMode
 
 
-class DecomonReshape(Reshape, DecomonLayer):
+class DecomonReshape(DecomonLayer, Reshape):
     """Forward LiRPA implementation of Reshape layers.
     See Keras official documentation for further details on the Reshape operator
     """
+
+    original_keras_layer_class = Reshape
 
     def __init__(
         self,
@@ -65,19 +67,6 @@ class DecomonReshape(Reshape, DecomonLayer):
 
         if self.dc_decomp:
             self.input_spec += [InputSpec(min_ndim=1), InputSpec(min_ndim=1)]
-
-    def build(self, input_shape: List[tf.TensorShape]) -> None:
-        """
-        Args:
-            self
-            input_shape
-
-        Returns:
-
-        """
-
-        y_input_shape = input_shape[0]
-        Reshape.build(self, y_input_shape)
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         def op(x: tf.Tensor) -> tf.Tensor:
@@ -134,10 +123,12 @@ class DecomonReshape(Reshape, DecomonLayer):
         return output
 
 
-class DecomonPermute(Permute, DecomonLayer):
+class DecomonPermute(DecomonLayer, Permute):
     """Forward LiRPA implementation of Reshape layers.
     See Keras official documentation for further details on the Reshape operator
     """
+
+    original_keras_layer_class = Permute
 
     def __init__(
         self,
@@ -194,19 +185,6 @@ class DecomonPermute(Permute, DecomonLayer):
 
         if self.dc_decomp:
             self.input_spec += [InputSpec(min_ndim=1), InputSpec(min_ndim=1)]
-
-    def build(self, input_shape: List[tf.TensorShape]) -> None:
-        """
-        Args:
-            self
-            input_shape
-
-        Returns:
-
-        """
-
-        y_input_shape = input_shape[-1]
-        super().build(y_input_shape)
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         def op(x: tf.Tensor) -> tf.Tensor:

@@ -49,8 +49,17 @@ from decomon.layers.decomon_merge_layers import (
     DecomonSubtract,
 )
 from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
-from decomon.layers.deel_lip import DecomonGroupSort2
 from decomon.layers.maxpooling import DecomonMaxPooling2D
+
+try:
+    from decomon.layers.deel_lip import DecomonGroupSort2
+except ImportError:
+    deel_lip_available = False
+else:
+    deel_lip_available = True
+
+
+deel_lip_skip_reason = "deel-lip is not available"
 
 
 def test_backward_layers():
@@ -132,6 +141,7 @@ def test_backward_maxpooling():
 
 
 @pytest.mark.skip("Not yet implemented.")
+@pytest.mark.skipif(not (deel_lip_available), reason=deel_lip_skip_reason)
 def test_deel_lip():
     sublayer = DecomonGroupSort2()
     layer = BackwardGroupSort2(layer=sublayer)

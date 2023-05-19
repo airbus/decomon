@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Lambda
+from tensorflow.keras.layers import Lambda, Layer
 
 from decomon.layers.activations import softmax as softmax_
 from decomon.layers.core import DecomonLayer, ForwardMode, get_mode
@@ -361,6 +361,9 @@ def get_adv_loss(
 
 # create a layer
 class DecomonLossFusion(DecomonLayer):
+
+    original_keras_layer_class = Layer
+
     def __init__(
         self,
         asymptotic: bool = False,
@@ -446,9 +449,15 @@ class DecomonLossFusion(DecomonLayer):
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> tf.TensorShape:
         return input_shape[-1]
 
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
+        return None
+
 
 # new layer for new loss functions
 class DecomonRadiusRobust(DecomonLayer):
+
+    original_keras_layer_class = Layer
+
     def __init__(
         self,
         backward: bool = False,
@@ -560,6 +569,9 @@ class DecomonRadiusRobust(DecomonLayer):
 
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> tf.TensorShape:
         return input_shape[-1]
+
+    def build(self, input_shape: List[tf.TensorShape]) -> None:
+        return None
 
 
 def build_radius_robust_model(model: DecomonModel) -> DecomonModel:

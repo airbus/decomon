@@ -31,11 +31,13 @@ from decomon.layers.utils import (
 from decomon.utils import ConvexDomainType, Slope, get_lower, get_upper
 
 
-class DecomonConv2D(Conv2D, DecomonLayer):
+class DecomonConv2D(DecomonLayer, Conv2D):
     """Forward LiRPA implementation of Conv2d layers.
     See Keras official documentation for further details on the Conv2d operator
 
     """
+
+    original_keras_layer_class = Conv2D
 
     def __init__(
         self,
@@ -589,10 +591,12 @@ class DecomonConv2D(Conv2D, DecomonLayer):
             K.set_value(self.gamma_out, np.ones_like(self.gamma_pos_out.value()))
 
 
-class DecomonDense(Dense, DecomonLayer):
+class DecomonDense(DecomonLayer, Dense):
     """Forward LiRPA implementation of Dense layers.
     See Keras official documentation for further details on the Dense operator
     """
+
+    original_keras_layer_class = Dense
 
     def __init__(
         self,
@@ -998,10 +1002,12 @@ class DecomonDense(Dense, DecomonLayer):
             K.set_value(self.gamma_, np.ones_like(self.gamma_.value()))
 
 
-class DecomonActivation(Activation, DecomonLayer):
+class DecomonActivation(DecomonLayer, Activation):
     """Forward LiRPA implementation of Activation layers.
     See Keras official documentation for further details on the Activation operator
     """
+
+    original_keras_layer_class = Activation
 
     def __init__(
         self,
@@ -1108,10 +1114,12 @@ class DecomonActivation(Activation, DecomonLayer):
             self.frozen_alpha = False
 
 
-class DecomonFlatten(Flatten, DecomonLayer):
+class DecomonFlatten(DecomonLayer, Flatten):
     """Forward LiRPA implementation of Flatten layers.
     See Keras official documentation for further details on the Flatten operator
     """
+
+    original_keras_layer_class = Flatten
 
     def __init__(
         self,
@@ -1223,10 +1231,12 @@ class DecomonFlatten(Flatten, DecomonLayer):
         return output
 
 
-class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
+class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
     """Forward LiRPA implementation of Batch Normalization layers.
     See Keras official documentation for further details on the BatchNormalization operator
     """
+
+    original_keras_layer_class = BatchNormalization
 
     def __init__(
         self,
@@ -1275,8 +1285,7 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
         )
 
     def build(self, input_shape: List[tf.TensorShape]) -> None:
-        BatchNormalization.build(self, input_shape[0])
-
+        super().build(input_shape)
         self.input_spec = [InputSpec(min_ndim=len(elem)) for elem in input_shape]
 
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
@@ -1383,10 +1392,12 @@ class DecomonBatchNormalization(BatchNormalization, DecomonLayer):
         self.set_weights(params)
 
 
-class DecomonDropout(Dropout, DecomonLayer):
+class DecomonDropout(DecomonLayer, Dropout):
     """Forward LiRPA implementation of Dropout layers.
     See Keras official documentation for further details on the Dropout operator
     """
+
+    original_keras_layer_class = Dropout
 
     def __init__(
         self,
@@ -1418,7 +1429,7 @@ class DecomonDropout(Dropout, DecomonLayer):
         return input_shape
 
     def build(self, input_shape: List[tf.TensorShape]) -> None:
-        super().build(input_shape[0])
+        super().build(input_shape)
         self.input_spec = [InputSpec(min_ndim=len(elem)) for elem in input_shape]
 
     def call(self, inputs: List[tf.Tensor], training: Optional[bool] = None, **kwargs: Any) -> List[tf.Tensor]:
@@ -1436,6 +1447,8 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
     """Forward LiRPA implementation of Dropout layers.
     See Keras official documentation for further details on the Dropout operator
     """
+
+    original_keras_layer_class = InputLayer
 
     def __init__(
         self,
