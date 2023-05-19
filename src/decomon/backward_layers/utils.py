@@ -18,7 +18,7 @@ from decomon.utils import (
     maximum,
     minus,
     relu_,
-    substract,
+    subtract,
 )
 
 
@@ -363,7 +363,7 @@ def backward_maximum(
 
     if convex_domain is None:
         convex_domain = {}
-    input_step_a_0 = substract(inputs_0, inputs_1, dc_decomp=False, convex_domain=convex_domain, mode=mode)
+    input_step_a_0 = subtract(inputs_0, inputs_1, dc_decomp=False, convex_domain=convex_domain, mode=mode)
 
     input_step_0_ = relu_(input_step_a_0, dc_decomp=False, convex_domain=convex_domain, mode=mode, **kwargs)
 
@@ -371,7 +371,7 @@ def backward_maximum(
         input_step_0_, inputs_1, w_out_u, b_out_u, w_out_l, b_out_l, convex_domain=convex_domain, mode=mode
     )
 
-    input_step_a_1 = substract(inputs_1, inputs_0, dc_decomp=False, convex_domain=convex_domain, mode=mode)
+    input_step_a_1 = subtract(inputs_1, inputs_0, dc_decomp=False, convex_domain=convex_domain, mode=mode)
     input_step_1_ = relu_(input_step_a_1, dc_decomp=False, convex_domain=convex_domain, mode=mode, **kwargs)
 
     _, bounds_0_ = backward_add(
@@ -627,7 +627,7 @@ def backward_scale(
     return output
 
 
-def backward_substract(
+def backward_subtract(
     inputs_0: List[tf.Tensor],
     inputs_1: List[tf.Tensor],
     w_out_u_: tf.Tensor,

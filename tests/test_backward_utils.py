@@ -10,17 +10,17 @@ from decomon.backward_layers.utils import (
     backward_add,
     backward_maximum,
     backward_relu_,
-    backward_substract,
+    backward_subtract,
 )
 from decomon.layers.core import ForwardMode
-from decomon.utils import relu_, substract
+from decomon.utils import relu_, subtract
 
 
 def add_op(x, y):
     return x + y
 
 
-def substract_op(x, y):
+def subtract_op(x, y):
     return x - y
 
 
@@ -97,7 +97,7 @@ def test_relu_backward_1D_box(n, mode, floatx, helpers):
     [
         (backward_add, add_op),
         (backward_maximum, np.maximum),
-        (backward_substract, substract_op),
+        (backward_subtract, subtract_op),
     ],
 )
 def test_reduce_backward_1D_box(n_0, n_1, backward_func, tensor_op, mode, floatx, helpers):

@@ -32,7 +32,7 @@ def add_op(x, y):
     return x + y
 
 
-def substract_op(x, y):
+def subtract_op(x, y):
     return x - y
 
 
@@ -52,7 +52,7 @@ def concatenate_op(x, y):
     "decomon_op_class, tensor_op, decomon_op_kwargs",
     [
         (DecomonAdd, add_op, {}),
-        (DecomonSubtract, substract_op, {}),
+        (DecomonSubtract, subtract_op, {}),
         (DecomonAverage, average_op, {}),
         (DecomonMaximum, np.maximum, {}),
         (DecomonMinimum, np.minimum, {}),
@@ -119,7 +119,7 @@ def test_DecomonOp_1D_box(decomon_op_class, tensor_op, decomon_op_kwargs, n, mod
     "decomon_op_class, tensor_op, decomon_op_kwargs",
     [
         (DecomonAdd, add_op, {}),
-        (DecomonSubtract, substract_op, {}),
+        (DecomonSubtract, subtract_op, {}),
         (DecomonAverage, average_op, {}),
         (DecomonMaximum, np.maximum, {}),
         (DecomonMinimum, np.minimum, {}),
@@ -190,7 +190,7 @@ def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, od
     [
         (Add, add_op, {}),
         (Average, average_op, {}),
-        (Subtract, substract_op, {}),
+        (Subtract, subtract_op, {}),
         (Maximum, np.maximum, {}),
         (Minimum, np.minimum, {}),
         (Concatenate, concatenate_op, {"axis": -1}),
@@ -235,7 +235,7 @@ def test_Decomon_1D_box_to_decomon(layer_class, tensor_op, layer_kwargs, n, help
     [
         (Add, add_op, {}),
         (Average, average_op, {}),
-        (Subtract, substract_op, {}),
+        (Subtract, subtract_op, {}),
         (Maximum, np.maximum, {}),
         (Minimum, np.minimum, {}),
         (Concatenate, concatenate_op, {"axis": -1}),

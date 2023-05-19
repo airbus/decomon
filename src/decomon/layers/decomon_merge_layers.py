@@ -15,7 +15,7 @@ from tensorflow.keras.layers import (
 
 from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.utils import broadcast, multiply, permute_dimensions
-from decomon.utils import maximum, minus, substract
+from decomon.utils import maximum, minus, subtract
 
 ##### Merge Layer ####
 
@@ -231,7 +231,7 @@ class DecomonSubtract(DecomonLayer):
         n_comp = self.nb_tensors
         inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs) // n_comp)]
 
-        output = substract(
+        output = subtract(
             inputs_list[0], inputs_list[1], dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
         )
         return output
