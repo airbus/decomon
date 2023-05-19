@@ -8,7 +8,7 @@ from numpy.testing import assert_allclose, assert_almost_equal
 
 from decomon.layers.core import ForwardMode
 from decomon.layers.utils import add, get_lower, get_upper, max_, maximum, minus, relu_
-from decomon.utils import substract
+from decomon.utils import subtract
 
 
 def test_get_upper_multi_box(odd, floatx, helpers):
@@ -586,7 +586,7 @@ def test_minus(odd, mode, floatx, helpers):
     K.set_epsilon(eps)
 
 
-def test_substract(odd, mode, floatx, helpers):
+def test_subtract(odd, mode, floatx, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -608,16 +608,16 @@ def test_substract(odd, mode, floatx, helpers):
 
     mode = ForwardMode(mode)
     if mode == ForwardMode.HYBRID:
-        output = substract(inputs_0[2:], inputs_1[2:], dc_decomp=True, mode=mode)
+        output = subtract(inputs_0[2:], inputs_1[2:], dc_decomp=True, mode=mode)
     elif mode == ForwardMode.AFFINE:
-        output = substract(
+        output = subtract(
             [z_0, W_u_0, b_u_0, W_l_0, b_l_0, h_0, g_0],
             [z_1, W_u_1, b_u_1, W_l_1, b_l_1, h_1, g_1],
             dc_decomp=True,
             mode=mode,
         )
     elif mode == ForwardMode.IBP:
-        output = substract([u_c_0, l_c_0, h_0, g_0], [u_c_1, l_c_1, h_1, g_1], dc_decomp=True, mode=mode)
+        output = subtract([u_c_0, l_c_0, h_0, g_0], [u_c_1, l_c_1, h_1, g_1], dc_decomp=True, mode=mode)
     else:
         raise ValueError("Unknown mode.")
 

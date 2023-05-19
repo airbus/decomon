@@ -732,7 +732,7 @@ def get_linear_softplus_hull(
     return [w_u_, b_u_, w_l_, b_l_]
 
 
-def substract(
+def subtract(
     inputs_0: List[tf.Tensor],
     inputs_1: List[tf.Tensor],
     dc_decomp: bool = False,
@@ -984,7 +984,7 @@ def maximum(
     """
     if convex_domain is None:
         convex_domain = {}
-    output_0 = substract(inputs_1, inputs_0, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
+    output_0 = subtract(inputs_1, inputs_0, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
     if finetune:
         finetune = kwargs["finetune_params"]
         output_1 = relu_(output_0, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, finetune=finetune)

@@ -11,7 +11,7 @@ from decomon.backward_layers.utils import (
     backward_maximum,
     backward_minimum,
     backward_multiply,
-    backward_substract,
+    backward_subtract,
     get_identity_lirpa,
 )
 from decomon.layers.core import DecomonLayer, ForwardMode
@@ -281,7 +281,7 @@ class BackwardSubtract(BackwardMerge):
         if n_elem != 2:
             raise ValueError()
 
-        return backward_substract(
+        return backward_subtract(
             inputs_list[0],
             inputs_list[1],
             w_out_u,
