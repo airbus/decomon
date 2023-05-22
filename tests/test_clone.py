@@ -44,14 +44,14 @@ def test_convert_1D(n, method, mode, floatx, helpers):
         K.set_epsilon(1e-2)
         decimal = 2
 
-    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
-    x_ = inputs_[0]
-    z_ = inputs_[2]
+    x_, y_, z_, u_c_, W_u_, b_u_, l_c_, W_l_, b_l_ = inputs_
+
+    input_ref = y_
+    input_decomon = np.concatenate((l_c_[:, None, :], u_c_[:, None, :]), axis=1)
 
     ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
-    ref_nn(inputs[1])
+    output_ref = ref_nn.predict(input_ref)
 
     ibp = True
     affine = True
@@ -61,35 +61,32 @@ def test_convert_1D(n, method, mode, floatx, helpers):
     if mode == ForwardMode.IBP:
         affine = False
 
-    f_dense = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
+    decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
 
-    f_ref = K.function(inputs, ref_nn(inputs[1]))
-    y_ref = f_ref(inputs_)
-
-    u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = [None] * 6
+    u_c_model, w_u_model, b_u_model, l_c_model, w_l_model, b_l_model = [None] * 6
     if mode == ForwardMode.HYBRID:
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(z_)
+        z_model, u_c_model, w_u_model, b_u_model, l_c_model, w_l_model, b_l_model = decomon_model.predict(input_decomon)
     elif mode == ForwardMode.IBP:
-        u_c_, l_c_ = f_dense(z_)
+        u_c_model, l_c_model = decomon_model.predict(input_decomon)
     elif mode == ForwardMode.AFFINE:
-        z_, w_u_, b_u_, w_l_, b_l_ = f_dense(z_)
+        z_model, w_u_model, b_u_model, w_l_model, b_l_model = decomon_model.predict(input_decomon)
     else:
         raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
-        x_,
-        y_ref,
+        input_ref,
+        output_ref,
         None,
         None,
-        z_[:, 0],
-        z_[:, 1],
-        u_c_,
-        w_u_,
-        b_u_,
         l_c_,
-        w_l_,
-        b_l_,
-        "dense_{}".format(n),
+        u_c_,
+        u_c_model,
+        w_u_model,
+        b_u_model,
+        l_c_model,
+        w_l_model,
+        b_l_model,
+        "clone_{}".format(n),
         decimal=decimal,
     )
     K.set_floatx("float{}".format(32))
@@ -100,8 +97,6 @@ def test_convert_1D_forward_slope(slope, helpers):
     n, method, mode = 0, "forward-hybrid", "hybrid"
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
-    x_ = inputs_[0]
-    z_ = inputs_[2]
 
     ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
     ref_nn(inputs[1])
@@ -121,8 +116,6 @@ def test_convert_1D_backward_slope(slope, helpers):
     n, method, mode = 0, "crown-forward-hybrid", "hybrid"
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
-    x_ = inputs_[0]
-    z_ = inputs_[2]
 
     ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
     ref_nn(inputs[1])
