@@ -19,53 +19,6 @@ from decomon.layers.core import ForwardMode
 from decomon.models.forward_cloning import convert_forward
 
 
-# @pytest.mark.parametrize(
-#    "n, activation, mode, shared, floatx",
-#
-def test_toy_network_1D(helpers, n, archi=None, activation="relu", use_bias=True):
-
-    if archi is None:
-        archi = [4, 1]
-    inputs = helpers.get_tensor_decomposition_1d_box()
-    inputs_ = helpers.get_standard_values_1d_box(n)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
-
-    seq_nn = helpers.dense_NN_1D(1, archi, True, activation, use_bias)
-    model_nn = helpers.dense_NN_1D(1, archi, False, activation, use_bias)
-
-    _ = seq_nn.predict(y)
-    _ = model_nn.predict(y)
-    model_nn.set_weights(seq_nn.get_weights())
-
-    y_0 = seq_nn.predict(y)
-    y_1 = model_nn.predict(y)
-
-    np.allclose(y_0, y_1)
-
-
-def test_toy_network_multiD(helpers, odd, archi=None, activation="relu", use_bias=True):
-
-    if archi is None:
-        archi = [4, 1]
-    inputs = helpers.get_tensor_decomposition_multid_box(odd)
-    inputs_ = helpers.get_standard_values_multid_box(odd)
-
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs_
-
-    seq_nn = helpers.dense_NN_1D(y.shape[-1], archi, True, activation, use_bias)
-    model_nn = helpers.dense_NN_1D(y.shape[-1], archi, False, activation, use_bias)
-
-    _ = seq_nn.predict(y)
-    _ = model_nn.predict(y)
-    model_nn.set_weights(seq_nn.get_weights())
-
-    y_0 = seq_nn.predict(y)
-    y_1 = model_nn.predict(y)
-
-    np.allclose(y_0, y_1)
-
-
-# network from tutorial 1
 def test_convert_forward_1D(n, mode, floatx, helpers):
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
