@@ -11,13 +11,13 @@ from decomon.utils import Slope
 
 
 @pytest.mark.parametrize(
-    "activation_func, tensor_func, funcname",
+    "activation_func, tensor_func",
     [
-        (relu, backward_relu, "relu"),
-        (softsign, backward_softsign, "softsign"),
+        (relu, backward_relu),
+        (softsign, backward_softsign),
     ],
 )
-def test_activation_backward_1D_box(n, mode, floatx, activation_func, tensor_func, funcname, helpers):
+def test_activation_backward_1D_box(n, mode, floatx, activation_func, tensor_func, helpers):
 
     K.set_floatx("float{}".format(floatx))
     eps = K.epsilon()
@@ -64,7 +64,7 @@ def test_activation_backward_1D_box(n, mode, floatx, activation_func, tensor_fun
     b_l_b = b_l_ + np.sum(np.maximum(w_l_, 0) * B_l_[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * B_u_[:, :, None], 1)
 
     helpers.assert_output_properties_box_linear(
-        x_, None, z_[:, 0], z_[:, 1], None, w_u_b, b_u_b, None, w_l_b, b_l_b, f"{funcname}_{n}", decimal=decimal
+        x_, None, z_[:, 0], z_[:, 1], None, w_u_b, b_u_b, None, w_l_b, b_l_b, decimal=decimal
     )
 
     K.set_epsilon(eps)

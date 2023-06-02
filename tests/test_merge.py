@@ -108,7 +108,7 @@ def test_DecomonOp_1D_box(decomon_op_class, tensor_op, decomon_op_kwargs, n, mod
         raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
-        inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add", decimal=decimal
+        inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, decimal=decimal
     )
 
     K.set_epsilon(eps)
@@ -175,7 +175,7 @@ def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, od
         raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
-        inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add", decimal=decimal
+        inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, decimal=decimal
     )
 
     K.set_epsilon(eps)
@@ -222,9 +222,7 @@ def test_Decomon_1D_box_to_decomon(layer_class, tensor_op, layer_kwargs, n, help
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = tensor_op(inputs_0_[1], inputs_1_[1])
 
-    helpers.assert_output_properties_box_linear(
-        inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add"
-    )
+    helpers.assert_output_properties_box_linear(inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_)
 
 
 #### to_decomon multiD
@@ -265,6 +263,4 @@ def test_Decomon_multiD_box_to_decomon(layer_class, tensor_op, layer_kwargs, odd
     # output_ = K.function(inputs_0[1:]+inputs_1[1:], output_decomon)(inputs_0_[1:]+inputs_1_[1:])
     z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
     y_ = tensor_op(y0, y1)
-    helpers.assert_output_properties_box_linear(
-        inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, name="add"
-    )
+    helpers.assert_output_properties_box_linear(inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_)

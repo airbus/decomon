@@ -57,20 +57,7 @@ def test_MaxPooling2D_box(mode, floatx, helpers):
         raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
-        x,
-        y_,
-        h_,
-        g_,
-        z_[:, 0],
-        z_[:, 1],
-        u_c_,
-        w_u_,
-        b_u_,
-        l_c_,
-        w_l_,
-        b_l_,
-        "maxpooling_{}".format(odd),
-        decimal=decimal,
+        x, y_, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
     K.set_floatx("float{}".format(32))
     K.set_epsilon(eps)

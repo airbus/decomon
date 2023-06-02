@@ -99,9 +99,7 @@ def test_Decomon_conv_box(data_format, padding, use_bias, mode, floatx, helpers)
         + b_l_
     )
 
-    helpers.assert_output_properties_box_linear(
-        x, None, z_[:, 0], z_[:, 1], None, w_r_u, b_r_u, None, w_r_l, b_r_l, "nodc"
-    )
+    helpers.assert_output_properties_box_linear(x, None, z_[:, 0], z_[:, 1], None, w_r_u, b_r_u, None, w_r_l, b_r_l)
 
     K.set_floatx("float32")
     K.set_epsilon(eps)

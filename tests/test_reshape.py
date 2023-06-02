@@ -52,20 +52,7 @@ def test_Decomon_reshape_box(mode, floatx, helpers):
         raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
-        x_,
-        y_,
-        h_,
-        g_,
-        z_[:, 0],
-        z_[:, 1],
-        u_c_,
-        w_u_,
-        b_u_,
-        l_c_,
-        w_l_,
-        b_l_,
-        "reshape_{}_{}_{}".format(odd, m_0, m_1),
-        decimal=decimal,
+        x_, y_, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
     K.set_floatx("float{}".format(32))
@@ -116,20 +103,7 @@ def test_Decomon_reshape_box_nodc(mode, floatx, helpers):
         raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
-        x_,
-        y_,
-        None,
-        None,
-        z_[:, 0],
-        z_[:, 1],
-        u_c_,
-        w_u_,
-        b_u_,
-        l_c_,
-        w_l_,
-        b_l_,
-        "reshape_{}_{}_{}".format(odd, m_0, m_1),
-        decimal=decimal,
+        x_, y_, None, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
     K.set_floatx("float{}".format(32))
@@ -169,20 +143,7 @@ def test_Decomon_reshape_to_decomon_box(shared, floatx, helpers):
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_reshape(inputs_[2:])
 
     helpers.assert_output_properties_box(
-        x_,
-        y_ref,
-        h_,
-        g_,
-        z_[:, 0],
-        z_[:, 1],
-        u_c_,
-        w_u_,
-        b_u_,
-        l_c_,
-        w_l_,
-        b_l_,
-        "reshape_{}_{}_{}".format(odd, m_0, m_1),
-        decimal=decimal,
+        x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
     K.set_floatx("float{}".format(32))
@@ -237,20 +198,7 @@ def test_Decomon_permute_box(mode, floatx, helpers):
         raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
-        x_,
-        y_,
-        h_,
-        g_,
-        z_[:, 0],
-        z_[:, 1],
-        u_c_,
-        w_u_,
-        b_u_,
-        l_c_,
-        w_l_,
-        b_l_,
-        "reshape_{}_{}_{}".format(odd, m_0, m_1),
-        decimal=decimal,
+        x_, y_, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
     K.set_floatx("float{}".format(32))
@@ -304,20 +252,7 @@ def test_Decomon_permute_box_nodc(mode, floatx, helpers):
         raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
-        x_,
-        y_,
-        None,
-        None,
-        z_[:, 0],
-        z_[:, 1],
-        u_c_,
-        w_u_,
-        b_u_,
-        l_c_,
-        w_l_,
-        b_l_,
-        "reshape_{}_{}_{}".format(odd, m_0, m_1),
-        decimal=decimal,
+        x_, y_, None, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
     K.set_floatx("float{}".format(32))
@@ -357,20 +292,7 @@ def test_Decomon_permute_to_decomon_box(shared, floatx, helpers):
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_permute(inputs_[2:])
 
     helpers.assert_output_properties_box(
-        x_,
-        y_ref,
-        h_,
-        g_,
-        z_[:, 0],
-        z_[:, 1],
-        u_c_,
-        w_u_,
-        b_u_,
-        l_c_,
-        w_l_,
-        b_l_,
-        "reshape_{}_{}_{}".format(odd, m_0, m_1),
-        decimal=decimal,
+        x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
     K.set_floatx("float{}".format(32))

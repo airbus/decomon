@@ -679,35 +679,18 @@ class Helpers:
         return output
 
     @staticmethod
-    def assert_output_properties_box(
-        x_, y_, h_, g_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, name, decimal=5
-    ):
+    def assert_output_properties_box(x_, y_, h_, g_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=5):
 
         if y_ is None:
             y_ = h_ + g_
         if h_ is not None:
 
-            assert_almost_equal(
-                h_ + g_,
-                y_,
-                decimal=decimal,
-                err_msg="decomposition error for function {}".format(name),
-            )
+            assert_almost_equal(h_ + g_, y_, decimal=decimal, err_msg="decomposition error")
 
-        assert np.min(x_min_ <= x_max_), "x_min >x_max for function {}".format(name)
+        assert np.min(x_min_ <= x_max_), "x_min >x_max"
 
-        assert_almost_equal(
-            np.clip(x_min_ - x_, 0, np.inf),
-            0.0,
-            decimal=decimal,
-            err_msg="x_min >x_  for function {}".format(name),
-        )
-        assert_almost_equal(
-            np.clip(x_ - x_max_, 0, np.inf),
-            0.0,
-            decimal=decimal,
-            err_msg="x_max < x_  for function {}".format(name),
-        )
+        assert_almost_equal(np.clip(x_min_ - x_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_min >x_")
+        assert_almost_equal(np.clip(x_ - x_max_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_max < x_")
         if w_u_ is not None or w_l_ is not None:
             x_expand = x_ + np.zeros_like(x_)
             n_expand = len(w_u_.shape) - len(x_expand.shape)
@@ -725,13 +708,13 @@ class Helpers:
                 np.clip(h_[:-1] - h_[1:], 0, np.inf),
                 np.zeros_like(h_[1:]),
                 decimal=decimal,
-                err_msg="h is not increasing for function {}".format(name),
+                err_msg="h is not increasing",
             )
             assert_almost_equal(
                 np.clip(g_[1:] - g_[:-1], 0, np.inf),
                 np.zeros_like(g_[1:]),
                 decimal=decimal,
-                err_msg="g is not increasing for function {}".format(name),
+                err_msg="g is not increasing",
             )
 
         #
@@ -767,9 +750,7 @@ class Helpers:
             )
 
     @staticmethod
-    def assert_output_properties_box_linear(
-        x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, name, decimal=5
-    ):
+    def assert_output_properties_box_linear(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=5):
 
         # flatten everything
         # flatten everyting
@@ -786,15 +767,10 @@ class Helpers:
             b_u_ = b_u_.reshape((n, -1))
             b_l_ = b_l_.reshape((n, -1))
 
-        # assert_almost_equal(h_ + g_, y_, decimal=decimal, err_msg='decomposition error for function {}'.format(name))
-        assert np.min(x_min_ <= x_max_), "x_min >x_max for function {}".format(name)
+        assert np.min(x_min_ <= x_max_), "x_min >x_max"
 
-        assert_almost_equal(
-            np.clip(x_min_ - x_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_min >x_  for function {}".format(name)
-        )
-        assert_almost_equal(
-            np.clip(x_ - x_max_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_max < x_  for function {}".format(name)
-        )
+        assert_almost_equal(np.clip(x_min_ - x_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_min >x_")
+        assert_almost_equal(np.clip(x_ - x_max_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_max < x_")
         if w_u_ is not None:
             x_expand = x_ + np.zeros_like(x_)
             n_expand = len(w_u_.shape) - len(x_expand.shape)
@@ -803,13 +779,6 @@ class Helpers:
 
             lower_ = np.sum(w_l_ * x_expand, 1) + b_l_
             upper_ = np.sum(w_u_ * x_expand, 1) + b_u_
-
-        # check that the functions h_ and g_ remains monotonic
-
-        # assert_almost_equal(np.clip(h_[:-1] - h_[1:], 0, np.inf), np.zeros_like(h_[1:]), decimal=decimal,
-        #                    err_msg='h is not increasing for function {}'.format(name))
-        # assert_almost_equal(np.clip(g_[1:] - g_[:-1], 0, np.inf), np.zeros_like(g_[1:]), decimal=decimal,
-        #                    err_msg='g is not increasing for function {}'.format(name))
 
         if y_ is not None:
             if l_c_ is not None:
@@ -841,7 +810,6 @@ class Helpers:
                 np.sum(np.maximum(0, w_u_) * x_expand_max, 1) + np.sum(np.minimum(0, w_u_) * x_expand_min, 1) + b_u_
             )
 
-            # import pdb; pdb.set_trace()
             if y_ is not None:
                 assert_almost_equal(
                     np.clip(lower_ - y_, 0.0, np.inf), np.zeros_like(y_), decimal=decimal, err_msg="l_c >y"
@@ -978,22 +946,12 @@ class Helpers:
         return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
     @staticmethod
-    def assert_output_properties_box_nodc(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, name, decimal=5):
+    def assert_output_properties_box_nodc(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=5):
 
-        assert np.min(x_min_ <= x_max_), "x_min >x_max for function {}".format(name)
+        assert np.min(x_min_ <= x_max_), "x_min >x_max"
 
-        assert_almost_equal(
-            np.clip(x_min_ - x_, 0, np.inf),
-            0.0,
-            decimal=decimal,
-            err_msg="x_min >x_  for function {}".format(name),
-        )
-        assert_almost_equal(
-            np.clip(x_ - x_max_, 0, np.inf),
-            0.0,
-            decimal=decimal,
-            err_msg="x_max < x_  for function {}".format(name),
-        )
+        assert_almost_equal(np.clip(x_min_ - x_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_min >x_")
+        assert_almost_equal(np.clip(x_ - x_max_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_max < x_")
 
         x_expand = x_ + np.zeros_like(x_)
         n_expand = len(w_u_.shape) - len(x_expand.shape)

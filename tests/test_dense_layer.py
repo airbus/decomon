@@ -57,20 +57,7 @@ def test_DecomonDense_1D_box(n, mode, shared, floatx, helpers):
     if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
         helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            w_u_,
-            b_u_,
-            l_c_,
-            w_l_,
-            b_l_,
-            f"dense_{n}",
-            decimal=decimal,
+            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
         )
 
     elif mode == ForwardMode.AFFINE:
@@ -78,39 +65,13 @@ def test_DecomonDense_1D_box(n, mode, shared, floatx, helpers):
         u_c_ = None
         l_c_ = None
         helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            w_u_,
-            b_u_,
-            l_c_,
-            w_l_,
-            b_l_,
-            f"dense_{n}",
-            decimal=decimal,
+            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
         )
 
     elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
         helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            None,
-            None,
-            l_c_,
-            None,
-            None,
-            f"dense_{n}",
-            decimal=decimal,
+            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, None, None, l_c_, None, None, decimal=decimal
         )
     else:
         raise ValueError("Unknown mode.")
@@ -122,20 +83,7 @@ def test_DecomonDense_1D_box(n, mode, shared, floatx, helpers):
     if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
         helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            w_u_,
-            b_u_,
-            l_c_,
-            w_l_,
-            b_l_,
-            f"dense_{n}",
-            decimal=decimal,
+            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
         )
 
     elif mode == ForwardMode.AFFINE:
@@ -143,39 +91,13 @@ def test_DecomonDense_1D_box(n, mode, shared, floatx, helpers):
         u_c_ = None
         l_c_ = None
         helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            w_u_,
-            b_u_,
-            l_c_,
-            w_l_,
-            b_l_,
-            f"dense_{n}",
-            decimal=decimal,
+            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
         )
 
     elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
         helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            None,
-            None,
-            l_c_,
-            None,
-            None,
-            f"dense_{n}",
-            decimal=decimal,
+            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, None, None, l_c_, None, None, decimal=decimal
         )
     else:
         raise ValueError("Unknown mode.")
@@ -215,57 +137,15 @@ def test_DecomonDense_multiD_box(odd, mode, helpers):
     y_ref = f_ref(inputs_)
     if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            w_u_,
-            b_u_,
-            l_c_,
-            w_l_,
-            b_l_,
-            f"dense_multid_{odd}",
-        )
+        helpers.assert_output_properties_box(x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
     elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
         u_c_ = None
         l_c_ = None
-        helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            w_u_,
-            b_u_,
-            l_c_,
-            w_l_,
-            b_l_,
-            f"dense_multid_{odd}",
-        )
+        helpers.assert_output_properties_box(x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
     elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            None,
-            None,
-            l_c_,
-            None,
-            None,
-            "dense_multid_{}".format(odd),
-        )
+        helpers.assert_output_properties_box(x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, None, None, l_c_, None, None)
     else:
         raise ValueError("Unknown mode.")
 
@@ -275,57 +155,15 @@ def test_DecomonDense_multiD_box(odd, mode, helpers):
 
     if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            w_u_,
-            b_u_,
-            l_c_,
-            w_l_,
-            b_l_,
-            "dense_multid_{}".format(odd),
-        )
+        helpers.assert_output_properties_box(x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
     elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
         u_c_ = None
         l_c_ = None
-        helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            w_u_,
-            b_u_,
-            l_c_,
-            w_l_,
-            b_l_,
-            "dense_multid_{}".format(odd),
-        )
+        helpers.assert_output_properties_box(x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
     elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            None,
-            None,
-            l_c_,
-            None,
-            None,
-            "dense_multid_{}".format(odd),
-        )
+        helpers.assert_output_properties_box(x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, None, None, l_c_, None, None)
     else:
         raise ValueError("Unknown mode.")
 
@@ -384,58 +222,19 @@ def test_DecomonDense_1D_to_decomon_box(n, activation, mode, shared, helpers):
     if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
         helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            w_u_,
-            b_u_,
-            l_c_,
-            w_l_,
-            b_l_,
-            "dense_to_decomon_{}".format(n),
-            decimal=5,
+            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=5
         )
 
     elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
         helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            None,
-            w_u_,
-            b_u_,
-            None,
-            w_l_,
-            b_l_,
-            "dense_to_decomon_{}".format(n),
-            decimal=5,
+            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], None, w_u_, b_u_, None, w_l_, b_l_, decimal=5
         )
 
     elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
         helpers.assert_output_properties_box(
-            x_,
-            y_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            None,
-            None,
-            l_c_,
-            None,
-            None,
-            "dense_to_decomon_{}".format(n),
-            decimal=5,
+            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, None, None, l_c_, None, None, decimal=5
         )
     else:
         raise ValueError("Unknown mode.")
@@ -505,58 +304,19 @@ def test_DecomonDense_multiD_to_decomon_box(odd, activation, mode, helpers):
     if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
         helpers.assert_output_properties_box(
-            x_,
-            y_,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            w_u_,
-            b_u_,
-            l_c_,
-            w_l_,
-            b_l_,
-            "dense_to_decomon_{}".format(0),
-            decimal=5,
+            x_, y_, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=5
         )
 
     elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
         helpers.assert_output_properties_box(
-            x_,
-            y_,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            None,
-            w_u_,
-            b_u_,
-            None,
-            w_l_,
-            b_l_,
-            "dense_to_decomon_{}".format(0),
-            decimal=5,
+            x_, y_, h_, g_, z_[:, 0], z_[:, 1], None, w_u_, b_u_, None, w_l_, b_l_, decimal=5
         )
 
     elif mode == ForwardMode.IBP:
         u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
         helpers.assert_output_properties_box(
-            x_,
-            y_,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            None,
-            None,
-            l_c_,
-            None,
-            None,
-            "dense_to_decomon_{}".format(0),
-            decimal=5,
+            x_, y_, h_, g_, z_[:, 0], z_[:, 1], u_c_, None, None, l_c_, None, None, decimal=5
         )
     else:
         raise ValueError("Unknown mode.")
@@ -584,9 +344,7 @@ def test_DecomonDense_1D_box_nodc(n, helpers):
 
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
     y_ref = f_ref(inputs_)
-    helpers.assert_output_properties_box_linear(
-        x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc"
-    )
+    helpers.assert_output_properties_box_linear(x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
 
 
 def test_DecomonDense_multiD_to_decomon_box_nodc(odd, activation, mode, helpers):
@@ -634,9 +392,7 @@ def test_DecomonDense_multiD_to_decomon_box_nodc(odd, activation, mode, helpers)
 
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
 
-    helpers.assert_output_properties_box_linear(
-        x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc"
-    )
+    helpers.assert_output_properties_box_linear(x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
 
 
 def test_DecomonDense_multiD_box_dc(odd, helpers):
@@ -661,15 +417,11 @@ def test_DecomonDense_multiD_box_dc(odd, helpers):
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
     y_ref = f_ref(inputs_)
 
-    helpers.assert_output_properties_box_linear(
-        x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc"
-    )
+    helpers.assert_output_properties_box_linear(x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
 
     decomon_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
     ref_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
     y_ref = f_ref(inputs_)
 
-    helpers.assert_output_properties_box_linear(
-        x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc"
-    )
+    helpers.assert_output_properties_box_linear(x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)

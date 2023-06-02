@@ -96,7 +96,6 @@ def test_convert_backward_1D(n, mode, floatx, helpers):
         l_c_model,
         w_l_model,
         b_l_model,
-        "convert_backward_{}".format(n),
         decimal=decimal,
     )
     K.set_floatx("float{}".format(32))
