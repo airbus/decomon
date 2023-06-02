@@ -144,49 +144,6 @@ class DecomonConv2D(DecomonLayer, Conv2D):
             else:
                 self.bias = None
 
-        if self.finetune and self.mode == ForwardMode.HYBRID:
-            # create extra parameters that can be optimized
-
-            n_in_ = input_shape[-1][1:]
-            self.n_in_ = [e for e in n_in_]
-            nb_comp = int(np.prod(to_list(self.kernel_size)) * self.filters / np.prod(to_list(self.strides)))
-            self.n_comp = nb_comp
-
-            self.alpha_ = self.add_weight(
-                shape=[nb_comp] + n_in_,
-                initializer="ones",
-                name="alpha_f",
-                regularizer=None,
-                constraint=ClipAlpha(),
-            )
-
-            self.gamma_ = self.add_weight(
-                shape=nb_comp + n_in_,
-                initializer="ones",
-                name="gamma_f",
-                regularizer=None,
-                constraint=ClipAlpha(),
-            )
-
-            n_out_ = self.compute_output_shape(input_shape)[-1][1:]
-            self.n_out_ = [e for e in n_out_]
-
-            self.alpha_out = self.add_weight(
-                shape=[nb_comp] + self.n_out_,
-                initializer="ones",
-                name="alpha_f",
-                regularizer=None,
-                constraint=ClipAlphaAndSumtoOne(),
-            )
-
-            self.gamma_out = self.add_weight(
-                shape=[nb_comp] + self.n_out_,
-                initializer="ones",
-                name="alpha_f",
-                regularizer=None,
-                constraint=ClipAlphaAndSumtoOne(),
-            )
-
         self.built = True
 
     def get_backward_weights(self, inputs: List[tf.Tensor], flatten: bool = True) -> Tuple[tf.Tensor, tf.Tensor]:
@@ -322,11 +279,6 @@ class DecomonConv2D(DecomonLayer, Conv2D):
                 b_u_ = 0 * y_
                 b_l_ = 0 * y_
 
-                if self.finetune and self.mode == ForwardMode.HYBRID:
-                    self.frozen_alpha = True
-                    self.finetune = False
-                    self._trainable_weights = self._trainable_weights[:-4]
-
             else:
                 # check for linearity
                 x_max = get_upper(x_0, w_u - w_l, b_u - b_l, self.convex_domain)
@@ -339,101 +291,22 @@ class DecomonConv2D(DecomonLayer, Conv2D):
                 def step_neg(x: tf.Tensor, _: List[tf.Tensor]) -> Tuple[tf.Tensor, List[tf.Tensor]]:
                     return conv_neg(x), []
 
-                if self.mode == ForwardMode.HYBRID and self.finetune:
+                b_u_ = conv_pos(b_u) + conv_neg(b_l)
+                b_l_ = conv_pos(b_l) + conv_neg(b_u)
 
-                    b_u_ = (
-                        K.rnn(
-                            step_function=step_pos,
-                            inputs=self.alpha_[None] * (b_u - u_c)[:, None],
-                            initial_states=[],
-                            unroll=False,
-                        )[1]
-                        + u_c_[:, None]
-                        + K.rnn(
-                            step_function=step_neg,
-                            inputs=self.alpha_[None] * (b_l - l_c)[:, None],
-                            initial_states=[],
-                            unroll=False,
-                        )[1]
-                    )
-
-                    b_l_ = (
-                        K.rnn(
-                            step_function=step_pos,
-                            inputs=self.gamma_[None] * (b_l - l_c)[:, None],
-                            initial_states=[],
-                            unroll=False,
-                        )[1]
-                        + l_c_[:, None]
-                        + K.rnn(
-                            step_function=step_neg,
-                            inputs=self.gamma_[None] * (b_u - u_c)[:, None],
-                            initial_states=[],
-                            unroll=False,
-                        )[1]
-                    )
-
-                else:
-                    b_u_ = conv_pos(b_u) + conv_neg(b_l)
-                    b_l_ = conv_pos(b_l) + conv_neg(b_u)
-
-                if self.mode == ForwardMode.HYBRID and self.finetune:
-                    n_x = w_u.shape[1]
-
-                    w_u_alpha = K.reshape(
-                        self.alpha_[None, None] * w_u[:, :, None], [-1, n_x * self.n_comp] + self.n_in_
-                    )
-                    w_l_alpha = K.reshape(
-                        self.alpha_[None, None] * w_l[:, :, None], [-1, n_x * self.n_comp] + self.n_in_
-                    )
-                    w_u_gamma = K.reshape(
-                        self.gamma_[None, None] * w_u[:, :, None], [-1, n_x * self.n_comp] + self.n_in_
-                    )
-                    w_l_gamma = K.reshape(
-                        self.gamma_[None, None] * w_l[:, :, None], [-1, n_x * self.n_comp] + self.n_in_
-                    )
-
-                    w_u_ = (
-                        K.rnn(step_function=step_pos, inputs=w_u_alpha, initial_states=[], unroll=False)[1]
-                        + K.rnn(step_function=step_neg, inputs=w_l_alpha, initial_states=[], unroll=False)[1]
-                    )
-                    w_l_ = (
-                        K.rnn(step_function=step_pos, inputs=w_l_gamma, initial_states=[], unroll=False)[1]
-                        + K.rnn(step_function=step_neg, inputs=w_u_gamma, initial_states=[], unroll=False)[1]
-                    )
-
-                    n_out = [e for e in w_u_.shape[2:]]
-                    w_u_ = K.reshape(w_u_, [-1, n_x, self.n_comp] + n_out)
-                    w_l_ = K.reshape(w_l_, [-1, n_x, self.n_comp] + n_out)
-
-                else:
-
-                    w_u_ = (
-                        K.rnn(step_function=step_pos, inputs=w_u, initial_states=[], unroll=False)[1]
-                        + K.rnn(step_function=step_neg, inputs=w_l, initial_states=[], unroll=False)[1]
-                    )
-                    w_l_ = (
-                        K.rnn(step_function=step_pos, inputs=w_l, initial_states=[], unroll=False)[1]
-                        + K.rnn(step_function=step_neg, inputs=w_u, initial_states=[], unroll=False)[1]
-                    )
+                w_u_ = (
+                    K.rnn(step_function=step_pos, inputs=w_u, initial_states=[], unroll=False)[1]
+                    + K.rnn(step_function=step_neg, inputs=w_l, initial_states=[], unroll=False)[1]
+                )
+                w_l_ = (
+                    K.rnn(step_function=step_pos, inputs=w_l, initial_states=[], unroll=False)[1]
+                    + K.rnn(step_function=step_neg, inputs=w_u, initial_states=[], unroll=False)[1]
+                )
 
         # add bias
         if self.mode == ForwardMode.HYBRID:
             upper_ = get_upper(x_0, w_u_, b_u_, self.convex_domain)
             lower_ = get_lower(x_0, w_l_, b_l_, self.convex_domain)
-
-            if self.finetune:
-                # retrieve the best relaxation of the n_comp possible
-
-                upper_ = K.min(upper_, 1)
-                lower_ = K.max(lower_, 1)
-
-                # affine combination on the output: take the best
-
-                b_u_ = K.sum(self.alpha_out[None] * b_u_, 1)
-                b_l_ = K.sum(self.gamma_out[None] * b_l_, 1)
-                w_u_ = K.sum(self.alpha_out[None, None] * w_u_, 2)
-                w_l_ = K.sum(self.gamma_out[None, None] * w_l_, 2)
 
             u_c_ = K.minimum(upper_, u_c_)
 
@@ -546,47 +419,16 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         return weight_names
 
     def freeze_weights(self) -> None:
-
         if not self.frozen_weights:
-
-            if self.finetune and self.mode == ForwardMode.HYBRID:
-                if self.use_bias:
-                    self._trainable_weights = self._trainable_weights[2:]
-                else:
-                    self._trainable_weights = self._trainable_weights[1:]
-            else:
-                self._trainable_weights = []
-
+            self._trainable_weights = []
             self.frozen_weights = True
 
     def unfreeze_weights(self) -> None:
-
         if self.frozen_weights:
-
             if self.use_bias:
                 self._trainable_weights = [self.bias] + self._trainable_weights
             self._trainable_weights = [self.kernel] + self._trainable_weights
             self.frozen_weights = False
-
-    def freeze_alpha(self) -> None:
-        if not self.frozen_alpha:
-            if self.finetune and self.mode == ForwardMode.HYBRID:
-                self._trainable_weights = self._trainable_weights[:-4]
-                self.frozen_alpha = True
-
-    def unfreeze_alpha(self) -> None:
-        if self.frozen_alpha:
-            if self.finetune and self.mode == ForwardMode.HYBRID:
-                self._trainable_weights += [self.alpha_, self.gamma_, self.alpha_out, self.gamma_out]
-            self.frozen_alpha = False
-
-    def reset_finetuning(self) -> None:
-        if self.finetune and self.mode == ForwardMode.HYBRID:
-
-            K.set_value(self.alpha_, np.ones_like(self.alpha_.value()))
-            K.set_value(self.gamma_, np.ones_like(self.gamma_.value()))
-            K.set_value(self.alpha_out, np.ones_like(self.alpha_neg_out.value()))
-            K.set_value(self.gamma_out, np.ones_like(self.gamma_pos_out.value()))
 
 
 class DecomonDense(DecomonLayer, Dense):
@@ -673,24 +515,6 @@ class DecomonDense(DecomonLayer, Dense):
             else:
                 self.bias = None
 
-        if self.finetune and self.mode == ForwardMode.HYBRID:
-            # create extra parameters that can be optimized
-            self.alpha_ = self.add_weight(
-                shape=(input_dim, self.units),
-                initializer="ones",
-                name="alpha_",
-                regularizer=None,
-                constraint=ClipAlpha(),
-            )
-            self.gamma_ = self.add_weight(
-                shape=(input_dim, self.units),
-                initializer="ones",
-                name="gamma_",
-                regularizer=None,
-                constraint=ClipAlpha(),
-            )
-
-        # False
         # 6 inputs tensors :  h, g, x_min, x_max, W_u, b_u, W_l, b_l
         if self.mode == ForwardMode.HYBRID:
             self.input_spec = [
@@ -774,13 +598,6 @@ class DecomonDense(DecomonLayer, Dense):
         kernel_pos = K.maximum(z_value, self.kernel)
         kernel_neg = K.minimum(z_value, self.kernel)
 
-        if self.finetune and self.mode == ForwardMode.HYBRID:
-
-            kernel_pos_alpha = K.maximum(z_value, self.kernel * self.alpha_)
-            kernel_pos_gamma = K.maximum(z_value, self.kernel * self.gamma_)
-            kernel_neg_alpha = K.minimum(z_value, self.kernel * self.alpha_)
-            kernel_neg_gamma = K.minimum(z_value, self.kernel * self.gamma_)
-
         if self.dc_decomp:
             h, g = inputs[-2:]
             h_ = K.dot(h, kernel_pos) + K.dot(g, kernel_neg)
@@ -813,47 +630,17 @@ class DecomonDense(DecomonLayer, Dense):
                 w_l_ = w_u_
                 b_u_ = z_value * y_
                 b_l_ = b_u_
-                if self.finetune and self.mode == ForwardMode.HYBRID:
-                    self.frozen_alpha = True
-                    self._trainable_weights = self._trainable_weights[:-2]  # not optimal
 
             if len(w_u.shape) != len(b_u.shape):
-                # first layer, it is necessary linear
-                if self.finetune and self.mode == ForwardMode.HYBRID:
-                    b_u_ = (
-                        K.dot(b_u - u_c, kernel_pos_alpha)
-                        + K.dot((b_l - l_c), kernel_neg_alpha)
-                        + K.dot(u_c, kernel_pos)
-                        + K.dot(l_c, kernel_neg)
-                    )  # focus....
+                b_u_ = K.dot(b_u, kernel_pos) + K.dot(b_l, kernel_neg)
+                b_l_ = K.dot(b_l, kernel_pos) + K.dot(b_u, kernel_neg)
 
-                    b_l_ = (
-                        K.dot(b_l - l_c, kernel_pos_gamma)
-                        + K.dot((b_u - u_c), kernel_neg_gamma)
-                        + K.dot(l_c, kernel_pos)
-                        + K.dot(u_c, kernel_neg)
-                    )
-
-                else:
-                    b_u_ = K.dot(b_u, kernel_pos) + K.dot(b_l, kernel_neg)
-                    b_l_ = K.dot(b_l, kernel_pos) + K.dot(b_u, kernel_neg)
-
-                if self.finetune and self.mode == ForwardMode.HYBRID:
-
-                    if self.has_backward_bounds:
-                        raise ValueError("last layer should not be finetuned")
-
-                    w_u_ = K.dot(w_u, kernel_pos_alpha) + K.dot(w_l, kernel_neg_alpha)
-                    w_l_ = K.dot(w_l, kernel_pos_gamma) + K.dot(w_u, kernel_neg_gamma)
-
+                if not self.has_backward_bounds:
+                    w_u_ = K.dot(w_u, kernel_pos) + K.dot(w_l, kernel_neg)
+                    w_l_ = K.dot(w_l, kernel_pos) + K.dot(w_u, kernel_neg)
                 else:
 
-                    if not self.has_backward_bounds:
-                        w_u_ = K.dot(w_u, kernel_pos) + K.dot(w_l, kernel_neg)
-                        w_l_ = K.dot(w_l, kernel_pos) + K.dot(w_u, kernel_neg)
-                    else:
-
-                        raise NotImplementedError()  # bug somewhere
+                    raise NotImplementedError()  # bug somewhere
 
         if self.use_bias:
 
@@ -931,44 +718,16 @@ class DecomonDense(DecomonLayer, Dense):
         return weight_names
 
     def freeze_weights(self) -> None:
-
         if not self.frozen_weights:
-
-            if self.finetune and self.mode == ForwardMode.HYBRID:
-                if self.use_bias:
-                    self._trainable_weights = self._trainable_weights[2:]
-                else:
-                    self._trainable_weights = self._trainable_weights[1:]
-            else:
-                self._trainable_weights = []
-
+            self._trainable_weights = []
             self.frozen_weights = True
 
     def unfreeze_weights(self) -> None:
-
         if self.frozen_weights:
-
             if self.use_bias:
                 self._trainable_weights = [self.bias] + self._trainable_weights
             self._trainable_weights = [self.kernel] + self._trainable_weights
             self.frozen_weights = False
-
-    def freeze_alpha(self) -> None:
-        if not self.frozen_alpha:
-            if self.finetune and self.mode == ForwardMode.HYBRID:
-                self._trainable_weights = self._trainable_weights[:-2]
-            self.frozen_alpha = True
-
-    def unfreeze_alpha(self) -> None:
-        if self.frozen_alpha:
-            if self.finetune and self.mode == ForwardMode.HYBRID:
-                self._trainable_weights += [self.alpha_, self.gamma_]
-            self.frozen_alpha = False
-
-    def reset_finetuning(self) -> None:
-        if self.finetune and self.mode == ForwardMode.HYBRID:
-            K.set_value(self.alpha_, np.ones_like(self.alpha_.value()))
-            K.set_value(self.gamma_, np.ones_like(self.gamma_.value()))
 
 
 class DecomonActivation(DecomonLayer, Activation):
