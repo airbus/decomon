@@ -162,8 +162,6 @@ def test_decomonconv2d_reset_layer(helpers, use_bias):
     ],
 )
 def test_decomonbacthnormalization_reset_layer(helpers, center, scale):
-    if not center or not scale:
-        pytest.xfail("DecomonBatchNormalization does not take into account yet center=False or scale=False")
 
     dc_decomp = False
     odd = 0
