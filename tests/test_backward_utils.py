@@ -77,7 +77,7 @@ def test_relu_backward_1D_box(n, mode, floatx, helpers):
     )
 
     helpers.assert_output_properties_box_linear(
-        x_, None, z_[:, 0], z_[:, 1], None, w_u_b, b_u_b, None, w_l_b, b_l_b, "dense_{}".format(n), decimal=decimal
+        x_, None, z_[:, 0], z_[:, 1], None, w_u_b, b_u_b, None, w_l_b, b_l_b, decimal=decimal
     )
 
     K.set_epsilon(eps)
@@ -175,7 +175,6 @@ def test_reduce_backward_1D_box(n_0, n_1, backward_func, tensor_op, mode, floatx
         tensor_op(l_c_0, l_c_1),
         w_l_b_0,
         b_l_b_0,
-        "dense_{}".format(n_0),
         decimal=decimal,
     )
 
@@ -190,7 +189,6 @@ def test_reduce_backward_1D_box(n_0, n_1, backward_func, tensor_op, mode, floatx
         tensor_op(l_c_0, l_c_1),
         w_l_b_1,
         b_l_b_1,
-        "dense_{}".format(n_1),
         decimal=decimal,
     )
 

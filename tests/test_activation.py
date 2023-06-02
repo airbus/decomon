@@ -12,18 +12,18 @@ from decomon.utils import Slope
 
 
 @pytest.mark.parametrize(
-    "activation_func, tensor_func, funcname, decimal",
+    "activation_func, tensor_func, decimal",
     [
-        (sigmoid, K.sigmoid, "sigmoid", 5),
-        (tanh, K.tanh, "tanh", 5),
-        (softsign, K.softsign, "softsign", 4),
-        (softmax, K.softmax, "softmax", 4),
-        (relu, K.relu, "relu", 4),
+        (sigmoid, K.sigmoid, 5),
+        (tanh, K.tanh, 5),
+        (softsign, K.softsign, 4),
+        (softmax, K.softmax, 4),
+        (relu, K.relu, 4),
     ],
 )
-def test_activation_1D_box(n, mode, floatx, helpers, activation_func, tensor_func, funcname, decimal):
+def test_activation_1D_box(n, mode, floatx, helpers, activation_func, tensor_func, decimal):
     # softmax: test only n=0,3
-    if funcname == "softmax":
+    if activation_func is softmax:
         if n not in {0, 3}:
             pytest.skip("softmax activation only possible for n=0 or 3")
 
@@ -74,20 +74,7 @@ def test_activation_1D_box(n, mode, floatx, helpers, activation_func, tensor_fun
         raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
-        x_0,
-        y_,
-        None,
-        None,
-        z_[:, 0],
-        z_[:, 1],
-        u_c_,
-        w_u_,
-        b_u_,
-        l_c_,
-        w_l_,
-        b_l_,
-        f"{funcname}_{n}",
-        decimal=decimal,
+        x_0, y_, None, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
     K.set_floatx("float32")

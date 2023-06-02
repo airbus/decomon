@@ -42,56 +42,17 @@ def test_categorical_cross_entropy(odd, mode, floatx, helpers):
     if mode == ForwardMode.HYBRID:
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_entropy(inputs_)
         helpers.assert_output_properties_box(
-            x,
-            y_,
-            None,
-            None,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            w_u_,
-            b_u_,
-            l_c_,
-            w_l_,
-            b_l_,
-            "minus_multid_{}".format(odd),
-            decimal=decimal,
+            x, y_, None, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
         )
     elif mode == ForwardMode.AFFINE:
         z_, w_u_, b_u_, w_l_, b_l_ = f_entropy(inputs_)
         helpers.assert_output_properties_box(
-            x,
-            y_,
-            None,
-            None,
-            z_[:, 0],
-            z_[:, 1],
-            None,
-            w_u_,
-            b_u_,
-            None,
-            w_l_,
-            b_l_,
-            "minus_multid_{}".format(odd),
-            decimal=decimal,
+            x, y_, None, None, z_[:, 0], z_[:, 1], None, w_u_, b_u_, None, w_l_, b_l_, decimal=decimal
         )
     elif mode == ForwardMode.IBP:
         u_c_, l_c_ = f_entropy(inputs_)
         helpers.assert_output_properties_box(
-            x,
-            y_,
-            None,
-            None,
-            inputs_[2][:, 0],
-            inputs_[2][:, 1],
-            u_c_,
-            None,
-            None,
-            l_c_,
-            None,
-            None,
-            "minus_multid_{}".format(odd),
-            decimal=decimal,
+            x, y_, None, None, inputs_[2][:, 0], inputs_[2][:, 1], u_c_, None, None, l_c_, None, None, decimal=decimal
         )
     else:
         raise ValueError("Unknown mode.")

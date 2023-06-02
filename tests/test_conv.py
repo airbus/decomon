@@ -62,20 +62,7 @@ def test_Decomon_conv_box(data_format, mode, floatx, helpers):
         raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
-        x_,
-        None,
-        h_,
-        g_,
-        z_[:, 0],
-        z_[:, 1],
-        u_c_,
-        w_u_,
-        b_u_,
-        l_c_,
-        w_l_,
-        b_l_,
-        "conv_{}_{}_{}_{}".format(data_format, odd, m_0, m_1),
-        decimal=decimal,
+        x_, None, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
     decomon_layer.set_weights([np.minimum(0.0, W_), bias])
 
@@ -92,20 +79,7 @@ def test_Decomon_conv_box(data_format, mode, floatx, helpers):
         raise ValueError("Unknown mode.")
 
     helpers.assert_output_properties_box(
-        x_,
-        None,
-        h_,
-        g_,
-        z_[:, 0],
-        z_[:, 1],
-        u_c_,
-        w_u_,
-        b_u_,
-        l_c_,
-        w_l_,
-        b_l_,
-        "conv_{}_{}_{}_{}".format(data_format, odd, m_0, m_1),
-        decimal=decimal,
+        x_, None, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
     K.set_floatx("float{}".format(32))
@@ -140,12 +114,12 @@ def test_Decomon_conv_box_nodc(data_format, floatx, helpers):
 
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_conv(inputs_[2:])
     helpers.assert_output_properties_box_linear(
-        x, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc", decimal=decimal
+        x, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
     decomon_layer.set_weights([np.minimum(0.0, W_), bias])
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_conv(inputs_[2:])
     helpers.assert_output_properties_box_linear(
-        x, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc", decimal=decimal
+        x, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
     K.set_floatx("float{}".format(32))
@@ -182,20 +156,7 @@ def test_Decomon_conv_to_decomon_box(shared, floatx, helpers):
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_conv(inputs_[2:])
 
     helpers.assert_output_properties_box(
-        x,
-        y_ref,
-        h_,
-        g_,
-        z_[:, 0],
-        z_[:, 1],
-        u_c_,
-        w_u_,
-        b_u_,
-        l_c_,
-        w_l_,
-        b_l_,
-        "conv_{}_{}_{}_{}".format(data_format, odd, m_0, m_1),
-        decimal=decimal,
+        x, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
     )
 
     K.set_floatx("float{}".format(32))
@@ -223,6 +184,4 @@ def test_Decomon_conv_to_decomon_box_nodc(helpers):
 
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_conv(inputs_[2:])
 
-    helpers.assert_output_properties_box_linear(
-        x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, "nodc"
-    )
+    helpers.assert_output_properties_box_linear(x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)

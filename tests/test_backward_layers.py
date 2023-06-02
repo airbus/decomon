@@ -64,7 +64,6 @@ def test_Backward_Activation_1D_box_model(n, activation, mode, floatx, helpers):
         None,
         np.sum(np.maximum(w_l_, 0) * W_l + np.minimum(w_l_, 0) * W_u, 1)[:, :, None],
         b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
-        "activation_{}".format(activation),
         decimal=decimal,
     )
 
@@ -159,7 +158,6 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, mode, helpers):
         None,
         np.sum(np.maximum(w_l_, 0) * W_l + np.minimum(w_l_, 0) * W_u, 1)[:, :, None],
         b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
-        "dense_{}".format(odd),
         decimal=decimal,
     )
     """
@@ -243,7 +241,6 @@ def test_Backward_Flatten_multiD_box(odd, floatx, mode, data_format, helpers):
         None,
         np.sum(np.maximum(w_l_, 0) * W_l + np.minimum(w_l_, 0) * W_u, 1)[:, :, None],
         b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
-        "dense_{}".format(odd),
         decimal=decimal,
     )
     K.set_floatx("float32")
@@ -305,7 +302,6 @@ def test_Backward_Reshape_multiD_box(odd, floatx, mode, data_format, helpers):
         None,
         np.sum(np.maximum(w_l_, 0) * W_l + np.minimum(w_l_, 0) * W_u, 1)[:, :, None],
         b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
-        "dense_{}".format(odd),
         decimal=decimal,
     )
     K.set_floatx("float32")

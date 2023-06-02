@@ -86,7 +86,6 @@ def test_convert_1D(n, method, mode, floatx, helpers):
         l_c_model,
         w_l_model,
         b_l_model,
-        "clone_{}".format(n),
         decimal=decimal,
     )
     K.set_floatx("float{}".format(32))

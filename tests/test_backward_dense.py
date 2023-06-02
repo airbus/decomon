@@ -64,7 +64,6 @@ def test_Backward_Dense_1D_box(n, use_bias, mode, floatx, helpers):
         b_l_[:, 0]
         + np.sum(np.maximum(w_l_[:, 0], 0) * b_l[:, :, None], 1)
         + np.sum(np.minimum(w_l_[:, 0], 0) * b_u[:, :, None], 1),
-        "dense_{}".format(n),
     )
 
     helpers.assert_output_properties_box_linear(
@@ -82,7 +81,6 @@ def test_Backward_Dense_1D_box(n, use_bias, mode, floatx, helpers):
         b_l_[:, 0]
         + np.sum(np.maximum(w_l_[:, 0], 0) * b_l[:, :, None], 1)
         + np.sum(np.minimum(w_l_[:, 0], 0) * b_u[:, :, None], 1),
-        "dense_{}".format(n),
     )
 
     helpers.assert_output_properties_box_linear(
@@ -100,7 +98,6 @@ def test_Backward_Dense_1D_box(n, use_bias, mode, floatx, helpers):
         b_l_[:, 0]
         + np.sum(np.maximum(w_l_[:, 0], 0) * b_l[:, :, None], 1)
         + np.sum(np.minimum(w_l_[:, 0], 0) * b_u[:, :, None], 1),
-        "dense_{}".format(n),
     )
 
     K.set_epsilon(eps)
@@ -150,7 +147,6 @@ def test_Backward_DecomonDense_multiD_box(odd, floatx, mode, helpers):
         None,
         np.sum(np.maximum(w_l_, 0) * W_l + np.minimum(w_l_, 0) * W_u, 1)[:, :, None],
         b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
-        "dense_{}".format(odd),
         decimal=decimal,
     )
     K.set_floatx("float32")

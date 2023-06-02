@@ -12,17 +12,15 @@ from decomon.layers.utils_pooling import (
 
 
 @pytest.mark.parametrize(
-    "name, func, minmax, clipmin, clipmax",
+    "func, minmax, clipmin, clipmax",
     [
-        ("lower", get_lower_linear_hull_max, np.max, -np.inf, 0.0),
-        ("upper", get_upper_linear_hull_max, np.min, 0.0, np.inf),
+        (get_lower_linear_hull_max, np.max, -np.inf, 0.0),
+        (get_upper_linear_hull_max, np.min, 0.0, np.inf),
     ],
 )
-def test_get_lower_upper_linear_hull_max(
-    name, func, minmax, clipmin, clipmax, mode, floatx, axis, finetune_odd, helpers
-):
+def test_get_lower_upper_linear_hull_max(func, minmax, clipmin, clipmax, mode, floatx, axis, finetune_odd, helpers):
 
-    if finetune_odd is not None and name == "upper":
+    if finetune_odd is not None and func is not get_lower_linear_hull_max:
         # skip test with finetune if not get_lower
         pytest.skip("finetune_odd is only intended for get_lower_linear_hull_max()")
 
@@ -66,7 +64,7 @@ def test_get_lower_upper_linear_hull_max(
         minmax(np.clip(np.sum(w_ * y, axis) + b_ - y_, clipmin, clipmax)),
         0.0,
         decimal=decimal,
-        err_msg=f"linear hull for {name} bounding max",
+        err_msg=f"linear hull for bounding max",
     )
 
     K.set_floatx("float{}".format(32))
