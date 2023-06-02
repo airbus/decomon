@@ -1069,8 +1069,14 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
         for i, ax in enumerate(self.axis):
             tuple_[ax] = self.moving_mean.shape[i]
 
-        gamma_ = K.reshape(self.gamma + z_value, tuple_)
-        beta_ = K.reshape(self.beta + z_value, tuple_)
+        if self.gamma is None:  # scale = False
+            gamma_ = tf.ones(tuple_)
+        else:  # scale = True
+            gamma_ = K.reshape(self.gamma + z_value, tuple_)
+        if self.beta is None:  # center = False
+            beta_ = tf.zeros(tuple_)
+        else:  # center = True
+            beta_ = K.reshape(self.beta + z_value, tuple_)
         moving_mean_ = K.reshape(self.moving_mean + z_value, tuple_)
         moving_variance_ = K.reshape(self.moving_variance + z_value, tuple_)
 
