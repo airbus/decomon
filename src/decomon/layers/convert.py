@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import tensorflow as tf
 from tensorflow.keras.layers import Activation, Input, Layer
@@ -122,11 +122,8 @@ def _to_decomon_wo_input_init(
 def _prepare_input_tensors(
     layer: Layer, input_dim: int, dc_decomp: bool, convex_domain: Dict[str, Any], mode: ForwardMode
 ) -> List[tf.Tensor]:
-    original_input_shapes = layer.input_shape
-    if not isinstance(original_input_shapes, list):
-        original_input_shapes = [original_input_shapes]
-
-    decomon_input_shapes = [list(input_shape[1:]) for input_shape in original_input_shapes]
+    original_input_shapes = get_layer_input_shape(layer)
+    decomon_input_shapes: List[List[Optional[int]]] = [list(input_shape[1:]) for input_shape in original_input_shapes]
     n_input = len(decomon_input_shapes)
 
     if len(convex_domain) == 0 or ConvexDomainType(convex_domain["name"]) == ConvexDomainType.BOX:
@@ -157,3 +154,57 @@ def _prepare_input_tensors(
             raise NotImplementedError()
 
     return flatten_input_list
+
+
+SingleInputShapeType = Tuple[Optional[int]]
+
+
+def get_input_shapes_as_a_list_of_input_shape(
+    input_shapes: Union[List[SingleInputShapeType], SingleInputShapeType]
+) -> List[SingleInputShapeType]:
+    if not isinstance(input_shapes, list):
+        return [input_shapes]
+    else:
+        return input_shapes
+
+
+def get_layer_input_shape(layer: Layer) -> List[SingleInputShapeType]:
+    """Retrieves the input shape(s) of a layer.
+
+    Only applicable if the layer has exactly one input,
+    i.e. if it is connected to one incoming layer, or if all inputs
+    have the same shape.
+
+    Args:
+        layer:
+
+    Returns:
+        Input shape, as an integer shape tuple
+        (or list of shape tuples, one tuple per input tensor).
+
+    Raises:
+        AttributeError: if the layer has no defined input_shape.
+        RuntimeError: if called in Eager mode.
+    """
+
+    if not layer.inbound_nodes:
+        raise AttributeError(
+            f'The layer "{layer.name}" has never been called '
+            "and thus has no defined input shape. Note that the "
+            "`input_shape` property is only available for "
+            "Functional and Sequential models."
+        )
+    all_input_shapes = set(
+        [str(get_input_shapes_as_a_list_of_input_shape(node.input_shapes)) for node in layer.inbound_nodes]
+    )
+    if len(all_input_shapes) == 1:
+        return get_input_shapes_as_a_list_of_input_shape(layer.inbound_nodes[0].input_shapes)
+    else:
+        raise AttributeError(
+            'The layer "' + str(layer.name) + '" has multiple inbound nodes, '
+            "with different input shapes. Hence "
+            'the notion of "input shape" is '
+            "ill-defined for the layer. "
+            "Use `get_input_shape_at(node_index)` "
+            "instead."
+        )
