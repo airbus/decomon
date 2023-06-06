@@ -15,6 +15,7 @@ from tensorflow.keras.layers import (
     Dense,
     Flatten,
     Input,
+    Reshape,
 )
 from tensorflow.keras.models import Model, Sequential
 
@@ -1458,16 +1459,16 @@ class Helpers:
         return Model(x, y)
 
     @staticmethod
-    def toy_struct_cnn(dtype="float32"):
-
+    def toy_struct_cnn(dtype="float32", image_data_shape=(6, 6, 2)):
+        input_dim = np.prod(image_data_shape)
         layers = [
+            Reshape(target_shape=image_data_shape, input_dim=input_dim),
             Conv2D(
                 10,
                 kernel_size=(3, 3),
                 activation="relu",
                 data_format="channels_last",
                 dtype=dtype,
-                input_shape=(28, 28, 3),
             ),
             Flatten(dtype=dtype),
             Dense(1, dtype=dtype),

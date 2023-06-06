@@ -260,7 +260,6 @@ def test_convert_toy_models_1d(toy_model_1d, method, mode, helpers):
     )
 
 
-@pytest.mark.skip("test not ready yet")
 def test_convert_cnn(method, mode, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
         # skip method=ibp/crown-ibp with mode=affine/hybrid
@@ -281,11 +280,20 @@ def test_convert_cnn(method, mode, helpers):
     # numpy inputs
     inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=dc_decomp)
     input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
-    input_decomon_ = helpers.get_inputs_np_for_decomon_model_from_full_inputs(inputs=inputs_)
+    input_ref_min_, input_ref_max_ = helpers.get_input_ref_bounds_from_full_inputs(inputs_)
+
+    # flatten inputs
+    preprocess_layer = Flatten(data_format=data_format)
+    input_ref_reshaped_ = preprocess_layer(input_ref_).numpy()
+    input_ref_min_reshaped_ = preprocess_layer(input_ref_min_).numpy()
+    input_ref_max_reshaped_ = preprocess_layer(input_ref_max_).numpy()
+
+    input_decomon_ = np.concatenate((input_ref_min_reshaped_[:, None], input_ref_max_reshaped_[:, None]), axis=1)
 
     #  keras model and output of reference
-    ref_nn = helpers.toy_struct_cnn(dtype=K.floatx())
-    output_ref_ = ref_nn.predict(input_ref_)
+    image_data_shape = input_ref_.shape[1:]  # image shape: before flattening
+    ref_nn = helpers.toy_struct_cnn(dtype=K.floatx(), image_data_shape=image_data_shape)
+    output_ref_ = ref_nn.predict(input_ref_reshaped_)
 
     # decomon conversion
     decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
@@ -294,11 +302,21 @@ def test_convert_cnn(method, mode, helpers):
     outputs_ = decomon_model.predict(input_decomon_)
 
     #  check bounds consistency
-    helpers.assert_decomon_model_output_properties_box(
-        full_inputs=inputs_,
-        output_ref=output_ref_,
-        outputs_for_mode=outputs_,
-        mode=mode,
-        dc_decomp=dc_decomp,
+    z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = helpers.get_full_outputs_from_outputs_for_mode(
+        outputs_for_mode=outputs_, mode=mode, dc_decomp=dc_decomp, full_inputs=inputs_
+    )
+    helpers.assert_output_properties_box(
+        input_ref_reshaped_,
+        output_ref_,
+        h_,
+        g_,
+        input_ref_min_reshaped_,
+        input_ref_max_reshaped_,
+        u_c_,
+        w_u_,
+        b_u_,
+        l_c_,
+        w_l_,
+        b_l_,
         decimal=decimal,
     )
