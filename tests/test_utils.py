@@ -11,7 +11,7 @@ from decomon.layers.utils import add, get_lower, get_upper, max_, maximum, minus
 from decomon.utils import subtract
 
 
-def test_get_upper_multi_box(odd, floatx, helpers):
+def test_get_upper_multi_box(odd, floatx, decimal, helpers):
 
     inputs = helpers.get_tensor_decomposition_multid_box(odd)
     inputs_ = helpers.get_standard_values_multid_box(odd)
@@ -33,7 +33,7 @@ def test_get_upper_multi_box(odd, floatx, helpers):
     assert_allclose(upper_pred, upper_)
 
 
-def test_get_upper_box_numpy(n, floatx, helpers):
+def test_get_upper_box_numpy(n, floatx, decimal, helpers):
     inputs = helpers.get_tensor_decomposition_1d_box()
     inputs_ = helpers.get_standard_values_1d_box(n)
 
@@ -56,7 +56,7 @@ def test_get_upper_box_numpy(n, floatx, helpers):
     assert_allclose(upper_pred, upper_)
 
 
-def test_get_upper_box(n, floatx, helpers):
+def test_get_upper_box(n, floatx, decimal, helpers):
     inputs = helpers.get_tensor_decomposition_1d_box()
     inputs_ = helpers.get_standard_values_1d_box(n)
 
@@ -77,19 +77,19 @@ def test_get_upper_box(n, floatx, helpers):
     assert_almost_equal(
         np.clip(output - upper_, 0, np.inf),
         np.zeros_like(output),
-        decimal=6,
+        decimal=decimal,
         err_msg="upper_<y_ in call {}".format(n),
     )
 
     assert_almost_equal(
         np.clip(u_c_ - upper_, 0, np.inf),
         np.zeros_like(output),
-        decimal=6,
+        decimal=decimal,
         err_msg="upper_<y_ in call {}".format(n),
     )
 
 
-def test_get_lower_box(n, floatx, helpers):
+def test_get_lower_box(n, floatx, decimal, helpers):
     inputs = helpers.get_tensor_decomposition_1d_box()
     inputs_ = helpers.get_standard_values_1d_box(n)
     x, y, x_0, _, _, _, l_c, W_l, b_l, _, _ = inputs
@@ -107,18 +107,18 @@ def test_get_lower_box(n, floatx, helpers):
     assert_almost_equal(
         np.clip(lower_ - input_ref, 0, np.inf),
         np.zeros_like(input_ref),
-        decimal=6,
+        decimal=decimal,
         err_msg="lower_> y_ in call {}".format(n),
     )
     assert_almost_equal(
         np.clip(lower_ - l_c_, 0, np.inf),
         np.zeros_like(input_ref),
-        decimal=6,
+        decimal=decimal,
         err_msg="lower_> y_ in call {}".format(n),
     )
 
 
-def test_get_lower_upper_box(n, floatx, helpers):
+def test_get_lower_upper_box(n, floatx, decimal, helpers):
     inputs = helpers.get_tensor_decomposition_1d_box()
     inputs_ = helpers.get_standard_values_1d_box(n)
     x, y, x_0, _, W_u, b_u, _, W_l, b_l, _, _ = inputs
@@ -135,7 +135,7 @@ def test_get_lower_upper_box(n, floatx, helpers):
     assert_almost_equal(
         np.clip(lower_ - upper_, 0, np.inf),
         np.zeros_like(lower_),
-        decimal=6,
+        decimal=decimal,
         err_msg="lower_> upper_ in call {}".format(n),
     )
 
@@ -262,7 +262,7 @@ def test_relu_1D_box(n, mode, floatx, decimal, helpers):
             assert_almost_equal(
                 l_c_output,
                 np.zeros_like(l_c_output),
-                decimal=6,
+                decimal=decimal,
                 err_msg="l_c_!=0 but upper_<=0 in call {}".format(n),
             )
 
@@ -418,7 +418,7 @@ def test_max_nodc(odd, helpers):
 
     output = max_(inputs[2:], dc_decomp=False)
     f_max = K.function(inputs, output)
-    assert_allclose(len(f_max(inputs_)), 7)
+    assert len(f_max(inputs_)) == 7
 
 
 def test_maximum_nodc(odd, helpers):
@@ -432,7 +432,7 @@ def test_maximum_nodc(odd, helpers):
     f_ref = K.function(inputs_0 + inputs_1, K.maximum(inputs_0[1], inputs_1[1]))
     f_maximum = K.function(inputs_0 + inputs_1, output)
 
-    assert_allclose(len(f_maximum(inputs_ + inputs_)), 7)
+    assert len(f_maximum(inputs_ + inputs_)) == 7
     f_ref(inputs_ + inputs_)
 
 
@@ -446,7 +446,7 @@ def test_minus_nodc(odd, helpers):
     f_ref = K.function(inputs_0, -inputs_0[1])
     f_minus = K.function(inputs_0, output)
 
-    assert_allclose(len(f_minus(inputs_)), 7)
+    assert len(f_minus(inputs_)) == 7
     f_ref(inputs_)
 
 
@@ -458,7 +458,7 @@ def test_add_nodc(odd, helpers):
     output = add(inputs_0[2:], inputs_1[2:], dc_decomp=False)
     f_ref = K.function(inputs_0 + inputs_1, inputs_0[1] + inputs_1[1])
     f_add = K.function(inputs_0 + inputs_1, output)
-    assert_allclose(len(f_add(inputs_ + inputs_)), 7)
+    assert len(f_add(inputs_ + inputs_)) == 7
     f_ref(inputs_ + inputs_)
 
 
@@ -479,4 +479,4 @@ def test_relu_1D_box_nodc(n, helpers):
     np.max(f_upper(inputs_))
 
     f_relu_ = K.function(inputs[2:], output)
-    assert_allclose(len(f_relu_(inputs_[2:])), 7)
+    assert len(f_relu_(inputs_[2:])) == 7

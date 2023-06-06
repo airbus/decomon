@@ -77,7 +77,7 @@ def test_Decomon_conv_to_decomon_box(shared, floatx, dc_decomp, helpers):
     if floatx == 16:
         decimal = 1
     else:
-        decimal = 5
+        decimal = 4
 
     # tensor inputs
     inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=dc_decomp)

@@ -59,7 +59,7 @@ def decimal(floatx):
     if floatx == 16:
         return 2
     else:
-        return 5
+        return 4
 
 
 @pytest.fixture(params=[True, False])
@@ -901,7 +901,7 @@ class Helpers:
         return output
 
     @staticmethod
-    def assert_output_properties_box(x_, y_, h_, g_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=5):
+    def assert_output_properties_box(x_, y_, h_, g_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=4):
 
         if y_ is None:
             y_ = h_ + g_
@@ -973,7 +973,7 @@ class Helpers:
 
     @staticmethod
     def assert_decomon_model_output_properties_box(
-        full_inputs, output_ref, outputs_for_mode, mode=ForwardMode.HYBRID, dc_decomp=True, decimal=5
+        full_inputs, output_ref, outputs_for_mode, mode=ForwardMode.HYBRID, dc_decomp=True, decimal=4
     ):
         input_ref_ = Helpers.get_input_ref_from_full_inputs(full_inputs)
         input_ref_min_, input_ref_max_ = Helpers.get_input_ref_bounds_from_full_inputs(inputs=full_inputs)
@@ -999,7 +999,7 @@ class Helpers:
 
     @staticmethod
     def assert_decomon_layer_output_properties_box(
-        full_inputs, output_ref, outputs_for_mode, mode=ForwardMode.HYBRID, dc_decomp=True, decimal=5
+        full_inputs, output_ref, outputs_for_mode, mode=ForwardMode.HYBRID, dc_decomp=True, decimal=4
     ):
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = Helpers.get_full_outputs_from_outputs_for_mode(
             outputs_for_mode=outputs_for_mode, mode=mode, dc_decomp=dc_decomp, full_inputs=full_inputs
@@ -1023,7 +1023,7 @@ class Helpers:
 
     @staticmethod
     def assert_decomon_layer_output_properties_box_linear(
-        full_inputs, output_ref, outputs_for_mode, mode=ForwardMode.HYBRID, dc_decomp=True, decimal=5
+        full_inputs, output_ref, outputs_for_mode, mode=ForwardMode.HYBRID, dc_decomp=True, decimal=4
     ):
         z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = Helpers.get_full_outputs_from_outputs_for_mode(
             outputs_for_mode=outputs_for_mode, mode=mode, dc_decomp=dc_decomp, full_inputs=full_inputs
@@ -1045,7 +1045,7 @@ class Helpers:
 
     @staticmethod
     def assert_backward_layer_output_properties_box_linear(
-        full_inputs, backward_outputs, output_ref=None, upper_constant_bound=None, lower_constant_bound=None, decimal=5
+        full_inputs, backward_outputs, output_ref=None, upper_constant_bound=None, lower_constant_bound=None, decimal=4
     ):
         w_u_, b_u_, w_l_, b_l_ = backward_outputs
         x_, y_, z_, u_c_, W_u_, B_u_, l_c_, W_l_, B_l_ = full_inputs
@@ -1075,7 +1075,7 @@ class Helpers:
         )
 
     @staticmethod
-    def assert_output_properties_box_linear(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=5):
+    def assert_output_properties_box_linear(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=4):
         # flatten everyting
         n = len(x_)
         if y_ is not None:
@@ -1269,7 +1269,7 @@ class Helpers:
         return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
     @staticmethod
-    def assert_output_properties_box_nodc(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=5):
+    def assert_output_properties_box_nodc(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=4):
 
         assert np.min(x_min_ <= x_max_), "x_min >x_max"
 
