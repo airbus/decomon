@@ -25,7 +25,7 @@ from decomon.models.utils import ConvertMethod
     ],
 )
 def test_with_lirpa(path, onnx_filename, method, eps, N):
-
+    decimal = 4
     equ_method = {
         "IBP": ConvertMethod.FORWARD_IBP,
         "backward": ConvertMethod.CROWN,
@@ -63,5 +63,5 @@ def test_with_lirpa(path, onnx_filename, method, eps, N):
     box = np.concatenate([image_[:, None] - eps, image_[:, None] + eps], 1)
     ub_k, lb_k = decomon_model.predict(box)
 
-    assert_almost_equal(ub_k, ub_p, decimal=4, err_msg="error")
-    assert_almost_equal(lb_k, lb_p, decimal=4, err_msg="error")
+    assert_almost_equal(ub_k, ub_p, decimal=decimal, err_msg="error")
+    assert_almost_equal(lb_k, lb_p, decimal=decimal, err_msg="error")

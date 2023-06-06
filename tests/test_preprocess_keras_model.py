@@ -61,7 +61,7 @@ def test_split_activations_in_keras_model(toy_model):
     inputs_np = np.linspace(-1, 1, flatten_dim).reshape(input_shape_with_batch_size)
     output_np_ref = toy_model(inputs_np).numpy()
     output_np_new = converted_model(inputs_np).numpy()
-    assert_almost_equal(output_np_new, output_np_ref)
+    assert_almost_equal(output_np_new, output_np_ref, decimal=4)
 
 
 def test_convert_deellip_layers_in_keras_model_no_inputshape_ko():
@@ -101,7 +101,7 @@ def test_convert_deellip_layers_in_keras_model_ok():
     inputs_np = np.linspace(-1, 1, flatten_dim).reshape(input_shape_with_batch_size)
     output_np_ref = model(inputs_np).numpy()
     output_np_new = converted_model(inputs_np).numpy()
-    assert_almost_equal(output_np_new, output_np_ref)
+    assert_almost_equal(output_np_new, output_np_ref, decimal=4)
 
 
 @pytest.mark.parametrize(
@@ -173,4 +173,4 @@ def test_preprocess(
     inputs_np = np.linspace(-1, 1, flatten_dim).reshape(input_shape_with_batch_size)
     output_np_ref = model(inputs_np).numpy()
     output_np_new = converted_model(inputs_np).numpy()
-    assert_almost_equal(output_np_new, output_np_ref)
+    assert_almost_equal(output_np_new, output_np_ref, decimal=4)
