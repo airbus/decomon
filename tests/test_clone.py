@@ -177,12 +177,42 @@ def test_name_backward_deellip():
 
 
 @pytest.mark.skipif(not (deel_lip_available), reason=deel_lip_skip_reason)
-def test_clone_full_deellip_model_forward(helpers):
-    target_shape = (6, 6, 2)
-    input_shape = (np.prod(target_shape),)
-    model = DeellipSequential(
+def test_clone_full_deellip_model_forward(method, mode, helpers):
+    if not helpers.is_method_mode_compatible(method=method, mode=mode):
+        # skip method=ibp/crown-ibp with mode=affine/hybrid
+        pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
+
+    if get_direction(method) == FeedDirection.BACKWARD:
+        # skip as BackwardConv2D not yet ready
+        pytest.skip(f"BackwardConv2D not yet fully implemented")
+
+    decimal = 4
+    data_format = "channels_last"
+    odd, m_0, m_1 = 0, 0, 1
+    dc_decomp = False
+    ibp = get_ibp(mode=mode)
+    affine = get_affine(mode=mode)
+
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
+    input_ref_min_, input_ref_max_ = helpers.get_input_ref_bounds_from_full_inputs(inputs_)
+
+    # flatten inputs
+    preprocess_layer = Flatten(data_format=data_format)
+    input_ref_reshaped_ = preprocess_layer(input_ref_).numpy()
+    input_ref_min_reshaped_ = preprocess_layer(input_ref_min_).numpy()
+    input_ref_max_reshaped_ = preprocess_layer(input_ref_max_).numpy()
+
+    # decomon inputs
+    input_decomon_ = np.concatenate((input_ref_min_reshaped_[:, None], input_ref_max_reshaped_[:, None]), axis=1)
+
+    # deel-lip model and output of reference
+    image_data_shape = input_ref_.shape[1:]  # image shape: before flattening
+    flatten_input_shape = (np.prod(image_data_shape),)
+    ref_nn = DeellipSequential(
         [
-            Reshape(target_shape=target_shape, input_shape=input_shape),
+            Reshape(target_shape=image_data_shape, input_shape=flatten_input_shape),
             # Lipschitz layers preserve the API of their superclass ( here Conv2D )
             # an optional param is available: k_coef_lip which control the lipschitz
             # constant of the layer
@@ -208,13 +238,33 @@ def test_clone_full_deellip_model_forward(helpers):
         k_coef_lip=1.0,
         name="hkr_model",
     )
+    output_ref_ = ref_nn.predict(input_ref_reshaped_)
 
-    method = ConvertMethod.FORWARD_HYBRID
-    ibp, affine = get_ibp_affine_from_method(method)
-    mode = get_mode(ibp=ibp, affine=affine)
-    decomon_model = clone(model, method=method, final_ibp=ibp, final_affine=affine)
+    # decomon conversion
+    decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
 
-    # check bounds: todo
+    #  decomon outputs
+    outputs_ = decomon_model.predict(input_decomon_)
+
+    #  check bounds consistency
+    z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = helpers.get_full_outputs_from_outputs_for_mode(
+        outputs_for_mode=outputs_, mode=mode, dc_decomp=dc_decomp, full_inputs=inputs_
+    )
+    helpers.assert_output_properties_box(
+        input_ref_reshaped_,
+        output_ref_,
+        h_,
+        g_,
+        input_ref_min_reshaped_,
+        input_ref_max_reshaped_,
+        u_c_,
+        w_u_,
+        b_u_,
+        l_c_,
+        w_l_,
+        b_l_,
+        decimal=decimal,
+    )
 
 
 def test_convert_toy_models_1d(toy_model_1d, method, mode, helpers):
