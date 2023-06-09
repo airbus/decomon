@@ -35,7 +35,7 @@ GROUP_SORT_2 = "GroupSort2"
 
 
 def relu(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     alpha: float = 0.0,
@@ -47,7 +47,7 @@ def relu(
 ) -> List[tf.Tensor]:
     """
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         alpha: see Keras official documentation
@@ -69,13 +69,13 @@ def relu(
 
     if not alpha and max_value is None:
         # default values: return relu_(x) = max(x, 0)
-        return relu_(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope, **kwargs)
+        return relu_(inputs, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope, **kwargs)
 
     raise NotImplementedError()
 
 
 def linear_hull_s_shape(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     func: Callable[[TensorLike], tf.Tensor] = K.sigmoid,
     f_prime: Callable[[TensorLike], tf.Tensor] = sigmoid_prime,
     dc_decomp: bool = False,
@@ -86,7 +86,7 @@ def linear_hull_s_shape(
     """Computing the linear hull of s-shape functions
 
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         func: the function (sigmoid, tanh, softsign...)
         f_prime: the derivative of the function (sigmoid_prime...)
         dc_decomp: boolean that indicates
@@ -105,24 +105,24 @@ def linear_hull_s_shape(
         raise NotImplementedError()
     mode = ForwardMode(mode)
     if mode == ForwardMode.IBP:
-        u_c, l_c = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
+        u_c, l_c = inputs[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
     elif mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
     elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = x[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
+        x_0, w_u, b_u, w_l, b_l = inputs[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
         u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
         l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
     else:
         raise ValueError(f"Unknown mode {mode}")
 
     if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-        u_c_ = func(u_c)
-        l_c_ = func(l_c)
+        u_c_out = func(u_c)
+        l_c_out = func(l_c)
 
     if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
 
         w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
-            x, func=func, f_prime=f_prime, convex_domain=convex_domain, mode=mode
+            inputs, func=func, f_prime=f_prime, convex_domain=convex_domain, mode=mode
         )
 
         if len(w_u.shape) == len(b_u.shape):
@@ -131,23 +131,23 @@ def linear_hull_s_shape(
             M = np.reshape(
                 np.diag([K.cast(1, dtype=w_u_0.dtype)] * n_dim), [1, n_dim] + list(w_u.shape[1:])
             )  # usage de numpy pb pour les types
-            w_u_ = M * K.concatenate([K.expand_dims(w_u_0, 1)] * n_dim, 1)
-            w_l_ = M * K.concatenate([K.expand_dims(w_l_0, 1)] * n_dim, 1)
-            b_u_ = b_u_0
-            b_l_ = b_l_0
+            w_u_out = M * K.concatenate([K.expand_dims(w_u_0, 1)] * n_dim, 1)
+            w_l_out = M * K.concatenate([K.expand_dims(w_l_0, 1)] * n_dim, 1)
+            b_u_out = b_u_0
+            b_l_out = b_l_0
 
         else:
-            w_u_ = K.expand_dims(w_u_0, 1) * w_u  # pour l'instant
-            b_u_ = b_u_0 + w_u_0 * b_u
-            w_l_ = K.expand_dims(w_l_0, 1) * w_l
-            b_l_ = b_l_0 + w_l_0 * b_l
+            w_u_out = K.expand_dims(w_u_0, 1) * w_u  # pour l'instant
+            b_u_out = b_u_0 + w_u_0 * b_u
+            w_l_out = K.expand_dims(w_l_0, 1) * w_l
+            b_l_out = b_l_0 + w_l_0 * b_l
 
     if mode == ForwardMode.IBP:
-        output = [u_c_, l_c_]
+        output = [u_c_out, l_c_out]
     elif mode == ForwardMode.HYBRID:
-        output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+        output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     elif mode == ForwardMode.AFFINE:
-        output = [x_0, w_u_, b_u_, w_l_, b_l_]
+        output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
@@ -155,7 +155,7 @@ def linear_hull_s_shape(
 
 
 def sigmoid(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -166,7 +166,7 @@ def sigmoid(
     `1 / (1 + exp(-x))`.
 
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
@@ -182,12 +182,12 @@ def sigmoid(
     func = K.sigmoid
     f_prime = sigmoid_prime
     return linear_hull_s_shape(
-        x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope
+        inputs, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope
     )
 
 
 def tanh(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -198,7 +198,7 @@ def tanh(
     `tanh(x)=2*sigmoid(2*x)+1`
 
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
@@ -215,12 +215,12 @@ def tanh(
     func = K.tanh
     f_prime = tanh_prime
     return linear_hull_s_shape(
-        x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope
+        inputs, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope
     )
 
 
 def hard_sigmoid(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -231,7 +231,7 @@ def hard_sigmoid(
        Faster to compute than sigmoid activation.
 
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
@@ -252,7 +252,7 @@ def hard_sigmoid(
 
 
 def elu(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -262,7 +262,7 @@ def elu(
     """LiRPA for Exponential linear unit.
 
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
@@ -283,7 +283,7 @@ def elu(
 
 
 def selu(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -300,7 +300,7 @@ def selu(
     is "large enough" (see references for more information).
 
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
@@ -320,7 +320,7 @@ def selu(
 
 
 def linear(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -330,7 +330,7 @@ def linear(
     """LiRPA foe Linear (i.e. identity) activation function.
 
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
@@ -343,11 +343,11 @@ def linear(
     """
     if convex_domain is None:
         convex_domain = {}
-    return x
+    return inputs
 
 
 def exponential(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -357,7 +357,7 @@ def exponential(
     """LiRPA for Exponential activation function.
 
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
@@ -371,11 +371,11 @@ def exponential(
 
     if convex_domain is None:
         convex_domain = {}
-    return exp(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope, **kwargs)
+    return exp(inputs, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope, **kwargs)
 
 
 def softplus(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -385,7 +385,7 @@ def softplus(
     """LiRPA for Softplus activation function `log(exp(x) + 1)`.
 
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
@@ -401,11 +401,11 @@ def softplus(
     if dc_decomp:
         raise NotImplementedError()
 
-    return softplus_(x, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope)
+    return softplus_(inputs, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope)
 
 
 def softsign(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -415,7 +415,7 @@ def softsign(
     """LiRPA for Softsign activation function `x / (abs(x) + 1)`.
 
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
@@ -432,12 +432,12 @@ def softsign(
     func = K.softsign
     f_prime = softsign_prime
     return linear_hull_s_shape(
-        x, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope
+        inputs, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope
     )
 
 
 def softmax(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -449,7 +449,7 @@ def softmax(
     """LiRPA for Softmax activation function.
 
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
@@ -466,33 +466,39 @@ def softmax(
         raise NotImplementedError()
     mode = ForwardMode(mode)
 
-    x_ = minus(x, mode=mode)
-    x_0 = exponential(x_, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope)
-    x_sum = sum(x_0, axis=axis, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
-    x_frac = expand_dims(
-        frac_pos(x_sum, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode), mode=mode, axis=axis
+    outputs_exp = exponential(
+        minus(inputs, mode=mode), dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope
     )
-
-    x_final = multiply(x_0, x_frac, mode=mode, convex_domain=convex_domain)
+    outputs = expand_dims(
+        frac_pos(
+            sum(outputs_exp, axis=axis, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode),
+            dc_decomp=dc_decomp,
+            convex_domain=convex_domain,
+            mode=mode,
+        ),
+        mode=mode,
+        axis=axis,
+    )
+    outputs = multiply(outputs_exp, outputs, mode=mode, convex_domain=convex_domain)
 
     if mode == ForwardMode.IBP:
-        u_c, l_c = x_final
+        u_c, l_c = outputs
         if clip:
             return [K.minimum(u_c, 1.0), K.maximum(l_c, 0.0)]
         else:
-            return x_final
+            return outputs
     if mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x_final
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = outputs
         if clip:
             u_c = K.minimum(u_c, 1.0)
             l_c = K.maximum(l_c, 0.0)
         return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
 
-    return x_final
+    return outputs
 
 
 def group_sort_2(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,

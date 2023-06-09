@@ -132,7 +132,7 @@ class BackwardAdd(BackwardMerge):
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
-        w_out_u, b_out_u, w_out_l, b_out_l = get_identity_lirpa(inputs)
+        w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
         n_comp = 2
         if self.mode == ForwardMode.AFFINE:
             n_comp = 5
@@ -142,7 +142,7 @@ class BackwardAdd(BackwardMerge):
         n_elem = len(inputs) // n_comp
 
         if n_elem == 1:
-            return [[w_out_u, b_out_u, w_out_l, b_out_l]]
+            return [[w_u_out, b_u_out, w_l_out, b_l_out]]
         else:
             if n_elem > 2:
                 raise NotImplementedError()
@@ -154,10 +154,10 @@ class BackwardAdd(BackwardMerge):
                 bounds_0, bounds_1 = backward_add(
                     inputs_0,
                     inputs_1,
-                    w_out_u,
-                    b_out_u,
-                    w_out_l,
-                    b_out_l,
+                    w_u_out,
+                    b_u_out,
+                    w_l_out,
+                    b_l_out,
                     convex_domain=self.convex_domain,
                     mode=self.mode,
                 )
@@ -188,7 +188,7 @@ class BackwardAverage(BackwardMerge):
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
-        w_out_u, b_out_u, w_out_l, b_out_l = get_identity_lirpa(inputs)
+        w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
         n_comp = 2
         if self.mode == ForwardMode.AFFINE:
@@ -198,7 +198,7 @@ class BackwardAverage(BackwardMerge):
 
         n_elem = len(inputs) // n_comp
         if n_elem == 1:
-            return [[w_out_u, b_out_u, w_out_l, b_out_l]]
+            return [[w_u_out, b_u_out, w_l_out, b_l_out]]
         else:
             bounds: List[List[tf.Tensor]] = []
             input_bounds: List[List[tf.Tensor]] = []
@@ -213,10 +213,10 @@ class BackwardAverage(BackwardMerge):
                     bounds_0, bounds_1 = backward_add(
                         inputs_0,
                         inputs_1,
-                        w_out_u,
-                        b_out_u,
-                        w_out_l,
-                        b_out_l,
+                        w_u_out,
+                        b_u_out,
+                        w_l_out,
+                        b_l_out,
                         convex_domain=self.convex_domain,
                         mode=self.mode,
                     )
@@ -232,7 +232,6 @@ class BackwardAverage(BackwardMerge):
                         convex_domain=self.convex_domain,
                         mode=self.mode,
                     )
-
                 input_bounds.append(bounds_1)
                 bounds.append(bounds_0)
                 if j == 1:
@@ -267,8 +266,8 @@ class BackwardSubtract(BackwardMerge):
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
-        x_ = inputs[:-4]
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
+        inputs_wo_backward_bounds = inputs[:-4]
+        w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
 
         n_comp = 4
         if self.mode == ForwardMode.AFFINE:
@@ -276,18 +275,18 @@ class BackwardSubtract(BackwardMerge):
         if self.mode == ForwardMode.HYBRID:
             n_comp = 8
 
-        n_elem = len(x_) // n_comp
-        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(x_) // n_comp)]
+        n_elem = len(inputs_wo_backward_bounds) // n_comp
+        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs_wo_backward_bounds) // n_comp)]
         if n_elem != 2:
             raise ValueError()
 
         return backward_subtract(
             inputs_list[0],
             inputs_list[1],
-            w_out_u,
-            b_out_u,
-            w_out_l,
-            b_out_l,
+            w_u_out,
+            b_u_out,
+            w_l_out,
+            b_l_out,
             convex_domain=self.layer.convex_domain,
             mode=self.mode,
         )
@@ -318,8 +317,8 @@ class BackwardMaximum(BackwardMerge):
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
-        x_ = inputs[:-4]
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
+        inputs_wo_backward_bounds = inputs[:-4]
+        w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
 
         n_comp = 4
         if self.mode == ForwardMode.AFFINE:
@@ -327,18 +326,18 @@ class BackwardMaximum(BackwardMerge):
         if self.mode == ForwardMode.HYBRID:
             n_comp = 8
 
-        n_elem = len(x_) // n_comp
-        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(x_) // n_comp)]
+        n_elem = len(inputs_wo_backward_bounds) // n_comp
+        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs_wo_backward_bounds) // n_comp)]
         if n_elem != 2:
             raise ValueError()
 
         return backward_maximum(
             inputs_list[0],
             inputs_list[1],
-            w_out_u,
-            b_out_u,
-            w_out_l,
-            b_out_l,
+            w_u_out,
+            b_u_out,
+            w_l_out,
+            b_l_out,
             convex_domain=self.layer.convex_domain,
             mode=self.mode,
         )
@@ -369,8 +368,8 @@ class BackwardMinimum(BackwardMerge):
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
-        x_ = inputs[:-4]
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
+        inputs_wo_backward_bounds = inputs[:-4]
+        w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
 
         n_comp = 4
         if self.mode == ForwardMode.AFFINE:
@@ -378,18 +377,18 @@ class BackwardMinimum(BackwardMerge):
         if self.mode == ForwardMode.HYBRID:
             n_comp = 8
 
-        n_elem = len(x_) // n_comp
-        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(x_) // n_comp)]
+        n_elem = len(inputs_wo_backward_bounds) // n_comp
+        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs_wo_backward_bounds) // n_comp)]
         if n_elem != 2:
             raise ValueError()
 
         return backward_minimum(
             inputs_list[0],
             inputs_list[1],
-            w_out_u,
-            b_out_u,
-            w_out_l,
-            b_out_l,
+            w_u_out,
+            b_u_out,
+            w_l_out,
+            b_l_out,
             convex_domain=self.layer.convex_domain,
             mode=self.mode,
         )
@@ -421,8 +420,8 @@ class BackwardConcatenate(BackwardMerge):
         self.axis = self.layer.axis
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
-        x_ = inputs[:-4]
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
+        inputs_wo_backward_bounds = inputs[:-4]
+        w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
 
         n_comp = 4
         if self.mode == ForwardMode.AFFINE:
@@ -430,17 +429,20 @@ class BackwardConcatenate(BackwardMerge):
         if self.mode == ForwardMode.HYBRID:
             n_comp = 8
 
-        n_elem = len(x_) // n_comp
-        n_list = [inputs[n_comp * i : n_comp * (i + 1)][0].shape[self.axis] for i in range(len(x_) // n_comp)]
+        n_elem = len(inputs_wo_backward_bounds) // n_comp
+        n_list = [
+            inputs[n_comp * i : n_comp * (i + 1)][0].shape[self.axis]
+            for i in range(len(inputs_wo_backward_bounds) // n_comp)
+        ]
         axis_w = self.axis
         if axis_w != -1:
             axis_w += 1
-        w_out_u_list = tf.split(w_out_u, n_list, axis_w)
-        w_out_l_list = tf.split(w_out_l, n_list, axis_w)
-        b_out_u_list = tf.split(b_out_u, n_list, self.axis)
-        b_out_l_list = tf.split(b_out_l, n_list, self.axis)
+        w_u_out_list = tf.split(w_u_out, n_list, axis_w)
+        w_l_out_list = tf.split(w_l_out, n_list, axis_w)
+        b_u_out_list = tf.split(b_u_out, n_list, self.axis)
+        b_l_out_list = tf.split(b_l_out, n_list, self.axis)
 
-        bounds = [[w_out_u_list[i], b_out_u_list[i], w_out_l_list[i], b_out_l_list[i]] for i in range(n_elem)]
+        bounds = [[w_u_out_list[i], b_u_out_list[i], w_l_out_list[i], b_l_out_list[i]] for i in range(n_elem)]
 
         return bounds
 
@@ -470,8 +472,8 @@ class BackwardMultiply(BackwardMerge):
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
-        x_ = inputs[:-4]
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
+        inputs_wo_backward_bounds = inputs[:-4]
+        w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
 
         n_comp = 4
         if self.mode == ForwardMode.AFFINE:
@@ -479,18 +481,18 @@ class BackwardMultiply(BackwardMerge):
         if self.mode == ForwardMode.HYBRID:
             n_comp = 8
 
-        n_elem = len(x_) // n_comp
-        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(x_) // n_comp)]
+        n_elem = len(inputs_wo_backward_bounds) // n_comp
+        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs_wo_backward_bounds) // n_comp)]
         if n_elem != 2:
             raise ValueError()
 
         return backward_multiply(
             inputs_list[0],
             inputs_list[1],
-            w_out_u,
-            b_out_u,
-            w_out_l,
-            b_out_l,
+            w_u_out,
+            b_u_out,
+            w_l_out,
+            b_l_out,
             convex_domain=self.layer.convex_domain,
             mode=self.mode,
         )
@@ -526,8 +528,8 @@ class BackwardDot(BackwardMerge):
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
-        x_ = inputs[:-4]
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
+        inputs_wo_backward_bounds = inputs[:-4]
+        w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
 
         n_comp = 4
         if self.mode == ForwardMode.AFFINE:
@@ -535,8 +537,8 @@ class BackwardDot(BackwardMerge):
         if self.mode == ForwardMode.HYBRID:
             n_comp = 8
 
-        n_elem = len(x_) // n_comp
-        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(x_) // n_comp)]
+        n_elem = len(inputs_wo_backward_bounds) // n_comp
+        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs_wo_backward_bounds) // n_comp)]
         if n_elem != 2:
             raise ValueError()
 
@@ -547,53 +549,50 @@ class BackwardDot(BackwardMerge):
         n_0 = len(inputs_0[0].shape) - 2
         n_1 = len(inputs_1[0].shape) - 2
 
-        input_0_0 = permute_dimensions(inputs_0, self.axes[0], mode=self.mode)
-        input_1_0 = permute_dimensions(inputs_1, self.axes[1], mode=self.mode)
+        input_0_permuted = permute_dimensions(inputs_0, self.axes[0], mode=self.mode)
+        input_1_permuted = permute_dimensions(inputs_1, self.axes[1], mode=self.mode)
 
-        inputs_0_ = broadcast(input_0_0, n_1, -1, mode=self.mode)
-        inputs_1_ = broadcast(input_1_0, n_0, 2, mode=self.mode)
+        inputs_0_broadcasted = broadcast(input_0_permuted, n_1, -1, mode=self.mode)
+        inputs_1_broadcasted = broadcast(input_1_permuted, n_0, 2, mode=self.mode)
 
-        inputs_ = multiply(
-            inputs_0_,
-            inputs_1_,
+        inputs_multiplied = multiply(
+            inputs_0_broadcasted,
+            inputs_1_broadcasted,
             dc_decomp=self.layer.dc_decomp,
             convex_domain=self.convex_domain,
             mode=self.mode,
         )
 
-        inputs_add_ = split(inputs_, axis=self.axes[0], mode=self.mode)
         inputs_add = []
-        for elem in inputs_add_:
+        for elem in split(inputs_multiplied, axis=self.axes[0], mode=self.mode):
             inputs_add += elem
 
         bounds = self.op.call(inputs_add + inputs[-4:])
         n = len(inputs_add)
-        bounds_ = [[1.0 / n * elem for elem in bounds_i] for bounds_i in bounds]
+        bounds = [[1.0 / n * elem for elem in bounds_i] for bounds_i in bounds]
 
         # concatenate
-        reshape_ = [-1, 1] + list(inputs_[0].shape[1:]) + list(w_out_u.shape[3:])
+        shape = [-1, 1] + list(inputs_multiplied[0].shape[1:]) + list(w_u_out.shape[3:])
 
-        bounds_reshape = [
-            [K.reshape(elem[0], reshape_), elem[1], K.reshape(elem[2], reshape_), elem[3]] for elem in bounds_
-        ]
-        w_u_ = K.concatenate([elem[0] for elem in bounds_reshape], 1)
-        b_u_ = sum([elem[1] for elem in bounds_reshape], 1)
-        w_l_ = K.concatenate([elem[2] for elem in bounds_reshape], 1)
-        b_l_ = sum([elem[3] for elem in bounds_reshape])
+        bounds_reshaped = [[K.reshape(elem[0], shape), elem[1], K.reshape(elem[2], shape), elem[3]] for elem in bounds]
+        w_u = K.concatenate([elem[0] for elem in bounds_reshaped], 1)
+        b_u = sum([elem[1] for elem in bounds_reshaped], 1)
+        w_l = K.concatenate([elem[2] for elem in bounds_reshaped], 1)
+        b_l = sum([elem[3] for elem in bounds_reshaped])
 
         bounds_m_0, bounds_m_1 = backward_multiply(
-            inputs_0_,
-            inputs_1_,
-            w_u_,
-            b_u_,
-            w_l_,
-            b_l_,
+            inputs_0_broadcasted,
+            inputs_1_broadcasted,
+            w_u,
+            b_u,
+            w_l,
+            b_l,
             convex_domain=self.convex_domain,
             mode=self.mode,
         )
 
-        shape_0 = [-1, 1] + list(input_0_0[0].shape[1:]) + list(w_u_.shape[3:])
-        shape_1 = [-1, 1] + list(input_1_0[0].shape[1:]) + list(w_u_.shape[3:])
+        shape_0 = [-1, 1] + list(input_0_permuted[0].shape[1:]) + list(w_u.shape[3:])
+        shape_1 = [-1, 1] + list(input_1_permuted[0].shape[1:]) + list(w_u.shape[3:])
 
         bounds_m_0 = [
             K.reshape(bounds_m_0[0], shape_0),

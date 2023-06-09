@@ -134,22 +134,22 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
         if self.grad_bounds:
             raise NotImplementedError()
 
-        output_shape_ = MaxPooling2D.compute_output_shape(self, input_shape[0])
+        output_shape_keras = MaxPooling2D.compute_output_shape(self, input_shape[0])
         input_dim = input_shape[-1][1]
         if self.mode == ForwardMode.IBP:
-            output_shape = [output_shape_] * 2
+            output_shape = [output_shape_keras] * 2
         elif self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
             x_shape = input_shape[1]
-            w_shape_ = tuple([output_shape_[0], input_dim] + list(output_shape_)[1:])
+            w_shape = tuple([output_shape_keras[0], input_dim] + list(output_shape_keras)[1:])
             if self.mode == ForwardMode.AFFINE:
-                output_shape = [x_shape] + [w_shape_, output_shape_] * 2
+                output_shape = [x_shape] + [w_shape, output_shape_keras] * 2
             else:
-                output_shape = [x_shape] + [output_shape_, w_shape_, output_shape_] * 2
+                output_shape = [x_shape] + [output_shape_keras, w_shape, output_shape_keras] * 2
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
         if self.dc_decomp:
-            output_shape += [output_shape_] * 2
+            output_shape += [output_shape_keras] * 2
 
         return output_shape
 
@@ -176,8 +176,8 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
             raise ValueError(f"Unknown mode {mode}")
 
         if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            l_c_ = K.pool2d(l_c, pool_size, strides, padding, data_format, pool_mode="max")
-            u_c_ = K.pool2d(u_c, pool_size, strides, padding, data_format, pool_mode="max")
+            l_c_out = K.pool2d(l_c, pool_size, strides, padding, data_format, pool_mode="max")
+            u_c_out = K.pool2d(u_c, pool_size, strides, padding, data_format, pool_mode="max")
 
         if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
 
@@ -185,34 +185,34 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
                 u_c = get_upper(x_0, w_u, b_u)
                 l_c = get_lower(x_0, w_l, b_l)
 
-                l_c_ = K.pool2d(l_c, pool_size, strides, padding, data_format, pool_mode="max")
-                u_c_ = K.pool2d(u_c, pool_size, strides, padding, data_format, pool_mode="max")
+                l_c_out = K.pool2d(l_c, pool_size, strides, padding, data_format, pool_mode="max")
+                u_c_out = K.pool2d(u_c, pool_size, strides, padding, data_format, pool_mode="max")
 
             n_in = x_0.shape[-1]
-            w_u_ = K.concatenate([0 * K.expand_dims(u_c_, 1)] * n_in, 1)
-            w_l_ = w_u_
-            b_u_ = u_c_
-            b_l_ = l_c_
+            w_u_out = K.concatenate([0 * K.expand_dims(u_c_out, 1)] * n_in, 1)
+            w_l_out = w_u_out
+            b_u_out = u_c_out
+            b_l_out = l_c_out
 
         if mode == ForwardMode.IBP:
-            output = [u_c_, l_c_]
+            output = [u_c_out, l_c_out]
         elif mode == ForwardMode.HYBRID:
             output = [
                 x_0,
-                u_c_,
-                w_u_,
-                b_u_,
-                l_c_,
-                w_l_,
-                b_l_,
+                u_c_out,
+                w_u_out,
+                b_u_out,
+                l_c_out,
+                w_l_out,
+                b_l_out,
             ]
         elif mode == ForwardMode.AFFINE:
             output = [
                 x_0,
-                w_u_,
-                b_u_,
-                w_l_,
-                b_l_,
+                w_u_out,
+                b_u_out,
+                w_l_out,
+                b_l_out,
             ]
         else:
             raise ValueError(f"Unknown mode {mode}")

@@ -119,8 +119,6 @@ def convert(
 
     if method != ConvertMethod.CROWN:
 
-        ibp_, affine_ = ibp, affine
-
         input_tensors, output, layer_map, forward_map = convert_forward(
             model=model,
             input_tensors=input_tensors,
@@ -129,8 +127,8 @@ def convert(
             input_dim=input_dim,
             dc_decomp=False,
             convex_domain=convex_domain,
-            ibp=ibp_,
-            affine=affine_,
+            ibp=ibp,
+            affine=affine,
             finetune=finetune_forward,
             shared=shared,
             softmax_to_linear=softmax_to_linear,
@@ -192,11 +190,11 @@ def clone(
     if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
 
-    ibp_, affine_ = get_ibp_affine_from_method(method)
+    ibp, affine = get_ibp_affine_from_method(method)
     if final_ibp is None:
-        final_ibp = ibp_
+        final_ibp = ibp
     if final_affine is None:
-        final_affine = affine_
+        final_affine = affine
 
     if isinstance(method, str):
         method = ConvertMethod(method.lower())
@@ -211,8 +209,8 @@ def clone(
     z_tensor, input_tensors = get_input_tensors(
         model=model,
         convex_domain=convex_domain,
-        ibp=ibp_,
-        affine=affine_,
+        ibp=ibp,
+        affine=affine,
     )
 
     _, output, _, _ = convert(
@@ -222,8 +220,8 @@ def clone(
         input_tensors=input_tensors,
         back_bounds=back_bounds,
         method=method,
-        ibp=ibp_,
-        affine=affine_,
+        ibp=ibp,
+        affine=affine,
         input_dim=-1,
         convex_domain=convex_domain,
         finetune=finetune,
@@ -237,13 +235,10 @@ def clone(
         final_affine=final_affine,
     )
 
-    back_bounds_ = []
-    for elem in back_bounds:
-        if isinstance(elem._keras_history.layer, InputLayer):
-            back_bounds_.append(elem)
+    back_bounds_from_inputs = [elem for elem in back_bounds if isinstance(elem._keras_history.layer, InputLayer)]
 
     return DecomonModel(
-        inputs=[z_tensor] + back_bounds_ + extra_inputs,
+        inputs=[z_tensor] + back_bounds_from_inputs + extra_inputs,
         outputs=output,
         convex_domain=convex_domain,
         dc_decomp=False,

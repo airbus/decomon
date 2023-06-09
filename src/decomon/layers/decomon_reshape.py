@@ -75,8 +75,8 @@ class DecomonReshape(DecomonLayer, Reshape):
         nb_tensors = self.nb_tensors
         if self.dc_decomp:
             h, g = inputs[-2:]
-            h_ = op(h)
-            g_ = op(g)
+            h_out = op(h)
+            g_out = op(g)
             nb_tensors -= 2
 
         if self.mode == ForwardMode.HYBRID:
@@ -89,36 +89,36 @@ class DecomonReshape(DecomonLayer, Reshape):
             raise ValueError(f"Unknown mode {self.mode}")
 
         if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            u_c_ = op(u_c)
-            l_c_ = op(l_c)
+            u_c_out = op(u_c)
+            l_c_out = op(l_c)
 
         if self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-            b_u_ = op(b_u)
-            b_l_ = op(b_l)
+            b_u_out = op(b_u)
+            b_l_out = op(b_l)
 
             if len(w_u.shape) == len(b_u.shape):
-                w_u_ = op(w_u)
-                w_l_ = op(w_l)
+                w_u_out = op(w_u)
+                w_l_out = op(w_l)
 
             else:
 
                 def step_func(x: tf.Tensor, _: List[tf.Tensor]) -> Tuple[tf.Tensor, List[tf.Tensor]]:
                     return op(x), _
 
-                w_u_ = K.rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]
-                w_l_ = K.rnn(step_function=step_func, inputs=w_l, initial_states=[], unroll=False)[1]
+                w_u_out = K.rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]
+                w_l_out = K.rnn(step_function=step_func, inputs=w_l, initial_states=[], unroll=False)[1]
 
         if self.mode == ForwardMode.HYBRID:
-            output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+            output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
         elif self.mode == ForwardMode.AFFINE:
-            output = [x_0, w_u_, b_u_, w_l_, b_l_]
+            output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
         elif self.mode == ForwardMode.IBP:
-            output = [u_c_, l_c_]
+            output = [u_c_out, l_c_out]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
         if self.dc_decomp:
-            output += [h_, g_]
+            output += [h_out, g_out]
 
         return output
 
@@ -193,8 +193,8 @@ class DecomonPermute(DecomonLayer, Permute):
         nb_tensors = self.nb_tensors
         if self.dc_decomp:
             h, g = inputs[-2:]
-            h_ = op(h)
-            g_ = op(g)
+            h_out = op(h)
+            g_out = op(g)
             nb_tensors -= 2
 
         if self.mode == ForwardMode.HYBRID:
@@ -207,34 +207,34 @@ class DecomonPermute(DecomonLayer, Permute):
             raise ValueError(f"Unknown mode {self.mode}")
 
         if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            u_c_ = op(u_c)
-            l_c_ = op(l_c)
+            u_c_out = op(u_c)
+            l_c_out = op(l_c)
 
         if self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-            b_u_ = op(b_u)
-            b_l_ = op(b_l)
+            b_u_out = op(b_u)
+            b_l_out = op(b_l)
 
             if len(w_u.shape) == len(b_u.shape):
-                w_u_ = op(w_u)
-                w_l_ = op(w_l)
+                w_u_out = op(w_u)
+                w_l_out = op(w_l)
             else:
 
                 def step_func(x: tf.Tensor, _: List[tf.Tensor]) -> Tuple[tf.Tensor, List[tf.Tensor]]:
                     return op(x), _
 
-                w_u_ = K.rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]
-                w_l_ = K.rnn(step_function=step_func, inputs=w_l, initial_states=[], unroll=False)[1]
+                w_u_out = K.rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]
+                w_l_out = K.rnn(step_function=step_func, inputs=w_l, initial_states=[], unroll=False)[1]
 
         if self.mode == ForwardMode.HYBRID:
-            output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+            output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
         elif self.mode == ForwardMode.AFFINE:
-            output = [x_0, w_u_, b_u_, w_l_, b_l_]
+            output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
         elif self.mode == ForwardMode.IBP:
-            output = [u_c_, l_c_]
+            output = [u_c_out, l_c_out]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
         if self.dc_decomp:
-            output += [h_, g_]
+            output += [h_out, g_out]
 
         return output

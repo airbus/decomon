@@ -49,11 +49,9 @@ def get_grad(x: tf.Tensor, constant: tf.Tensor, W: tf.Tensor, b: tf.Tensor) -> t
         Keras Tensor the gradient of the function (None, n_dim, ...)
     """
     # product W*x + b
-    x_ = K.expand_dims(x, 2)
-    z = K.sum(W * x_, 1) + b
-    grad_ = K.sum(K.expand_dims(-K.sign(constant - K.maximum(constant, z)), 1) * W, 2)  # (None, n_dim, ...)
-
-    return grad_
+    x_reshaped = K.expand_dims(x, 2)
+    z = K.sum(W * x_reshaped, 1) + b
+    return K.sum(K.expand_dims(-K.sign(constant - K.maximum(constant, z)), 1) * W, 2)  # (None, n_dim, ...)
 
 
 def compute_L(W: tf.Tensor) -> tf.Tensor:
@@ -81,20 +79,17 @@ def compute_R(z: tf.Tensor, convex_domain: Dict[str, Any]) -> tf.Tensor:
     """
 
     if len(convex_domain) == 0:
-        # compute the L2 distance z[:, 0], z[:, 1]
-        dist_ = K.sqrt(K.sum(K.pow((z[:, 1] - z[:, 0]) / 2.0, 2), -1))
-    else:
-        convex_domain_type = ConvexDomainType(convex_domain["name"])
-        if convex_domain_type == ConvexDomainType.BOX:
-            dist_ = K.sqrt(K.sum(K.pow((z[:, 1] - z[:, 0]) / 2.0, 2), -1))
-        elif convex_domain_type == ConvexDomainType.BALL and convex_domain["p"] == np.inf:
-            dist_ = K.sqrt(K.sum(K.pow(z - z + convex_domain["eps"], 2), -1))
-        elif convex_domain_type == ConvexDomainType.BALL and convex_domain["p"] == 2:
-            dist_ = convex_domain["eps"] * (0 * z + 1.0)
-        else:
-            raise NotImplementedError()
+        convex_domain = dict(name=ConvexDomainType.BOX)
 
-    return dist_
+    convex_domain_type = ConvexDomainType(convex_domain["name"])
+    if convex_domain_type == ConvexDomainType.BOX:
+        return K.sqrt(K.sum(K.pow((z[:, 1] - z[:, 0]) / 2.0, 2), -1))
+    elif convex_domain_type == ConvexDomainType.BALL and convex_domain["p"] == np.inf:
+        return K.sqrt(K.sum(K.pow(z - z + convex_domain["eps"], 2), -1))
+    elif convex_domain_type == ConvexDomainType.BALL and convex_domain["p"] == 2:
+        return convex_domain["eps"] * (0 * z + 1.0)
+    else:
+        raise NotImplementedError()
 
 
 def get_start_point(z: tf.Tensor, convex_domain: Dict[str, Any]) -> tf.Tensor:
@@ -192,9 +187,9 @@ def grad_descent(
         R = K.expand_dims(R, -1)
         n_dim -= 1
 
-    def step_grad(x_: tf.Tensor, x_k_: List[tf.Tensor]) -> Tuple[tf.Tensor, List[tf.Tensor]]:
+    def step_grad(x: tf.Tensor, inputs_k: List[tf.Tensor]) -> Tuple[tf.Tensor, List[tf.Tensor]]:
 
-        x_k = x_k_[0]
+        x_k = inputs_k[0]
         g_k_0 = get_grad(x_k, constant_0, W_0, b_0)
         g_k_1 = get_grad(x_k, constant_1, W_1, b_1)
         g_k = g_k_0 + g_k_1
@@ -275,11 +270,10 @@ class MultipleConstraint(Constraint):
             self.constraints = [constraint_1]
 
     def __call__(self, w: tf.Tensor) -> tf.Tensor:
-        w_ = w
         for c in self.constraints:
-            w_ = c.__call__(w_)
+            w = c.__call__(w)
 
-        return w_
+        return w
 
 
 class Project_initializer_pos(Initializer):
@@ -290,8 +284,8 @@ class Project_initializer_pos(Initializer):
         self.initializer = initializer
 
     def __call__(self, shape: tf.TensorShape, dtype: Optional[tf.DType] = None, **kwargs: Any) -> tf.Tensor:
-        w_ = self.initializer.__call__(shape, dtype)
-        return K.maximum(0.0, w_)
+        w = self.initializer.__call__(shape, dtype)
+        return K.maximum(0.0, w)
 
 
 class Project_initializer_neg(Initializer):
@@ -302,12 +296,12 @@ class Project_initializer_neg(Initializer):
         self.initializer = initializer
 
     def __call__(self, shape: tf.TensorShape, dtype: Optional[tf.DType] = None, **kwargs: Any) -> tf.Tensor:
-        w_ = self.initializer.__call__(shape, dtype)
-        return K.minimum(0.0, w_)
+        w = self.initializer.__call__(shape, dtype)
+        return K.minimum(0.0, w)
 
 
 def softplus_(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -321,16 +315,16 @@ def softplus_(
 
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensors]
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
     elif mode == ForwardMode.IBP:
-        u_c, l_c = x[:nb_tensors]
+        u_c, l_c = inputs[:nb_tensors]
     elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = x[:nb_tensors]
+        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
     if dc_decomp:
-        h, g = x[-2:]
+        h, g = inputs[-2:]
 
     if mode == ForwardMode.AFFINE:
         upper = get_upper(x_0, w_u, b_u, convex_domain)
@@ -344,29 +338,29 @@ def softplus_(
     else:
         raise ValueError(f"Unknown mode {mode}")
 
-    u_c_ = K.softplus(upper)
-    l_c_ = K.softplus(lower)
+    u_c_out = K.softplus(upper)
+    l_c_out = K.softplus(lower)
 
     if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
 
-        w_u_, b_u_, w_l_, b_l_ = get_linear_softplus_hull(upper=upper, lower=lower, slope=slope, **kwargs)
-        b_u_ = w_u_ * b_u + b_u_
-        b_l_ = w_l_ * b_l + b_l_
-        w_u_ = K.expand_dims(w_u_, 1) * w_u
-        w_l_ = K.expand_dims(w_l_, 1) * w_l
+        w_u_out, b_u_out, w_l_out, b_l_out = get_linear_softplus_hull(upper=upper, lower=lower, slope=slope, **kwargs)
+        b_u_out = w_u_out * b_u + b_u_out
+        b_l_out = w_l_out * b_l + b_l_out
+        w_u_out = K.expand_dims(w_u_out, 1) * w_u
+        w_l_out = K.expand_dims(w_l_out, 1) * w_l
 
     if mode == ForwardMode.IBP:
-        return [u_c_, l_c_]
+        return [u_c_out, l_c_out]
     elif mode == ForwardMode.AFFINE:
-        return [x_0, w_u_, b_u_, w_l_, b_l_]
+        return [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
     elif mode == ForwardMode.HYBRID:
-        return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+        return [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
 
 def sum(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     axis: int = -1,
     dc_decomp: bool = False,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -377,33 +371,33 @@ def sum(
         raise NotImplementedError()
     mode = ForwardMode(mode)
     if mode == ForwardMode.IBP:
-        return [K.sum(x[0], axis=axis), K.sum(x[1], axis=axis)]
+        return [K.sum(inputs[0], axis=axis), K.sum(inputs[1], axis=axis)]
     elif mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
         if mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = x
+            x_0, w_u, b_u, w_l, b_l = inputs
         else:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
-            u_c_ = K.sum(u_c, axis=axis)
-            l_c_ = K.sum(l_c, axis=axis)
+            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
+            u_c_out = K.sum(u_c, axis=axis)
+            l_c_out = K.sum(l_c, axis=axis)
 
         axis_w = -1
         if axis != -1:
             axis_w = axis + 1
-        w_u_ = K.sum(w_u, axis=axis_w)
-        w_l_ = K.sum(w_l, axis=axis_w)
-        b_u_ = K.sum(b_u, axis=axis)
-        b_l_ = K.sum(b_l, axis=axis)
+        w_u_out = K.sum(w_u, axis=axis_w)
+        w_l_out = K.sum(w_l, axis=axis_w)
+        b_u_out = K.sum(b_u, axis=axis)
+        b_l_out = K.sum(b_l, axis=axis)
 
         if mode == ForwardMode.AFFINE:
-            return [x_0, w_u_, b_u_, w_l_, b_l_]
+            return [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
         else:
-            return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+            return [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
 
 def frac_pos(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -417,45 +411,45 @@ def frac_pos(
     mode = ForwardMode(mode)
     # frac_pos is convex for positive values
     if mode == ForwardMode.IBP:
-        u_c, l_c = x
-        u_c_ = 1.0 / l_c
-        l_c_ = 1.0 / u_c
-        return [u_c_, l_c_]
+        u_c, l_c = inputs
+        u_c_out = 1.0 / l_c
+        l_c_out = 1.0 / u_c
+        return [u_c_out, l_c_out]
     elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = x
+        x_0, w_u, b_u, w_l, b_l = inputs
         u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
         l_c = get_lower(x_0, w_u, b_u, convex_domain=convex_domain)
     elif mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
     else:
         raise ValueError(f"Mode {mode} unknown")
 
-    u_c_ = 1.0 / l_c
-    l_c_ = 1.0 / u_c
+    u_c_out = 1.0 / l_c
+    l_c_out = 1.0 / u_c
 
-    w_u_0 = (u_c_ - l_c_) / K.maximum(u_c - l_c, K.epsilon())
-    b_u_0 = l_c_ - w_u_0 * l_c
+    w_u_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, K.epsilon())
+    b_u_0 = l_c_out - w_u_0 * l_c
 
     y = (u_c + l_c) / 2.0
     b_l_0 = 2.0 / y
     w_l_0 = -1 / y**2
 
-    w_u_ = w_u_0[:, None] * w_l
-    b_u_ = b_u_0 * b_l + b_u_0
-    w_l_ = w_l_0[:, None] * w_u
-    b_l_ = b_l_0 * b_u + b_l_0
+    w_u_out = w_u_0[:, None] * w_l
+    b_u_out = b_u_0 * b_l + b_u_0
+    w_l_out = w_l_0[:, None] * w_u
+    b_l_out = b_l_0 * b_u + b_l_0
 
     if mode == ForwardMode.AFFINE:
-        return [x_0, w_u_, b_u_, w_l_, b_l_]
+        return [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
     elif mode == ForwardMode.HYBRID:
-        return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+        return [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
         raise ValueError(f"Mode {mode} unknown")
 
 
 # convex hull of the maximum between two functions
 def max_(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -466,7 +460,7 @@ def max_(
     """LiRPA implementation of max(x, axis)
 
     Args:
-        x: list of tensors
+        inputs: list of tensors
         dc_decomp: boolean that indicates
         convex_domain: the type of convex domain
         axis: axis to perform the maximum
@@ -479,26 +473,26 @@ def max_(
     if convex_domain is None:
         convex_domain = {}
     if dc_decomp:
-        h, g = x[-2:]
+        h, g = inputs[-2:]
     mode = ForwardMode(mode)
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
 
     if mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensor]
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
     elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = x[:nb_tensor]
+        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
     elif mode == ForwardMode.IBP:
-        u_c, l_c = x[:nb_tensor]
+        u_c, l_c = inputs[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
     if mode == ForwardMode.IBP and not dc_decomp:
-        u_c_ = K.max(u_c, axis=axis)
-        l_c_ = K.max(l_c, axis=axis)
+        u_c_out = K.max(u_c, axis=axis)
+        l_c_out = K.max(l_c, axis=axis)
 
-        return [u_c_, l_c_]
+        return [u_c_out, l_c_out]
 
-    input_shape = K.int_shape(x[-1])
+    input_shape = K.int_shape(inputs[-1])
     max_dim = input_shape[axis]
 
     # do some transpose so that the last axis is also at the end
@@ -533,7 +527,7 @@ def max_(
         if finetune:
             key = [e for e in kwargs.keys()][0]
             params = kwargs[key][0]
-            params_ = [e[0] for e in tf.split(params[None], max_dim, axis)]
+            params_split = [e[0] for e in tf.split(params[None], max_dim, axis)]
 
     output_tmp = []
     if mode == ForwardMode.HYBRID:
@@ -551,7 +545,7 @@ def max_(
             output_i = [x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
             if finetune:
                 output_tmp = maximum(
-                    output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune, finetune_params=params_[i]
+                    output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune, finetune_params=params_split[i]
                 )
             else:
                 output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
@@ -579,7 +573,7 @@ def max_(
             output_i = [x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
             if finetune:
                 output_tmp = maximum(
-                    output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune, finetune_params=params_[i]
+                    output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune, finetune_params=params_split[i]
                 )
             else:
                 output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
@@ -588,50 +582,50 @@ def max_(
 
     # reduce the dimension
     if mode == ForwardMode.IBP:
-        u_c_, l_c_ = output_tmp[:nb_tensor]
+        u_c_out, l_c_out = output_tmp[:nb_tensor]
     elif mode == ForwardMode.AFFINE:
-        _, w_u_, b_u_, w_l_, b_l_ = output_tmp[:nb_tensor]
+        _, w_u_out, b_u_out, w_l_out, b_l_out = output_tmp[:nb_tensor]
     elif mode == ForwardMode.HYBRID:
-        _, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = output_tmp[:nb_tensor]
+        _, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out = output_tmp[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
     if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-        u_c_ = K.squeeze(u_c_, axis)
-        l_c_ = K.squeeze(l_c_, axis)
+        u_c_out = K.squeeze(u_c_out, axis)
+        l_c_out = K.squeeze(l_c_out, axis)
     if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-        b_u_ = K.squeeze(b_u_, axis)
-        b_l_ = K.squeeze(b_l_, axis)
+        b_u_out = K.squeeze(b_u_out, axis)
+        b_l_out = K.squeeze(b_l_out, axis)
         if axis == -1:
-            w_u_ = K.squeeze(w_u_, axis)
-            w_l_ = K.squeeze(w_l_, axis)
+            w_u_out = K.squeeze(w_u_out, axis)
+            w_l_out = K.squeeze(w_l_out, axis)
         else:
-            w_u_ = K.squeeze(w_u_, axis + 1)
-            w_l_ = K.squeeze(w_l_, axis + 1)
+            w_u_out = K.squeeze(w_u_out, axis + 1)
+            w_l_out = K.squeeze(w_l_out, axis + 1)
 
     if dc_decomp:
-        g_ = K.sum(g, axis=axis)
-        h_ = K.max(h + g, axis=axis) - g_
+        g_out = K.sum(g, axis=axis)
+        h_out = K.max(h + g, axis=axis) - g_out
 
     if mode == ForwardMode.HYBRID:
 
-        upper_ = get_upper(x_0, w_u_, b_u_, convex_domain)
-        u_c_ = K.minimum(upper_, u_c_)
+        upper = get_upper(x_0, w_u_out, b_u_out, convex_domain)
+        u_c_out = K.minimum(upper, u_c_out)
 
-        lower_ = get_lower(x_0, w_l_, b_l_, convex_domain)
-        l_c_ = K.maximum(lower_, l_c_)
+        lower = get_lower(x_0, w_l_out, b_l_out, convex_domain)
+        l_c_out = K.maximum(lower, l_c_out)
 
     if mode == ForwardMode.HYBRID:
-        output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+        output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     elif mode == ForwardMode.IBP:
-        output = [u_c_, l_c_]
+        output = [u_c_out, l_c_out]
     elif mode == ForwardMode.AFFINE:
-        output = [x_0, w_u_, b_u_, w_l_, b_l_]
+        output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
     if dc_decomp:
-        output += [h_, g_]
+        output += [h_out, g_out]
 
     return output
 
@@ -720,10 +714,10 @@ def multiply(
     # xy >= x_U*y + x*y_U - x_U*y_U
 
     if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-        u_c_0_ = K.maximum(u0 * u1, u0 * l1) + K.maximum(u0 * l1, l0 * l1) - u0 * l1
-        u_c_1_ = K.maximum(u1 * u0, u1 * l0) + K.maximum(u1 * l0, l1 * l0) - u1 * l0
-        u_c_ = K.minimum(u_c_0_, u_c_1_)
-        l_c_ = K.minimum(l0 * l1, l0 * u1) + K.minimum(l0 * l1, u0 * l1) - l0 * l1
+        u_c_0_out = K.maximum(u0 * u1, u0 * l1) + K.maximum(u0 * l1, l0 * l1) - u0 * l1
+        u_c_1_out = K.maximum(u1 * u0, u1 * l0) + K.maximum(u1 * l0, l1 * l0) - u1 * l0
+        u_c_out = K.minimum(u_c_0_out, u_c_1_out)
+        l_c_out = K.minimum(l0 * l1, l0 * u1) + K.minimum(l0 * l1, u0 * l1) - l0 * l1
 
     if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
         # xy <= x_u * y + x * y_L - xU * y_L
@@ -732,33 +726,37 @@ def multiply(
 
         cy_l_pos = K.maximum(l1, 0.0)
         cy_l_neg = K.minimum(l1, 0.0)
-        w_u_ = cx_u_pos[:, None] * w_u1 + cx_u_neg[:, None] * w_l1 + cy_l_pos[:, None] * w_u0 + cy_l_neg[:, None] * w_l0
-        b_u_ = cx_u_pos * b_u1 + cx_u_neg * b_l1 + cy_l_pos * b_u0 + cy_l_neg * b_l0 - u0 * l1
+        w_u_out = (
+            cx_u_pos[:, None] * w_u1 + cx_u_neg[:, None] * w_l1 + cy_l_pos[:, None] * w_u0 + cy_l_neg[:, None] * w_l0
+        )
+        b_u_out = cx_u_pos * b_u1 + cx_u_neg * b_l1 + cy_l_pos * b_u0 + cy_l_neg * b_l0 - u0 * l1
 
         # xy >= x_U*y + x*y_U - x_U*y_U
         cx_l_pos = K.maximum(l0, 0.0)
         cx_l_neg = K.minimum(l0, 0.0)
 
-        w_l_ = cx_l_pos[:, None] * w_l1 + cx_l_neg[:, None] * w_u1 + cy_l_pos[:, None] * w_l0 + cy_l_neg[:, None] * w_u0
-        b_l_ = cx_l_pos * b_l1 + cx_l_neg * b_u1 + cy_l_pos * b_l0 + cy_l_neg * b_u0 - l0 * l1
+        w_l_out = (
+            cx_l_pos[:, None] * w_l1 + cx_l_neg[:, None] * w_u1 + cy_l_pos[:, None] * w_l0 + cy_l_neg[:, None] * w_u0
+        )
+        b_l_out = cx_l_pos * b_l1 + cx_l_neg * b_u1 + cy_l_pos * b_l0 + cy_l_neg * b_u0 - l0 * l1
 
     if mode == ForwardMode.IBP:
-        return [u_c_, l_c_]
+        return [u_c_out, l_c_out]
     elif mode == ForwardMode.AFFINE:
-        return [x, w_u_, b_u_, w_l_, b_l_]
+        return [x, w_u_out, b_u_out, w_l_out, b_l_out]
     elif mode == ForwardMode.HYBRID:
-        return [x, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+        return [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
 
 def permute_dimensions(
-    x: List[tf.Tensor], axis: int, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, axis_perm: int = 1
+    inputs: List[tf.Tensor], axis: int, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, axis_perm: int = 1
 ) -> List[tf.Tensor]:
     """LiRPA implementation of (element-wise) permute(x,axis)
 
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         axis: axis on which we apply the permutation
         mode: type of Forward propagation (ibp, affine, or hybrid)
         axis_perm: see DecomonPermute operator
@@ -767,23 +765,23 @@ def permute_dimensions(
 
     """
 
-    if len(x[0].shape) <= 2:
-        return x
+    if len(inputs[0].shape) <= 2:
+        return inputs
     mode = ForwardMode(mode)
-    index = np.arange(len(x[0].shape))
+    index = np.arange(len(inputs[0].shape))
     index = np.insert(np.delete(index, axis), axis_perm, axis)
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.IBP:
         return [
-            K.permute_dimensions(x[2], index),
-            K.permute_dimensions(x[3], index),
+            K.permute_dimensions(inputs[2], index),
+            K.permute_dimensions(inputs[3], index),
         ]
     else:
-        index_w = np.arange(len(x[0].shape) + 1)
+        index_w = np.arange(len(inputs[0].shape) + 1)
         index_w = np.insert(np.delete(index_w, axis), axis_perm + 1, axis)
 
         if mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = x[:nb_tensor]
+            x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
             return [
                 x_0,
                 K.permute_dimensions(w_u, index_w),
@@ -793,14 +791,14 @@ def permute_dimensions(
             ]
 
         elif mode == ForwardMode.HYBRID:
-            x_0, u, w_u, b_u, l, w_l, b_l = x
+            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
 
             return [
                 x_0,
-                K.permute_dimensions(u, index),
+                K.permute_dimensions(u_c, index),
                 K.permute_dimensions(w_u, index_w),
                 K.permute_dimensions(b_u, index),
-                K.permute_dimensions(l, index),
+                K.permute_dimensions(l_c, index),
                 K.permute_dimensions(w_l, index_w),
                 K.permute_dimensions(b_l, index),
             ]
@@ -824,18 +822,18 @@ def broadcast(inputs: List[tf.Tensor], n: int, axis: int, mode: Union[str, Forwa
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     mode = ForwardMode(mode)
     if mode == ForwardMode.IBP:
-        u, l = inputs[:nb_tensor]
+        u_c, l_c = inputs[:nb_tensor]
     elif mode == ForwardMode.AFFINE:
         x, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
     elif mode == ForwardMode.HYBRID:
-        x, u, w_u, b_u, l, w_l, b_l = inputs[:nb_tensor]
+        x, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
     if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
         for _ in range(n):
-            u = K.expand_dims(u, axis)
-            l = K.expand_dims(l, axis)
+            u_c = K.expand_dims(u_c, axis)
+            l_c = K.expand_dims(l_c, axis)
 
     if axis != -1:
         axis_w = axis + 1
@@ -850,23 +848,23 @@ def broadcast(inputs: List[tf.Tensor], n: int, axis: int, mode: Union[str, Forwa
             w_l = K.expand_dims(w_l, axis_w)
 
     if mode == ForwardMode.IBP:
-        output = [u, l]
+        output = [u_c, l_c]
     elif mode == ForwardMode.AFFINE:
         output = [x, w_u, b_u, w_l, b_l]
     elif mode == ForwardMode.HYBRID:
-        output = [x, u, w_u, b_u, l, w_l, b_l]
+        output = [x, u_c, w_u, b_u, l_c, w_l, b_l]
     else:
         raise ValueError(f"Unknown mode {mode}")
     return output
 
 
 def split(
-    input_: List[tf.Tensor], axis: int = -1, mode: Union[str, ForwardMode] = ForwardMode.HYBRID
+    inputs: List[tf.Tensor], axis: int = -1, mode: Union[str, ForwardMode] = ForwardMode.HYBRID
 ) -> List[tf.Tensor]:
     """LiRPA implementation of split
 
     Args:
-        input_
+        inputs
         axis
         mode
 
@@ -876,42 +874,42 @@ def split(
     mode = ForwardMode(mode)
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.IBP:
-        u_, l_ = input_[:nb_tensor]
+        u_c, l_c = inputs[:nb_tensor]
     elif mode == ForwardMode.HYBRID:
-        x_, u_, w_u_, b_u_, l_, w_l_, b_l_ = input_[:nb_tensor]
+        x, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
     elif mode == ForwardMode.AFFINE:
-        x_, w_u_, b_u_, w_l_, b_l_ = input_[:nb_tensor]
+        x, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
     if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-        u_list = tf.split(u_, 1, axis=axis)
-        l_list = tf.split(l_, 1, axis=axis)
+        u_list = tf.split(u_c, 1, axis=axis)
+        l_list = tf.split(l_c, 1, axis=axis)
         n = len(u_list)
 
     if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-        b_u_list = tf.split(b_u_, 1, axis=axis)
-        b_l_list = tf.split(b_l_, 1, axis=axis)
+        b_u_list = tf.split(b_u, 1, axis=axis)
+        b_l_list = tf.split(b_l, 1, axis=axis)
         n = len(b_u_list)
 
         if axis != -1:
             axis += 1
-        w_u_list = tf.split(w_u_, 1, axis=axis)
-        w_l_list = tf.split(w_l_, 1, axis=axis)
+        w_u_list = tf.split(w_u, 1, axis=axis)
+        w_l_list = tf.split(w_l, 1, axis=axis)
 
     if mode == ForwardMode.IBP:
         outputs = [[u_list[i], l_list[i]] for i in range(n)]
     elif mode == ForwardMode.AFFINE:
-        outputs = [[x_, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]] for i in range(n)]
+        outputs = [[x, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]] for i in range(n)]
     elif mode == ForwardMode.HYBRID:
-        outputs = [[x_, u_list[i], w_u_list[i], b_u_list[i], l_list[i], w_l_list[i], b_l_list[i]] for i in range(n)]
+        outputs = [[x, u_list[i], w_u_list[i], b_u_list[i], l_list[i], w_l_list[i], b_l_list[i]] for i in range(n)]
     else:
         raise ValueError(f"Unknown mode {mode}")
     return outputs
 
 
 def sort(
-    input_: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     axis: int = -1,
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
@@ -920,7 +918,7 @@ def sort(
     """LiRPA implementation of sort by selection
 
     Args:
-        input_
+        inputs
         axis
         dc_decomp
         convex_domain
@@ -940,31 +938,31 @@ def sort(
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
 
     if mode == ForwardMode.IBP:
-        u_c, l_c = input_[:nb_tensor]
+        u_c, l_c = inputs[:nb_tensor]
     elif mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = input_[:nb_tensor]
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
     elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = input_[:nb_tensor]
+        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
     if axis == -1:
-        n = input_[-1].shape[-1]
-        axis = len(input_[-1].shape) - 1
+        n = inputs[-1].shape[-1]
+        axis = len(inputs[-1].shape) - 1
     else:
-        n = input_[-1].shape[axis]
+        n = inputs[-1].shape[axis]
 
     # what about splitting elements
-    op = lambda x: tf.split(x, n, axis=axis)
+    op_split = lambda x: tf.split(x, n, axis=axis)
     if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-        u_c_list = op(u_c)
-        l_c_list = op(l_c)
+        u_c_list = op_split(u_c)
+        l_c_list = op_split(l_c)
 
     if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
         w_u_list = tf.split(w_u, n, axis=axis + 1)
-        b_u_list = op(b_u)
+        b_u_list = op_split(b_u)
         w_l_list = tf.split(w_l, n, axis=axis + 1)
-        b_l_list = op(b_l)
+        b_l_list = op_split(b_l)
 
     def get_input(mode: ForwardMode, i: int) -> List[tf.Tensor]:
         if mode == ForwardMode.IBP:
@@ -976,13 +974,13 @@ def sort(
         else:
             raise ValueError(f"Unknown mode {mode}")
 
-    def set_input(input_: List[tf.Tensor], mode: ForwardMode, i: int) -> None:
+    def set_input(inputs: List[tf.Tensor], mode: ForwardMode, i: int) -> None:
         if mode == ForwardMode.IBP:
-            u_i, l_i = input_
+            u_i, l_i = inputs
         elif mode == ForwardMode.AFFINE:
-            _, w_u_i, b_u_i, w_l_i, b_l_i = input_
+            _, w_u_i, b_u_i, w_l_i, b_l_i = inputs
         elif mode == ForwardMode.HYBRID:
-            _, u_i, w_u_i, b_u_i, l_i, w_l_i, b_l_i = input_
+            _, u_i, w_u_i, b_u_i, l_i, w_l_i, b_l_i = inputs
         else:
             raise ValueError(f"Unknown mode {mode}")
 
@@ -1007,30 +1005,30 @@ def sort(
             set_input(output_a, mode, j)
             set_input(output_b, mode, i)
 
-    op_ = lambda x: K.concatenate(x, axis)
+    op_concatenate = lambda x: K.concatenate(x, axis)
     # update the inputs
     if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-        u_c_ = op_(u_c_list)
-        l_c_ = op_(l_c_list)
+        u_c_out = op_concatenate(u_c_list)
+        l_c_out = op_concatenate(l_c_list)
     if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-        w_u_ = K.concatenate(w_u_list, axis + 1)
-        w_l_ = K.concatenate(w_l_list, axis + 1)
-        b_u_ = op_(b_u_list)
-        b_l_ = op_(b_l_list)
+        w_u_out = K.concatenate(w_u_list, axis + 1)
+        w_l_out = K.concatenate(w_l_list, axis + 1)
+        b_u_out = op_concatenate(b_u_list)
+        b_l_out = op_concatenate(b_l_list)
 
     if mode == ForwardMode.IBP:
-        output = [u_c_, l_c_]
+        output = [u_c_out, l_c_out]
     elif mode == ForwardMode.AFFINE:
-        output = [x_0, w_u_, b_u_, w_l_, b_l_]
+        output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
     elif mode == ForwardMode.HYBRID:
-        output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+        output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
         raise ValueError(f"Unknown mode {mode}")
     return output
 
 
 def pow(
-    inputs_: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -1038,7 +1036,7 @@ def pow(
     """LiRPA implementation of pow(x )=x**2
 
     Args:
-        inputs_
+        inputs
         dc_decomp
         convex_domain
         mode
@@ -1049,11 +1047,11 @@ def pow(
 
     if convex_domain is None:
         convex_domain = {}
-    return multiply(inputs_, inputs_, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
+    return multiply(inputs, inputs, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
 def abs(
-    inputs_: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -1061,7 +1059,7 @@ def abs(
     """LiRPA implementation of |x|
 
     Args:
-        inputs_
+        inputs
         dc_decomp
         convex_domain
         mode
@@ -1072,16 +1070,16 @@ def abs(
 
     if convex_domain is None:
         convex_domain = {}
-    inputs_0 = relu_(inputs_, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
+    inputs_0 = relu_(inputs, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
     inputs_1 = minus(
-        relu_(minus(inputs_, mode=mode), dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode), mode=mode
+        relu_(minus(inputs, mode=mode), dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode), mode=mode
     )
 
     return add(inputs_0, inputs_1, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
 
 
 def frac_pos_hull(
-    inputs_: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -1089,7 +1087,7 @@ def frac_pos_hull(
     """LiRPA implementation of 1/x for x>0
 
     Args:
-        inputs_
+        inputs
         dc_decomp
         convex_domain
         mode
@@ -1106,23 +1104,23 @@ def frac_pos_hull(
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
 
     if mode == ForwardMode.IBP:
-        u_c, l_c = inputs_[:nb_tensor]
+        u_c, l_c = inputs[:nb_tensor]
     elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = inputs_[:nb_tensor]
+        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
     elif mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs_[:nb_tensor]
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
     if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-        u_c_ = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
-        l_c_ = get_lower(x_0, w_u, b_u, convex_domain=convex_domain)
+        u_c_affine = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
+        l_c_affine = get_lower(x_0, w_u, b_u, convex_domain=convex_domain)
 
         if mode == ForwardMode.AFFINE:
-            u_c = u_c_
-            l_c = l_c_
+            u_c = u_c_affine
+            l_c = l_c_affine
         else:
-            u_c = K.minimum(u_c_, u_c)
-            l_c = K.maximum(l_c, l_c_)
+            u_c = K.minimum(u_c_affine, u_c)
+            l_c = K.maximum(l_c, l_c_affine)
 
     l_c = K.maximum(l_c, 1.0)
     z = (u_c + l_c) / 2.0
@@ -1136,7 +1134,7 @@ def frac_pos_hull(
 
 # convex hull for min
 def min_(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -1147,7 +1145,7 @@ def min_(
     """LiRPA implementation of min(x, axis=axis)
 
     Args:
-        x
+        inputs
         dc_decomp
         convex_domain
         mode
@@ -1161,7 +1159,7 @@ def min_(
         convex_domain = {}
     return minus(
         max_(
-            minus(x, mode=mode),
+            minus(inputs, mode=mode),
             dc_decomp=dc_decomp,
             convex_domain=convex_domain,
             mode=mode,
@@ -1174,7 +1172,7 @@ def min_(
 
 
 def expand_dims(
-    inputs_: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis: int = -1,
@@ -1183,11 +1181,11 @@ def expand_dims(
     mode = ForwardMode(mode)
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.IBP:
-        u_c, l_c = inputs_[:nb_tensor]
+        u_c, l_c = inputs[:nb_tensor]
     elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = inputs_[:nb_tensor]
+        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
     elif mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs_[:nb_tensor]
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
@@ -1200,22 +1198,22 @@ def expand_dims(
     op = lambda t: K.expand_dims(t, axis)
 
     if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-        u_c_ = op(u_c)
-        l_c_ = op(l_c)
+        u_c_out = op(u_c)
+        l_c_out = op(l_c)
 
     if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
 
-        b_u_ = op(b_u)
-        b_l_ = op(b_l)
-        w_u_ = K.expand_dims(w_u, axis_w)
-        w_l_ = K.expand_dims(w_l, axis_w)
+        b_u_out = op(b_u)
+        b_l_out = op(b_l)
+        w_u_out = K.expand_dims(w_u, axis_w)
+        w_l_out = K.expand_dims(w_l, axis_w)
 
     if mode == ForwardMode.IBP:
-        output = [u_c_, l_c_]
+        output = [u_c_out, l_c_out]
     elif mode == ForwardMode.AFFINE:
-        output = [x_0, w_u_, b_u_, w_l_, b_l_]
+        output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
     elif mode == ForwardMode.HYBRID:
-        output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+        output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
@@ -1223,7 +1221,7 @@ def expand_dims(
 
 
 def log(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -1232,7 +1230,7 @@ def log(
     """Exponential activation function.
 
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: the type of convex input domain
         mode: type of Forward propagation (ibp, affine, or hybrid)
@@ -1248,43 +1246,43 @@ def log(
         raise NotImplementedError()
     mode = ForwardMode(mode)
     if mode == ForwardMode.IBP:
-        u_c, l_c = x
+        u_c, l_c = inputs
         return [K.log(u_c), K.log(l_c)]
     elif mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
         if mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = x
+            x_0, w_u, b_u, w_l, b_l = inputs
             u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
             l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
             l_c = K.maximum(K.cast(K.epsilon(), dtype=l_c.dtype), l_c)
         else:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
+            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
 
-        u_c_ = K.log(u_c)
-        l_c_ = K.log(l_c)
+        u_c_out = K.log(u_c)
+        l_c_out = K.log(l_c)
 
         y = (u_c + l_c) / 2.0
 
-        w_l_0 = (u_c_ - l_c_) / K.maximum(u_c - l_c, K.epsilon())
-        b_l_0 = l_c_ - w_l_0 * l_c
+        w_l_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, K.epsilon())
+        b_l_0 = l_c_out - w_l_0 * l_c
 
         w_u_0 = 1 / y
         b_u_0 = K.log(y) - 1
 
-        w_u_ = w_u_0[:, None] * w_u
-        b_u_ = w_u_0 * b_u + b_u_0
-        w_l_ = w_l_0[:, None] * w_l
-        b_l_ = w_l_0 * b_l + b_l_0
+        w_u_out = w_u_0[:, None] * w_u
+        b_u_out = w_u_0 * b_u + b_u_0
+        w_l_out = w_l_0[:, None] * w_l
+        b_l_out = w_l_0 * b_l + b_l_0
 
         if mode == ForwardMode.AFFINE:
-            return [x_0, w_u_, b_u_, w_l_, b_l_]
+            return [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
         else:
-            return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+            return [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
 
 def exp(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     convex_domain: Optional[Dict[str, Any]] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -1294,7 +1292,7 @@ def exp(
     """Exponential activation function.
 
     Args:
-        x: list of input tensors
+        inputs: list of input tensors
         dc_decomp: boolean that indicates
         convex_domain: the type of convex input domain
         mode: type of Forward propagation (ibp, affine, or hybrid)
@@ -1311,34 +1309,34 @@ def exp(
         raise NotImplementedError()
     mode = ForwardMode(mode)
     if mode == ForwardMode.IBP:
-        return [K.exp(e) for e in x]
+        return [K.exp(e) for e in inputs]
     elif mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
         if mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = x
+            x_0, w_u, b_u, w_l, b_l = inputs
             u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
             l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
         else:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
+            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
 
-        u_c_ = K.exp(u_c)
-        l_c_ = K.exp(l_c)
+        u_c_out = K.exp(u_c)
+        l_c_out = K.exp(l_c)
 
         y = (u_c + l_c) / 2.0  # do finetuneting
 
-        w_u_0 = (u_c_ - l_c_) / K.maximum(u_c - l_c, K.epsilon())
-        b_u_0 = l_c_ - w_u_0 * l_c
+        w_u_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, K.epsilon())
+        b_u_0 = l_c_out - w_u_0 * l_c
 
         w_l_0 = K.exp(y)
         b_l_0 = w_l_0 * (1 - y)
 
-        w_u_ = w_u_0[:, None] * w_u
-        b_u_ = w_u_0 * b_u + b_u_0
-        w_l_ = w_l_0[:, None] * w_l
-        b_l_ = w_l_0 * b_l + b_l_0
+        w_u_out = w_u_0[:, None] * w_u
+        b_u_out = w_u_0 * b_u + b_u_0
+        w_l_out = w_l_0[:, None] * w_l
+        b_l_out = w_l_0 * b_l + b_l_0
 
         if mode == ForwardMode.AFFINE:
-            return [x_0, w_u_, b_u_, w_l_, b_l_]
+            return [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
         else:
-            return [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+            return [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
         raise ValueError(f"Unknown mode {mode}")

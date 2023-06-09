@@ -15,14 +15,14 @@ class Fuse(Layer):
         super().__init__(**kwargs)
         self.mode = ForwardMode(mode)
 
-    def call(self, inputs_: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        inputs = inputs_[:-4]
-        backward_bounds = inputs_[-4:]
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+        inputs_wo_backward_bounds = inputs[:-4]
+        backward_bounds = inputs[-4:]
 
         if self.mode == ForwardMode.AFFINE:
-            x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs
+            x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs_wo_backward_bounds
         elif self.mode == ForwardMode.HYBRID:
-            x_0, u_c, w_f_u, b_f_u, l_c, w_f_l, b_f_l = inputs
+            x_0, u_c, w_f_u, b_f_u, l_c, w_f_l, b_f_l = inputs_wo_backward_bounds
         else:
             return backward_bounds
 
@@ -40,29 +40,29 @@ class Convert2BackwardMode(Layer):
         self.mode = ForwardMode(mode)
         self.convex_domain = convex_domain
 
-    def call(self, inputs_: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        inputs = inputs_[:-4]
-        backward_bounds = inputs_[-4:]
-        w_out_u, b_out_u, w_out_l, b_out_l = backward_bounds
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+        inputs_wo_backward_bounds = inputs[:-4]
+        backward_bounds = inputs[-4:]
+        w_u_out, b_u_out, w_l_out, b_l_out = backward_bounds
 
         if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-            x_0 = inputs[0]
+            x_0 = inputs_wo_backward_bounds[0]
         else:
-            u_c, l_c = inputs
+            u_c, l_c = inputs_wo_backward_bounds
             x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
 
         if self.mode == ForwardMode.AFFINE:
             return [x_0] + backward_bounds
 
         elif self.mode == ForwardMode.IBP:
-            u_c_ = get_upper(x_0, w_out_u, b_out_u, convex_domain={})
-            l_c_ = get_lower(x_0, w_out_l, b_out_l, convex_domain={})
-            return [u_c_, l_c_]
+            u_c_out = get_upper(x_0, w_u_out, b_u_out, convex_domain={})
+            l_c_out = get_lower(x_0, w_l_out, b_l_out, convex_domain={})
+            return [u_c_out, l_c_out]
 
         elif self.mode == ForwardMode.HYBRID:
-            u_c_ = get_upper(x_0, w_out_u, b_out_u, convex_domain=self.convex_domain)
-            l_c_ = get_lower(x_0, w_out_l, b_out_l, convex_domain=self.convex_domain)
-            return [x_0, u_c_, w_out_u, b_out_u, l_c_, w_out_l, b_out_l]
+            u_c_out = get_upper(x_0, w_u_out, b_u_out, convex_domain=self.convex_domain)
+            l_c_out = get_lower(x_0, w_l_out, b_l_out, convex_domain=self.convex_domain)
+            return [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
 
         else:
             raise ValueError(f"Unknwon mode {self.mode}")
@@ -120,19 +120,19 @@ class Convert2Mode(Layer):
         self.mode_to = ForwardMode(mode_to)
         self.convex_domain = convex_domain
 
-    def call(self, inputs_: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         mode_from = self.mode_from
         mode_to = self.mode_to
         convex_domain = self.convex_domain
 
         if mode_from == mode_to:
-            return inputs_
+            return inputs
 
         if mode_from in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-            x_0 = inputs_[0]
+            x_0 = inputs[0]
         else:
-            u_c, l_c = inputs_
+            u_c, l_c = inputs
             if mode_to in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
                 x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
                 z_value = K.cast(0.0, u_c.dtype)
@@ -144,14 +144,14 @@ class Convert2Mode(Layer):
                 b_l = l_c
 
         if mode_from == ForwardMode.AFFINE:
-            _, w_u, b_u, w_l, b_l = inputs_
+            _, w_u, b_u, w_l, b_l = inputs
             if mode_to in [ForwardMode.IBP, ForwardMode.HYBRID]:
                 u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
                 l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
         elif mode_from == ForwardMode.IBP:
-            u_c, l_c = inputs_
+            u_c, l_c = inputs
         elif mode_from == ForwardMode.HYBRID:
-            _, u_c, w_u, b_u, l_c, w_l, b_l = inputs_
+            _, u_c, w_u, b_u, l_c, w_l, b_l = inputs
         else:
             raise ValueError(f"Unknwon mode {self.mode}")
 

@@ -86,15 +86,15 @@ def get_input_tensors(
     for input_layer in model._input_layers:
         if len(input_layer.input_shape) > 1:
             raise ValueError(f"Expected one input tensor but got {len(input_layer.input_shape)}")
-        input_shape_vec_ = input_layer.input_shape[0]
-        input_shape_ = tuple(list(input_shape_vec_)[1:])
+        input_shape_vec_default = input_layer.input_shape[0]
+        input_shape_default = tuple(list(input_shape_vec_default)[1:])
 
         if input_shape_vec is None:
-            input_shape_vec = input_shape_vec_
+            input_shape_vec = input_shape_vec_default
         if input_shape is None:
-            input_shape = input_shape_
+            input_shape = input_shape_default
         else:
-            if not np.allclose(input_shape, input_shape_):
+            if not np.allclose(input_shape, input_shape_default):
                 raise ValueError("Expected that every input layers use the same input_tensor")
 
     input_shape_x: Tuple[int, ...]
@@ -140,22 +140,22 @@ def get_input_tensors(
             o_value = K.cast(1.0, model.layers[0].dtype)
 
             def get_bounds(z: tf.Tensor) -> List[tf.Tensor]:
-                output = []
+                outputs = []
                 if affine:
                     W = tf.linalg.diag(z_value * z + o_value)
                     b = z_value * z
-                    output += [W, b]
+                    outputs += [W, b]
                 if ibp:
-                    u_c_ = get_upper(z, W, b, convex_domain)
-                    l_c_ = get_lower(z, W, b, convex_domain)
-                    output += [u_c_, l_c_]
-                return output
+                    u_c_out = get_upper(z, W, b, convex_domain)
+                    l_c_out = get_lower(z, W, b, convex_domain)
+                    outputs += [u_c_out, l_c_out]
+                return outputs
 
-            output_ = get_bounds(z_tensor)
+            outputs = get_bounds(z_tensor)
             if ibp:
-                u_c_tensor, l_c_tensor = output_[-2:]
+                u_c_tensor, l_c_tensor = outputs[-2:]
             if affine:
-                W, b = output_[:2]
+                W, b = outputs[:2]
 
     if ibp and affine:
         input_tensors = [z_tensor] + [u_c_tensor, W, b] + [l_c_tensor, W, b]

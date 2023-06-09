@@ -10,7 +10,7 @@ from decomon.utils import add, minus
 
 
 def categorical_cross_entropy(
-    input_: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     dc_decomp: bool = False,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     convex_domain: Optional[Dict[str, Any]] = None,
@@ -19,20 +19,17 @@ def categorical_cross_entropy(
     # step 1: exponential
     if convex_domain is None:
         convex_domain = {}
-    exp_ = exp(input_, mode=mode, convex_domain=convex_domain, dc_decomp=dc_decomp)
+    outputs = exp(inputs, mode=mode, convex_domain=convex_domain, dc_decomp=dc_decomp)
     # step 2: sum
-    sum_exp_ = sum(exp_, axis=-1, mode=mode)
-    # step 3
-    tmp = log(sum_exp_, dc_decomp=dc_decomp, mode=mode, convex_domain=convex_domain)
-
-    log_sum_exp = expand_dims(tmp, dc_decomp=dc_decomp, mode=mode, convex_domain=convex_domain, axis=-1)
-
-    log_p = add(
-        minus(input_, mode=mode, convex_domain=convex_domain, dc_decomp=dc_decomp),
-        log_sum_exp,
+    outputs = sum(outputs, axis=-1, mode=mode)
+    # step 3: log
+    outputs = log(outputs, dc_decomp=dc_decomp, mode=mode, convex_domain=convex_domain)
+    outputs = expand_dims(outputs, dc_decomp=dc_decomp, mode=mode, convex_domain=convex_domain, axis=-1)
+    # step 4: - inputs
+    return add(
+        minus(inputs, mode=mode, convex_domain=convex_domain, dc_decomp=dc_decomp),
+        outputs,
         mode=mode,
         convex_domain=convex_domain,
         dc_decomp=dc_decomp,
     )
-
-    return log_p

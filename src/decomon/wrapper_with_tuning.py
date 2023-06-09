@@ -40,7 +40,7 @@ def get_upper_box_tuning(
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion
-    model_ = model
+    decomon_model = model
 
     baseline_upper = get_upper_box(model, x_min, x_max, batch_size=batch_size, n_sub_boxes=n_sub_boxes)
 
@@ -52,10 +52,10 @@ def get_upper_box_tuning(
         x_max = np.reshape(x_max, [-1] + shape)
 
     # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[2:])
+    input_shape = list(decomon_model.input_shape[2:])
     input_dim = np.prod(input_shape)
-    x_ = x_min + 0 * x_min
-    x_ = x_.reshape([-1] + input_shape)
+    x_reshaped = x_min + 0 * x_min
+    x_reshaped = x_reshaped.reshape([-1] + input_shape)
     x_min = x_min.reshape((-1, 1, input_dim))
     x_max = x_max.reshape((-1, 1, input_dim))
 
@@ -64,19 +64,20 @@ def get_upper_box_tuning(
     if batch_size > 1:
         # split
         r = 0
-        if len(x_) % batch_size > 0:
+        if len(x_reshaped) % batch_size > 0:
             r += 1
-        X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        x_min_list = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        x_max_list = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
 
         results = [
-            get_upper_box_tuning(model_, decomon_model_concat, X_min_[i], X_max_[i], -1, lr=lr, epochs=epochs)
-            for i in range(len(X_min_))
+            get_upper_box_tuning(
+                decomon_model, decomon_model_concat, x_min_list[i], x_max_list[i], -1, lr=lr, epochs=epochs
+            )
+            for i in range(len(x_min_list))
         ]
 
-        u_ = np.concatenate(results)
+        return np.concatenate(results)
 
-        return u_
     else:
 
         # freeze_weights
@@ -88,12 +89,12 @@ def get_upper_box_tuning(
 
         decomon_model_concat.fit(z, baseline_upper, epochs=epochs, verbose=0)
 
-        upper_ = get_upper_box(model, x_min, x_max, batch_size=batch_size, n_sub_boxes=n_sub_boxes)
+        upper = get_upper_box(model, x_min, x_max, batch_size=batch_size, n_sub_boxes=n_sub_boxes)
 
         # reset alpha
         model.reset_finetuning()
 
-        return np.minimum(baseline_upper, upper_)
+        return np.minimum(baseline_upper, upper)
 
 
 #### FORMAL BOUNDS ######
@@ -126,7 +127,7 @@ def get_lower_box_tuning(
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion
-    model_ = model
+    decomon_model = model
 
     baseline_upper = get_lower_box(model, x_min, x_max, batch_size=batch_size, n_sub_boxes=n_sub_boxes)
 
@@ -138,10 +139,10 @@ def get_lower_box_tuning(
         x_max = np.reshape(x_max, [-1] + shape)
 
     # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[2:])
+    input_shape = list(decomon_model.input_shape[2:])
     input_dim = np.prod(input_shape)
-    x_ = x_min + 0 * x_min
-    x_ = x_.reshape([-1] + input_shape)
+    x_reshaped = x_min + 0 * x_min
+    x_reshaped = x_reshaped.reshape([-1] + input_shape)
     x_min = x_min.reshape((-1, 1, input_dim))
     x_max = x_max.reshape((-1, 1, input_dim))
 
@@ -150,20 +151,21 @@ def get_lower_box_tuning(
     if batch_size > 0 and batch_size != len(x_min):
         # split
         r = 0
-        if len(x_) % batch_size > 0:
+        if len(x_reshaped) % batch_size > 0:
             r += 1
-        X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        x_min_list = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        x_max_list = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
 
         results = [
-            get_lower_box_tuning(model_, decomon_model_concat, X_min_[i], X_max_[i], -1, lr=lr, epochs=epochs)
-            for i in range(len(X_min_))
+            get_lower_box_tuning(
+                decomon_model, decomon_model_concat, x_min_list[i], x_max_list[i], -1, lr=lr, epochs=epochs
+            )
+            for i in range(len(x_min_list))
         ]
 
-        u_ = np.concatenate(results)
         model.reset_finetuning()
 
-        return u_
+        return np.concatenate(results)
     else:
 
         # freeze_weights
@@ -175,9 +177,9 @@ def get_lower_box_tuning(
 
         decomon_model_concat.fit(z, baseline_upper, epochs=epochs, verbose=0)
 
-        upper_ = get_lower_box(model, x_min, x_max, batch_size=batch_size, n_sub_boxes=n_sub_boxes)
+        upper = get_lower_box(model, x_min, x_max, batch_size=batch_size, n_sub_boxes=n_sub_boxes)
 
         # reset alpha
         model.reset_finetuning()
 
-        return np.minimum(baseline_upper, upper_)
+        return np.minimum(baseline_upper, upper)

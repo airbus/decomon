@@ -76,26 +76,25 @@ class DecomonModel(tf.keras.Model):
 
 
 def _check_domain(convex_domain_prev: Dict[str, Any], convex_domain: Dict[str, Any]) -> Dict[str, Any]:
-    msg = "we can only change the parameters of the convex domain, not its nature"
+    if len(convex_domain) == 0:
+        convex_domain_type = ConvexDomainType.BOX
+    else:
+        convex_domain_type = ConvexDomainType(convex_domain["name"])
 
-    convex_domain_ = convex_domain
-    if convex_domain == {}:
-        convex_domain = {"name": ConvexDomainType.BOX}
+    if len(convex_domain_prev) == 0:
+        convex_domain_prev_type = ConvexDomainType.BOX
+    else:
+        convex_domain_prev_type = ConvexDomainType(convex_domain_prev["name"])
 
-    if len(convex_domain_prev) == 0 or ConvexDomainType(convex_domain_prev["name"]) == ConvexDomainType.BOX:
-        # Box
-        if ConvexDomainType(convex_domain["name"]) != ConvexDomainType.BOX:
-            raise NotImplementedError(msg)
+    if convex_domain_prev_type != convex_domain_type:
+        raise NotImplementedError("We can only change the parameters of the convex domain, not its nature.")
 
-    if ConvexDomainType(convex_domain_prev["name"]) != ConvexDomainType(convex_domain["name"]):
-        raise NotImplementedError(msg)
-
-    return convex_domain_
+    return convex_domain
 
 
-def get_AB(model_: DecomonModel) -> Dict[str, List[tf.Variable]]:
+def get_AB(model: DecomonModel) -> Dict[str, List[tf.Variable]]:
     dico_AB: Dict[str, List[tf.Variable]] = {}
-    convex_domain = model_.convex_domain
+    convex_domain = model.convex_domain
     if not (
         len(convex_domain)
         and ConvexDomainType(convex_domain["name"]) == ConvexDomainType.GRID
@@ -103,7 +102,7 @@ def get_AB(model_: DecomonModel) -> Dict[str, List[tf.Variable]]:
     ):
         return dico_AB
 
-    for layer in model_.layers:
+    for layer in model.layers:
         name = layer.name
         sub_names = name.split("backward_activation")
         if len(sub_names) > 1:
@@ -113,9 +112,9 @@ def get_AB(model_: DecomonModel) -> Dict[str, List[tf.Variable]]:
     return dico_AB
 
 
-def get_AB_finetune(model_: DecomonModel) -> Dict[str, tf.Variable]:
+def get_AB_finetune(model: DecomonModel) -> Dict[str, tf.Variable]:
     dico_AB: Dict[str, tf.Variable] = {}
-    convex_domain = model_.convex_domain
+    convex_domain = model.convex_domain
     if not (
         len(convex_domain)
         and ConvexDomainType(convex_domain["name"]) == ConvexDomainType.GRID
@@ -123,10 +122,10 @@ def get_AB_finetune(model_: DecomonModel) -> Dict[str, tf.Variable]:
     ):
         return dico_AB
 
-    if not model_.finetune:
+    if not model.finetune:
         return dico_AB
 
-    for layer in model_.layers:
+    for layer in model.layers:
         name = layer.name
         sub_names = name.split("backward_activation")
         if len(sub_names) > 1:
