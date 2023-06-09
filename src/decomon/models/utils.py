@@ -301,28 +301,6 @@ def preprocess_layer(layer: Layer) -> List[Layer]:
     return [convert_deellip_to_keras(l) for l in layers]
 
 
-def get_input_tensor_x(
-    model: Model,
-    input_tensors: Optional[List[tf.Tensor]],
-    input_dim: int,
-    input_dim_init: int,
-    convex_domain: Dict[str, Any],
-) -> Input:
-    if len(convex_domain) == 0 and not isinstance(input_dim, tuple):
-        input_dim_ = (2, input_dim)
-        z_tensor = Input(input_dim_, dtype=model.layers[0].dtype)
-    elif ConvexDomainType(convex_domain["name"]) == ConvexDomainType.BOX and not isinstance(input_dim, tuple):
-        input_dim_ = (2, input_dim)
-        z_tensor = Input(input_dim_, dtype=model.layers[0].dtype)
-    else:
-
-        if isinstance(input_dim, tuple):
-            z_tensor = Input(input_dim, dtype=model.layers[0].dtype)
-        else:
-            z_tensor = Input((input_dim,), dtype=model.layers[0].dtype)
-    return z_tensor
-
-
 def get_mode(ibp: bool = True, affine: bool = True) -> ForwardMode:
 
     if ibp:
