@@ -4,7 +4,6 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from numpy.testing import assert_almost_equal
 
-from decomon.layers.core import ForwardMode
 from decomon.layers.utils_pooling import (
     get_lower_linear_hull_max,
     get_upper_linear_hull_max,
@@ -28,35 +27,27 @@ def test_get_lower_upper_linear_hull_max(
 
     odd, m_0, m_1 = 0, 0, 1
     data_format = "channels_last"
+    dc_decomp = True
 
-    inputs = helpers.get_tensor_decomposition_images_box(data_format, odd)
-    inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1)
-    x, y, z = inputs_[:3]
+    # inputs
+    inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
 
     if finetune_odd is not None:
         finetune_odd = tf.constant(finetune_odd, dtype="float{}".format(floatx))
 
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        output = func(inputs[2:], mode=mode, axis=axis, finetune_lower=finetune_odd)
-    elif mode == ForwardMode.AFFINE:
-        output = func(
-            [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8], inputs[9], inputs[10]],
-            mode=mode,
-            axis=axis,
-            finetune_lower=finetune_odd,
-        )
-    elif mode == ForwardMode.IBP:
-        output = func([inputs[3], inputs[6], inputs[9], inputs[10]], mode=mode, axis=axis, finetune_lower=finetune_odd)
-    else:
-        raise ValueError("Unknown mode.")
-
+    # decomon output
+    output = func(inputs_for_mode, mode=mode, axis=axis, finetune_lower=finetune_odd)
     f_pooling = K.function(inputs, output)
     w_, b_ = f_pooling(inputs_)
-    y_ = np.max(y, axis=axis)
+
+    # reference output
+    output_ref_ = np.max(input_ref_, axis=axis)
 
     assert_almost_equal(
-        minmax(np.clip(np.sum(w_ * y, axis) + b_ - y_, clipmin, clipmax)),
+        minmax(np.clip(np.sum(w_ * input_ref_, axis) + b_ - output_ref_, clipmin, clipmax)),
         0.0,
         decimal=decimal,
         err_msg=f"linear hull for bounding max",

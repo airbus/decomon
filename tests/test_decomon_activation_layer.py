@@ -31,8 +31,8 @@ def test_decomon_activation_slope(helpers):
         x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
         inputs_for_mode = [z, W_u, b_u, W_l, b_l]
         output = layer(inputs_for_mode)
-        f_func = K.function(inputs[2:], output)
-        outputs_by_slope[slope] = f_func(inputs_[2:])
+        f_func = K.function(inputs, output)
+        outputs_by_slope[slope] = f_func(inputs_)
 
     # check results
     # O_Slope != Z_Slope

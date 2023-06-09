@@ -7,6 +7,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Activation, Dense, Flatten, Input, Reshape
 from tensorflow.keras.models import Sequential
 
+from decomon.backward_layers.utils import get_affine, get_ibp
 from decomon.layers.core import ForwardMode, get_mode
 from decomon.layers.decomon_reshape import DecomonReshape
 from decomon.models import clone
@@ -37,84 +38,72 @@ def test_convert_1D(n, method, mode, floatx, decimal, helpers):
         # skip method=ibp/crown-ibp with mode=affine/hybrid
         pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
 
-    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
-    x_, y_, z_, u_c_, W_u_, b_u_, l_c_, W_l_, b_l_ = inputs_
+    dc_decomp = False
+    ibp = get_ibp(mode=mode)
+    affine = get_affine(mode=mode)
 
-    input_ref = y_
-    input_decomon = np.concatenate((l_c_[:, None, :], u_c_[:, None, :]), axis=1)
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
+    input_decomon_ = helpers.get_inputs_np_for_decomon_model_from_full_inputs(inputs=inputs_)
 
+    #  keras model and output of reference
     ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
-    output_ref = ref_nn.predict(input_ref)
+    output_ref_ = ref_nn.predict(input_ref_)
 
-    ibp = True
-    affine = True
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.AFFINE:
-        ibp = False
-    if mode == ForwardMode.IBP:
-        affine = False
-
+    # decomon conversion
     decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
 
-    u_c_model, w_u_model, b_u_model, l_c_model, w_l_model, b_l_model = [None] * 6
-    if mode == ForwardMode.HYBRID:
-        z_model, u_c_model, w_u_model, b_u_model, l_c_model, w_l_model, b_l_model = decomon_model.predict(input_decomon)
-    elif mode == ForwardMode.IBP:
-        u_c_model, l_c_model = decomon_model.predict(input_decomon)
-    elif mode == ForwardMode.AFFINE:
-        z_model, w_u_model, b_u_model, w_l_model, b_l_model = decomon_model.predict(input_decomon)
-    else:
-        raise ValueError("Unknown mode.")
+    #  decomon outputs
+    outputs_ = decomon_model.predict(input_decomon_)
 
-    helpers.assert_output_properties_box(
-        input_ref,
-        output_ref,
-        None,
-        None,
-        l_c_,
-        u_c_,
-        u_c_model,
-        w_u_model,
-        b_u_model,
-        l_c_model,
-        w_l_model,
-        b_l_model,
+    #  check bounds consistency
+    helpers.assert_decomon_model_output_properties_box(
+        full_inputs=inputs_,
+        output_ref=output_ref_,
+        outputs_for_mode=outputs_,
+        mode=mode,
+        dc_decomp=dc_decomp,
         decimal=decimal,
     )
 
 
 def test_convert_1D_forward_slope(slope, helpers):
-    n, method, mode = 0, "forward-hybrid", "hybrid"
-    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-
-    ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
-    ref_nn(inputs[1])
-
     ibp = True
     affine = True
+    dc_decomp = False
 
-    f_dense = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine, slope=slope)
+    n, method, mode = 0, "forward-hybrid", "hybrid"
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
+
+    ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
+    ref_nn(input_ref)
+
+    decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine, slope=slope)
 
     # check slope of activation layers
-    for layer in f_dense.layers:
+    for layer in decomon_model.layers:
         if layer.__class__.__name__.endswith("Activation"):
             assert layer.slope == Slope(slope)
 
 
 def test_convert_1D_backward_slope(slope, helpers):
     n, method, mode = 0, "crown-forward-hybrid", "hybrid"
-    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-
-    ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
-    ref_nn(inputs[1])
-
     ibp = True
     affine = True
+    dc_decomp = False
 
-    f_dense = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine, slope=slope)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
+
+    ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
+    ref_nn(input_ref)
+
+    decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine, slope=slope)
 
     # check slope of layers with activation
-    for layer in f_dense.layers:
+    for layer in decomon_model.layers:
         layer_class_name = layer.__class__.__name__
         if layer_class_name.endswith("Activation"):
             assert layer.slope == Slope(slope)

@@ -15,6 +15,7 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model
 
+from decomon.backward_layers.utils import get_affine, get_ibp
 from decomon.layers.convert import to_decomon
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_merge_layers import (
@@ -61,45 +62,35 @@ def concatenate_op(x, y):
     ],
 )
 def test_DecomonOp_1D_box(decomon_op_class, tensor_op, decomon_op_kwargs, n, mode, floatx, decimal, helpers):
-    decomon_op = decomon_op_class(dc_decomp=False, mode=mode, dtype=K.floatx(), **decomon_op_kwargs)
+    dc_decomp = False
 
-    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
-    inputs_1_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
+    #  tensor inputs
+    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    inputs_for_mode_0 = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_0, mode=mode, dc_decomp=dc_decomp)
+    inputs_for_mode_1 = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_1, mode=mode, dc_decomp=dc_decomp)
 
-    x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0
-    x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs=inputs_)
 
-    x0_, y0_, z0_, u_c0_, W_u0_, b_u0_, l_c0_, W_l0_, b_l0_ = inputs_0_
-    x1_, y1_, z1_, u_c1_, W_u1_, b_u1_, l_c1_, W_l1_, b_l1_ = inputs_1_
+    # original output
+    output_ref_ = tensor_op(input_ref_, input_ref_)
 
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        output_decomon = decomon_op(inputs_0[2:] + inputs_1[2:])
-    elif mode == ForwardMode.AFFINE:
-        output_decomon = decomon_op([z0, W_u0, b_u0, W_l0, b_l0] + [z1, W_u1, b_u1, W_l1, b_l1])
-    elif mode == ForwardMode.IBP:
-        output_decomon = decomon_op([u_c0, l_c0] + [u_c1, l_c1])
-    else:
-        raise ValueError("Unknown mode.")
+    # decomon output
+    decomon_op = decomon_op_class(dc_decomp=dc_decomp, mode=mode, dtype=K.floatx(), **decomon_op_kwargs)
+    output = decomon_op(inputs_for_mode_0 + inputs_for_mode_1)
+    f_decomon = K.function(inputs_0 + inputs_1, output)
+    outputs_ = f_decomon(inputs_ + inputs_)
 
-    model = Model(inputs_0[2:] + inputs_1[2:], output_decomon)
-    y_ = tensor_op(y0_, y1_)
-    output_ = model.predict(inputs_0_[2:] + inputs_1_[2:])
-    u_, w_u_, b_u_, l_, w_l_, b_l_ = [None] * 6
-    z_ = z0_
-    if mode == ForwardMode.HYBRID:
-        z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
-    elif mode == ForwardMode.AFFINE:
-        z_, w_u_, b_u_, w_l_, b_l_ = output_
-    elif mode == ForwardMode.IBP:
-        u_, l_ = output_
-    else:
-        raise ValueError("Unknown mode.")
-
-    helpers.assert_output_properties_box(
-        inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, decimal=decimal
+    #  check bounds consistency
+    helpers.assert_decomon_layer_output_properties_box(
+        full_inputs=inputs_,
+        output_ref=output_ref_,
+        outputs_for_mode=outputs_,
+        mode=mode,
+        dc_decomp=dc_decomp,
+        decimal=decimal,
     )
 
 
@@ -116,45 +107,35 @@ def test_DecomonOp_1D_box(decomon_op_class, tensor_op, decomon_op_kwargs, n, mod
     ],
 )
 def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, odd, mode, floatx, decimal, helpers):
-    decomon_op = decomon_op_class(dc_decomp=False, mode=mode, dtype=K.floatx(), **decomon_op_kwargs)
+    dc_decomp = False
 
-    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_1 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_0_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
-    inputs_1_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
+    #  tensor inputs
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=dc_decomp)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=dc_decomp)
+    inputs_for_mode_0 = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_0, mode=mode, dc_decomp=dc_decomp)
+    inputs_for_mode_1 = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_1, mode=mode, dc_decomp=dc_decomp)
 
-    x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0
-    x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs=inputs_)
 
-    x0_, y0_, z0_, u_c0_, W_u0_, b_u0_, l_c0_, W_l0_, b_l0_ = inputs_0_
-    x1_, y1_, z1_, u_c1_, W_u1_, b_u1_, l_c1_, W_l1_, b_l1_ = inputs_1_
+    # original output
+    output_ref_ = tensor_op(input_ref_, input_ref_)
 
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        output_decomon = decomon_op(inputs_0[2:] + inputs_1[2:])
-    elif mode == ForwardMode.AFFINE:
-        output_decomon = decomon_op([z0, W_u0, b_u0, W_l0, b_l0] + [z1, W_u1, b_u1, W_l1, b_l1])
-    elif mode == ForwardMode.IBP:
-        output_decomon = decomon_op([u_c0, l_c0] + [u_c1, l_c1])
-    else:
-        raise ValueError("Unknown mode.")
+    # decomon output
+    decomon_op = decomon_op_class(dc_decomp=dc_decomp, mode=mode, dtype=K.floatx(), **decomon_op_kwargs)
+    output = decomon_op(inputs_for_mode_0 + inputs_for_mode_1)
+    f_decomon = K.function(inputs_0 + inputs_1, output)
+    outputs_ = f_decomon(inputs_ + inputs_)
 
-    model = Model(inputs_0[2:] + inputs_1[2:], output_decomon)
-    y_ = tensor_op(y0_, y1_)
-    output_ = model.predict(inputs_0_[2:] + inputs_1_[2:])
-    u_, w_u_, b_u_, l_, w_l_, b_l_ = [None] * 6
-    z_ = z0_
-    if mode == ForwardMode.HYBRID:
-        z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
-    elif mode == ForwardMode.AFFINE:
-        z_, w_u_, b_u_, w_l_, b_l_ = output_
-    elif mode == ForwardMode.IBP:
-        u_, l_ = output_
-    else:
-        raise ValueError("Unknown mode.")
-
-    helpers.assert_output_properties_box(
-        inputs_0_[0], y_, None, None, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_, decimal=decimal
+    #  check bounds consistency
+    helpers.assert_decomon_layer_output_properties_box(
+        full_inputs=inputs_,
+        output_ref=output_ref_,
+        outputs_for_mode=outputs_,
+        mode=mode,
+        dc_decomp=dc_decomp,
+        decimal=decimal,
     )
 
 
@@ -172,29 +153,48 @@ def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, od
 )
 def test_Decomon_1D_box_to_decomon(layer_class, tensor_op, layer_kwargs, n, helpers):
 
+    dc_decomp = False
+    mode = ForwardMode.HYBRID
+    ibp = get_ibp(mode=mode)
+    affine = get_affine(mode=mode)
+    decimal = 5
+
+    #  tensor inputs
+    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    inputs_for_mode_0 = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_0, mode=mode, dc_decomp=dc_decomp)
+    inputs_for_mode_1 = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_1, mode=mode, dc_decomp=dc_decomp)
+    input_ref_0 = helpers.get_input_ref_from_full_inputs(inputs=inputs_0)
+    input_ref_1 = helpers.get_input_ref_from_full_inputs(inputs=inputs_1)
+
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs=inputs_)
+
+    # original output
+    output_ref_ = tensor_op(input_ref_, input_ref_)
+
+    # to_decomon
     ref_op = layer_class(dtype=K.floatx(), **layer_kwargs)
+    ref_op([input_ref_0, input_ref_1])
+    decomon_op = to_decomon(
+        ref_op, input_dim=helpers.get_input_dim_from_full_inputs(inputs_0), dc_decomp=dc_decomp, affine=affine, ibp=ibp
+    )
 
-    inputs_0 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_1 = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_0_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
-    inputs_1_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
+    # decomon output
+    output = decomon_op(inputs_for_mode_0 + inputs_for_mode_1)
+    f_decomon = K.function(inputs_0 + inputs_1, output)
+    outputs_ = f_decomon(inputs_ + inputs_)
 
-    ref_op([inputs_0[0], inputs_1[0]])
-
-    decomon_op = to_decomon(ref_op, input_dim=1, dc_decomp=False)
-
-    x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0_
-    x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1_
-
-    output_decomon = decomon_op(inputs_0[2:] + inputs_1[2:])
-
-    model = Model(inputs_0[2:] + inputs_1[2:], output_decomon)
-
-    output_ = model.predict(inputs_0_[2:] + inputs_1_[2:])
-    z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
-    y_ = tensor_op(inputs_0_[1], inputs_1_[1])
-
-    helpers.assert_output_properties_box_linear(inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_)
+    #  check bounds consistency
+    helpers.assert_decomon_layer_output_properties_box_linear(
+        full_inputs=inputs_,
+        output_ref=output_ref_,
+        outputs_for_mode=outputs_,
+        mode=mode,
+        dc_decomp=dc_decomp,
+        decimal=decimal,
+    )
 
 
 #### to_decomon multiD
@@ -213,24 +213,45 @@ def test_Decomon_1D_box_to_decomon(layer_class, tensor_op, layer_kwargs, n, help
     ],
 )
 def test_Decomon_multiD_box_to_decomon(layer_class, tensor_op, layer_kwargs, odd, helpers):
+    dc_decomp = False
+    mode = ForwardMode.HYBRID
+    ibp = get_ibp(mode=mode)
+    affine = get_affine(mode=mode)
+    decimal = 5
 
+    #  tensor inputs
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=dc_decomp)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=dc_decomp)
+    inputs_for_mode_0 = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_0, mode=mode, dc_decomp=dc_decomp)
+    inputs_for_mode_1 = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_1, mode=mode, dc_decomp=dc_decomp)
+    input_ref_0 = helpers.get_input_ref_from_full_inputs(inputs=inputs_0)
+    input_ref_1 = helpers.get_input_ref_from_full_inputs(inputs=inputs_1)
+
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs=inputs_)
+
+    # original output
+    output_ref_ = tensor_op(input_ref_, input_ref_)
+
+    #  to_decomon
     ref_op = layer_class(dtype=K.floatx(), **layer_kwargs)
+    ref_op([input_ref_0, input_ref_1])
+    decomon_op = to_decomon(
+        ref_op, input_dim=helpers.get_input_dim_from_full_inputs(inputs_0), dc_decomp=dc_decomp, affine=affine, ibp=ibp
+    )
 
-    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_1 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_0_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
-    inputs_1_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
+    # decomon output
+    output = decomon_op(inputs_for_mode_0 + inputs_for_mode_1)
+    f_decomon = K.function(inputs_0 + inputs_1, output)
+    outputs_ = f_decomon(inputs_ + inputs_)
 
-    x0, y0, z0, u_c0, W_u0, b_u0, l_c0, W_l0, b_l0 = inputs_0_
-    x1, y1, z1, u_c1, W_u1, b_u1, l_c1, W_l1, b_l1 = inputs_1_
-
-    ref_op([inputs_0[0], inputs_1[0]])
-    decomon_op = to_decomon(ref_op, input_dim=x0.shape[-1], dc_decomp=False)
-
-    output_decomon = decomon_op(inputs_0[2:] + inputs_1[2:])
-    model = Model(inputs_0[2:] + inputs_1[2:], output_decomon)
-
-    output_ = model.predict(inputs_0_[2:] + inputs_1_[2:])
-    z_, u_, w_u_, b_u_, l_, w_l_, b_l_ = output_
-    y_ = tensor_op(y0, y1)
-    helpers.assert_output_properties_box_linear(inputs_0_[0], y_, z_[:, 0], z_[:, 1], u_, w_u_, b_u_, l_, w_l_, b_l_)
+    #  check bounds consistency
+    helpers.assert_decomon_layer_output_properties_box_linear(
+        full_inputs=inputs_,
+        output_ref=output_ref_,
+        outputs_for_mode=outputs_,
+        mode=mode,
+        dc_decomp=dc_decomp,
+        decimal=decimal,
+    )

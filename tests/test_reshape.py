@@ -3,237 +3,136 @@ import pytest
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Permute, Reshape
 
+from decomon.backward_layers.utils import get_affine, get_ibp
 from decomon.layers.convert import to_decomon
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
 
 
-def test_Decomon_reshape_box(mode, floatx, decimal, helpers):
+def keras_target_shape_reshape(input_ref):
+    return (np.prod(input_ref.shape[1:]),)
+
+
+def target_shape_keras2np_reshape(target_shape):
+    return (-1, target_shape[0])
+
+
+def keras_target_shape_permute(input_ref):
+    n_dim = len(input_ref.shape) - 1
+    return np.random.permutation(n_dim) + 1
+
+
+def target_shape_keras2np_permute(target_shape):
+    return tuple([0] + list(target_shape))
+
+
+@pytest.mark.parametrize(
+    "decomon_layer_class, keras_target_shape_func, target_shape_keras2np_func, np_func",
+    [
+        (DecomonReshape, keras_target_shape_reshape, target_shape_keras2np_reshape, np.reshape),
+        (DecomonPermute, keras_target_shape_permute, target_shape_keras2np_permute, np.transpose),
+    ],
+)
+def test_Decomon_reshape_n_permute_box(
+    decomon_layer_class,
+    keras_target_shape_func,
+    target_shape_keras2np_func,
+    np_func,
+    mode,
+    dc_decomp,
+    floatx,
+    decimal,
+    helpers,
+):
     odd, m_0, m_1 = 0, 0, 1
+    data_format = "channels_last"
 
-    inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd)
-    inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
-    x_ = inputs_[0]
-    z_ = inputs_[2]
-    target_shape = (np.prod(y.shape[1:]),)
-    y_ = np.reshape(inputs_[1], (-1, target_shape[0]))
+    # tensor inputs
+    inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
 
-    decomon_layer = DecomonReshape((target_shape), dc_decomp=True, mode=mode, dtype=K.floatx())
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs=inputs_)
 
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        output = decomon_layer(inputs[2:])
-    elif mode == ForwardMode.AFFINE:
-        output = decomon_layer([z, W_u, b_u, W_l, b_l, h, g])
-    elif mode == ForwardMode.IBP:
-        output = decomon_layer([u_c, l_c, h, g])
-    else:
-        raise ValueError("Unknown mode.")
+    # target shape
+    target_shape = keras_target_shape_func(input_ref)
+    target_shape_ = target_shape_keras2np_func(target_shape)
 
-    f_reshape = K.function(inputs[2:], output)
-    if mode == ForwardMode.HYBRID:
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_reshape(inputs_[2:])
-    elif mode == ForwardMode.AFFINE:
-        z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_reshape(inputs_[2:])
-        u_c_ = None
-        l_c_ = None
-    elif mode == ForwardMode.IBP:
-        u_c_, l_c_, h_, g_ = f_reshape(inputs_[2:])
-        w_u_, b_u_, w_l_, b_l_ = [None] * 4
-    else:
-        raise ValueError("Unknown mode.")
+    # original output
+    output_ref_ = np_func(input_ref_, target_shape_)
 
-    helpers.assert_output_properties_box(
-        x_, y_, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
+    # decomon layer
+    decomon_layer = decomon_layer_class(target_shape, dc_decomp=dc_decomp, mode=mode, dtype=K.floatx())
+
+    # decomon output
+    output = decomon_layer(inputs_for_mode)
+    f_decomon = K.function(inputs, output)
+    outputs_ = f_decomon(inputs_)
+
+    # check bounds consistency
+    helpers.assert_decomon_layer_output_properties_box(
+        full_inputs=inputs_,
+        output_ref=output_ref_,
+        outputs_for_mode=outputs_,
+        mode=mode,
+        dc_decomp=dc_decomp,
+        decimal=decimal,
     )
 
 
-def test_Decomon_reshape_box_nodc(mode, floatx, decimal, helpers):
+@pytest.mark.parametrize(
+    "keras_target_shape_func, keras_layer_class",
+    [
+        (keras_target_shape_reshape, Reshape),
+        (keras_target_shape_permute, Permute),
+    ],
+)
+def test_Decomon_reshape_n_permute_to_decomon_box(
+    keras_target_shape_func, keras_layer_class, shared, floatx, decimal, helpers
+):
     odd, m_0, m_1 = 0, 0, 1
+    dc_decomp = True
+    data_format = "channels_last"
+    mode = ForwardMode.HYBRID
+    ibp = get_ibp(mode=mode)
+    affine = get_affine(mode=mode)
 
-    inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd, dc_decomp=False)
-    inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1, dc_decomp=False)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
-    x_ = inputs_[0]
-    z_ = inputs_[2]
-    target_shape = (np.prod(y.shape[1:]),)
-    y_ = np.reshape(inputs_[1], (-1, target_shape[0]))
+    # tensor inputs
+    inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
 
-    decomon_layer = DecomonReshape((target_shape), dc_decomp=False, mode=mode, dtype=K.floatx())
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=dc_decomp)
 
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        output = decomon_layer(inputs[2:])
-    elif mode == ForwardMode.AFFINE:
-        output = decomon_layer([z, W_u, b_u, W_l, b_l])
-    elif mode == ForwardMode.IBP:
-        output = decomon_layer([u_c, l_c])
-    else:
-        raise ValueError("Unknown mode.")
+    #  target shape
+    target_shape = keras_target_shape_func(input_ref)
 
-    f_reshape = K.function(inputs[2:], output)
-    if mode == ForwardMode.HYBRID:
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_reshape(inputs_[2:])
-    elif mode == ForwardMode.AFFINE:
-        z_, w_u_, b_u_, w_l_, b_l_ = f_reshape(inputs_[2:])
-        u_c_ = None
-        l_c_ = None
-    elif mode == ForwardMode.IBP:
-        u_c_, l_c_ = f_reshape(inputs_[2:])
-        w_u_, b_u_, w_l_, b_l_ = [None] * 4
-    else:
-        raise ValueError("Unknown mode.")
+    # keras layer
+    keras_layer = keras_layer_class(target_shape, dtype=K.floatx())
 
-    helpers.assert_output_properties_box(
-        x_, y_, None, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
-    )
-
-
-def test_Decomon_reshape_to_decomon_box(shared, floatx, decimal, helpers):
-    odd, m_0, m_1 = 0, 0, 1
-
-    inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd)
-    inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
-    x_ = inputs_[0]
-    z_ = inputs_[2]
-    target_shape = (np.prod(y.shape[1:]),)
-
-    reshape_ref = Reshape(target_shape, dtype=K.floatx())
-    output_ref = reshape_ref(inputs[1])
-
-    input_dim = x_.shape[-1]
-    decomon_layer = to_decomon(reshape_ref, input_dim, dc_decomp=True, shared=shared)
-
-    output = decomon_layer(inputs[2:])
-
+    # original output
+    output_ref = keras_layer(input_ref)
     f_ref = K.function(inputs, output_ref)
+    output_ref_ = f_ref(inputs_)
 
-    f_reshape = K.function(inputs[2:], output)
-    y_ref = f_ref(inputs_)
+    # conversion with to_decomon
+    input_dim = helpers.get_input_dim_from_full_inputs(inputs_)
+    decomon_layer = to_decomon(keras_layer, input_dim, dc_decomp=dc_decomp, shared=shared, ibp=ibp, affine=affine)
 
-    z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_reshape(inputs_[2:])
+    # decomon outputs
+    outputs = decomon_layer(inputs_for_mode)
+    f_decomon = K.function(inputs, outputs)
+    outputs_ = f_decomon(inputs_)
 
-    helpers.assert_output_properties_box(
-        x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
-    )
-
-
-# permute
-def test_Decomon_permute_box(mode, floatx, decimal, helpers):
-    odd, m_0, m_1 = 0, 0, 1
-
-    inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd)
-    inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
-    x_ = inputs_[0]
-    z_ = inputs_[2]
-    n_dim = len(y.shape) - 1
-    target_shape = np.random.permutation(n_dim) + 1
-    target_shape_ = tuple([0] + list(target_shape))
-
-    y_ = np.transpose(inputs_[1], target_shape_)
-
-    decomon_layer = DecomonPermute(target_shape, dc_decomp=True, mode=mode, dtype=K.floatx())
-
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        output = decomon_layer(inputs[2:])
-    elif mode == ForwardMode.AFFINE:
-        output = decomon_layer([z, W_u, b_u, W_l, b_l, h, g])
-    elif mode == ForwardMode.IBP:
-        output = decomon_layer([u_c, l_c, h, g])
-    else:
-        raise ValueError("Unknown mode.")
-
-    f_permute = K.function(inputs[2:], output)
-    if mode == ForwardMode.HYBRID:
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_permute(inputs_[2:])
-    elif mode == ForwardMode.AFFINE:
-        z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_permute(inputs_[2:])
-        u_c_ = None
-        l_c_ = None
-    elif mode == ForwardMode.IBP:
-        u_c_, l_c_, h_, g_ = f_permute(inputs_[2:])
-        w_u_, b_u_, w_l_, b_l_ = [None] * 4
-    else:
-        raise ValueError("Unknown mode.")
-
-    helpers.assert_output_properties_box(
-        x_, y_, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
-    )
-
-
-def test_Decomon_permute_box_nodc(mode, floatx, decimal, helpers):
-    odd, m_0, m_1 = 0, 0, 1
-
-    inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd, dc_decomp=False)
-    inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1, dc_decomp=False)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
-    x_ = inputs_[0]
-    z_ = inputs_[2]
-    n_dim = len(y.shape) - 1
-    target_shape = np.random.permutation(n_dim) + 1
-    target_shape_ = tuple([0] + list(target_shape))
-
-    y_ = np.transpose(inputs_[1], target_shape_)
-
-    decomon_layer = DecomonPermute(target_shape, dc_decomp=False, mode=mode, dtype=K.floatx())
-
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        output = decomon_layer(inputs[2:])
-    elif mode == ForwardMode.AFFINE:
-        output = decomon_layer([z, W_u, b_u, W_l, b_l])
-    elif mode == ForwardMode.IBP:
-        output = decomon_layer([u_c, l_c])
-    else:
-        raise ValueError("Unknown mode.")
-
-    f_permute = K.function(inputs[2:], output)
-    if mode == ForwardMode.HYBRID:
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_permute(inputs_[2:])
-    elif mode == ForwardMode.AFFINE:
-        z_, w_u_, b_u_, w_l_, b_l_ = f_permute(inputs_[2:])
-        u_c_ = None
-        l_c_ = None
-    elif mode == ForwardMode.IBP:
-        u_c_, l_c_ = f_permute(inputs_[2:])
-        w_u_, b_u_, w_l_, b_l_ = [None] * 4
-    else:
-        raise ValueError("Unknown mode.")
-
-    helpers.assert_output_properties_box(
-        x_, y_, None, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
-    )
-
-
-def test_Decomon_permute_to_decomon_box(shared, floatx, decimal, helpers):
-    odd, m_0, m_1 = 0, 0, 1
-
-    inputs = helpers.get_tensor_decomposition_images_box("channels_last", odd)
-    inputs_ = helpers.get_standard_values_images_box("channels_last", odd, m0=m_0, m1=m_1)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
-    x_ = inputs_[0]
-    z_ = inputs_[2]
-    n_dim = len(y.shape) - 1
-    target_shape = np.random.permutation(n_dim) + 1
-
-    permute_ref = Permute(target_shape)
-    output_ref = permute_ref(inputs[1])
-
-    input_dim = x_.shape[-1]
-    decomon_layer = to_decomon(permute_ref, input_dim, dc_decomp=True, shared=shared)
-    output = decomon_layer(inputs[2:])
-
-    f_ref = K.function(inputs, output_ref)
-
-    f_permute = K.function(inputs[2:], output)
-    y_ref = f_ref(inputs_)
-
-    z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_permute(inputs_[2:])
-
-    helpers.assert_output_properties_box(
-        x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
+    # check bounds consistency
+    helpers.assert_decomon_layer_output_properties_box(
+        full_inputs=inputs_,
+        output_ref=output_ref_,
+        outputs_for_mode=outputs_,
+        dc_decomp=dc_decomp,
+        mode=mode,
+        decimal=decimal,
     )

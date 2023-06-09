@@ -7,6 +7,7 @@ import tensorflow.keras.backend as K
 from numpy.testing import assert_almost_equal
 from tensorflow.keras.layers import Dense
 
+from decomon.backward_layers.utils import get_affine, get_ibp
 from decomon.layers.convert import to_decomon
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonDense
@@ -15,403 +16,283 @@ from decomon.models.utils import split_activation
 
 def test_DecomonDense_1D_box(n, mode, shared, floatx, decimal, helpers):
 
-    decomon_dense = DecomonDense(1, use_bias=True, dc_decomp=True, mode=mode, shared=shared, dtype=K.floatx())
+    dc_decomp = True
+    kwargs_layer = dict(units=1, use_bias=True, dtype=K.floatx())
 
-    ref_dense = Dense(1, use_bias=True, dtype=K.floatx())
+    # tensor inputs
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
 
-    inputs = helpers.get_tensor_decomposition_1d_box()
-    inputs_ = helpers.get_standard_values_1d_box(n)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
-    x_ = inputs_[0]
-    z_ = inputs_[2]
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
 
-    ref_dense(inputs[1])
-    decomon_dense.share_weights(ref_dense)
+    # keras layer & function
+    keras_layer = Dense(**kwargs_layer)
+    output_ref = keras_layer(input_ref)
+    f_ref = K.function(inputs, output_ref)
 
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        output = decomon_dense(inputs[2:])
-    elif mode == ForwardMode.AFFINE:
-        output = decomon_dense([z, W_u, b_u, W_l, b_l, h, g])
-    elif mode == ForwardMode.IBP:
-        output = decomon_dense([u_c, l_c, h, g])
-    else:
-        raise ValueError("Unknown mode.")
+    # decomon layer & function
+    decomon_layer = DecomonDense(dc_decomp=dc_decomp, shared=shared, mode=mode, **kwargs_layer)
+    decomon_layer.share_weights(keras_layer)
+    outputs = decomon_layer(inputs_for_mode)
+    f_decomon = K.function(inputs, outputs)
 
-    W_, bias = decomon_dense.get_weights()
-    if not shared:
-        decomon_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
-    ref_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
+    # test with several kernel values
+    kernel_coeffs = [2, -3]
+    W_, bias = decomon_layer.get_weights()
 
-    f_dense = K.function(inputs[2:], output)
-    f_ref = K.function(inputs, ref_dense(inputs[1]))
+    for kernel_coeff in kernel_coeffs:
+        # set weights
+        if not shared:
+            decomon_layer.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
+        keras_layer.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
 
-    y_ref = f_ref(inputs_)
-    if mode == ForwardMode.HYBRID:
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(
-            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
+        # keras & decomon outputs
+        output_ref_ = f_ref(inputs_)
+        outputs_ = f_decomon(inputs_)
+
+        # check bounds consistency
+        helpers.assert_decomon_layer_output_properties_box(
+            full_inputs=inputs_,
+            output_ref=output_ref_,
+            outputs_for_mode=outputs_,
+            dc_decomp=dc_decomp,
+            decimal=decimal,
+            mode=mode,
         )
 
-    elif mode == ForwardMode.AFFINE:
-        z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        u_c_ = None
-        l_c_ = None
-        helpers.assert_output_properties_box(
-            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
+
+def test_DecomonDense_1D_box_nodc(n, helpers):
+    dc_decomp = False
+    shared = False
+    mode = ForwardMode.HYBRID
+    decimal = 5
+    kwargs_layer = dict(units=1, use_bias=True, dtype=K.floatx())
+
+    # tensor inputs
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
+
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
+
+    # keras layer & function
+    keras_layer = Dense(**kwargs_layer)
+    output_ref = keras_layer(input_ref)
+    f_ref = K.function(inputs, output_ref)
+
+    #  decomon layer & function
+    decomon_layer = DecomonDense(dc_decomp=dc_decomp, shared=shared, mode=mode, **kwargs_layer)
+    decomon_layer.share_weights(keras_layer)
+    outputs = decomon_layer(inputs_for_mode)
+    f_decomon = K.function(inputs, outputs)
+
+    #  test with several kernel values
+    kernel_coeffs = [2, -3]
+    W_, bias = decomon_layer.get_weights()
+
+    for kernel_coeff in kernel_coeffs:
+        # set weights
+        if not shared:
+            decomon_layer.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
+        keras_layer.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
+
+        # keras & decomon outputs
+        output_ref_ = f_ref(inputs_)
+        outputs_ = f_decomon(inputs_)
+
+        # check bounds consistency
+        helpers.assert_decomon_layer_output_properties_box_linear(
+            full_inputs=inputs_,
+            output_ref=output_ref_,
+            outputs_for_mode=outputs_,
+            dc_decomp=dc_decomp,
+            decimal=decimal,
+            mode=mode,
         )
 
-    elif mode == ForwardMode.IBP:
-        u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(
-            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, None, None, l_c_, None, None, decimal=decimal
-        )
-    else:
-        raise ValueError("Unknown mode.")
 
-    if not shared:
-        decomon_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
-    ref_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
-    y_ref = f_ref(inputs_)
-    if mode == ForwardMode.HYBRID:
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(
-            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
-        )
+def test_DecomonDense_multiD_box(odd, mode, dc_decomp, helpers):
 
-    elif mode == ForwardMode.AFFINE:
-        z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        u_c_ = None
-        l_c_ = None
-        helpers.assert_output_properties_box(
-            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
-        )
+    shared = False
+    kwargs_layer = dict(units=1, use_bias=True, dtype=K.floatx())
+    decimal = 5
 
-    elif mode == ForwardMode.IBP:
-        u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(
-            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, None, None, l_c_, None, None, decimal=decimal
-        )
-    else:
-        raise ValueError("Unknown mode.")
+    # tensor inputs
+    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
 
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
 
-def test_DecomonDense_multiD_box(odd, mode, helpers):
+    # keras layer & function
+    keras_layer = Dense(**kwargs_layer)
+    output_ref = keras_layer(input_ref)
+    f_ref = K.function(inputs, output_ref)
 
-    decomon_dense = DecomonDense(1, use_bias=True, dc_decomp=True, mode=mode, dtype=K.floatx())
-    ref_dense = Dense(1, use_bias=True, dtype=K.floatx())
+    # decomon layer & function
+    decomon_layer = DecomonDense(dc_decomp=dc_decomp, shared=shared, mode=mode, **kwargs_layer)
+    decomon_layer.share_weights(keras_layer)
+    outputs = decomon_layer(inputs_for_mode)
+    f_decomon = K.function(inputs, outputs)
 
-    inputs = helpers.get_tensor_decomposition_multid_box(odd)
-    inputs_ = helpers.get_standard_values_multid_box(odd)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
-    x_ = inputs_[0]
-    z_ = inputs_[2]
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        output = decomon_dense(inputs[2:])
-    elif mode == ForwardMode.AFFINE:
-        output = decomon_dense([z, W_u, b_u, W_l, b_l, h, g])
-    elif mode == ForwardMode.IBP:
-        output = decomon_dense([u_c, l_c, h, g])
-    else:
-        raise ValueError("Unknown mode.")
+    # test with several kernel values
+    kernel_coeffs = [2, -3]
+    W_, bias = decomon_layer.get_weights()
 
-    ref_dense(inputs[1])
+    for kernel_coeff in kernel_coeffs:
+        # set weights
+        if not shared:
+            decomon_layer.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
+        keras_layer.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
 
-    W_, bias = decomon_dense.get_weights()
+        # keras & decomon outputs
+        output_ref_ = f_ref(inputs_)
+        outputs_ = f_decomon(inputs_)
 
-    decomon_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
-    ref_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
-    f_dense = K.function(inputs[2:], output)
-    f_ref = K.function(inputs, ref_dense(inputs[1]))
-    y_ref = f_ref(inputs_)
-    if mode == ForwardMode.HYBRID:
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
-    elif mode == ForwardMode.AFFINE:
-        z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        u_c_ = None
-        l_c_ = None
-        helpers.assert_output_properties_box(x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
-    elif mode == ForwardMode.IBP:
-        u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, None, None, l_c_, None, None)
-    else:
-        raise ValueError("Unknown mode.")
-
-    decomon_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
-    ref_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
-    y_ref = f_ref(inputs_)
-
-    if mode == ForwardMode.HYBRID:
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
-    elif mode == ForwardMode.AFFINE:
-        z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        u_c_ = None
-        l_c_ = None
-        helpers.assert_output_properties_box(x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
-    elif mode == ForwardMode.IBP:
-        u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, None, None, l_c_, None, None)
-    else:
-        raise ValueError("Unknown mode.")
+        # check bounds consistency
+        if dc_decomp:
+            helpers.assert_decomon_layer_output_properties_box(
+                full_inputs=inputs_,
+                output_ref=output_ref_,
+                outputs_for_mode=outputs_,
+                dc_decomp=dc_decomp,
+                decimal=decimal,
+                mode=mode,
+            )
+        else:
+            helpers.assert_decomon_layer_output_properties_box_linear(
+                full_inputs=inputs_,
+                output_ref=output_ref_,
+                outputs_for_mode=outputs_,
+                dc_decomp=dc_decomp,
+                decimal=decimal,
+                mode=mode,
+            )
 
 
 def test_DecomonDense_1D_to_decomon_box(n, activation, mode, shared, helpers):
 
-    dense_ref = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
+    dc_decomp = True
+    kwargs_layer = dict(units=1, use_bias=True, dtype=K.floatx())
+    decimal = 5
+    ibp = get_ibp(mode=mode)
+    affine = get_affine(mode=mode)
 
-    inputs = helpers.get_tensor_decomposition_1d_box()
-    inputs_ = helpers.get_standard_values_1d_box(n)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
-    z_ = inputs_[2]
-    x_ = inputs_[0]
+    # tensor inputs
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
 
-    output_ref = dense_ref(inputs[1])
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
+
+    # keras layer & function & output
+    keras_layer = Dense(**kwargs_layer)
+    output_ref = keras_layer(input_ref)
     f_ref = K.function(inputs, output_ref)
-    input_dim = x.shape[-1]
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        ibp = True
-        affine = True
-    elif mode == ForwardMode.AFFINE:
-        ibp = False
-        affine = True
-    elif mode == ForwardMode.IBP:
-        ibp = True
-        affine = False
-    else:
-        raise ValueError("Unknown mode.")
+    output_ref_ = f_ref(inputs_)
 
-    layers_ref = split_activation(dense_ref)
+    # decomon layer & function & output via to_decomon
+    input_dim = helpers.get_input_dim_from_full_inputs(inputs)
+    layers_ref = split_activation(keras_layer)
     decomon_layers = []
     for layer in layers_ref:
-        decomon_layers.append(to_decomon(layer, input_dim, dc_decomp=True, ibp=ibp, affine=affine, shared=shared))
-
-    W_, bias = decomon_layers[0].get_weights()
-    W_0, b_0 = dense_ref.get_weights()
-
-    assert_almost_equal(W_, W_0, decimal=6, err_msg="wrong decomposition")
-    assert_almost_equal(bias, b_0, decimal=6, err_msg="wrong decomposition")
-
-    if mode == ForwardMode.HYBRID:
-        output = decomon_layers[0](inputs[2:])
-    elif mode == ForwardMode.AFFINE:
-        output = decomon_layers[0]([z, W_u, b_u, W_l, b_l, h, g])
-    elif mode == ForwardMode.IBP:
-        output = decomon_layers[0]([u_c, l_c, h, g])
-    else:
-        raise ValueError("Unknown mode.")
-
+        decomon_layers.append(to_decomon(layer, input_dim, dc_decomp=dc_decomp, ibp=ibp, affine=affine, shared=shared))
+    outputs = decomon_layers[0](inputs_for_mode)
     if len(decomon_layers) > 1:
-        output = decomon_layers[1](output)
+        outputs = decomon_layers[1](outputs)
+    f_decomon = K.function(inputs, outputs)
+    outputs_ = f_decomon(inputs_)
 
-    f_dense = K.function(inputs[2:], output)
-    y_ref = f_ref(inputs_)
-    if mode == ForwardMode.HYBRID:
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(
-            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=5
-        )
+    # check bounds consistency
+    helpers.assert_decomon_layer_output_properties_box(
+        full_inputs=inputs_,
+        output_ref=output_ref_,
+        outputs_for_mode=outputs_,
+        dc_decomp=dc_decomp,
+        decimal=decimal,
+        mode=mode,
+    )
 
-    elif mode == ForwardMode.AFFINE:
-        z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(
-            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], None, w_u_, b_u_, None, w_l_, b_l_, decimal=5
-        )
-
-    elif mode == ForwardMode.IBP:
-        u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(
-            x_, y_ref, h_, g_, z_[:, 0], z_[:, 1], u_c_, None, None, l_c_, None, None, decimal=5
-        )
-    else:
-        raise ValueError("Unknown mode.")
-
-
-def test_DecomonDense_multiD_to_decomon_box(odd, activation, mode, helpers):
-
-    dense_ref = Dense(1, use_bias=True, activation=activation, dtype=K.floatx())
-
-    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=True)
-    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=True)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
-    x_ = inputs_[0]
-    z_ = inputs_[2]
-
-    output_ref = dense_ref(inputs[1])
-    W_0, b_0 = dense_ref.get_weights()
-    if odd == 1:
-
-        W_0[0] = -0.1657672
-        W_0[1] = -0.2613032
-        W_0[2] = 0.08437371
-        dense_ref.set_weights([W_0, b_0])
-
-    f_ref = K.function(inputs, output_ref)
-    input_dim = x.shape[-1]
-
-    y_ = f_ref(inputs_)
-
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        ibp = True
-        affine = True
-    elif mode == ForwardMode.AFFINE:
-        ibp = False
-        affine = True
-    elif mode == ForwardMode.IBP:
-        ibp = True
-        affine = False
-    else:
-        raise ValueError("Unknown mode.")
-
-    layers_ref = split_activation(dense_ref)
-    decomon_layers = []
-    for layer in layers_ref:
-        decomon_layers.append(to_decomon(layer, input_dim, dc_decomp=True, ibp=ibp, affine=affine))
+    # check same weights
     W_, bias = decomon_layers[0].get_weights()
-    W_0, b_0 = dense_ref.get_weights()
-
-    assert_almost_equal(W_, W_0, decimal=6, err_msg="wrong decomposition")
-    assert_almost_equal(bias, b_0, decimal=6, err_msg="wrong decomposition")
-
-    if mode == ForwardMode.HYBRID:
-        output = decomon_layers[0](inputs[2:])
-    elif mode == ForwardMode.AFFINE:
-        output = decomon_layers[0]([z, W_u, b_u, W_l, b_l, h, g])
-    elif mode == ForwardMode.IBP:
-        output = decomon_layers[0]([u_c, l_c, h, g])
-    else:
-        raise ValueError("Unknown mode.")
-
-    if len(decomon_layers) > 1:
-        output = decomon_layers[1](output)
-
-    f_dense = K.function(inputs[2:], output)
-
-    if mode == ForwardMode.HYBRID:
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(
-            x_, y_, h_, g_, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=5
-        )
-
-    elif mode == ForwardMode.AFFINE:
-        z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(
-            x_, y_, h_, g_, z_[:, 0], z_[:, 1], None, w_u_, b_u_, None, w_l_, b_l_, decimal=5
-        )
-
-    elif mode == ForwardMode.IBP:
-        u_c_, l_c_, h_, g_ = f_dense(inputs_[2:])
-        helpers.assert_output_properties_box(
-            x_, y_, h_, g_, z_[:, 0], z_[:, 1], u_c_, None, None, l_c_, None, None, decimal=5
-        )
-    else:
-        raise ValueError("Unknown mode.")
+    W_0, b_0 = keras_layer.get_weights()
+    assert_almost_equal(W_, W_0, decimal=decimal, err_msg="wrong decomposition")
+    assert_almost_equal(bias, b_0, decimal=decimal, err_msg="wrong decomposition")
 
 
-def test_DecomonDense_1D_box_nodc(n, helpers):
+def test_DecomonDense_multiD_to_decomon_box(odd, activation, mode, dc_decomp, helpers):
 
-    decomon_dense = DecomonDense(1, use_bias=True, dc_decomp=False)
-    ref_dense = Dense(1, use_bias=True)
+    shared = False
+    kwargs_layer = dict(units=1, use_bias=True, dtype=K.floatx())
+    decimal = 5
+    ibp = get_ibp(mode=mode)
+    affine = get_affine(mode=mode)
 
-    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
+    # tensor inputs
+    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
 
-    output = decomon_dense(inputs[2:])
-    ref_dense(inputs[1])
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
 
-    W_, bias = decomon_dense.get_weights()
-
-    decomon_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
-    ref_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
-
-    f_dense = K.function(inputs[2:], output)
-    f_ref = K.function(inputs, ref_dense(inputs[1]))
-
-    z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
-    y_ref = f_ref(inputs_)
-    helpers.assert_output_properties_box_linear(x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
-
-
-def test_DecomonDense_multiD_to_decomon_box_nodc(odd, activation, mode, helpers):
-
-    dense_ref = Dense(1, use_bias=True, activation=activation)
-
-    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
-
-    output_ref = dense_ref(inputs[1])
-    W_0, b_0 = dense_ref.get_weights()
+    # keras layer & function & output
+    keras_layer = Dense(**kwargs_layer)
+    output_ref = keras_layer(input_ref)
+    W_0, b_0 = keras_layer.get_weights()
     if odd == 0:
         W_0[0] = 1.037377
         W_0[1] = -0.7575816
 
-        dense_ref.set_weights([W_0, b_0])
+        keras_layer.set_weights([W_0, b_0])
     if odd == 1:
 
         W_0[0] = -0.1657672
         W_0[1] = -0.2613032
         W_0[2] = 0.08437371
-        dense_ref.set_weights([W_0, b_0])
-
+        keras_layer.set_weights([W_0, b_0])
     f_ref = K.function(inputs, output_ref)
-    input_dim = x.shape[-1]
+    output_ref_ = f_ref(inputs_)
 
-    y_ref = f_ref(inputs_)
-
-    layers_ref = split_activation(dense_ref)
+    #  decomon layer & function via to_decomon
+    input_dim = helpers.get_input_dim_from_full_inputs(inputs)
+    layers_ref = split_activation(keras_layer)
     decomon_layers = []
     for layer in layers_ref:
-        decomon_layers.append(to_decomon(layer, input_dim, dc_decomp=False))
-    W_, bias = decomon_layers[0].get_weights()
-    W_0, b_0 = dense_ref.get_weights()
-
-    assert_almost_equal(W_, W_0, decimal=6, err_msg="wrong decomposition")
-    assert_almost_equal(bias, b_0, decimal=6, err_msg="wrong decomposition")
-
-    output = decomon_layers[0](inputs[2:])
+        decomon_layers.append(to_decomon(layer, input_dim, dc_decomp=dc_decomp, ibp=ibp, affine=affine, shared=shared))
+    outputs = decomon_layers[0](inputs_for_mode)
     if len(decomon_layers) > 1:
-        output = decomon_layers[1](output)
+        outputs = decomon_layers[1](outputs)
+    f_decomon = K.function(inputs, outputs)
+    outputs_ = f_decomon(inputs_)
 
-    f_dense = K.function(inputs[2:], output)
+    # check bounds consistency
+    if dc_decomp:
+        helpers.assert_decomon_layer_output_properties_box(
+            full_inputs=inputs_,
+            output_ref=output_ref_,
+            outputs_for_mode=outputs_,
+            dc_decomp=dc_decomp,
+            decimal=decimal,
+            mode=mode,
+        )
+    else:
+        helpers.assert_decomon_layer_output_properties_box_linear(
+            full_inputs=inputs_,
+            output_ref=output_ref_,
+            outputs_for_mode=outputs_,
+            dc_decomp=dc_decomp,
+            decimal=decimal,
+            mode=mode,
+        )
 
-    z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
-
-    helpers.assert_output_properties_box_linear(x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
-
-
-def test_DecomonDense_multiD_box_dc(odd, helpers):
-
-    decomon_dense = DecomonDense(1, use_bias=True, dc_decomp=False)
-    ref_dense = Dense(1, use_bias=True)
-
-    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
-
-    output = decomon_dense(inputs[2:])
-    ref_dense(inputs[1])
-
-    W_, bias = decomon_dense.get_weights()
-
-    decomon_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
-    ref_dense.set_weights([2 * np.ones_like(W_), np.ones_like(bias)])
-    f_dense = K.function(inputs[2:], output)
-    f_ref = K.function(inputs, ref_dense(inputs[1]))
-
-    z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
-    y_ref = f_ref(inputs_)
-
-    helpers.assert_output_properties_box_linear(x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
-
-    decomon_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
-    ref_dense.set_weights([-3 * np.ones_like(W_), np.ones_like(bias)])
-    z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_dense(inputs_[2:])
-    y_ref = f_ref(inputs_)
-
-    helpers.assert_output_properties_box_linear(x, y_ref, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_)
+    # check same weights
+    W_, bias = decomon_layers[0].get_weights()
+    W_0, b_0 = keras_layer.get_weights()
+    assert_almost_equal(W_, W_0, decimal=decimal, err_msg="wrong decomposition")
+    assert_almost_equal(bias, b_0, decimal=decimal, err_msg="wrong decomposition")
