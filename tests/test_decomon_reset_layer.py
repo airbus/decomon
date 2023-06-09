@@ -22,7 +22,8 @@ def test_decomondense_reset_layer(helpers, use_bias):
     layer(tf.zeros((2, input_dim)))
     decomon_layer = DecomonDense(units=units, use_bias=use_bias, mode=mode, dc_decomp=dc_decomp)
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
-    decomon_layer(inputs[2:])
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    decomon_layer(inputs_for_mode)
 
     kernel = layer.kernel
     layer.kernel.assign(2 * np.ones_like(kernel))
@@ -52,7 +53,8 @@ def test_decomondense_reset_layer_decomon_with_new_weights(helpers):
     layer(tf.zeros((2, input_dim)))
     decomon_layer = DecomonDense(units=units, mode=mode, dc_decomp=dc_decomp)
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
-    decomon_layer(inputs[2:])
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    decomon_layer(inputs_for_mode)
     # Add new variables
     decomon_layer.add_weight(shape=(input_dim, units), initializer="ones", name="alpha", trainable=True)
     decomon_layer.add_weight(shape=(input_dim, units), initializer="ones", name="beta", trainable=False)
@@ -80,7 +82,8 @@ def test_decomondense_reset_layer_keras_with_new_weights(helpers):
     layer(tf.zeros((2, input_dim)))
     decomon_layer = DecomonDense(units=units, mode=mode, dc_decomp=dc_decomp)
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
-    decomon_layer(inputs[2:])
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    decomon_layer(inputs_for_mode)
     # Add new variables
     layer.add_weight(shape=(input_dim, units), initializer="ones", name="alpha", trainable=False)
     assert len(layer.weights) == 3
@@ -131,12 +134,15 @@ def test_decomonconv2d_reset_layer(helpers, use_bias):
     mode = ForwardMode.HYBRID
 
     inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=False)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
+
     layer = Conv2D(filters=filters, kernel_size=kernel_size, use_bias=use_bias)
-    layer(inputs[1])
+    layer(input_ref)
     decomon_layer = DecomonConv2D(
         filters=filters, kernel_size=kernel_size, use_bias=use_bias, mode=mode, dc_decomp=dc_decomp
     )
-    decomon_layer(inputs[2:])
+    decomon_layer(inputs_for_mode)
 
     kernel = layer.kernel
     layer.kernel.assign(2 * np.ones_like(kernel))
@@ -167,11 +173,13 @@ def test_decomonbacthnormalization_reset_layer(helpers, center, scale):
     odd = 0
     mode = ForwardMode.HYBRID
     inputs = helpers.get_tensor_decomposition_multid_box(odd=odd, dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
 
     layer = BatchNormalization(center=center, scale=scale)
-    layer(inputs[1])
+    layer(input_ref)
     decomon_layer = DecomonBatchNormalization(center=center, scale=scale, mode=mode, dc_decomp=dc_decomp)
-    decomon_layer(inputs[2:])
+    decomon_layer(inputs_for_mode)
 
     moving_mean = layer.moving_mean
     layer.moving_mean.assign(np.ones_like(moving_mean))
@@ -204,6 +212,7 @@ def test_decomonflatten_reset_layer(helpers):
     layer(tf.zeros((2, input_dim)))
     decomon_layer = DecomonFlatten(mode=mode, dc_decomp=dc_decomp)
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
-    decomon_layer(inputs[2:])
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    decomon_layer(inputs_for_mode)
 
     decomon_layer.reset_layer(layer)

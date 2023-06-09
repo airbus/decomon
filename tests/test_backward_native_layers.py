@@ -1,110 +1,65 @@
-# Test unit for decomon with Dense layers
-
-
-import numpy as np
 import pytest
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Activation, Flatten, Input, Reshape
-from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Activation, Flatten, Reshape
 from tensorflow.python.keras.backend import _get_available_gpus
 
 from decomon.backward_layers.convert import to_backward
-from decomon.layers.core import ForwardMode
-from decomon.layers.decomon_layers import DecomonActivation, DecomonFlatten
-from decomon.layers.decomon_reshape import DecomonReshape
 
 
 def test_Backward_NativeActivation_1D_box_model(n, activation, mode, floatx, decimal, helpers):
+    dc_decomp = False
 
-    layer = DecomonActivation(activation, dc_decomp=False, mode=mode, dtype=K.floatx())
+    #  tensor inputs
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
 
-    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
-    x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
 
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        input_mode = inputs[2:]
-        output = layer(input_mode)
-        z_0, u_c_0, _, _, l_c_0, _, _ = output
-    elif mode == ForwardMode.AFFINE:
-        input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
-        output = layer(input_mode)
-        z_0, _, _, _, _ = output
-    elif mode == ForwardMode.IBP:
-        input_mode = [inputs[3], inputs[6]]
-        output = layer(input_mode)
-        u_c_0, l_c_0 = output
-    else:
-        raise ValueError("Unknown mode.")
+    # keras layer
+    keras_layer = Activation(activation, dtype=K.floatx())
 
-    w_out = Input((1, 1), dtype=K.floatx())
-    b_out = Input((1,), dtype=K.floatx())
     # get backward layer
-    layer_backward = to_backward(Activation(activation, dtype=K.floatx()), mode=mode)
-    w_out_u_, b_out_u_, w_out_l_, b_out_l_ = layer_backward(input_mode)
-    model = Model(inputs[2:], [w_out_u_, b_out_u_, w_out_l_, b_out_l_])
-    w_u_, b_u_, w_l_, b_l_ = model.predict(inputs_[2:])
+    backward_layer = to_backward(keras_layer, mode=mode)
 
-    helpers.assert_output_properties_box_linear(
-        x,
-        None,
-        z_[:, 0],
-        z_[:, 1],
-        None,
-        np.sum(np.maximum(w_u_, 0) * W_u + np.minimum(w_u_, 0) * W_l, 1)[:, :, None],
-        b_u_ + np.sum(np.maximum(w_u_, 0) * b_u[:, :, None], 1) + np.sum(np.minimum(w_u_, 0) * b_l[:, :, None], 1),
-        None,
-        np.sum(np.maximum(w_l_, 0) * W_l + np.minimum(w_l_, 0) * W_u, 1)[:, :, None],
-        b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
+    # backward outputs
+    outputs = backward_layer(inputs_for_mode)
+    f_decomon = K.function(inputs, outputs)
+    outputs_ = f_decomon(inputs_)
+
+    # check bounds consistency
+    helpers.assert_backward_layer_output_properties_box_linear(
+        full_inputs=inputs_,
+        backward_outputs=outputs_,
         decimal=decimal,
     )
 
 
 def test_Backward_NativeActivation_multiD_box(odd, activation, floatx, decimal, mode, helpers):
-    layer = DecomonActivation(activation, dc_decomp=False, mode=mode, dtype=K.floatx())
+    dc_decomp = False
 
-    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
-    x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
+    #  tensor inputs
+    inputs = helpers.get_tensor_decomposition_multid_box(odd=odd, dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
 
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        input_mode = inputs[2:]
-        output = layer(input_mode)
-        z_0, u_c_0, _, _, l_c_0, _, _ = output
-    elif mode == ForwardMode.AFFINE:
-        input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
-        output = layer(input_mode)
-        z_0, _, _, _, _ = output
-    elif mode == ForwardMode.IBP:
-        input_mode = [inputs[3], inputs[6]]
-        output = layer(input_mode)
-        u_c_0, l_c_0 = output
-    else:
-        raise ValueError("Unknown mode.")
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
 
-    w_out = Input((1, 1), dtype=K.floatx())
-    b_out = Input((1,), dtype=K.floatx())
+    # keras layer
+    keras_layer = Activation(activation, dtype=K.floatx())
+
     # get backward layer
-    layer_backward = to_backward(Activation(activation, dtype=K.floatx()), mode=mode)
-    w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
-    f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
-    # import pdb; pdb.set_trace()
-    output_ = f_dense(inputs_)
-    w_u_, b_u_, w_l_, b_l_ = output_
+    backward_layer = to_backward(keras_layer, mode=mode)
 
-    helpers.assert_output_properties_box_linear(
-        x,
-        None,
-        z_[:, 0],
-        z_[:, 1],
-        None,
-        np.sum(np.maximum(w_u_, 0) * W_u + np.minimum(w_u_, 0) * W_l, 1)[:, :, None],
-        b_u_ + np.sum(np.maximum(w_u_, 0) * b_u[:, :, None], 1) + np.sum(np.minimum(w_u_, 0) * b_l[:, :, None], 1),
-        None,
-        np.sum(np.maximum(w_l_, 0) * W_l + np.minimum(w_l_, 0) * W_u, 1)[:, :, None],
-        b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
+    # backward outputs
+    outputs = backward_layer(inputs_for_mode)
+    f_decomon = K.function(inputs, outputs)
+    outputs_ = f_decomon(inputs_)
+
+    # check bounds consistency
+    helpers.assert_backward_layer_output_properties_box_linear(
+        full_inputs=inputs_,
+        backward_outputs=outputs_,
         decimal=decimal,
     )
 
@@ -113,92 +68,59 @@ def test_Backward_NativeFlatten_multiD_box(odd, floatx, decimal, mode, data_form
     if data_format == "channels_first" and not len(_get_available_gpus()):
         pytest.skip("data format 'channels first' is possible only in GPU mode")
 
-    layer = DecomonFlatten("channels_last", dc_decomp=False, mode=mode, dtype=K.floatx())
+    dc_decomp = False
 
-    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
-    x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
+    #  tensor inputs
+    inputs = helpers.get_tensor_decomposition_multid_box(odd=odd, dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
 
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        input_mode = inputs[2:]
-        output = layer(input_mode)
-        z_0, u_c_0, _, _, l_c_0, _, _ = output
-    elif mode == ForwardMode.AFFINE:
-        input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
-        output = layer(input_mode)
-        z_0, _, _, _, _ = output
-    elif mode == ForwardMode.IBP:
-        input_mode = [inputs[3], inputs[6]]
-        output = layer(input_mode)
-        u_c_0, l_c_0 = output
-    else:
-        raise ValueError("Unknown mode.")
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
+
+    # keras layer
+    keras_layer = Flatten(data_format, dtype=K.floatx())
 
     # get backward layer
-    layer_backward = to_backward(Flatten("channels_last", dtype=K.floatx()), mode=mode)
-    w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
-    f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
-    output_ = f_dense(inputs_)
-    w_u_, b_u_, w_l_, b_l_ = output_
+    backward_layer = to_backward(keras_layer, mode=mode)
 
-    helpers.assert_output_properties_box_linear(
-        x,
-        None,
-        z_[:, 0],
-        z_[:, 1],
-        None,
-        np.sum(np.maximum(w_u_, 0) * W_u + np.minimum(w_u_, 0) * W_l, 1)[:, :, None],
-        b_u_ + np.sum(np.maximum(w_u_, 0) * b_u[:, :, None], 1) + np.sum(np.minimum(w_u_, 0) * b_l[:, :, None], 1),
-        None,
-        np.sum(np.maximum(w_l_, 0) * W_l + np.minimum(w_l_, 0) * W_u, 1)[:, :, None],
-        b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
+    # backward outputs
+    outputs = backward_layer(inputs_for_mode)
+    f_decomon = K.function(inputs, outputs)
+    outputs_ = f_decomon(inputs_)
+
+    # check bounds consistency
+    helpers.assert_backward_layer_output_properties_box_linear(
+        full_inputs=inputs_,
+        backward_outputs=outputs_,
         decimal=decimal,
     )
 
 
-def test_Backward_NativeReshape_multiD_box(odd, floatx, decimal, mode, data_format, helpers):
-    if data_format == "channels_first" and not len(_get_available_gpus()):
-        pytest.skip("data format 'channels first' is possible only in GPU mode")
+def test_Backward_NativeReshape_multiD_box(odd, floatx, decimal, mode, helpers):
 
-    layer = DecomonReshape((-1,), dc_decomp=False, mode=mode)
-    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
-    x, y, z_, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
+    dc_decomp = False
 
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.HYBRID:
-        input_mode = inputs[2:]
-        output = layer(input_mode)
-        z_0, u_c_0, _, _, l_c_0, _, _ = output
-    elif mode == ForwardMode.AFFINE:
-        input_mode = [inputs[2], inputs[4], inputs[5], inputs[7], inputs[8]]
-        output = layer(input_mode)
-        z_0, _, _, _, _ = output
-    elif mode == ForwardMode.IBP:
-        input_mode = [inputs[3], inputs[6]]
-        output = layer(input_mode)
-        u_c_0, l_c_0 = output
-    else:
-        raise ValueError("Unknown mode.")
+    #  tensor inputs
+    inputs = helpers.get_tensor_decomposition_multid_box(odd=odd, dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
+
+    # keras layer
+    keras_layer = Reshape((-1,), dtype=K.floatx())
 
     # get backward layer
-    layer_backward = to_backward(Reshape((-1,)), mode=mode)
-    w_out_u, b_out_u, w_out_l, b_out_l = layer_backward(input_mode)
-    f_dense = K.function(inputs, [w_out_u, b_out_u, w_out_l, b_out_l])
-    output_ = f_dense(inputs_)
-    w_u_, b_u_, w_l_, b_l_ = output_
+    backward_layer = to_backward(keras_layer, mode=mode)
 
-    helpers.assert_output_properties_box_linear(
-        x,
-        None,
-        z_[:, 0],
-        z_[:, 1],
-        None,
-        np.sum(np.maximum(w_u_, 0) * W_u + np.minimum(w_u_, 0) * W_l, 1)[:, :, None],
-        b_u_ + np.sum(np.maximum(w_u_, 0) * b_u[:, :, None], 1) + np.sum(np.minimum(w_u_, 0) * b_l[:, :, None], 1),
-        None,
-        np.sum(np.maximum(w_l_, 0) * W_l + np.minimum(w_l_, 0) * W_u, 1)[:, :, None],
-        b_l_ + np.sum(np.maximum(w_l_, 0) * b_l[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * b_u[:, :, None], 1),
+    # backward outputs
+    outputs = backward_layer(inputs_for_mode)
+    f_decomon = K.function(inputs, outputs)
+    outputs_ = f_decomon(inputs_)
+
+    # check bounds consistency
+    helpers.assert_backward_layer_output_properties_box_linear(
+        full_inputs=inputs_,
+        backward_outputs=outputs_,
         decimal=decimal,
     )

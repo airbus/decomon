@@ -1,7 +1,9 @@
-from typing import Optional
+from typing import List, Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 import pytest
+import tensorflow as tf
 import tensorflow.keras.backend as K
 from numpy.testing import assert_almost_equal
 from tensorflow.keras import Input
@@ -58,6 +60,11 @@ def decimal(floatx):
         return 2
     else:
         return 5
+
+
+@pytest.fixture(params=[True, False])
+def dc_decomp(request):
+    return request.param
 
 
 @pytest.fixture(params=[True, False])
@@ -253,6 +260,158 @@ class Helpers:
         return [e.astype(K.floatx()) for e in output]
 
     @staticmethod
+    def get_inputs_for_mode_from_full_inputs(
+        inputs: Union[List[tf.Tensor], List[npt.NDArray[np.float_]]],
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        dc_decomp: bool = True,
+    ) -> Union[List[tf.Tensor], List[npt.NDArray[np.float_]]]:
+        """Extract from full inputs the ones corresponding to the selected mode.
+
+        Args:
+            inputs: inputs from `get_standard_values_xxx()` or `get_tensor_decomposition_xxx()`
+            mode:
+            dc_decomp:
+
+        Returns:
+
+        """
+        mode = ForwardMode(mode)
+        if dc_decomp:
+            x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
+            if mode == ForwardMode.HYBRID:
+                return inputs[2:]
+            elif mode == ForwardMode.AFFINE:
+                return [z, W_u, b_u, W_l, b_l, h, g]
+            elif mode == ForwardMode.IBP:
+                return [u_c, l_c, h, g]
+            else:
+                raise ValueError("Unknown mode.")
+        else:
+            x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
+            if mode == ForwardMode.HYBRID:
+                return inputs[2:]
+            elif mode == ForwardMode.AFFINE:
+                return [z, W_u, b_u, W_l, b_l]
+            elif mode == ForwardMode.IBP:
+                return [u_c, l_c]
+            else:
+                raise ValueError("Unknown mode.")
+
+    @staticmethod
+    def get_inputs_np_for_decomon_model_from_full_inputs(
+        inputs: List[npt.NDArray[np.float_]],
+    ) -> npt.NDArray[np.float_]:
+        """Extract from full numpy inputs the ones for a decomon model prediction.
+
+        Args:
+            inputs:  inputs from `get_standard_values_xxx()`
+
+        Returns:
+
+        """
+        l_c_, u_c_ = Helpers.get_input_ref_bounds_from_full_inputs(inputs=inputs)
+        return np.concatenate((l_c_[:, None], u_c_[:, None]), axis=1)
+
+    @staticmethod
+    def get_input_ref_bounds_from_full_inputs(
+        inputs: Union[List[tf.Tensor], List[npt.NDArray[np.float_]]],
+    ) -> Union[List[tf.Tensor], List[npt.NDArray[np.float_]]]:
+        """Extract lower and upper bound for input ref from full inputs
+
+        Args:
+            inputs: inputs from `get_standard_values_xxx()` or `get_tensor_decomposition_xxx()`
+
+        Returns:
+
+        """
+        u_c_, l_c_ = inputs[3], inputs[6]
+        return [l_c_, u_c_]
+
+    @staticmethod
+    def prepare_full_np_inputs_for_convert_model(
+        inputs: List[npt.NDArray[np.float_]],
+        dc_decomp: bool = True,
+    ) -> List[npt.NDArray[np.float_]]:
+        """Prepare full numpy inputs for convert_forward or convert_backward.
+
+        W_u and W_l will be idendity matrices, and b_u, b_l zeros vectors.
+
+        Args:
+            inputs: inputs from `get_standard_values_xxx()` or `get_tensor_decomposition_xxx()`
+
+        Returns:
+
+        """
+        if dc_decomp:
+            x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
+        else:
+            x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
+
+        b_u = np.zeros_like(b_u)
+        b_l = np.zeros_like(b_l)
+        W_u = np.repeat(np.identity(n=W_u.shape[-1])[None, :, :], repeats=W_u.shape[0], axis=0)
+        W_l = np.repeat(np.identity(n=W_l.shape[-1])[None, :, :], repeats=W_l.shape[0], axis=0)
+
+        if dc_decomp:
+            return [x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g]
+        else:
+            return [x, y, z, u_c, W_u, b_u, l_c, W_l, b_l]
+
+    @staticmethod
+    def get_input_tensors_for_decomon_convert_from_full_inputs(
+        inputs: List[tf.Tensor],
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        dc_decomp: bool = True,
+    ) -> List[tf.Tensor]:
+        """Extract from full tensor inputs the ones for a conversion to decomon model.
+
+        Args:
+            inputs:  inputs from `get_tensor_decomposition_xxx()`
+            mode:
+            dc_decomp:
+
+        Returns:
+
+        """
+        mode = ForwardMode(mode)
+        if dc_decomp:
+            x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
+            input_box_tensor = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
+            if mode == ForwardMode.HYBRID:
+                return [input_box_tensor, u_c, W_u, b_u, l_c, W_l, b_l, h, g]
+            elif mode == ForwardMode.AFFINE:
+                return [input_box_tensor, W_u, b_u, W_l, b_l, h, g]
+            elif mode == ForwardMode.IBP:
+                return [u_c, l_c, h, g]
+            else:
+                raise ValueError("Unknown mode.")
+        else:
+            x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
+            input_box_tensor = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
+            if mode == ForwardMode.HYBRID:
+                return [input_box_tensor, u_c, W_u, b_u, l_c, W_l, b_l]
+            elif mode == ForwardMode.AFFINE:
+                return [input_box_tensor, W_u, b_u, W_l, b_l]
+            elif mode == ForwardMode.IBP:
+                return [u_c, l_c]
+            else:
+                raise ValueError("Unknown mode.")
+
+    @staticmethod
+    def get_input_ref_from_full_inputs(
+        inputs: Union[List[tf.Tensor], List[npt.NDArray[np.float_]]]
+    ) -> Union[tf.Tensor, npt.NDArray[np.float_]]:
+        """Extract from full inputs the input of reference for the original Keras layer.
+
+        Args:
+            inputs: inputs from `get_standard_values_xxx()` or `get_tensor_decomposition_xxx()`
+
+        Returns:
+
+        """
+        return inputs[1]
+
+    @staticmethod
     def get_tensor_decomposition_1d_box(dc_decomp=True):
 
         if dc_decomp:
@@ -282,6 +441,43 @@ class Helpers:
         ]
 
     @staticmethod
+    def get_full_outputs_from_outputs_for_mode(
+        outputs_for_mode: Union[List[tf.Tensor], List[npt.NDArray[np.float_]]],
+        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        dc_decomp: bool = True,
+        full_inputs: Optional[Union[List[tf.Tensor], List[npt.NDArray[np.float_]]]] = None,
+    ) -> Union[List[tf.Tensor], List[npt.NDArray[np.float_]]]:
+        mode = ForwardMode(mode)
+        if dc_decomp:
+            if mode == ForwardMode.HYBRID:
+                z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = outputs_for_mode
+            elif mode == ForwardMode.AFFINE:
+                z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = outputs_for_mode
+                u_c_, l_c_ = None, None
+            elif mode == ForwardMode.IBP:
+                u_c_, l_c_, h_, g_ = outputs_for_mode
+                z_, w_u_, b_u_, w_l_, b_l_ = None, None, None, None, None
+                if full_inputs is not None:
+                    z_ = full_inputs[2]
+            else:
+                raise ValueError("Unknown mode.")
+        else:
+            if mode == ForwardMode.HYBRID:
+                z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = outputs_for_mode
+            elif mode == ForwardMode.AFFINE:
+                z_, w_u_, b_u_, w_l_, b_l_ = outputs_for_mode
+                u_c_, l_c_ = None, None
+            elif mode == ForwardMode.IBP:
+                u_c_, l_c_ = outputs_for_mode
+                z_, w_u_, b_u_, w_l_, b_l_ = None, None, None, None, None
+                if full_inputs is not None:
+                    z_ = full_inputs[2]
+            else:
+                raise ValueError("Unknown mode.")
+            h_, g_ = None, None
+        return [z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
+
+    @staticmethod
     def get_input_dim_multid_box(odd):
         if odd:
             return 3
@@ -294,6 +490,18 @@ class Helpers:
             return 7
         else:
             return 6
+
+    @staticmethod
+    def get_input_dim_from_full_inputs(inputs: Union[List[tf.Tensor], List[npt.NDArray[np.float_]]]) -> int:
+        """Get input_dim for to_decomon or to_backward from full inputs
+
+        Args:
+            inputs: inputs from `get_standard_values_xxx()` or `get_tensor_decomposition_xxx()`
+
+        Returns:
+
+        """
+        return inputs[0].shape[-1]
 
     @staticmethod
     def get_tensor_decomposition_multid_box(odd=1, dc_decomp=True):
@@ -764,9 +972,110 @@ class Helpers:
             )
 
     @staticmethod
-    def assert_output_properties_box_linear(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=5):
+    def assert_decomon_model_output_properties_box(
+        full_inputs, output_ref, outputs_for_mode, mode=ForwardMode.HYBRID, dc_decomp=True, decimal=5
+    ):
+        input_ref_ = Helpers.get_input_ref_from_full_inputs(full_inputs)
+        input_ref_min_, input_ref_max_ = Helpers.get_input_ref_bounds_from_full_inputs(inputs=full_inputs)
+        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = Helpers.get_full_outputs_from_outputs_for_mode(
+            outputs_for_mode=outputs_for_mode, mode=mode, dc_decomp=dc_decomp, full_inputs=full_inputs
+        )
 
-        # flatten everything
+        Helpers.assert_output_properties_box(
+            input_ref_,
+            output_ref,
+            h_,
+            g_,
+            input_ref_min_,
+            input_ref_max_,
+            u_c_,
+            w_u_,
+            b_u_,
+            l_c_,
+            w_l_,
+            b_l_,
+            decimal=decimal,
+        )
+
+    @staticmethod
+    def assert_decomon_layer_output_properties_box(
+        full_inputs, output_ref, outputs_for_mode, mode=ForwardMode.HYBRID, dc_decomp=True, decimal=5
+    ):
+        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = Helpers.get_full_outputs_from_outputs_for_mode(
+            outputs_for_mode=outputs_for_mode, mode=mode, dc_decomp=dc_decomp, full_inputs=full_inputs
+        )
+        x_ = full_inputs[0]
+        Helpers.assert_output_properties_box(
+            x_,
+            output_ref,
+            h_,
+            g_,
+            z_[:, 0],
+            z_[:, 1],
+            u_c_,
+            w_u_,
+            b_u_,
+            l_c_,
+            w_l_,
+            b_l_,
+            decimal=decimal,
+        )
+
+    @staticmethod
+    def assert_decomon_layer_output_properties_box_linear(
+        full_inputs, output_ref, outputs_for_mode, mode=ForwardMode.HYBRID, dc_decomp=True, decimal=5
+    ):
+        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = Helpers.get_full_outputs_from_outputs_for_mode(
+            outputs_for_mode=outputs_for_mode, mode=mode, dc_decomp=dc_decomp, full_inputs=full_inputs
+        )
+        x_ = full_inputs[0]
+        Helpers.assert_output_properties_box_linear(
+            x_,
+            output_ref,
+            z_[:, 0],
+            z_[:, 1],
+            u_c_,
+            w_u_,
+            b_u_,
+            l_c_,
+            w_l_,
+            b_l_,
+            decimal=decimal,
+        )
+
+    @staticmethod
+    def assert_backward_layer_output_properties_box_linear(
+        full_inputs, backward_outputs, output_ref=None, upper_constant_bound=None, lower_constant_bound=None, decimal=5
+    ):
+        w_u_, b_u_, w_l_, b_l_ = backward_outputs
+        x_, y_, z_, u_c_, W_u_, B_u_, l_c_, W_l_, B_l_ = full_inputs
+
+        # backward recomposition
+        w_u_b = np.sum(np.maximum(w_u_, 0) * W_u_ + np.minimum(w_u_, 0) * W_l_, 1)[:, :, None]
+        b_u_b = (
+            b_u_ + np.sum(np.maximum(w_u_, 0) * B_u_[:, :, None], 1) + np.sum(np.minimum(w_u_, 0) * B_l_[:, :, None], 1)
+        )
+        w_l_b = np.sum(np.maximum(w_l_, 0) * W_l_ + np.minimum(w_l_, 0) * W_u_, 1)[:, :, None]
+        b_l_b = (
+            b_l_ + np.sum(np.maximum(w_l_, 0) * B_l_[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * B_u_[:, :, None], 1)
+        )
+
+        Helpers.assert_output_properties_box_linear(
+            x_,
+            output_ref,
+            z_[:, 0],
+            z_[:, 1],
+            upper_constant_bound,
+            w_u_b,
+            b_u_b,
+            lower_constant_bound,
+            w_l_b,
+            b_l_b,
+            decimal=decimal,
+        )
+
+    @staticmethod
+    def assert_output_properties_box_linear(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=5):
         # flatten everyting
         n = len(x_)
         if y_ is not None:

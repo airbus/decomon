@@ -27,49 +27,33 @@ def test_activation_1D_box(n, mode, floatx, decimal, helpers, activation_func, t
         if n not in {0, 3}:
             pytest.skip("softmax activation only possible for n=0 or 3")
 
-    mode = ForwardMode(mode)
+    dc_decomp = False
 
-    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
-    (
-        x_0,
-        y_0,
-        z_0,
-        u_c_0,
-        W_u_0,
-        b_u_0,
-        l_c_0,
-        W_l_0,
-        b_l_0,
-    ) = inputs_  # numpy values
+    #  tensor inputs
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
 
-    if mode == ForwardMode.HYBRID:
-        output = activation_func(inputs[2:], dc_decomp=False, mode=mode)
-    elif mode == ForwardMode.AFFINE:
-        output = activation_func([z, W_u, b_u, W_l, b_l], dc_decomp=False, mode=mode)
-    elif mode == ForwardMode.IBP:
-        output = activation_func([u_c, l_c], dc_decomp=False, mode=mode)
-    else:
-        raise ValueError("Unknown mode.")
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
 
-    f_func = K.function(inputs[2:], output)
-    f_ref = K.function(inputs, tensor_func(y))
-    y_ = f_ref(inputs_)
-    z_ = z_0
-    if mode == ForwardMode.HYBRID:
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = f_func(inputs_[2:])
-    elif mode == ForwardMode.AFFINE:
-        z_, w_u_, b_u_, w_l_, b_l_ = f_func(inputs_[2:])
-        u_c_, l_c_ = [None] * 2
-    elif mode == ForwardMode.IBP:
-        u_c_, l_c_ = f_func(inputs_[2:])
-        w_u_, b_u_, w_l_, b_l_ = [None] * 4
-    else:
-        raise ValueError("Unknown mode.")
+    # reference output
+    f_ref = K.function(inputs, tensor_func(input_ref))
+    output_ref_ = f_ref(inputs_)
 
-    helpers.assert_output_properties_box(
-        x_0, y_, None, None, z_[:, 0], z_[:, 1], u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=decimal
+    # decomon output
+    output = activation_func(inputs_for_mode, dc_decomp=dc_decomp, mode=mode)
+    f_decomon = K.function(inputs, output)
+    outputs_ = f_decomon(inputs_)
+
+    #  check bounds consistency
+    helpers.assert_decomon_layer_output_properties_box(
+        full_inputs=inputs_,
+        output_ref=output_ref_,
+        outputs_for_mode=outputs_,
+        mode=mode,
+        dc_decomp=dc_decomp,
+        decimal=decimal,
     )
 
 
@@ -84,10 +68,39 @@ def test_activation_1D_box(n, mode, floatx, decimal, helpers, activation_func, t
 def test_activation_1D_box_slope(n, slope, helpers):
     mode = ForwardMode.AFFINE
     activation_func = relu
+    dc_decomp = False
 
-    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
-    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
+    #  tensor inputs
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
+
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
+
+    # decomon output
+    outputs = activation_func(inputs_for_mode, dc_decomp=dc_decomp, mode=mode, slope=slope)
+    f_decomon = K.function(inputs, outputs)
+    outputs_ = f_decomon(inputs_)
+
+    # full outputs & inputs
+    (
+        z_output,
+        u_c_output,
+        w_u_output,
+        b_u_output,
+        l_c_output,
+        w_l_output,
+        b_l_output,
+        h_output,
+        g_output,
+    ) = helpers.get_full_outputs_from_outputs_for_mode(
+        outputs_for_mode=outputs_,
+        full_inputs=inputs_,
+        mode=mode,
+        dc_decomp=dc_decomp,
+    )
+
     (
         x_0,
         y_0,
@@ -100,36 +113,33 @@ def test_activation_1D_box_slope(n, slope, helpers):
         b_l_0,
     ) = inputs_  # numpy values
 
-    output = activation_func([z, W_u, b_u, W_l, b_l], dc_decomp=False, mode=mode, slope=slope)
-    f_func = K.function(inputs[2:], output)
-    z_, w_u_, b_u_, w_l_, b_l_ = f_func(inputs_[2:])
-
+    # check bounds according to slope
     slope = Slope(slope)
     if n == 0:
-        assert_almost_equal(w_u_, np.zeros(w_u_.shape))
-        assert_almost_equal(b_u_, np.zeros(b_u_.shape))
-        assert_almost_equal(w_l_, np.zeros(w_l_.shape))
-        assert_almost_equal(b_l_, np.zeros(b_l_.shape))
+        assert_almost_equal(w_u_output, np.zeros(w_u_output.shape))
+        assert_almost_equal(b_u_output, np.zeros(b_u_output.shape))
+        assert_almost_equal(w_l_output, np.zeros(w_l_output.shape))
+        assert_almost_equal(b_l_output, np.zeros(b_l_output.shape))
     elif n == 1:
-        assert_almost_equal(w_u_, np.ones(w_u_.shape))
-        assert_almost_equal(b_u_, np.zeros(b_u_.shape))
-        assert_almost_equal(w_l_, W_l_0)
-        assert_almost_equal(b_l_, np.zeros(b_l_.shape))
+        assert_almost_equal(w_u_output, np.ones(w_u_output.shape))
+        assert_almost_equal(b_u_output, np.zeros(b_u_output.shape))
+        assert_almost_equal(w_l_output, W_l_0)
+        assert_almost_equal(b_l_output, np.zeros(b_l_output.shape))
     elif n == 2:
-        assert_almost_equal(w_u_, 0.5 * np.ones(w_u_.shape))
-        assert_almost_equal(b_u_, 0.5 * np.ones(b_u_.shape))
+        assert_almost_equal(w_u_output, 0.5 * np.ones(w_u_output.shape))
+        assert_almost_equal(b_u_output, 0.5 * np.ones(b_u_output.shape))
         if slope == Slope.O_SLOPE:
-            assert_almost_equal(w_l_, W_l_0)
-            assert_almost_equal(b_l_, np.zeros(b_l_.shape))
+            assert_almost_equal(w_l_output, W_l_0)
+            assert_almost_equal(b_l_output, np.zeros(b_l_output.shape))
         elif slope == Slope.Z_SLOPE:
-            assert_almost_equal(w_l_, np.zeros(w_l_.shape))
-            assert_almost_equal(b_l_, np.zeros(b_l_.shape))
+            assert_almost_equal(w_l_output, np.zeros(w_l_output.shape))
+            assert_almost_equal(b_l_output, np.zeros(b_l_output.shape))
         elif slope == Slope.V_SLOPE:
-            assert_almost_equal(w_l_, np.zeros(w_l_.shape))
-            assert_almost_equal(b_l_, np.zeros(b_l_.shape))
+            assert_almost_equal(w_l_output, np.zeros(w_l_output.shape))
+            assert_almost_equal(b_l_output, np.zeros(b_l_output.shape))
         elif slope == Slope.S_SLOPE:
-            assert_almost_equal(w_l_, w_u_)
-            assert_almost_equal(b_l_, np.zeros(b_l_.shape))
+            assert_almost_equal(w_l_output, w_u_output)
+            assert_almost_equal(b_l_output, np.zeros(b_l_output.shape))
         elif slope == Slope.A_SLOPE:
-            assert_almost_equal(b_l_, np.zeros(b_l_.shape))
-            assert_almost_equal(w_l_, np.zeros(w_l_.shape))
+            assert_almost_equal(b_l_output, np.zeros(b_l_output.shape))
+            assert_almost_equal(w_l_output, np.zeros(w_l_output.shape))
