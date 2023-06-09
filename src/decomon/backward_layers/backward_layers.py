@@ -39,10 +39,7 @@ class BackwardDense(BackwardLayer):
             dc_decomp=dc_decomp,
             **kwargs,
         )
-        self.kernel = self.layer.kernel
         self.use_bias = self.layer.use_bias
-        if self.layer.use_bias:
-            self.bias = self.layer.bias
         if not isinstance(self.layer, DecomonLayer):
             if input_dim < 0:
                 input_dim = get_input_dim(self.layer)
@@ -83,8 +80,14 @@ class BackwardDense(BackwardLayer):
         Returns:
 
         """
+        if self.layer.kernel is None:
+            raise RuntimeError("self.layer.kernel cannot be None when calling self.build()")
+        self.kernel = self.layer.kernel
         self._trainable_weights = [self.kernel]
         if self.use_bias:
+            if self.layer.bias is None:
+                raise RuntimeError("self.layer.bias cannot be None when calling self.build()")
+            self.bias = self.layer.bias
             self._trainable_weights.append(self.bias)
         self.built = True
 
