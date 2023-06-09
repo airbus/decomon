@@ -65,17 +65,6 @@ class DecomonConv2D(DecomonLayer, Conv2D):
             fast=fast,
             **kwargs,
         )
-        self.kernel_constraint_pos_ = NonNeg()
-        self.kernel_constraint_neg_ = NonPos()
-
-        self.kernel_pos = None
-        self.kernel_neg = None
-        self.kernel = None
-        self.kernel_constraints_pos = None
-        self.kernel_constraints_neg = None
-        self.bias = None
-        self.w_ = None
-
         if self.mode == ForwardMode.HYBRID:
             self.input_spec = [
                 InputSpec(min_ndim=2),  # z
@@ -155,6 +144,8 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         n_in = np.prod(b_u.shape[1:])
         identity_tensor = K.cast(self.diag_op(z_value * Flatten(dtype=self.dtype)(b_u[0][None]) + o_value), self.dtype)
         identity_tensor = K.reshape(identity_tensor, [-1] + list(b_u.shape[1:]))
+        if self.kernel is None:
+            raise RuntimeError("self.kernel cannot be None when calling get_backward_weights()")
         w = K.conv2d(
             identity_tensor,
             self.kernel,
@@ -461,16 +452,7 @@ class DecomonDense(DecomonLayer, Dense):
             fast=fast,
             **kwargs,
         )
-        self.kernel_constraint_pos_ = NonNeg()
-        self.kernel_constraint_neg_ = NonPos()
         self.input_spec = [InputSpec(min_ndim=2) for _ in range(self.nb_tensors)]
-        self.kernel_pos = None
-        self.kernel_neg = None
-        self.kernel: Optional[tf.Variable] = None
-        self.kernel_constraints_pos = None
-        self.kernel_constraints_neg = None
-        self.dot_op = Dot(axes=(1, 2))
-        self.n_subgrad = 0  # deprecated optimization scheme
         self.input_shape_build: Optional[List[tf.TensorShape]] = None
         self.op_dot = K.dot
 
@@ -500,7 +482,6 @@ class DecomonDense(DecomonLayer, Dense):
                 initializer=Project_initializer_pos(self.kernel_initializer),
                 name="kernel_pos",
                 regularizer=self.kernel_regularizer,
-                constraint=self.kernel_constraints_pos,
             )
 
             if self.use_bias:
