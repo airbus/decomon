@@ -610,21 +610,24 @@ def get_linear_hull_relu(
         w_l = index_b
         b_l = z_value * b_u
 
-    if slope == Slope.A_SLOPE:
+    elif slope == Slope.A_SLOPE:
         w_l = K.clip(K.sign(w_u - 0.5), 0, 1)
         b_l = z_value * b_u
 
-    if slope == Slope.Z_SLOPE:
+    elif slope == Slope.Z_SLOPE:
         w_l = z_value * w_u
         b_l = z_value * b_u
 
-    if slope == Slope.O_SLOPE:
+    elif slope == Slope.O_SLOPE:
         w_l = z_value * w_u + o_value
         b_l = z_value * b_u
 
-    if slope == Slope.S_SLOPE:
+    elif slope == Slope.S_SLOPE:
         w_l = w_u
         b_l = z_value * b_u
+
+    else:
+        raise NotImplementedError(f"Not implemented for slope {slope}")
 
     if "upper_grid" in kwargs:
 
