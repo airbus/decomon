@@ -359,10 +359,14 @@ def _get_ibp_score(
         target_tensor = 1.0 - source_tensor
 
     shape = np.prod(u_c.shape[1:])
-    u_c_ = K.reshape(u_c, (-1, shape))
-    l_c_ = K.reshape(l_c, (-1, shape))
+    u_c_reshaped = K.reshape(u_c, (-1, shape))
+    l_c_reshaped = K.reshape(l_c, (-1, shape))
 
-    score_u = l_c_ * target_tensor - K.expand_dims(K.min(u_c_ * source_tensor, -1), -1) - 1e6 * (1 - target_tensor)
+    score_u = (
+        l_c_reshaped * target_tensor
+        - K.expand_dims(K.min(u_c_reshaped * source_tensor, -1), -1)
+        - 1e6 * (1 - target_tensor)
+    )
 
     return K.max(score_u, -1)
 
@@ -381,13 +385,13 @@ def _get_affine_score(
 
     n_dim = w_u.shape[1]
     shape = np.prod(b_u.shape[1:])
-    w_u_ = K.reshape(w_u, (-1, n_dim, shape, 1))
-    w_l_ = K.reshape(w_l, (-1, n_dim, 1, shape))
-    b_u_ = K.reshape(b_u, (-1, shape, 1))
-    b_l_ = K.reshape(b_l, (-1, 1, shape))
+    w_u_reshaped = K.reshape(w_u, (-1, n_dim, shape, 1))
+    w_l_reshaped = K.reshape(w_l, (-1, n_dim, 1, shape))
+    b_u_reshaped = K.reshape(b_u, (-1, shape, 1))
+    b_l_reshaped = K.reshape(b_l, (-1, 1, shape))
 
-    w_u_f = w_l_ - w_u_
-    b_u_f = b_l_ - b_u_
+    w_u_f = w_l_reshaped - w_u_reshaped
+    b_u_f = b_l_reshaped - b_u_reshaped
 
     # add penalties on biases
     b_u_f = b_u_f - 1e6 * (1 - target_tensor)[:, None, :]

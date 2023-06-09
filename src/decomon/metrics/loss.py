@@ -18,48 +18,48 @@ def get_model(model: DecomonModel) -> DecomonModel:
     mode = get_mode(ibp, affine)
     convex_domain = model.convex_domain
 
-    inputs = model.input
-    output = model.output
-    output_: tf.Tensor
+    inputs = model.inputs
+    outputs = model.outputs
+    new_output: tf.Tensor
 
     if mode == ForwardMode.IBP:
 
-        def func(output_: List[tf.Tensor]) -> tf.Tensor:
-            u_c, l_c = output_
+        def func(outputs: List[tf.Tensor]) -> tf.Tensor:
+            u_c, l_c = outputs
             return K.concatenate([K.expand_dims(u_c, -1), K.expand_dims(l_c, -1)], -1)
 
-        output_ = Lambda(func)(output)
+        new_output = Lambda(func)(outputs)
 
     elif mode == ForwardMode.AFFINE:
 
-        def func(output_: List[tf.Tensor]) -> tf.Tensor:
-            x_0, w_u, b_u, w_l, b_l = output_
+        def func(outputs: List[tf.Tensor]) -> tf.Tensor:
+            x_0, w_u, b_u, w_l, b_l = outputs
             if len(x_0.shape) == 2:
-                x_0_ = x_0[:, :, None]
+                x_0_reshaped = x_0[:, :, None]
             else:
-                x_0_ = K.permute_dimensions(x_0, (0, 2, 1))
-            x_fake = K.sum(x_0_, 1)[:, None]
-            x_0_ = K.concatenate([x_0_, x_fake], 1)  # (None, n_in+1, n_comp)
+                x_0_reshaped = K.permute_dimensions(x_0, (0, 2, 1))
+            x_fake = K.sum(x_0_reshaped, 1)[:, None]
+            x_0_reshaped = K.concatenate([x_0_reshaped, x_fake], 1)  # (None, n_in+1, n_comp)
 
             w_b_u = K.concatenate([w_u, b_u[:, None]], 1)  # (None, n_in+1, n_out)
             w_b_l = K.concatenate([w_l, b_l[:, None]], 1)
 
             w_b = K.concatenate([w_b_u, w_b_l], -1)  # (None, n_in+1, 2*n_out)
-            return K.concatenate([x_0_, w_b], -1)  # (None, n_in+1, n_comp+2*n_out)
+            return K.concatenate([x_0_reshaped, w_b], -1)  # (None, n_in+1, n_comp+2*n_out)
 
-        output_ = Lambda(func)(output)
+        new_output = Lambda(func)(outputs)
 
     elif mode == ForwardMode.HYBRID:
 
-        def func(output_: List[tf.Tensor]) -> tf.Tensor:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = output_
+        def func(outputs: List[tf.Tensor]) -> tf.Tensor:
+            x_0, u_c, w_u, b_u, l_c, w_l, b_l = outputs
 
             if len(x_0.shape) == 2:
-                x_0_ = x_0[:, :, None]
+                x_0_reshaped = x_0[:, :, None]
             else:
-                x_0_ = K.permute_dimensions(x_0, (0, 2, 1))
-            x_fake = K.sum(x_0_, 1)[:, None]
-            x_0_ = K.concatenate([x_0_, x_fake, x_fake], 1)  # (None, n_in+2, n_comp)
+                x_0_reshaped = K.permute_dimensions(x_0, (0, 2, 1))
+            x_fake = K.sum(x_0_reshaped, 1)[:, None]
+            x_0_reshaped = K.concatenate([x_0_reshaped, x_fake, x_fake], 1)  # (None, n_in+2, n_comp)
 
             w_b_u = K.concatenate([w_u, b_u[:, None]], 1)  # (None, n_in+1, n_out)
             w_b_l = K.concatenate([w_l, b_l[:, None]], 1)
@@ -70,16 +70,16 @@ def get_model(model: DecomonModel) -> DecomonModel:
 
             w_b_u_l = K.concatenate([w_b, u_l], 1)  # (None, n_in+2, 2*n_out)
 
-            return K.concatenate([x_0_, w_b_u_l], -1)  # (None, n_in+1, n_comp+2*n_out)
+            return K.concatenate([x_0_reshaped, w_b_u_l], -1)  # (None, n_in+1, n_comp+2*n_out)
 
-        output_ = Lambda(func)(output)
+        new_output = Lambda(func)(outputs)
 
     else:
         raise ValueError(f"Unknown mode {mode}")
 
     return DecomonModel(
         inputs=inputs,
-        outputs=output_,
+        outputs=new_output,
         convex_domain=model.convex_domain,
         ibp=ibp,
         affine=affine,
@@ -264,10 +264,10 @@ def get_adv_loss(
         x: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor, y_tensor: tf.Tensor
     ) -> tf.Tensor:
 
-        w_u_ = K.expand_dims(w_u, -1)
-        w_l_ = K.expand_dims(w_l, -2)
+        w_u_reshaped = K.expand_dims(w_u, -1)
+        w_l_reshaped = K.expand_dims(w_l, -2)
 
-        w_adv = w_u_ - w_l_
+        w_adv = w_u_reshaped - w_l_reshaped
         b_adv = K.expand_dims(b_u, -1) - K.expand_dims(b_l, 1)
 
         upper = get_upper(x, w_adv, b_adv, convex_domain=convex_domain)

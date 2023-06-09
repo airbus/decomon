@@ -68,15 +68,15 @@ def get_adv_box(
         raise UserWarning("Inconsistency Error: x_max < x_min")
 
     # check that the model is a DecomonModel, else do the conversion
-    model_: DecomonModel
+    decomon_model: DecomonModel
     if not isinstance(model, DecomonModel):
-        model_ = clone(model)
+        decomon_model = clone(model)
     else:
         assert len(model.convex_domain) == 0 or ConvexDomainType(model.convex_domain["name"]) in [
             ConvexDomainType.BOX,
             ConvexDomainType.GRID,
         ]
-        model_ = model
+        decomon_model = model
 
     n_split = 1
     n_batch = len(x_min)
@@ -90,13 +90,13 @@ def get_adv_box(
         x_max = np.reshape(x_max, [-1] + shape)
 
     # reshape x_mmin, x_max
-    if model_.backward_bounds:
-        input_shape = list(model_.input_shape[0][2:])
+    if decomon_model.backward_bounds:
+        input_shape = list(decomon_model.input_shape[0][2:])
     else:
-        input_shape = list(model_.input_shape[2:])
+        input_shape = list(decomon_model.input_shape[2:])
     input_dim = np.prod(input_shape)
-    x_ = x_min + 0 * x_min
-    x_ = x_.reshape([-1] + input_shape)
+    x_reshaped = x_min + 0 * x_min
+    x_reshaped = x_reshaped.reshape([-1] + input_shape)
 
     x_min = x_min.reshape((-1, 1, input_dim))
     x_max = x_max.reshape((-1, 1, input_dim))
@@ -116,34 +116,46 @@ def get_adv_box(
     if batch_size > 0:
         # split
         r = 0
-        if len(x_) % batch_size > 0:
+        if len(x_reshaped) % batch_size > 0:
             r += 1
-        X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        S_ = [source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+        x_min_list = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        x_max_list = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        source_labels_list = [
+            source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)
+        ]
         if target_labels is not None:
-            T_ = [target_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+            target_labels_list = [
+                target_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)
+            ]
             adv_score = np.concatenate(
-                [get_adv_box(model_, X_min_[i], X_max_[i], S_[i], T_[i], -1) for i in range(len(X_min_))]
+                [
+                    get_adv_box(
+                        decomon_model, x_min_list[i], x_max_list[i], source_labels_list[i], target_labels_list[i], -1
+                    )
+                    for i in range(len(x_min_list))
+                ]
             )
         else:
             adv_score = np.concatenate(
-                [get_adv_box(model_, X_min_[i], X_max_[i], S_[i], None, -1) for i in range(len(X_min_))]
+                [
+                    get_adv_box(decomon_model, x_min_list[i], x_max_list[i], source_labels_list[i], None, -1)
+                    for i in range(len(x_min_list))
+                ]
             )
 
     else:
 
-        ibp = model_.ibp
-        affine = model_.affine
+        ibp = decomon_model.ibp
+        affine = decomon_model.affine
         n_label = source_labels.shape[-1]
 
         # two possitible cases: the model improves the bound based on the knowledge of the labels
         output: npt.NDArray[np.float_]
-        if model_.backward_bounds:
+        if decomon_model.backward_bounds:
             C = np.diag([1] * n_label)[None] - source_labels[:, :, None]
-            output = model_.predict([z, C], verbose=0)
+            output = decomon_model.predict([z, C], verbose=0)
         else:
-            output = model_.predict(z, verbose=0)
+            output = decomon_model.predict(z, verbose=0)
 
         def get_ibp_score(
             u_c: npt.NDArray[np.float_],
@@ -158,8 +170,8 @@ def get_adv_box(
 
             shape = np.prod(u_c.shape[1:])
 
-            t_tensor_ = np.reshape(target_tensor, (-1, shape))
-            s_tensor_ = np.reshape(source_tensor, (-1, shape))
+            t_tensor_reshaped = np.reshape(target_tensor, (-1, shape))
+            s_tensor_reshaped = np.reshape(source_tensor, (-1, shape))
 
             # add penalties on biases
             if backward:
@@ -167,7 +179,7 @@ def get_adv_box(
             else:
                 upper = u_c[:, :, None] - l_c[:, None]
             const = upper.max() - upper.min()
-            discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
+            discard_mask_s = t_tensor_reshaped[:, :, None] * s_tensor_reshaped[:, None, :]
 
             upper -= (1 - discard_mask_s) * (const + 0.1)
 
@@ -189,17 +201,17 @@ def get_adv_box(
 
             n_dim = w_u.shape[1]
             shape = np.prod(b_u.shape[1:])
-            w_u_ = np.reshape(w_u, (-1, n_dim, shape, 1))
-            w_l_ = np.reshape(w_l, (-1, n_dim, 1, shape))
-            b_u_ = np.reshape(b_u, (-1, shape, 1))
-            b_l_ = np.reshape(b_l, (-1, 1, shape))
+            w_u_reshaped = np.reshape(w_u, (-1, n_dim, shape, 1))
+            w_l_reshaped = np.reshape(w_l, (-1, n_dim, 1, shape))
+            b_u_reshaped = np.reshape(b_u, (-1, shape, 1))
+            b_l_reshaped = np.reshape(b_l, (-1, 1, shape))
 
-            t_tensor_ = np.reshape(target_tensor, (-1, shape))
-            s_tensor_ = np.reshape(source_tensor, (-1, shape))
+            t_tensor_reshaped = np.reshape(target_tensor, (-1, shape))
+            s_tensor_reshaped = np.reshape(source_tensor, (-1, shape))
 
             if not backward:
-                w_u_f = w_u_ - w_l_
-                b_u_f = b_u_ - b_l_
+                w_u_f = w_u_reshaped - w_l_reshaped
+                b_u_f = b_u_reshaped - b_l_reshaped
             else:
 
                 upper = (
@@ -217,7 +229,7 @@ def get_adv_box(
                 + b_u_f
             )  # (-1, shape, shape)
             const = upper.max() - upper.min()
-            discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
+            discard_mask_s = t_tensor_reshaped[:, :, None] * s_tensor_reshaped[:, None, :]
 
             upper -= (1 - discard_mask_s) * (const + 0.1)
 
@@ -233,10 +245,10 @@ def get_adv_box(
             raise NotImplementedError("not ibp and not affine not implemented")
 
         if ibp:
-            adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels, backward=model_.backward_bounds)
+            adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels, backward=decomon_model.backward_bounds)
         if affine:
             adv_f = get_affine_score(
-                z, w_u_f, b_u_f, w_l_f, b_l_f, source_labels, target_labels, backward=model_.backward_bounds
+                z, w_u_f, b_u_f, w_l_f, b_l_f, source_labels, target_labels, backward=decomon_model.backward_bounds
             )
 
         if ibp and not affine:
@@ -285,24 +297,24 @@ def check_adv_box(
 
     # check that the model is a DecomonModel, else do the conversion
     if not isinstance(model, DecomonModel):
-        model_ = clone(model)
+        decomon_model = clone(model)
     else:
         assert len(model.convex_domain) == 0 or ConvexDomainType(model.convex_domain["name"]) in [
             ConvexDomainType.BOX,
             ConvexDomainType.GRID,
         ]
-        model_ = model
+        decomon_model = model
 
-    ibp = model_.ibp
-    affine = model_.affine
+    ibp = decomon_model.ibp
+    affine = decomon_model.affine
 
     n_split = 1
     n_batch = len(x_min)
     # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[2:])
+    input_shape = list(decomon_model.input_shape[2:])
     input_dim = np.prod(input_shape)
-    x_ = x_min + 0 * x_min
-    x_ = x_.reshape([-1] + input_shape)
+    x_reshaped = x_min + 0 * x_min
+    x_reshaped = x_reshaped.reshape([-1] + input_shape)
 
     x_min = x_min.reshape((-1, 1, input_dim))
     x_max = x_max.reshape((-1, 1, input_dim))
@@ -330,28 +342,37 @@ def check_adv_box(
     if batch_size > 0:
         # split
         r = 0
-        if len(x_) % batch_size > 0:
+        if len(x_reshaped) % batch_size > 0:
             r += 1
-        X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        S_ = [source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        T_: List[Optional[npt.NDArray[np.int_]]]
+        x_min_list = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        x_max_list = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        source_labels_list = [
+            source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)
+        ]
+        target_labels_list: List[Optional[npt.NDArray[np.int_]]]
         if (
             (target_labels is not None)
             and (not isinstance(target_labels, int))
             and (str(target_labels.dtype)[:3] != "int")
         ):
-            T_ = [target_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+            target_labels_list = [
+                target_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)
+            ]
         else:
-            T_ = [target_labels] * (len(x_) // batch_size + r)
+            target_labels_list = [target_labels] * (len(x_reshaped) // batch_size + r)
 
         return np.concatenate(
-            [check_adv_box(model_, X_min_[i], X_max_[i], S_[i], T_[i], -1) for i in range(len(X_min_))]
+            [
+                check_adv_box(
+                    decomon_model, x_min_list[i], x_max_list[i], source_labels_list[i], target_labels_list[i], -1
+                )
+                for i in range(len(x_min_list))
+            ]
         )
 
     else:
 
-        output = model_.predict(z, verbose=0)
+        output = decomon_model.predict(z, verbose=0)
 
         if not affine:
             # translate  into affine information
@@ -376,16 +397,16 @@ def check_adv_box(
 
             n_dim = w_u.shape[1]
             shape = np.prod(b_u.shape[1:])
-            w_u_ = np.reshape(w_u, (-1, n_dim, shape, 1))
-            w_l_ = np.reshape(w_l, (-1, n_dim, 1, shape))
-            b_u_ = np.reshape(b_u, (-1, shape, 1))
-            b_l_ = np.reshape(b_l, (-1, 1, shape))
+            w_u_reshaped = np.reshape(w_u, (-1, n_dim, shape, 1))
+            w_l_reshaped = np.reshape(w_l, (-1, n_dim, 1, shape))
+            b_u_reshaped = np.reshape(b_u, (-1, shape, 1))
+            b_l_reshaped = np.reshape(b_l, (-1, 1, shape))
 
-            t_tensor_ = np.reshape(target_tensor, (-1, shape))
-            s_tensor_ = np.reshape(source_tensor, (-1, shape))
+            t_tensor_reshaped = np.reshape(target_tensor, (-1, shape))
+            s_tensor_reshaped = np.reshape(source_tensor, (-1, shape))
 
-            w_u_f = w_u_ - w_l_
-            b_u_f = b_u_ - b_l_
+            w_u_f = w_u_reshaped - w_l_reshaped
+            b_u_f = b_u_reshaped - b_l_reshaped
 
             # add penalties on biases
             upper = (
@@ -394,7 +415,7 @@ def check_adv_box(
                 + b_u_f
             )  # (-1, shape, shape)
             const = upper.max() - upper.min()
-            discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
+            discard_mask_s = t_tensor_reshaped[:, :, None] * s_tensor_reshaped[:, None, :]
 
             upper -= (1 - discard_mask_s) * (const + 0.1)
 
@@ -481,13 +502,13 @@ def get_range_box(
 
     # check that the model is a DecomonModel, else do the conversion
     if not (isinstance(model, DecomonModel)):
-        model_ = clone(model)
+        decomon_model = clone(model)
     else:
         assert len(model.convex_domain) == 0 or ConvexDomainType(model.convex_domain["name"]) in [
             ConvexDomainType.BOX,
             ConvexDomainType.GRID,
         ]
-        model_ = model
+        decomon_model = model
 
     n_split = 1
     n_batch = len(x_min)
@@ -501,10 +522,10 @@ def get_range_box(
         x_max = np.reshape(x_max, [-1] + shape)
 
     # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[2:])
+    input_shape = list(decomon_model.input_shape[2:])
     input_dim = np.prod(input_shape)
-    x_ = x_min + 0 * x_min
-    x_ = x_.reshape([-1] + input_shape)
+    x_reshaped = x_min + 0 * x_min
+    x_reshaped = x_reshaped.reshape([-1] + input_shape)
     x_min = x_min.reshape((-1, 1, input_dim))
     x_max = x_max.reshape((-1, 1, input_dim))
 
@@ -513,38 +534,38 @@ def get_range_box(
     if batch_size > 0:
         # split
         r = 0
-        if len(x_) % batch_size > 0:
+        if len(x_reshaped) % batch_size > 0:
             r += 1
-        X_min_ = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        X_max_ = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        results = [get_range_box(model_, X_min_[i], X_max_[i], -1) for i in range(len(X_min_))]
+        x_min_list = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        x_max_list = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        results = [get_range_box(decomon_model, x_min_list[i], x_max_list[i], -1) for i in range(len(x_min_list))]
 
-        u_ = np.concatenate([r[0] for r in results])
-        l_ = np.concatenate([r[1] for r in results])
+        u_out = np.concatenate([r[0] for r in results])
+        l_out = np.concatenate([r[1] for r in results])
 
     else:
-        ibp = model_.ibp
-        affine = model_.affine
+        ibp = decomon_model.ibp
+        affine = decomon_model.affine
 
-        output = model_.predict(z, verbose=0)
+        output = decomon_model.predict(z, verbose=0)
         shape = list(output[-1].shape[1:])
-        shape_ = np.prod(shape)
+        output_dim = np.prod(shape)
 
         if affine:
             if ibp:
                 _, u_i, w_u_f, b_u_f, l_i, w_l_f, b_l_f = output[:7]
                 if len(u_i.shape) > 2:
-                    u_i = np.reshape(u_i, (-1, shape_))
-                    l_i = np.reshape(l_i, (-1, shape_))
+                    u_i = np.reshape(u_i, (-1, output_dim))
+                    l_i = np.reshape(l_i, (-1, output_dim))
             else:
                 _, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
 
             # reshape if necessary
             if len(w_u_f.shape) > 3:
-                w_u_f = np.reshape(w_u_f, (-1, input_dim, shape_))
-                w_l_f = np.reshape(w_l_f, (-1, input_dim, shape_))
-                b_u_f = np.reshape(b_u_f, (-1, shape_))
-                b_l_f = np.reshape(b_l_f, (-1, shape_))
+                w_u_f = np.reshape(w_u_f, (-1, input_dim, output_dim))
+                w_l_f = np.reshape(w_l_f, (-1, input_dim, output_dim))
+                b_u_f = np.reshape(b_u_f, (-1, output_dim))
+                b_l_f = np.reshape(b_l_f, (-1, output_dim))
 
             u_f = (
                 np.sum(np.maximum(w_u_f, 0) * x_max[:, 0, :, None], 1)
@@ -561,30 +582,30 @@ def get_range_box(
             u_i = output[0]
             l_i = output[1]
             if len(u_i.shape) > 2:
-                u_i = np.reshape(u_i, (-1, shape_))
-                l_i = np.reshape(l_i, (-1, shape_))
+                u_i = np.reshape(u_i, (-1, output_dim))
+                l_i = np.reshape(l_i, (-1, output_dim))
 
         if ibp and affine:
-            u_ = np.minimum(u_i, u_f)
-            l_ = np.maximum(l_i, l_f)
+            u_out = np.minimum(u_i, u_f)
+            l_out = np.maximum(l_i, l_f)
         elif ibp and not affine:
-            u_ = u_i
-            l_ = l_i
+            u_out = u_i
+            l_out = l_i
         elif not ibp and affine:
-            u_ = u_f
-            l_ = l_f
+            u_out = u_f
+            l_out = l_f
         else:
             raise NotImplementedError("not ibp and not affine not implemented")
 
         #####
         if len(shape) > 1:
-            u_ = np.reshape(u_, [-1] + shape)
-            l_ = np.reshape(l_, [-1] + shape)
+            u_out = np.reshape(u_out, [-1] + shape)
+            l_out = np.reshape(l_out, [-1] + shape)
 
     if n_split > 1:
-        u_ = np.max(np.reshape(u_, (-1, n_split)), -1)
-        l_ = np.min(np.reshape(l_, (-1, n_split)), -1)
-    return u_, l_
+        u_out = np.max(np.reshape(u_out, (-1, n_split)), -1)
+        l_out = np.min(np.reshape(l_out, (-1, n_split)), -1)
+    return u_out, l_out
 
 
 # get upper bound of a sample with bounded noise
@@ -666,86 +687,86 @@ def get_range_noise(
     convex_domain = {"name": ConvexDomainType.BALL, "p": p, "eps": max(0, eps)}
 
     if not isinstance(model, DecomonModel):
-        model_ = clone(
+        decomon_model = clone(
             model,
             method=ConvertMethod.CROWN_FORWARD_HYBRID,
             convex_domain=convex_domain,
         )
     else:
-        model_ = model
+        decomon_model = model
         if eps >= 0:
-            model_.set_domain(convex_domain)
+            decomon_model.set_domain(convex_domain)
 
     # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[1:])
+    input_shape = list(decomon_model.input_shape[1:])
     input_dim = np.prod(input_shape)
-    x_ = x + 0 * x
-    x_ = x_.reshape([-1] + input_shape)
+    x_reshaped = x + 0 * x
+    x_reshaped = x_reshaped.reshape([-1] + input_shape)
 
     if batch_size > 0:
         # split
         r = 0
-        if len(x_) % batch_size > 0:
+        if len(x_reshaped) % batch_size > 0:
             r += 1
-        X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        results = [get_range_noise(model_, X_[i], eps=eps, p=p, batch_size=-1) for i in range(len(X_))]
+        x_list = [x_reshaped[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        results = [get_range_noise(decomon_model, x_list[i], eps=eps, p=p, batch_size=-1) for i in range(len(x_list))]
 
         return np.concatenate([r[0] for r in results]), np.concatenate([r[1] for r in results])
 
-    ibp = model_.ibp
-    affine = model_.affine
+    ibp = decomon_model.ibp
+    affine = decomon_model.affine
 
-    output = model_.predict(x_, verbose=0)
+    output = decomon_model.predict(x_reshaped, verbose=0)
     shape = list(output[-1].shape[1:])
-    shape_ = np.prod(shape)
+    output_dim = np.prod(shape)
 
-    x_ = x_.reshape((len(x_), -1))
+    x_reshaped = x_reshaped.reshape((len(x_reshaped), -1))
     ord = _get_dual_ord(p)
 
     if affine:
         if ibp:
             _, u_i, w_u_f, b_u_f, l_i, w_l_f, b_l_f = output[:7]
             if len(u_i.shape) > 2:
-                u_i = np.reshape(u_i, (-1, shape_))
-                l_i = np.reshape(l_i, (-1, shape_))
+                u_i = np.reshape(u_i, (-1, output_dim))
+                l_i = np.reshape(l_i, (-1, output_dim))
         else:
             _, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
 
         # reshape if necessary
         if len(w_u_f.shape) > 3:
-            w_u_f = np.reshape(w_u_f, (-1, input_dim, shape_))
-            b_u_f = np.reshape(b_u_f, (-1, shape_))
-            w_l_f = np.reshape(w_l_f, (-1, input_dim, shape_))
-            b_l_f = np.reshape(b_l_f, (-1, shape_))
+            w_u_f = np.reshape(w_u_f, (-1, input_dim, output_dim))
+            b_u_f = np.reshape(b_u_f, (-1, output_dim))
+            w_l_f = np.reshape(w_l_f, (-1, input_dim, output_dim))
+            b_l_f = np.reshape(b_l_f, (-1, output_dim))
 
-        u_f = eps * np.linalg.norm(w_u_f, ord=ord, axis=1) + np.sum(w_u_f * x_[:, :, None], 1) + b_u_f
-        l_f = -eps * np.linalg.norm(w_l_f, ord=ord, axis=1) + np.sum(w_l_f * x_[:, :, None], 1) + b_l_f
+        u_f = eps * np.linalg.norm(w_u_f, ord=ord, axis=1) + np.sum(w_u_f * x_reshaped[:, :, None], 1) + b_u_f
+        l_f = -eps * np.linalg.norm(w_l_f, ord=ord, axis=1) + np.sum(w_l_f * x_reshaped[:, :, None], 1) + b_l_f
 
     else:
         u_i = output[0]
         l_i = output[1]
         if len(u_i.shape) > 2:
-            u_i = np.reshape(u_i, (-1, shape_))
-            l_i = np.reshape(l_i, (-1, shape_))
+            u_i = np.reshape(u_i, (-1, output_dim))
+            l_i = np.reshape(l_i, (-1, output_dim))
             ######
 
     if ibp and affine:
-        u_ = np.minimum(u_i, u_f)
-        l_ = np.maximum(l_i, l_f)
+        u_out = np.minimum(u_i, u_f)
+        l_out = np.maximum(l_i, l_f)
     elif ibp and not affine:
-        u_ = u_i
-        l_ = l_i
+        u_out = u_i
+        l_out = l_i
     elif not ibp and affine:
-        u_ = u_f
-        l_ = l_f
+        u_out = u_f
+        l_out = l_f
     else:
         raise NotImplementedError("not ibp and not affine not implemented")
 
     if len(shape) > 1:
-        u_ = np.reshape(u_, [-1] + shape)
-        l_ = np.reshape(l_, [-1] + shape)
+        u_out = np.reshape(u_out, [-1] + shape)
+        l_out = np.reshape(l_out, [-1] + shape)
 
-    return u_, l_
+    return u_out, l_out
 
 
 def refine_boxes(
@@ -754,10 +775,10 @@ def refine_boxes(
 
     # flatten x_min and x_max
     shape = list(x_min.shape[1:])
-    shape_ = np.prod(shape)
+    output_dim = np.prod(shape)
     if len(shape) > 1:
-        x_min = np.reshape(x_min, (-1, shape_))
-        x_max = np.reshape(x_min, (-1, shape_))
+        x_min = np.reshape(x_min, (-1, output_dim))
+        x_max = np.reshape(x_min, (-1, output_dim))
     # x_min (None, n)
     # x_max (None, n)
     n = x_min.shape[-1]
@@ -765,24 +786,24 @@ def refine_boxes(
     X_max = np.zeros((len(x_max), 1, n)) + x_max[:, None]
 
     def split(
-        x_min_: npt.NDArray[np.float_], x_max_: npt.NDArray[np.float_], j: npt.NDArray[np.int_]
+        x_min: npt.NDArray[np.float_], x_max: npt.NDArray[np.float_], j: npt.NDArray[np.int_]
     ) -> Tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
-        n_0 = len(x_min_)
-        n_k = x_min_.shape[1]
+        n_0 = len(x_min)
+        n_k = x_min.shape[1]
 
-        X_min_ = np.zeros((n_0, 2, n_k, n)) + x_min_[:, None]
-        X_max_ = np.zeros((n_0, 2, n_k, n)) + x_max_[:, None]
+        x_min_reshaped = np.zeros((n_0, 2, n_k, n)) + x_min[:, None]
+        x_max_reshaped = np.zeros((n_0, 2, n_k, n)) + x_max[:, None]
 
         index_0 = np.arange(n_0)
         index_k = np.arange(n_k)
-        mid_x = (x_min_ + x_max_) / 2.0
+        mid_x = (x_min + x_max) / 2.0
         split_value = np.array([mid_x[i, index_k, j[i]] for i in index_0])
 
         for i in index_0:
-            X_min_[i, 1, index_k, j[i]] = split_value[i]
-            X_max_[i, 0, index_k, j[i]] = split_value[i]
+            x_min_reshaped[i, 1, index_k, j[i]] = split_value[i]
+            x_max_reshaped[i, 0, index_k, j[i]] = split_value[i]
 
-        return X_min_.reshape((-1, 2 * n_k, n)), X_max_.reshape((-1, 2 * n_k, n))
+        return x_min_reshaped.reshape((-1, 2 * n_k, n)), x_max_reshaped.reshape((-1, 2 * n_k, n))
 
     # init
     n_sub = X_min.shape[1]
@@ -817,16 +838,16 @@ def refine_box(
 
     # check that the model is a DecomonModel, else do the conversion
     if not isinstance(model, DecomonModel):
-        model_ = clone(model)
+        decomon_model = clone(model)
     else:
         assert len(model.convex_domain) == 0 or ConvexDomainType(model.convex_domain["name"]) in [
             ConvexDomainType.BOX,
             ConvexDomainType.GRID,
         ]
-        model_ = model
+        decomon_model = model
 
     # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[2:])
+    input_shape = list(decomon_model.input_shape[2:])
     input_dim = np.prod(input_shape)
     x_min = x_min.reshape((-1, input_dim))
     x_max = x_max.reshape((-1, input_dim))
@@ -834,11 +855,11 @@ def refine_box(
     n_x = len(x_min)
 
     # split
-    X_min = np.zeros((n_x, n_split, input_dim))
-    X_max = np.zeros((n_x, n_split, input_dim))
+    x_min_split = np.zeros((n_x, n_split, input_dim))
+    x_max_split = np.zeros((n_x, n_split, input_dim))
 
-    X_min[:, 0] = x_min
-    X_max[:, 0] = x_max
+    x_min_split[:, 0] = x_min
+    x_max_split[:, 0] = x_max
 
     index_max = np.zeros((n_x, n_split, input_dim))
     # init
@@ -848,10 +869,10 @@ def refine_box(
     if func.__name__ == get_lower_box.__name__:
         maximize = False
 
-    def priv_func(X_min: npt.NDArray[np.float_], X_max: npt.NDArray[np.float_]) -> npt.NDArray[np.float_]:
+    def priv_func(x_min_split: npt.NDArray[np.float_], x_max_split: npt.NDArray[np.float_]) -> npt.NDArray[np.float_]:
         if func.__name__ in [elem.__name__ for elem in [get_upper_box, get_lower_box, get_range_box]]:
 
-            results = func(model_, x_min=X_min, x_max=X_max, batch_size=batch_size)
+            results = func(decomon_model, x_min=x_min_split, x_max=x_max_split, batch_size=batch_size)
 
             if func.__name__ == get_upper_box.__name__:
                 return results.reshape((n_x, n_split, -1))
@@ -861,9 +882,9 @@ def refine_box(
         if func.__name__ in [elem.__name__ for elem in [get_adv_box, check_adv_box]]:
 
             results = func(
-                model_,
-                x_min=X_min,
-                x_max=X_max,
+                decomon_model,
+                x_min=x_min_split,
+                x_max=x_max_split,
                 source_labels=source_labels,
                 target_labels=target_labels,
                 batch_size=batch_size,
@@ -885,26 +906,24 @@ def refine_box(
                 i = np.random.randint(count - 1)
                 j = np.random.randint(input_dim)
 
-            z_min = X_min[n_i, i] + 0.0
-            z_max = X_max[n_i, i] + 0.0
-            X_min[n_i, count] = z_min + 0.0
-            X_max[n_i, count] = z_max + 0.0
+            z_min = x_min_split[n_i, i] + 0.0
+            z_max = x_max_split[n_i, i] + 0.0
+            x_min_split[n_i, count] = z_min + 0.0
+            x_max_split[n_i, count] = z_max + 0.0
 
-            X_max[n_i, i, j] = (z_min[j] + z_max[j]) / 2.0
-            X_min[n_i, count, j] = (z_min[j] + z_max[j]) / 2.0
+            x_max_split[n_i, i, j] = (z_min[j] + z_max[j]) / 2.0
+            x_min_split[n_i, count, j] = (z_min[j] + z_max[j]) / 2.0
 
             index_max[n_i, count] = index_max[n_i, i]
             index_max[n_i, i, j] /= 2.0
             index_max[n_i, count, j] /= 2.0
 
             count += 1
-            X_min_ = X_min.reshape((-1, input_dim))
-            X_max_ = X_max.reshape((-1, input_dim))
 
-    X_min_ = X_min.reshape((-1, input_dim))
-    X_max_ = X_max.reshape((-1, input_dim))
+    x_min_split = x_min_split.reshape((-1, input_dim))
+    x_max_split = x_max_split.reshape((-1, input_dim))
 
-    results = priv_func(X_min_, X_max_)
+    results = priv_func(x_min_split, x_max_split)
     if maximize:
         return np.max(results, 1)
     else:
@@ -944,24 +963,24 @@ def get_adv_noise(
 
     # check that the model is a DecomonModel, else do the conversion
     if not isinstance(model, DecomonModel):
-        model_ = clone(model, convex_domain=convex_domain)
+        decomon_model = clone(model, convex_domain=convex_domain)
     else:
-        model_ = model
+        decomon_model = model
         if eps >= 0:
-            model_.set_domain(convex_domain)
+            decomon_model.set_domain(convex_domain)
 
     eps = model.convex_domain["eps"]
 
     # reshape x_mmin, x_max
-    input_shape = list(model_.input_shape[1:])
-    x_ = x + 0 * x
-    x_ = x_.reshape([-1] + input_shape)
+    input_shape = list(decomon_model.input_shape[1:])
+    x_reshaped = x + 0 * x
+    x_reshaped = x_reshaped.reshape([-1] + input_shape)
     n_split = 1
-    n_batch = len(x_)
+    n_batch = len(x_reshaped)
 
-    input_shape = list(model_.input_shape[1:])
-    x_ = x + 0 * x
-    x_ = x_.reshape([-1] + input_shape)
+    input_shape = list(decomon_model.input_shape[1:])
+    x_reshaped = x + 0 * x
+    x_reshaped = x_reshaped.reshape([-1] + input_shape)
 
     if isinstance(source_labels, (int, np.int_)):
         source_labels = np.zeros((n_batch, 1), dtype=np.int_) + source_labels
@@ -975,31 +994,43 @@ def get_adv_noise(
     if batch_size > 0:
         # split
         r = 0
-        if len(x_) % batch_size > 0:
+        if len(x_reshaped) % batch_size > 0:
             r += 1
-        X_ = [x_[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        S_ = [source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
-        T_: List[Optional[npt.NDArray[np.int_]]]
+        x_list = [x_reshaped[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        source_labels_list = [
+            source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)
+        ]
+        target_labels_list: List[Optional[npt.NDArray[np.int_]]]
         if (
             (target_labels is not None)
             and (not isinstance(target_labels, int))
             and (str(target_labels.dtype)[:3] != "int")
         ):
-            T_ = [target_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_) // batch_size + r)]
+            target_labels_list = [
+                target_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)
+            ]
         else:
-            T_ = [target_labels] * (len(x_) // batch_size + r)
+            target_labels_list = [target_labels] * (len(x_reshaped) // batch_size + r)
 
         results = [
-            get_adv_noise(model_, X_[i], source_labels=S_[i], eps=eps, p=p, target_labels=T_[i], batch_size=-1)
-            for i in range(len(X_))
+            get_adv_noise(
+                decomon_model,
+                x_list[i],
+                source_labels=source_labels_list[i],
+                eps=eps,
+                p=p,
+                target_labels=target_labels_list[i],
+                batch_size=-1,
+            )
+            for i in range(len(x_list))
         ]
 
         return np.concatenate(results)
     else:
 
-        ibp = model_.ibp
-        affine = model_.affine
-        output = model_.predict(x_, verbose=0)
+        ibp = decomon_model.ibp
+        affine = decomon_model.affine
+        output = decomon_model.predict(x_reshaped, verbose=0)
 
         def get_ibp_score(
             u_c: npt.NDArray[np.float_],
@@ -1013,13 +1044,13 @@ def get_adv_noise(
 
             shape = np.prod(u_c.shape[1:])
 
-            t_tensor_ = np.reshape(target_tensor, (-1, shape))
-            s_tensor_ = np.reshape(source_tensor, (-1, shape))
+            t_tensor_reshaped = np.reshape(target_tensor, (-1, shape))
+            s_tensor_reshaped = np.reshape(source_tensor, (-1, shape))
 
             # add penalties on biases
             upper = u_c[:, :, None] - l_c[:, None]
             const = upper.max() - upper.min()
-            discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
+            discard_mask_s = t_tensor_reshaped[:, :, None] * s_tensor_reshaped[:, None, :]
 
             upper -= (1 - discard_mask_s) * (const + 0.1)
 
@@ -1040,16 +1071,16 @@ def get_adv_noise(
 
             n_dim = w_u.shape[1]
             shape = np.prod(b_u.shape[1:])
-            w_u_ = np.reshape(w_u, (-1, n_dim, shape, 1))
-            w_l_ = np.reshape(w_l, (-1, n_dim, 1, shape))
-            b_u_ = np.reshape(b_u, (-1, shape, 1))
-            b_l_ = np.reshape(b_l, (-1, 1, shape))
+            w_u_reshaped = np.reshape(w_u, (-1, n_dim, shape, 1))
+            w_l_reshaped = np.reshape(w_l, (-1, n_dim, 1, shape))
+            b_u_reshaped = np.reshape(b_u, (-1, shape, 1))
+            b_l_reshaped = np.reshape(b_l, (-1, 1, shape))
 
-            t_tensor_ = np.reshape(target_tensor, (-1, shape))
-            s_tensor_ = np.reshape(source_tensor, (-1, shape))
+            t_tensor_reshaped = np.reshape(target_tensor, (-1, shape))
+            s_tensor_reshaped = np.reshape(source_tensor, (-1, shape))
 
-            w_u_f = w_u_ - w_l_
-            b_u_f = b_u_ - b_l_
+            w_u_f = w_u_reshaped - w_l_reshaped
+            b_u_f = b_u_reshaped - b_l_reshaped
 
             # add penalties on biases
 
@@ -1072,7 +1103,7 @@ def get_adv_noise(
             upper = upper_0 + upper_1
 
             const = upper.max() - upper.min()
-            discard_mask_s = t_tensor_[:, :, None] * s_tensor_[:, None, :]
+            discard_mask_s = t_tensor_reshaped[:, :, None] * s_tensor_reshaped[:, None, :]
             upper -= (1 - discard_mask_s) * (const + 0.1)
 
             return np.max(np.max(upper, -2), -1)

@@ -81,32 +81,44 @@ else:
         def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
             shape_in = tuple(inputs[-1].shape[1:])
-            input_ = self.reshape(inputs)
+            inputs_reshaped = self.reshape(inputs)
             if self.n == 2:
 
                 output_max = expand_dims(
-                    max_(input_, dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode, axis=-1),
+                    max_(
+                        inputs_reshaped,
+                        dc_decomp=self.dc_decomp,
+                        convex_domain=self.convex_domain,
+                        mode=self.mode,
+                        axis=-1,
+                    ),
                     dc_decomp=self.dc_decomp,
                     mode=self.mode,
                     axis=-1,
                 )
                 output_min = expand_dims(
-                    min_(input_, dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode, axis=-1),
+                    min_(
+                        inputs_reshaped,
+                        dc_decomp=self.dc_decomp,
+                        convex_domain=self.convex_domain,
+                        mode=self.mode,
+                        axis=-1,
+                    ),
                     dc_decomp=self.dc_decomp,
                     mode=self.mode,
                     axis=-1,
                 )
-                output_ = self.concat(output_min + output_max)
+                outputs = self.concat(output_min + output_max)
 
             else:
 
-                output_ = sort(
-                    input_, axis=-1, dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
+                outputs = sort(
+                    inputs_reshaped, axis=-1, dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
                 )
 
             return DecomonReshape(
                 shape_in, mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp
-            ).call(output_)
+            ).call(outputs)
 
         def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
             return input_shape
@@ -164,10 +176,10 @@ else:
 
         def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
-            inputs_ = self.op_reshape_in(inputs)
+            inputs_reshaped = self.op_reshape_in(inputs)
             inputs_max = expand_dims(
                 max_(
-                    inputs_,
+                    inputs_reshaped,
                     mode=self.mode,
                     convex_domain=self.convex_domain,
                     axis=self.axis,
@@ -179,7 +191,7 @@ else:
             )
             inputs_min = expand_dims(
                 min_(
-                    inputs_,
+                    inputs_reshaped,
                     mode=self.mode,
                     convex_domain=self.convex_domain,
                     axis=self.axis,
@@ -190,8 +202,7 @@ else:
                 axis=self.axis,
             )
             output = self.op_concat(inputs_min + inputs_max)
-            output_ = self.op_reshape_out(output)
-            return output_
+            return self.op_reshape_out(output)
 
         def build(self, input_shape: List[tf.TensorShape]) -> None:
             input_shape = input_shape[-1]
@@ -209,14 +220,14 @@ else:
             self.params_min = []
 
             if self.finetune and self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-                self.beta_max_ = self.add_weight(
+                self.beta_max = self.add_weight(
                     shape=target_shape, initializer="ones", name="beta_max", regularizer=None, constraint=ClipAlpha()
                 )
-                self.beta_min_ = self.add_weight(
+                self.beta_min = self.add_weight(
                     shape=target_shape, initializer="ones", name="beta_max", regularizer=None, constraint=ClipAlpha()
                 )
-                self.params_max = [self.beta_max_]
-                self.params_min = [self.beta_min_]
+                self.params_max = [self.beta_max]
+                self.params_min = [self.beta_min]
 
             self.op_reshape_in = DecomonReshape(tuple(target_shape), mode=self.mode)
             self.op_reshape_out = DecomonReshape(tuple(input_shape[1:]), mode=self.mode)

@@ -119,14 +119,14 @@ def get_upper_box(x_min: tf.Tensor, x_max: tf.Tensor, w: tf.Tensor, b: tf.Tensor
     w_pos = K.maximum(w, z_value)
     w_neg = K.minimum(w, z_value)
 
-    x_min_ = x_min + z_value * x_min
-    x_max_ = x_max + z_value * x_max
+    x_min_out = x_min + z_value * x_min
+    x_max_out = x_max + z_value * x_max
 
     for _ in range(len(w.shape) - len(x_max.shape)):
-        x_min_ = K.expand_dims(x_min_, -1)
-        x_max_ = K.expand_dims(x_max_, -1)
+        x_min_out = K.expand_dims(x_min_out, -1)
+        x_max_out = K.expand_dims(x_max_out, -1)
 
-    return K.sum(w_pos * x_max_ + w_neg * x_min_, 1) + b
+    return K.sum(w_pos * x_max_out + w_neg * x_min_out, 1) + b
 
 
 def get_lower_box(x_min: tf.Tensor, x_max: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
@@ -149,14 +149,14 @@ def get_lower_box(x_min: tf.Tensor, x_max: tf.Tensor, w: tf.Tensor, b: tf.Tensor
     w_pos = K.maximum(w, z_value)
     w_neg = K.minimum(w, z_value)
 
-    x_min_ = x_min + z_value * x_min
-    x_max_ = x_max + z_value * x_max
+    x_min_out = x_min + z_value * x_min
+    x_max_out = x_max + z_value * x_max
 
     for _ in range(len(w.shape) - len(x_max.shape)):
-        x_min_ = K.expand_dims(x_min_, -1)
-        x_max_ = K.expand_dims(x_max_, -1)
+        x_min_out = K.expand_dims(x_min_out, -1)
+        x_max_out = K.expand_dims(x_max_out, -1)
 
-    return K.sum(w_pos * x_min_ + w_neg * x_max_, 1) + b
+    return K.sum(w_pos * x_min_out + w_neg * x_max_out, 1) + b
 
 
 # case 2 : a ball
@@ -267,13 +267,15 @@ def get_lower_ball_finetune(x_0: tf.Tensor, eps: float, p: int, w: tf.Tensor, b:
             upper = kwargs["upper"]  # flatten vector
             lower = kwargs["lower"]  # flatten vector
 
-            upper_ = np.reshape(upper, [1, -1] + [1] * n_shape)
-            lower_ = np.reshape(lower, [1, -1] + [1] * n_shape)
+            upper_reshaped = np.reshape(upper, [1, -1] + [1] * n_shape)
+            lower_reshaped = np.reshape(lower, [1, -1] + [1] * n_shape)
 
             w_alpha = w * alpha[None]
             w_alpha_bar = w * (1 - alpha)
 
-            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * lower_, 1) + K.sum(K.minimum(0.0, w_alpha_bar) * upper_, 1)
+            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * lower_reshaped, 1) + K.sum(
+                K.minimum(0.0, w_alpha_bar) * upper_reshaped, 1
+            )
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
             return score_box + score_ball
@@ -281,12 +283,12 @@ def get_lower_ball_finetune(x_0: tf.Tensor, eps: float, p: int, w: tf.Tensor, b:
         if "upper" in kwargs:
 
             upper = kwargs["upper"]  # flatten vector
-            upper_ = np.reshape(upper, [1, -1] + [1] * n_shape)
+            upper_reshaped = np.reshape(upper, [1, -1] + [1] * n_shape)
 
             w_alpha = K.minimum(0, w) * alpha[None] + K.maximum(0.0, w)
             w_alpha_bar = K.minimum(0, w) * (1 - alpha[None])
 
-            score_box = K.sum(K.minimum(0.0, w_alpha_bar) * upper_, 1)
+            score_box = K.sum(K.minimum(0.0, w_alpha_bar) * upper_reshaped, 1)
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
             return score_box + score_ball
@@ -294,12 +296,12 @@ def get_lower_ball_finetune(x_0: tf.Tensor, eps: float, p: int, w: tf.Tensor, b:
         if "lower" in kwargs:
 
             lower = kwargs["lower"]  # flatten vector
-            lower_ = np.reshape(lower, [1, -1] + [1] * n_shape)
+            lower_reshaped = np.reshape(lower, [1, -1] + [1] * n_shape)
 
             w_alpha = K.maximum(0, w) * alpha[None] + K.minimum(0.0, w)
             w_alpha_bar = K.maximum(0, w) * (1 - alpha[None])
 
-            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * lower_, 1)
+            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * lower_reshaped, 1)
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
             return score_box + score_ball
@@ -319,13 +321,15 @@ def get_upper_ball_finetune(x_0: tf.Tensor, eps: float, p: int, w: tf.Tensor, b:
             upper = kwargs["upper"]  # flatten vector
             lower = kwargs["lower"]  # flatten vector
 
-            upper_ = np.reshape(upper, [1, -1] + [1] * n_shape)
-            lower_ = np.reshape(lower, [1, -1] + [1] * n_shape)
+            upper_reshaped = np.reshape(upper, [1, -1] + [1] * n_shape)
+            lower_reshaped = np.reshape(lower, [1, -1] + [1] * n_shape)
 
             w_alpha = w * alpha[None]
             w_alpha_bar = w * (1 - alpha)
 
-            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * upper_, 1) + K.sum(K.minimum(0.0, w_alpha_bar) * lower_, 1)
+            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * upper_reshaped, 1) + K.sum(
+                K.minimum(0.0, w_alpha_bar) * lower_reshaped, 1
+            )
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
             return score_box + score_ball
@@ -333,12 +337,12 @@ def get_upper_ball_finetune(x_0: tf.Tensor, eps: float, p: int, w: tf.Tensor, b:
         if "upper" in kwargs:
 
             upper = kwargs["upper"]  # flatten vector
-            upper_ = np.reshape(upper, [1, -1] + [1] * n_shape)
+            upper_reshaped = np.reshape(upper, [1, -1] + [1] * n_shape)
 
             w_alpha = K.minimum(0, w) * alpha[None] + K.maximum(0.0, w)
             w_alpha_bar = K.minimum(0, w) * (1 - alpha[None])
 
-            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * upper_, 1)
+            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * upper_reshaped, 1)
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
             return score_box + score_ball
@@ -346,12 +350,12 @@ def get_upper_ball_finetune(x_0: tf.Tensor, eps: float, p: int, w: tf.Tensor, b:
         if "lower" in kwargs:
 
             lower = kwargs["lower"]  # flatten vector
-            lower_ = np.reshape(lower, [1, -1] + [1] * n_shape)
+            lower_reshaped = np.reshape(lower, [1, -1] + [1] * n_shape)
 
             w_alpha = K.maximum(0, w) * alpha[None] + K.minimum(0.0, w)
             w_alpha_bar = K.maximum(0, w) * (1 - alpha[None])
 
-            score_box = K.sum(K.minimum(0.0, w_alpha_bar) * lower_, 1)
+            score_box = K.sum(K.minimum(0.0, w_alpha_bar) * lower_reshaped, 1)
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
             return score_box + score_ball
@@ -472,16 +476,16 @@ def get_upper_layer_box() -> Layer:
     return Lambda(func)
 
 
-def backward_maximum(inputs_: List[tf.Tensor], convex_domain: Optional[Dict[str, Any]] = None) -> List[tf.Tensor]:
+def backward_maximum(inputs: List[tf.Tensor], convex_domain: Optional[Dict[str, Any]] = None) -> List[tf.Tensor]:
 
-    back_bounds_0 = inputs_[2:6]
-    back_bounds = inputs_[6:]
+    back_bounds_0 = inputs[2:6]
+    back_bounds = inputs[6:]
 
-    output = inputs_[:2] + back_bounds_0
+    output = inputs[:2] + back_bounds_0
     for i in range(int(len(back_bounds) / 4)):
         output = maximum(
             output,
-            inputs_[:2] + back_bounds[4 * i : 4 * (i + 1)],
+            inputs[:2] + back_bounds[4 * i : 4 * (i + 1)],
             dc_decomp=False,
             convex_domain=convex_domain,
             mode=ForwardMode.AFFINE,
@@ -490,16 +494,16 @@ def backward_maximum(inputs_: List[tf.Tensor], convex_domain: Optional[Dict[str,
     return output[-2:]
 
 
-def backward_minimum(inputs_: List[tf.Tensor], convex_domain: Optional[Dict[str, Any]] = None) -> List[tf.Tensor]:
+def backward_minimum(inputs: List[tf.Tensor], convex_domain: Optional[Dict[str, Any]] = None) -> List[tf.Tensor]:
 
-    back_bounds_0 = inputs_[2:6]
-    back_bounds = inputs_[6:]
+    back_bounds_0 = inputs[2:6]
+    back_bounds = inputs[6:]
 
-    output = inputs_[:2] + back_bounds_0
+    output = inputs[:2] + back_bounds_0
     for i in range(int(len(back_bounds) / 4)):
         output = minimum(
             output,
-            inputs_[:2] + back_bounds[4 * i : 4 * (i + 1)],
+            inputs[:2] + back_bounds[4 * i : 4 * (i + 1)],
             dc_decomp=False,
             convex_domain=convex_domain,
             mode=ForwardMode.AFFINE,
@@ -511,19 +515,19 @@ def backward_minimum(inputs_: List[tf.Tensor], convex_domain: Optional[Dict[str,
 def noisy_lower(lower: tf.Tensor) -> tf.Tensor:
 
     # if some random binary variable is set to 0 return K.maximum(upper,- upper)
-    var_ = K.minimum(lower, -lower)
+    var = K.minimum(lower, -lower)
     proba = K.random_binomial(lower.shape, p=0.2, dtype=K.floatx())
 
-    return proba * lower + (1 - proba) * var_
+    return proba * lower + (1 - proba) * var
 
 
 def noisy_upper(upper: tf.Tensor) -> tf.Tensor:
 
     # if some random binary variable is set to 0 return K.maximum(upper,- upper)
-    var_ = K.maximum(upper, -upper)
+    var = K.maximum(upper, -upper)
     proba = K.random_binomial(upper.shape, p=0.2, dtype=K.floatx())
 
-    return proba * upper + (1 - proba) * var_
+    return proba * upper + (1 - proba) * var
 
 
 ##### corners ######
@@ -568,8 +572,8 @@ def subset_sum_lower(W: tf.Tensor, b: tf.Tensor, repeat: int = 1) -> tf.Tensor:
 
     B = tf.sort(W, 1)
     C = K.repeat_elements(B, rep=repeat, axis=1)
-    C_ = K.cumsum(C, axis=1)
-    D = K.minimum(K.sign(K.expand_dims(-b, 1) - C_) + 1, 1)
+    C_reduced = K.cumsum(C, axis=1)
+    D = K.minimum(K.sign(K.expand_dims(-b, 1) - C_reduced) + 1, 1)
 
     score = K.minimum(K.sum(D * C, 1) + b, 0.0)
     return score
@@ -592,8 +596,8 @@ def get_linear_hull_relu(
     # scaling factor for the upper bound on the relu
     # see README
 
-    w_u_ = alpha
-    b_u_ = K.relu(lower) - alpha * lower
+    w_u = alpha
+    b_u = K.relu(lower) - alpha * lower
     z_value = K.cast(0.0, dtype=upper.dtype)
     o_value = K.cast(1.0, dtype=upper.dtype)
 
@@ -603,24 +607,24 @@ def get_linear_hull_relu(
 
         # 1 if upper>-lower else 0
         index_b = o_value - index_a
-        w_l_ = index_b
-        b_l_ = z_value * b_u_
+        w_l = index_b
+        b_l = z_value * b_u
 
     if slope == Slope.A_SLOPE:
-        w_l_ = K.clip(K.sign(w_u_ - 0.5), 0, 1)
-        b_l_ = z_value * b_u_
+        w_l = K.clip(K.sign(w_u - 0.5), 0, 1)
+        b_l = z_value * b_u
 
     if slope == Slope.Z_SLOPE:
-        w_l_ = z_value * w_u_
-        b_l_ = z_value * b_u_
+        w_l = z_value * w_u
+        b_l = z_value * b_u
 
     if slope == Slope.O_SLOPE:
-        w_l_ = z_value * w_u_ + o_value
-        b_l_ = z_value * b_u_
+        w_l = z_value * w_u + o_value
+        b_l = z_value * b_u
 
     if slope == Slope.S_SLOPE:
-        w_l_ = w_u_
-        b_l_ = z_value * b_u_
+        w_l = w_u
+        b_l = z_value * b_u
 
     if "upper_grid" in kwargs:
 
@@ -631,23 +635,23 @@ def get_linear_hull_relu(
         # retrieve variables to optimize the slopes
         gamma = kwargs["finetune"][None]
 
-    w_l_ = gamma * w_l_ + (o_value - gamma) * (o_value - w_l_)
+    w_l = gamma * w_l + (o_value - gamma) * (o_value - w_l)
 
     # check inactive relu state: u<=0
     index_dead = -K.clip(K.sign(upper) - o_value, -o_value, z_value)  # =1 if inactive state
     index_linear = K.clip(K.sign(lower) + o_value, z_value, o_value)  # 1 if linear state
 
-    w_u_ = (o_value - index_dead) * w_u_
-    w_l_ = (o_value - index_dead) * w_l_
-    b_u_ = (o_value - index_dead) * b_u_
-    b_l_ = (o_value - index_dead) * b_l_
+    w_u = (o_value - index_dead) * w_u
+    w_l = (o_value - index_dead) * w_l
+    b_u = (o_value - index_dead) * b_u
+    b_l = (o_value - index_dead) * b_l
 
-    w_u_ = (o_value - index_linear) * w_u_ + index_linear
-    w_l_ = (o_value - index_linear) * w_l_ + index_linear
-    b_u_ = (o_value - index_linear) * b_u_
-    b_l_ = (o_value - index_linear) * b_l_
+    w_u = (o_value - index_linear) * w_u + index_linear
+    w_l = (o_value - index_linear) * w_l + index_linear
+    b_u = (o_value - index_linear) * b_u
+    b_l = (o_value - index_linear) * b_l
 
-    return [w_u_, b_u_, w_l_, b_l_]
+    return [w_u, b_u, w_l, b_l]
 
 
 def get_linear_hull_sigmoid(
@@ -674,11 +678,11 @@ def get_linear_softplus_hull(
     slope = Slope(slope)
     # in case upper=lower, this cases are
     # considered with index_dead and index_linear
-    u_c_ = K.softsign(upper)
-    l_c_ = K.softsign(lower)
-    alpha = (u_c_ - l_c_) / K.maximum(K.cast(K.epsilon(), dtype=upper.dtype), (upper - lower))
-    w_u_ = alpha
-    b_u_ = -alpha * lower + l_c_
+    u_c = K.softsign(upper)
+    l_c = K.softsign(lower)
+    alpha = (u_c - l_c) / K.maximum(K.cast(K.epsilon(), dtype=upper.dtype), (upper - lower))
+    w_u = alpha
+    b_u = -alpha * lower + l_c
 
     z_value = K.cast(0.0, dtype=upper.dtype)
     o_value = K.cast(1.0, dtype=upper.dtype)
@@ -688,48 +692,48 @@ def get_linear_softplus_hull(
         index_a = -K.clip(K.sign(upper + lower) - o_value, -o_value, z_value)
         # 1 if upper>-lower else 0
         index_b = o_value - index_a
-        w_l_ = index_b
-        b_l_ = z_value * b_u_
+        w_l = index_b
+        b_l = z_value * b_u
     elif slope == Slope.Z_SLOPE:
-        w_l_ = z_value * w_u_
-        b_l_ = z_value * b_u_
+        w_l = z_value * w_u
+        b_l = z_value * b_u
     elif slope == Slope.O_SLOPE:
-        w_l_ = z_value * w_u_ + o_value
-        b_l_ = z_value * b_u_
+        w_l = z_value * w_u + o_value
+        b_l = z_value * b_u
     elif slope == Slope.S_SLOPE:
-        w_l_ = w_u_
-        b_l_ = z_value * b_u_
+        w_l = w_u
+        b_l = z_value * b_u
     else:
         raise ValueError(f"Unknown slope {slope}")
 
     if "finetune" in kwargs:
         # weighted linear combination
         alpha_l = kwargs["finetune"]
-        alpha_l_ = alpha_l[None]
+        alpha_l = alpha_l[None]
 
-        w_l_ = alpha_l_ * w_l_
-        b_l_ = alpha_l_ * b_l_ + (o_value - alpha_l_) * K.maximum(lower, z_value)
+        w_l = alpha_l * w_l
+        b_l = alpha_l * b_l + (o_value - alpha_l) * K.maximum(lower, z_value)
 
     index_dead = -K.clip(K.sign(upper) - o_value, -o_value, z_value)
 
-    w_u_ = (o_value - index_dead) * w_u_
-    w_l_ = (o_value - index_dead) * w_l_
-    b_u_ = (o_value - index_dead) * b_u_
-    b_l_ = (o_value - index_dead) * b_l_
+    w_u = (o_value - index_dead) * w_u
+    w_l = (o_value - index_dead) * w_l
+    b_u = (o_value - index_dead) * b_u
+    b_l = (o_value - index_dead) * b_l
 
     if "finetune" in kwargs:
         # weighted linear combination
         alpha_u, alpha_l = kwargs["finetune"]
-        alpha_u_ = alpha_u[None]
-        alpha_l_ = alpha_l[None]
+        alpha_u = alpha_u[None]
+        alpha_l = alpha_l[None]
 
-        w_u_ = alpha_u_ * w_u_
-        b_u_ = alpha_u_ * b_u_ + (o_value - alpha_u_) * K.maximum(upper, z_value)
+        w_u = alpha_u * w_u
+        b_u = alpha_u * b_u + (o_value - alpha_u) * K.maximum(upper, z_value)
 
-        w_l_ = alpha_l_ * w_l_
-        b_l_ = alpha_l_ * b_l_ + (o_value - alpha_l_) * K.maximum(lower, z_value)
+        w_l = alpha_l * w_l
+        b_l = alpha_l * b_l + (o_value - alpha_l) * K.maximum(lower, z_value)
 
-    return [w_u_, b_u_, w_l_, b_l_]
+    return [w_u, b_u, w_l, b_l]
 
 
 def subtract(
@@ -753,8 +757,8 @@ def subtract(
     """
     if convex_domain is None:
         convex_domain = {}
-    inputs_1_ = minus(inputs_1, mode=mode, dc_decomp=dc_decomp)
-    output = add(inputs_0, inputs_1_, dc_decomp=dc_decomp, mode=mode, convex_domain=convex_domain)
+    inputs_1 = minus(inputs_1, mode=mode, dc_decomp=dc_decomp)
+    output = add(inputs_0, inputs_1, dc_decomp=dc_decomp, mode=mode, convex_domain=convex_domain)
 
     return output
 
@@ -785,8 +789,8 @@ def add(
     if dc_decomp:
         h_0, g_0 = inputs_0[-2:]
         h_1, g_1 = inputs_1[-2:]
-        h_ = h_0 + h_1
-        g_ = g_0 + g_1
+        h = h_0 + h_1
+        g = g_0 + g_1
 
     if mode == ForwardMode.HYBRID:
         x_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0 = inputs_0[:nb_tensor]
@@ -801,34 +805,34 @@ def add(
         raise ValueError(f"Unknown mode {mode}")
 
     if mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
-        u_c_ = u_c_0 + u_c_1
-        l_c_ = l_c_0 + l_c_1
+        u_c = u_c_0 + u_c_1
+        l_c = l_c_0 + l_c_1
     if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
 
-        w_u_ = w_u_0 + w_u_1
-        w_l_ = w_l_0 + w_l_1
+        w_u = w_u_0 + w_u_1
+        w_l = w_l_0 + w_l_1
 
-        b_u_ = b_u_0 + b_u_1
-        b_l_ = b_l_0 + b_l_1
-
-    if mode == ForwardMode.HYBRID:
-        upper_ = get_upper(x_0, w_u_, b_u_, convex_domain)
-        u_c_ = K.minimum(upper_, u_c_)
-
-        lower_ = get_lower(x_0, w_l_, b_l_, convex_domain)
-        l_c_ = K.maximum(lower_, l_c_)
+        b_u = b_u_0 + b_u_1
+        b_l = b_l_0 + b_l_1
 
     if mode == ForwardMode.HYBRID:
-        output = [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+        upper = get_upper(x_0, w_u, b_u, convex_domain)
+        u_c = K.minimum(upper, u_c)
+
+        lower = get_lower(x_0, w_l, b_l, convex_domain)
+        l_c = K.maximum(lower, l_c)
+
+    if mode == ForwardMode.HYBRID:
+        output = [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
     elif mode == ForwardMode.IBP:
-        output = [u_c_, l_c_]
+        output = [u_c, l_c]
     elif mode == ForwardMode.AFFINE:
-        output = [x_0, w_u_, b_u_, w_l_, b_l_]
+        output = [x_0, w_u, b_u, w_l, b_l]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
     if dc_decomp:
-        output += [h_, g_]
+        output += [h, g]
 
     return output
 
@@ -870,18 +874,18 @@ def relu_(
 
     if dc_decomp:
         h, g = x[-2:]
-        h_ = K.maximum(h, -g)
-        g_ = g
+        h_out = K.maximum(h, -g)
+        g_out = g
         index_dead = -K.clip(K.sign(upper) - o_value, -o_value, z_value)  # =1 if inactive state
         index_linear = K.clip(K.sign(lower) + o_value, z_value, o_value)  # 1 if linear state
 
-        h_ = (o_value - index_dead) * h_
-        g_ = (o_value - index_dead) * g_
-        h_ = (o_value - index_linear) * h_ + index_linear * h
-        g_ = (o_value - index_linear) * g_ + index_linear * g
+        h_out = (o_value - index_dead) * h_out
+        g_out = (o_value - index_dead) * g_out
+        h_out = (o_value - index_linear) * h_out + index_linear * h
+        g_out = (o_value - index_linear) * g_out + index_linear * g
 
-    u_c_ = K.relu(upper)
-    l_c_ = K.relu(lower)
+    u_c_out = K.relu(upper)
+    l_c_out = K.relu(lower)
 
     if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
 
@@ -889,24 +893,24 @@ def relu_(
             upper_g, lower_g = get_bound_grid(x_0, w_u, b_u, w_l, b_l, 1)
             kwargs.update({"upper_grid": upper_g, "lower_grid": lower_g})
 
-        w_u_, b_u_, w_l_, b_l_ = get_linear_hull_relu(upper, lower, slope, **kwargs)
-        b_u_ = w_u_ * b_u + b_u_
-        b_l_ = w_l_ * b_l + b_l_
-        w_u_ = K.expand_dims(w_u_, 1) * w_u
-        w_l_ = K.expand_dims(w_l_, 1) * w_l
+        w_u_out, b_u_out, w_l_out, b_l_out = get_linear_hull_relu(upper, lower, slope, **kwargs)
+        b_u_out = w_u_out * b_u + b_u_out
+        b_l_out = w_l_out * b_l + b_l_out
+        w_u_out = K.expand_dims(w_u_out, 1) * w_u
+        w_l_out = K.expand_dims(w_l_out, 1) * w_l
 
     output = []
     if mode == ForwardMode.IBP:
-        output += [u_c_, l_c_]
+        output += [u_c_out, l_c_out]
     elif mode == ForwardMode.AFFINE:
-        output += [x_0, w_u_, b_u_, w_l_, b_l_]
+        output += [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
     elif mode == ForwardMode.HYBRID:
-        output += [x_0, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+        output += [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
     if dc_decomp:
-        output += [h_, g_]
+        output += [h_out, g_out]
     return output
 
 
@@ -925,11 +929,11 @@ def minus(
     mode = ForwardMode(mode)
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.IBP:
-        u, l = inputs[:nb_tensor]
+        u_c, l_c = inputs[:nb_tensor]
     elif mode == ForwardMode.AFFINE:
         x, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
     elif mode == ForwardMode.HYBRID:
-        x, u, w_u, b_u, l, w_l, b_l = inputs[:nb_tensor]
+        x, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
@@ -937,21 +941,21 @@ def minus(
         h, g = inputs[-2:]
 
     if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-        u_ = -l
-        l_ = -u
+        u_c_out = -l_c
+        l_c_out = -u_c
 
     if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-        w_u_ = -w_l
-        b_u_ = -b_l
-        w_l_ = -w_u
-        b_l_ = -b_u
+        w_u_out = -w_l
+        b_u_out = -b_l
+        w_l_out = -w_u
+        b_l_out = -b_u
 
     if mode == ForwardMode.IBP:
-        output = [u_, l_]
+        output = [u_c_out, l_c_out]
     elif mode == ForwardMode.AFFINE:
-        output = [x, w_u_, b_u_, w_l_, b_l_]
+        output = [x, w_u_out, b_u_out, w_l_out, b_l_out]
     elif mode == ForwardMode.HYBRID:
-        output = [x, u_, w_u_, b_u_, l_, w_l_, b_l_]
+        output = [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
         raise ValueError(f"Unknown mode {mode}")
 
@@ -1105,8 +1109,8 @@ def get_linear_hull_s_shape(
 
     w_u_2, b_u_2 = get_t_upper(u_c_flat, l_c_flat, s_l, func=func, f_prime=f_prime)
 
-    w_u_ = K.reshape(alpha_u_0 * w_u_0 + alpha_u_1 * w_u_1 + (o_value - alpha_u_0 - alpha_u_1) * w_u_2, [-1] + shape)
-    b_u_ = K.reshape(alpha_u_0 * b_u_0 + alpha_u_1 * b_u_1 + (o_value - alpha_u_0 - alpha_u_1) * b_u_2, [-1] + shape)
+    w_u_out = K.reshape(alpha_u_0 * w_u_0 + alpha_u_1 * w_u_1 + (o_value - alpha_u_0 - alpha_u_1) * w_u_2, [-1] + shape)
+    b_u_out = K.reshape(alpha_u_0 * b_u_0 + alpha_u_1 * b_u_1 + (o_value - alpha_u_0 - alpha_u_1) * b_u_2, [-1] + shape)
 
     # linear hull
     # case 0:
@@ -1121,10 +1125,10 @@ def get_linear_hull_s_shape(
 
     w_l_2, b_l_2 = get_t_lower(u_c_flat, l_c_flat, s_u, func=func, f_prime=f_prime)
 
-    w_l_ = K.reshape(alpha_l_0 * w_l_0 + alpha_l_1 * w_l_1 + (o_value - alpha_l_0 - alpha_l_1) * w_l_2, [-1] + shape)
-    b_l_ = K.reshape(alpha_l_0 * b_l_0 + alpha_l_1 * b_l_1 + (o_value - alpha_l_0 - alpha_l_1) * b_l_2, [-1] + shape)
+    w_l_out = K.reshape(alpha_l_0 * w_l_0 + alpha_l_1 * w_l_1 + (o_value - alpha_l_0 - alpha_l_1) * w_l_2, [-1] + shape)
+    b_l_out = K.reshape(alpha_l_0 * b_l_0 + alpha_l_1 * b_l_1 + (o_value - alpha_l_0 - alpha_l_1) * b_l_2, [-1] + shape)
 
-    return [w_u_, b_u_, w_l_, b_l_]
+    return [w_u_out, b_u_out, w_l_out, b_l_out]
 
 
 def get_t_upper(
@@ -1152,28 +1156,28 @@ def get_t_upper(
     z_value = K.cast(0.0, dtype=u_c_flat.dtype)
 
     # step1: find t
-    u_c_flat_ = K.expand_dims(u_c_flat, -1)  # (None, n , 1)
-    l_c_flat_ = K.expand_dims(l_c_flat, -1)  # (None, n,  1)
-    t_ = K.cast(np.linspace(0, 1, 100)[None, None, :], dtype=u_c_flat.dtype) * u_c_flat_  # (None, n , 100)
+    u_c_reshaped = K.expand_dims(u_c_flat, -1)  # (None, n , 1)
+    l_c_reshaped = K.expand_dims(l_c_flat, -1)  # (None, n,  1)
+    t = K.cast(np.linspace(0, 1, 100)[None, None, :], dtype=u_c_flat.dtype) * u_c_reshaped  # (None, n , 100)
 
-    s_p_t_ = f_prime(t_)  # (None, n, 100)
-    s_t_ = func(t_)  # (None, n, 100)
+    s_p_t = f_prime(t)  # (None, n, 100)
+    s_t = func(t)  # (None, n, 100)
 
-    score = K.abs(s_p_t_ - (s_t_ - K.expand_dims(s_l, -1)) / (t_ - l_c_flat_))  # (None, n, 100)
-    index_ = K.argmin(score, -1)  # (None, n)
+    score = K.abs(s_p_t - (s_t - K.expand_dims(s_l, -1)) / (t - l_c_reshaped))  # (None, n, 100)
+    index = K.argmin(score, -1)  # (None, n)
     threshold = K.min(score, -1)  # (None, n)
 
     index_t = K.cast(
-        K.switch(K.greater(threshold, z_value * threshold), index_, K.clip(index_ - 1, 0, 100)), dtype=u_c_flat.dtype
+        K.switch(K.greater(threshold, z_value * threshold), index, K.clip(index - 1, 0, 100)), dtype=u_c_flat.dtype
     )  # (None, n)
     t_value = K.sum(
         K.switch(
             K.equal(
-                o_value * K.cast(np.arange(0, 100)[None, None, :], dtype=u_c_flat.dtype) + z_value * u_c_flat_,
-                K.expand_dims(index_t, -1) + z_value * u_c_flat_,
+                o_value * K.cast(np.arange(0, 100)[None, None, :], dtype=u_c_flat.dtype) + z_value * u_c_reshaped,
+                K.expand_dims(index_t, -1) + z_value * u_c_reshaped,
             ),
-            t_,
-            z_value * t_,
+            t,
+            z_value * t,
         ),
         -1,
     )  # (None, n)
@@ -1209,28 +1213,28 @@ def get_t_lower(
     o_value = K.cast(1.0, dtype=u_c_flat.dtype)
 
     # step1: find t
-    u_c_flat_ = K.expand_dims(u_c_flat, -1)  # (None, n , 1)
-    l_c_flat_ = K.expand_dims(l_c_flat, -1)  # (None, n,  1)
-    t_ = K.cast(np.linspace(0, 1.0, 100)[None, None, :], dtype=u_c_flat.dtype) * l_c_flat_  # (None, n , 100)
+    u_c_reshaped = K.expand_dims(u_c_flat, -1)  # (None, n , 1)
+    l_c_reshaped = K.expand_dims(l_c_flat, -1)  # (None, n,  1)
+    t = K.cast(np.linspace(0, 1.0, 100)[None, None, :], dtype=u_c_flat.dtype) * l_c_reshaped  # (None, n , 100)
 
-    s_p_t_ = f_prime(t_)  # (None, n, 100)
-    s_t_ = func(t_)  # (None, n, 100)
+    s_p_t = f_prime(t)  # (None, n, 100)
+    s_t = func(t)  # (None, n, 100)
 
-    score = K.abs(s_p_t_ - (K.expand_dims(s_u, -1) - s_t_) / (u_c_flat_ - t_))  # (None, n, 100)
-    index_ = K.argmin(score, -1)  # (None, n)
+    score = K.abs(s_p_t - (K.expand_dims(s_u, -1) - s_t) / (u_c_reshaped - t))  # (None, n, 100)
+    index = K.argmin(score, -1)  # (None, n)
 
     threshold = K.min(score, -1)
     index_t = K.cast(
-        K.switch(K.greater(threshold, z_value * threshold), index_, K.clip(index_ + 1, 0, 100)), dtype=u_c_flat.dtype
+        K.switch(K.greater(threshold, z_value * threshold), index, K.clip(index + 1, 0, 100)), dtype=u_c_flat.dtype
     )  # (None, n)
     t_value = K.sum(
         K.switch(
             K.equal(
-                o_value * K.cast(np.arange(0, 100)[None, None, :], dtype=u_c_flat.dtype) + z_value * u_c_flat_,
-                K.expand_dims(index_t, -1) + z_value * u_c_flat_,
+                o_value * K.cast(np.arange(0, 100)[None, None, :], dtype=u_c_flat.dtype) + z_value * u_c_reshaped,
+                K.expand_dims(index_t, -1) + z_value * u_c_reshaped,
             ),
-            t_,
-            z_value * t_,
+            t,
+            z_value * t,
         ),
         -1,
     )
@@ -1243,7 +1247,7 @@ def get_t_lower(
 
 
 def set_mode(
-    x: List[tf.Tensor],
+    inputs: List[tf.Tensor],
     final_mode: Union[str, ForwardMode],
     mode: Union[str, ForwardMode],
     convex_domain: Optional[Dict[str, Any]] = None,
@@ -1254,21 +1258,21 @@ def set_mode(
     final_mode = ForwardMode(final_mode)
     mode = ForwardMode(mode)
     if final_mode == mode:
-        return x
+        return inputs
 
     x_0, u_c, w_u, b_u, l_c, w_l, b_l = None, None, None, None, None, None, None
     if mode == ForwardMode.IBP:
-        u_c, l_c = x
+        u_c, l_c = inputs
         if final_mode != mode:
             raise NotImplementedError(f"If mode is {ForwardMode.IBP}, final_mode must be also {ForwardMode.IBP}.")
     elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = x
+        x_0, w_u, b_u, w_l, b_l = inputs
         if final_mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
             # compute constant bounds
             u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
             l_c = get_lower(x_0, w_u, b_u, convex_domain=convex_domain)
     elif mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = x
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
     else:
         raise ValueError(f"Unknown mode {mode}")
 

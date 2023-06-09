@@ -74,13 +74,13 @@ class DecomonAdd(DecomonMerge, Add):
             output_x = inputs_x[0]
 
         if self.mode == ForwardMode.IBP:
-            inputs_u = inputs[::n_comp]
-            inputs_l = inputs[1::n_comp]
+            inputs_u_c = inputs[::n_comp]
+            inputs_l_c = inputs[1::n_comp]
         elif self.mode == ForwardMode.HYBRID:
-            inputs_u = inputs[1::n_comp]
+            inputs_u_c = inputs[1::n_comp]
             inputs_w_u = inputs[2::n_comp]
             inputs_b_u = inputs[3::n_comp]
-            inputs_l = inputs[4::n_comp]
+            inputs_l_c = inputs[4::n_comp]
             inputs_w_l = inputs[5::n_comp]
             inputs_b_l = inputs[6::n_comp]
         elif self.mode == ForwardMode.AFFINE:
@@ -92,8 +92,8 @@ class DecomonAdd(DecomonMerge, Add):
             raise ValueError(f"Unknown mode {self.mode}")
 
         if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            output_u = sum(inputs_u)
-            output_l = sum(inputs_l)
+            output_u_c = sum(inputs_u_c)
+            output_l_c = sum(inputs_l_c)
         if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             output_b_u = sum(inputs_b_u)
             output_b_l = sum(inputs_b_l)
@@ -102,11 +102,11 @@ class DecomonAdd(DecomonMerge, Add):
             output_w_l = sum(inputs_w_l)
 
         if self.mode == ForwardMode.IBP:
-            output = [output_u, output_l]
+            output = [output_u_c, output_l_c]
         elif self.mode == ForwardMode.AFFINE:
             output = [output_x, output_w_u, output_b_u, output_w_l, output_b_l]
         elif self.mode == ForwardMode.HYBRID:
-            output = [output_x, output_u, output_w_u, output_b_u, output_l, output_w_l, output_b_l]
+            output = [output_x, output_u_c, output_w_u, output_b_u, output_l_c, output_w_l, output_b_l]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
@@ -153,13 +153,13 @@ class DecomonAverage(DecomonMerge, Average):
         if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             output_x = inputs[0]
         if self.mode == ForwardMode.IBP:
-            inputs_u = inputs[::n_comp]
-            inputs_l = inputs[1::n_comp]
+            inputs_u_c = inputs[::n_comp]
+            inputs_l_c = inputs[1::n_comp]
         elif self.mode == ForwardMode.HYBRID:
-            inputs_u = inputs[1::n_comp]
+            inputs_u_c = inputs[1::n_comp]
             inputs_w_u = inputs[2::n_comp]
             inputs_b_u = inputs[3::n_comp]
-            inputs_l = inputs[4::n_comp]
+            inputs_l_c = inputs[4::n_comp]
             inputs_w_l = inputs[5::n_comp]
             inputs_b_l = inputs[6::n_comp]
         elif self.mode == ForwardMode.AFFINE:
@@ -171,8 +171,8 @@ class DecomonAverage(DecomonMerge, Average):
             raise ValueError(f"Unknown mode {self.mode}")
 
         if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            output_u = self.op(inputs_u)
-            output_l = self.op(inputs_l)
+            output_u_c = self.op(inputs_u_c)
+            output_l_c = self.op(inputs_l_c)
         if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             output_b_u = self.op(inputs_b_u)
             output_b_l = self.op(inputs_b_l)
@@ -181,11 +181,11 @@ class DecomonAverage(DecomonMerge, Average):
             output_w_l = self.op(inputs_w_l)
 
         if self.mode == ForwardMode.IBP:
-            output = [output_u, output_l]
+            output = [output_u_c, output_l_c]
         elif self.mode == ForwardMode.AFFINE:
             output = [output_x, output_w_u, output_b_u, output_w_l, output_b_l]
         elif self.mode == ForwardMode.HYBRID:
-            output = [output_x, output_u, output_w_u, output_b_u, output_l, output_w_l, output_b_l]
+            output = [output_x, output_u_c, output_w_u, output_b_u, output_l_c, output_w_l, output_b_l]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
@@ -392,13 +392,13 @@ class DecomonConcatenate(DecomonMerge, Concatenate):
             inputs_x = inputs[::n_comp]
             output_x = inputs_x[0]
         if self.mode == ForwardMode.IBP:
-            inputs_u = inputs[::n_comp]
-            inputs_l = inputs[1::n_comp]
+            inputs_u_c = inputs[::n_comp]
+            inputs_l_c = inputs[1::n_comp]
         elif self.mode == ForwardMode.HYBRID:
-            inputs_u = inputs[1::n_comp]
+            inputs_u_c = inputs[1::n_comp]
             inputs_w_u = inputs[2::n_comp]
             inputs_b_u = inputs[3::n_comp]
-            inputs_l = inputs[4::n_comp]
+            inputs_l_c = inputs[4::n_comp]
             inputs_w_l = inputs[5::n_comp]
             inputs_b_l = inputs[6::n_comp]
         elif self.mode == ForwardMode.AFFINE:
@@ -410,8 +410,8 @@ class DecomonConcatenate(DecomonMerge, Concatenate):
             raise ValueError(f"Unknown mode {self.mode}")
 
         if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            output_u = self.op(inputs_u)
-            output_l = self.op(inputs_l)
+            output_u_c = self.op(inputs_u_c)
+            output_l_c = self.op(inputs_l_c)
         if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             output_b_u = self.op(inputs_b_u)
             output_b_l = self.op(inputs_b_l)
@@ -420,11 +420,11 @@ class DecomonConcatenate(DecomonMerge, Concatenate):
             output_w_l = self.op_w(inputs_w_l)
 
         if self.mode == ForwardMode.IBP:
-            output = [output_u, output_l]
+            output = [output_u_c, output_l_c]
         elif self.mode == ForwardMode.AFFINE:
             output = [output_x, output_w_u, output_b_u, output_w_l, output_b_l]
         elif self.mode == ForwardMode.HYBRID:
-            output = [output_x, output_u, output_w_u, output_b_u, output_l, output_w_l, output_b_l]
+            output = [output_x, output_u_c, output_w_u, output_b_u, output_l_c, output_w_l, output_b_l]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
         return output
@@ -533,41 +533,41 @@ class DecomonDot(DecomonMerge, Dot):
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
-        input_0_0 = permute_dimensions(inputs_0, self.axes[0], mode=self.mode)
-        input_1_0 = permute_dimensions(inputs_1, self.axes[1], mode=self.mode)
+        inputs_0 = permute_dimensions(inputs_0, self.axes[0], mode=self.mode)
+        inputs_1 = permute_dimensions(inputs_1, self.axes[1], mode=self.mode)
 
-        inputs_0_ = broadcast(input_0_0, n_1, -1, mode=self.mode)
-        inputs_1_ = broadcast(input_1_0, n_0, 2, mode=self.mode)
+        inputs_0 = broadcast(inputs_0, n_1, -1, mode=self.mode)
+        inputs_1 = broadcast(inputs_1, n_0, 2, mode=self.mode)
 
-        inputs_ = multiply(
-            inputs_0_, inputs_1_, dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
+        outputs_multiply = multiply(
+            inputs_0, inputs_1, dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
         )
 
         if self.mode == ForwardMode.IBP:
-            u, l = inputs_[: self.nb_tensors]
+            u_c, l_c = outputs_multiply[: self.nb_tensors]
         elif self.mode == ForwardMode.AFFINE:
-            x, w_u, b_u, w_l, b_l = inputs_[: self.nb_tensors]
+            x, w_u, b_u, w_l, b_l = outputs_multiply[: self.nb_tensors]
         elif self.mode == ForwardMode.HYBRID:
-            x, u, w_u, b_u, l, w_l, b_l = inputs_[: self.nb_tensors]
+            x, u_c, w_u, b_u, l_c, w_l, b_l = outputs_multiply[: self.nb_tensors]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
         if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            u_ = K.sum(u, 1)
-            l_ = K.sum(l, 1)
+            u_c_out = K.sum(u_c, 1)
+            l_c_out = K.sum(l_c, 1)
 
         if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-            w_u_ = K.sum(w_u, 2)
-            b_u_ = K.sum(b_u, 1)
-            w_l_ = K.sum(w_l, 2)
-            b_l_ = K.sum(b_l, 1)
+            w_u_out = K.sum(w_u, 2)
+            b_u_out = K.sum(b_u, 1)
+            w_l_out = K.sum(w_l, 2)
+            b_l_out = K.sum(b_l, 1)
 
         if self.mode == ForwardMode.IBP:
-            outputs = [u_, l_]
+            outputs = [u_c_out, l_c_out]
         elif self.mode == ForwardMode.AFFINE:
-            outputs = [x, w_u_, b_u_, w_l_, b_l_]
+            outputs = [x, w_u_out, b_u_out, w_l_out, b_l_out]
         elif self.mode == ForwardMode.HYBRID:
-            outputs = [x, u_, w_u_, b_u_, l_, w_l_, b_l_]
+            outputs = [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 

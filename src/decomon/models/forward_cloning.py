@@ -176,7 +176,7 @@ def convert_forward_functional_model(
                     output += output_map[id(parent)]
 
             if isinstance(layer, Model):
-                _, output, layer_map_, output_map_ = convert_forward_functional_model(
+                _, output, layer_map_submodel, output_map_submodel = convert_forward_functional_model(
                     model=layer,
                     input_tensors=output,
                     layer_fn=layer_fn,
@@ -184,8 +184,8 @@ def convert_forward_functional_model(
                     count=count,
                 )
                 count = count + get_inner_layers(layer)
-                layer_map[id(node)] = layer_map_
-                output_map[id(node)] = output_map_
+                layer_map[id(node)] = layer_map_submodel
+                output_map[id(node)] = output_map_submodel
             else:
 
                 converted_layers = layer_fn(layer)

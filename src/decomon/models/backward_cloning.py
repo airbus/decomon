@@ -29,29 +29,29 @@ def get_disconnected_input(
 ) -> Layer:
     mode = ForwardMode(mode)
 
-    def disco_priv(inputs_: List[tf.Tensor]) -> List[tf.Tensor]:
+    def disco_priv(inputs: List[tf.Tensor]) -> List[tf.Tensor]:
 
         if mode == ForwardMode.IBP:
-            return inputs_
+            return inputs
         elif mode == ForwardMode.AFFINE:
-            x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs_
+            x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs
             u_c = get_upper(x_0, w_f_u, b_f_u, convex_domain=convex_domain)
             l_c = get_lower(x_0, w_f_l, b_f_l, convex_domain=convex_domain)
 
         elif mode == ForwardMode.HYBRID:
-            _, u_c, _, _, l_c, _, _ = inputs_
+            _, u_c, _, _, l_c, _, _ = inputs
         else:
             raise ValueError("Unknown mode.")
 
         x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
-        w_u_ = tf.linalg.diag(K.cast(0.0, x_0.dtype) * u_c + K.cast(1.0, x_0.dtype))
-        b_u_ = K.cast(0.0, x_0.dtype) * u_c
+        w_u = tf.linalg.diag(K.cast(0.0, x_0.dtype) * u_c + K.cast(1.0, x_0.dtype))
+        b_u = K.cast(0.0, x_0.dtype) * u_c
         # w_u_ = tf.linalg.diag(K.cast(0., x_0.dtype)*u_c)
 
         if mode == ForwardMode.AFFINE:
-            return [x_0, w_u_, b_u_, w_u_, b_u_]
+            return [x_0, w_u, b_u, w_u, b_u]
         if mode == ForwardMode.HYBRID:
-            return [x_0, u_c, w_u_, b_u_, l_c, w_u_, b_u_]
+            return [x_0, u_c, w_u, b_u, l_c, w_u, b_u]
         else:
             raise ValueError("Unknown mode.")
 
@@ -115,11 +115,10 @@ def crown_(
         convex_domain = {}
 
     if isinstance(node.outbound_layer, Model):
-
-        inputs_ = get_disconnected_input(get_mode(ibp, affine), convex_domain, dtype=inputs[0].dtype)(inputs)
+        inputs_tensors = get_disconnected_input(get_mode(ibp, affine), convex_domain, dtype=inputs[0].dtype)(inputs)
         _, backward_bounds_, _, _ = crown_model(
             model=node.outbound_layer,
-            input_tensors=inputs_,
+            input_tensors=inputs_tensors,
             backward_bounds=backward_bounds,
             ibp=ibp,
             affine=affine,
@@ -178,16 +177,14 @@ def crown_(
 
                     crown_bound_list.append(crown_bound_i)
 
-                # import pdb; pdb.set_trace()
-                avg_layer = Average(dtype=node.outbound_layer.dtype)
-
+                # avg_layer = Average(dtype=node.outbound_layer.dtype)
                 # crown_bound = [avg_layer([e[i] for e in crown_bound_list]) for i in range(4)]
                 crown_bound = crown_bound_list[0]
 
             else:
                 raise NotImplementedError()
         else:
-            crown_bound, fuse_layer_ = crown_(
+            crown_bound, fuse_layer_new = crown_(
                 node=parents[0],
                 ibp=ibp,
                 affine=affine,
@@ -203,7 +200,7 @@ def crown_(
                 fuse_layer=fuse_layer,
             )
             if fuse_layer is None:
-                fuse_layer = fuse_layer_
+                fuse_layer = fuse_layer_new
         return crown_bound, fuse_layer
     else:
         # do something
@@ -257,7 +254,7 @@ def get_input_nodes(
                     if id(parent) in output_map.keys():
                         output += output_map[id(parent)]
                     else:
-                        output_crown, fuse_layer_ = crown_(
+                        output_crown, fuse_layer_tmp = crown_(
                             node=parent,
                             ibp=ibp,
                             affine=affine,
@@ -273,13 +270,13 @@ def get_input_nodes(
                             fuse_layer=fuse_layer,
                         )
                         if fuse_layer is None:
-                            fuse_layer = fuse_layer_
+                            fuse_layer = fuse_layer_tmp
 
                         # convert output_crown in the right mode
                         if set_mode_layer is None:
                             set_mode_layer = Convert2BackwardMode(get_mode(ibp, affine), convex_domain)
-                        output_crown_ = set_mode_layer(input_tensors + output_crown)
-                        output += to_list(output_crown_)
+                        output_crown = set_mode_layer(input_tensors + output_crown)
+                        output += to_list(output_crown)
                         # crown_map[id(parent)]=output_crown_
 
                 input_map[id(node)] = output

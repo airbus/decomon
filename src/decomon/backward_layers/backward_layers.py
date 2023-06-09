@@ -61,22 +61,19 @@ class BackwardDense(BackwardLayer):
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
-        if len(inputs):
-            x_ = inputs
-        else:
-            x_ = self.layer.input
+        if len(inputs) == 0:
+            inputs = self.layer.input
 
-        # start with the activation: determine the upper and lower bounds before the weights
         weights = self.kernel
-        y_ = x_[-1]
+        y = inputs[-1]
         z_value = K.cast(0.0, self.dtype)
-        w_out_u_, w_out_l_ = [weights[None] + z_value * K.expand_dims(y_, -1)] * 2
+        w_u_out, w_l_out = [weights[None] + z_value * K.expand_dims(y, -1)] * 2
         if self.use_bias:
             bias = self.bias
-            b_out_u_, b_out_l_ = [bias[None] + z_value * w_out_u_[:, 0]] * 2
+            b_u_out, b_l_out = [bias[None] + z_value * w_u_out[:, 0]] * 2
         else:
-            b_out_u_, b_out_l_ = [z_value * w_out_u_[:, 0]] * 2
-        return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
+            b_u_out, b_l_out = [z_value * w_u_out[:, 0]] * 2
+        return [w_u_out, b_u_out, w_l_out, b_l_out]
 
     def build(self, input_shape: List[tf.TensorShape]) -> None:
         """
@@ -220,20 +217,18 @@ class BackwardConv2D(BackwardLayer):
         return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        x = inputs
-
-        weight, bias = self.layer.get_backward_weights(x)
+        weight, bias = self.layer.get_backward_weights(inputs)
 
         z_value = K.cast(0.0, self.dtype)
-        y_ = x[-1]
-        shape = np.prod(y_.shape[1:])
-        y_flatten = K.reshape(z_value * y_, (-1, np.prod(shape), 1))  # (None, n_in, 1)
-        w_out_u_ = y_flatten + K.expand_dims(weight, 0)
-        w_out_l_ = w_out_u_
-        b_out_u_ = K.sum(y_flatten, 1) + bias
-        b_out_l_ = b_out_u_
+        y = inputs[-1]
+        shape = np.prod(y.shape[1:])
+        y_flatten = K.reshape(z_value * y, (-1, np.prod(shape), 1))  # (None, n_in, 1)
+        w_u_out = y_flatten + K.expand_dims(weight, 0)
+        w_l_out = w_u_out
+        b_u_out = K.sum(y_flatten, 1) + bias
+        b_l_out = b_u_out
 
-        return [w_out_u_, b_out_u_, w_out_l_, b_out_l_]
+        return [w_u_out, b_u_out, w_l_out, b_l_out]
 
     def freeze_weights(self) -> None:
         if not self.frozen_weights:
@@ -400,10 +395,9 @@ class BackwardActivation(BackwardLayer):
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         # infer the output dimension
-        y_ = inputs[-1]
         if self.activation_name != "linear":
             if self.finetune:
-                w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
+                w_u_out, b_u_out, w_l_out, b_l_out = self.activation(
                     inputs,
                     convex_domain=self.convex_domain,
                     slope=self.slope,
@@ -412,7 +406,7 @@ class BackwardActivation(BackwardLayer):
                     finetune_grid=self.grid_finetune,
                 )
             else:
-                w_out_u, b_out_u, w_out_l, b_out_l = self.activation(
+                w_u_out, b_u_out, w_l_out, b_l_out = self.activation(
                     inputs,
                     convex_domain=self.convex_domain,
                     slope=self.slope,
@@ -420,25 +414,25 @@ class BackwardActivation(BackwardLayer):
                     finetune_grid=self.grid_finetune,
                 )
         else:
-            y_ = inputs[-1]
-            shape = np.prod(y_.shape[1:])
+            y = inputs[-1]
+            shape = np.prod(y.shape[1:])
 
             z_value = K.cast(0.0, self.dtype)
             o_value = K.cast(1.0, self.dtype)
-            y_flat = K.reshape(y_, [-1, shape])
+            y_flat = K.reshape(y, [-1, shape])
 
-            w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
-            b_out_u, b_out_l = [z_value * y_flat] * 2
+            w_u_out, w_l_out = [o_value + z_value * y_flat] * 2
+            b_u_out, b_l_out = [z_value * y_flat] * 2
 
-            w_out_u = tf.linalg.diag(w_out_u)
-            w_out_l = tf.linalg.diag(w_out_l)
+            w_u_out = tf.linalg.diag(w_u_out)
+            w_l_out = tf.linalg.diag(w_l_out)
 
-        if len(w_out_u.shape) == 2:
-            w_out_u = tf.linalg.diag(w_out_u)
-        if len(w_out_l.shape) == 2:
-            w_out_l = tf.linalg.diag(w_out_l)
+        if len(w_u_out.shape) == 2:
+            w_u_out = tf.linalg.diag(w_u_out)
+        if len(w_l_out.shape) == 2:
+            w_l_out = tf.linalg.diag(w_l_out)
 
-        return [w_out_u, b_out_u, w_out_l, b_out_l]
+        return [w_u_out, b_u_out, w_l_out, b_l_out]
 
     def freeze_alpha(self) -> None:
         if not self.frozen_alpha:
@@ -492,19 +486,19 @@ class BackwardFlatten(BackwardLayer):
         )
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        y_ = inputs[-1]
-        shape = np.prod(y_.shape[1:])
+        y = inputs[-1]
+        shape = np.prod(y.shape[1:])
 
         z_value = K.cast(0.0, self.dtype)
         o_value = K.cast(1.0, self.dtype)
-        y_flat = K.reshape(y_, [-1, shape])
+        y_flat = K.reshape(y, [-1, shape])
 
-        w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
-        b_out_u, b_out_l = [z_value * y_flat] * 2
-        w_out_u = tf.linalg.diag(w_out_u)
-        w_out_l = tf.linalg.diag(w_out_l)
+        w_u_out, w_l_out = [o_value + z_value * y_flat] * 2
+        b_u_out, b_l_out = [z_value * y_flat] * 2
+        w_u_out = tf.linalg.diag(w_u_out)
+        w_l_out = tf.linalg.diag(w_l_out)
 
-        return [w_out_u, b_out_u, w_out_l, b_out_l]
+        return [w_u_out, b_u_out, w_l_out, b_l_out]
 
 
 class BackwardReshape(BackwardLayer):
@@ -530,19 +524,19 @@ class BackwardReshape(BackwardLayer):
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
-        y_ = inputs[-1]
-        shape = np.prod(y_.shape[1:])
+        y = inputs[-1]
+        shape = np.prod(y.shape[1:])
 
         z_value = K.cast(0.0, self.dtype)
         o_value = K.cast(1.0, self.dtype)
-        y_flat = K.reshape(y_, [-1, shape])
+        y_flat = K.reshape(y, [-1, shape])
 
-        w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
-        b_out_u, b_out_l = [z_value * y_flat] * 2
-        w_out_u = tf.linalg.diag(w_out_u)
-        w_out_l = tf.linalg.diag(w_out_l)
+        w_u_out, w_l_out = [o_value + z_value * y_flat] * 2
+        b_u_out, b_l_out = [z_value * y_flat] * 2
+        w_u_out = tf.linalg.diag(w_u_out)
+        w_l_out = tf.linalg.diag(w_l_out)
 
-        return [w_out_u, b_out_u, w_out_l, b_out_l]
+        return [w_u_out, b_u_out, w_l_out, b_l_out]
 
 
 class BackwardPermute(BackwardLayer):
@@ -576,26 +570,26 @@ class BackwardPermute(BackwardLayer):
         o_value = K.cast(1.0, self.dtype)
         y_flat = K.reshape(y, [-1, shape])
 
-        w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
-        b_out_u, b_out_l = [z_value * y_flat] * 2
-        w_out_u = tf.linalg.diag(w_out_u)
-        w_out_l = tf.linalg.diag(w_out_l)
+        w_u_out, w_l_out = [o_value + z_value * y_flat] * 2
+        b_u_out, b_l_out = [z_value * y_flat] * 2
+        w_u_out = tf.linalg.diag(w_u_out)
+        w_l_out = tf.linalg.diag(w_l_out)
 
-        # w_out_u (None, n_in, n_out)
+        # w_u_out (None, n_in, n_out)
 
-        n_dim = w_out_u.shape[1]
-        n_out = w_out_u.shape[-1]
+        n_dim = w_u_out.shape[1]
+        n_out = w_u_out.shape[-1]
         shape = list(y.shape[1:])
 
-        w_out_u_ = K.reshape(w_out_u, [-1] + shape + [n_out])
-        w_out_l_ = K.reshape(w_out_l, [-1] + shape + [n_out])
+        w_u_out = K.reshape(w_u_out, [-1] + shape + [n_out])
+        w_l_out = K.reshape(w_l_out, [-1] + shape + [n_out])
 
         dims = [0] + list(self.dims) + [len(y.shape)]
         dims = list(np.argsort(dims))
-        w_out_u_0 = K.reshape(K.permute_dimensions(w_out_u_, dims), (-1, n_dim, n_out))
-        w_out_l_0 = K.reshape(K.permute_dimensions(w_out_l_, dims), (-1, n_dim, n_out))
+        w_u_out = K.reshape(K.permute_dimensions(w_u_out, dims), (-1, n_dim, n_out))
+        w_l_out = K.reshape(K.permute_dimensions(w_l_out, dims), (-1, n_dim, n_out))
 
-        return [w_out_u_0, b_out_u, w_out_l_0, b_out_l]
+        return [w_u_out, b_u_out, w_l_out, b_l_out]
 
 
 class BackwardDropout(BackwardLayer):
@@ -621,19 +615,19 @@ class BackwardDropout(BackwardLayer):
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
-        y_ = inputs[-1]
-        shape = np.prod(y_.shape[1:])
+        y = inputs[-1]
+        shape = np.prod(y.shape[1:])
 
         z_value = K.cast(0.0, self.dtype)
         o_value = K.cast(1.0, self.dtype)
-        y_flat = K.reshape(y_, [-1, shape])
+        y_flat = K.reshape(y, [-1, shape])
 
-        w_out_u, w_out_l = [o_value + z_value * y_flat] * 2
-        b_out_u, b_out_l = [z_value * y_flat] * 2
-        w_out_u = tf.linalg.diag(w_out_u)
-        w_out_l = tf.linalg.diag(w_out_l)
+        w_u_out, w_l_out = [o_value + z_value * y_flat] * 2
+        b_u_out, b_l_out = [z_value * y_flat] * 2
+        w_u_out = tf.linalg.diag(w_u_out)
+        w_l_out = tf.linalg.diag(w_l_out)
 
-        return [w_out_u, b_out_u, w_out_l, b_out_l]
+        return [w_u_out, b_u_out, w_l_out, b_l_out]
 
 
 class BackwardBatchNormalization(BackwardLayer):
@@ -665,39 +659,39 @@ class BackwardBatchNormalization(BackwardLayer):
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         y = inputs[0]
-        w_out_u, b_out_u, w_out_l, b_out_l = inputs[-4:]
+        w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
 
         n_dim = y.shape[1:]
-        n_out = w_out_u.shape[-1]
+        n_out = w_u_out.shape[-1]
         # reshape
-        w_out_u = K.reshape(w_out_u, [-1, 1] + list(n_dim) + [n_out])
-        w_out_l = K.reshape(w_out_l, [-1, 1] + list(n_dim) + [n_out])
+        w_u_out = K.reshape(w_u_out, [-1, 1] + list(n_dim) + [n_out])
+        w_l_out = K.reshape(w_l_out, [-1, 1] + list(n_dim) + [n_out])
 
         n_dim = len(y.shape)
-        tuple_ = [1] * n_dim
+        shape = [1] * n_dim
         for i, ax in enumerate(self.axis):
-            tuple_[ax] = self.layer.moving_mean.shape[i]
+            shape[ax] = self.layer.moving_mean.shape[i]
 
-        gamma_ = K.reshape(self.layer.gamma + 0.0, tuple_)
-        beta_ = K.reshape(self.layer.beta + 0.0, tuple_)
-        moving_mean_ = K.reshape(self.layer.moving_mean + 0.0, tuple_)
-        moving_variance_ = K.reshape(self.layer.moving_variance + 0.0, tuple_)
+        gamma = K.reshape(self.layer.gamma + 0.0, shape)
+        beta = K.reshape(self.layer.beta + 0.0, shape)
+        moving_mean = K.reshape(self.layer.moving_mean + 0.0, shape)
+        moving_variance = K.reshape(self.layer.moving_variance + 0.0, shape)
 
-        w_ = gamma_ / K.sqrt(moving_variance_ + self.layer.epsilon)
-        b_ = beta_ - w_ * moving_mean_
+        w = gamma / K.sqrt(moving_variance + self.layer.epsilon)
+        b = beta - w * moving_mean
 
         # flatten w_, b_
-        w_ = K.expand_dims(K.expand_dims(w_, -1), 1)
-        b_ = K.expand_dims(K.expand_dims(b_, -1), 1)
+        w = K.expand_dims(K.expand_dims(w, -1), 1)
+        b = K.expand_dims(K.expand_dims(b, -1), 1)
 
         n_dim = np.prod(y.shape[1:])
-        w_u_b_ = K.reshape(w_out_u * w_, (-1, n_dim, n_out))
-        w_l_b_ = K.reshape(w_out_l * w_, (-1, n_dim, n_out))
-        axis = [i for i in range(2, len(b_.shape) - 1)]
-        b_u_b_ = K.sum(w_out_u * b_, axis) + b_out_u
-        b_l_b_ = K.sum(w_out_l * b_, axis) + b_out_l
+        w_u_b = K.reshape(w_u_out * w, (-1, n_dim, n_out))
+        w_l_b = K.reshape(w_l_out * w, (-1, n_dim, n_out))
+        axis = [i for i in range(2, len(b.shape) - 1)]
+        b_u_b = K.sum(w_u_out * b, axis) + b_u_out
+        b_l_b = K.sum(w_l_out * b, axis) + b_l_out
 
-        return [w_u_b_, b_u_b_, w_l_b_, b_l_b_]
+        return [w_u_b, b_u_b, w_l_b, b_l_b]
 
 
 class BackwardInputLayer(BackwardLayer):
