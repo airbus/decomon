@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Union
 import tensorflow as tf
 from tensorflow.keras.layers import Layer
 
+from decomon.core import PerturbationDomain
 from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.decomon_merge_layers import DecomonConcatenate
 from decomon.layers.decomon_reshape import DecomonReshape
@@ -29,7 +30,7 @@ else:
             n: Optional[int] = None,
             data_format: str = "channels_last",
             k_coef_lip: float = 1.0,
-            convex_domain: Optional[Dict[str, Any]] = None,
+            perturbation_domain: Optional[PerturbationDomain] = None,
             dc_decomp: bool = False,
             mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
             finetune: bool = False,
@@ -38,7 +39,7 @@ else:
             **kwargs: Any,
         ):
             super().__init__(
-                convex_domain=convex_domain,
+                perturbation_domain=perturbation_domain,
                 dc_decomp=dc_decomp,
                 mode=mode,
                 finetune=finetune,
@@ -55,7 +56,7 @@ else:
                 raise RuntimeError("data format not understood")
             self.n = n
             self.concat = DecomonConcatenate(
-                mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp
+                mode=self.mode, perturbation_domain=self.perturbation_domain, dc_decomp=self.dc_decomp
             ).call
 
         def get_config(self) -> Dict[str, Any]:
@@ -75,7 +76,7 @@ else:
                 if self.n is None:  # for mypy
                     raise RuntimeError("self.n cannot be None at this point.")
             self.reshape = DecomonReshape(
-                (-1, self.n), mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp
+                (-1, self.n), mode=self.mode, perturbation_domain=self.perturbation_domain, dc_decomp=self.dc_decomp
             ).call
 
         def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
@@ -88,7 +89,7 @@ else:
                     max_(
                         inputs_reshaped,
                         dc_decomp=self.dc_decomp,
-                        convex_domain=self.convex_domain,
+                        perturbation_domain=self.perturbation_domain,
                         mode=self.mode,
                         axis=-1,
                     ),
@@ -100,7 +101,7 @@ else:
                     min_(
                         inputs_reshaped,
                         dc_decomp=self.dc_decomp,
-                        convex_domain=self.convex_domain,
+                        perturbation_domain=self.perturbation_domain,
                         mode=self.mode,
                         axis=-1,
                     ),
@@ -113,11 +114,15 @@ else:
             else:
 
                 outputs = sort(
-                    inputs_reshaped, axis=-1, dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
+                    inputs_reshaped,
+                    axis=-1,
+                    dc_decomp=self.dc_decomp,
+                    perturbation_domain=self.perturbation_domain,
+                    mode=self.mode,
                 )
 
             return DecomonReshape(
-                shape_in, mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp
+                shape_in, mode=self.mode, perturbation_domain=self.perturbation_domain, dc_decomp=self.dc_decomp
             ).call(outputs)
 
         def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
@@ -132,7 +137,7 @@ else:
             n: int = 2,
             data_format: str = "channels_last",
             k_coef_lip: float = 1.0,
-            convex_domain: Optional[Dict[str, Any]] = None,
+            perturbation_domain: Optional[PerturbationDomain] = None,
             dc_decomp: bool = False,
             mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
             finetune: bool = False,
@@ -141,7 +146,7 @@ else:
             **kwargs: Any,
         ):
             super().__init__(
-                convex_domain=convex_domain,
+                perturbation_domain=perturbation_domain,
                 dc_decomp=dc_decomp,
                 mode=mode,
                 finetune=finetune,
@@ -159,7 +164,7 @@ else:
             if self.dc_decomp:
                 raise NotImplementedError()
 
-            self.op_concat = DecomonConcatenate(self.axis, mode=self.mode, convex_domain=self.convex_domain)
+            self.op_concat = DecomonConcatenate(self.axis, mode=self.mode, perturbation_domain=self.perturbation_domain)
 
         def get_config(self) -> Dict[str, Any]:
             config = super().get_config()
@@ -181,7 +186,7 @@ else:
                 max_(
                     inputs_reshaped,
                     mode=self.mode,
-                    convex_domain=self.convex_domain,
+                    perturbation_domain=self.perturbation_domain,
                     axis=self.axis,
                     finetune=self.finetune,
                     finetune_params=self.params_max,
@@ -193,7 +198,7 @@ else:
                 min_(
                     inputs_reshaped,
                     mode=self.mode,
-                    convex_domain=self.convex_domain,
+                    perturbation_domain=self.perturbation_domain,
                     axis=self.axis,
                     finetune=self.finetune,
                     finetune_params=self.params_min,

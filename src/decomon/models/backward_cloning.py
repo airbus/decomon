@@ -17,15 +17,18 @@ from decomon.backward_layers.crown import (
     Fuse,
     MergeWithPrevious,
 )
+from decomon.core import BoxDomain, PerturbationDomain, Slope
 from decomon.layers.core import ForwardMode, get_mode
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.forward_cloning import OutputMapDict
 from decomon.models.utils import get_depth_dict
-from decomon.utils import Slope, get_lower, get_upper
+from decomon.utils import get_lower, get_upper
 
 
 def get_disconnected_input(
-    mode: Union[str, ForwardMode], convex_domain: Optional[Dict[str, Any]], dtype: Union[str, tf.DType] = K.floatx()
+    mode: Union[str, ForwardMode],
+    perturbation_domain: PerturbationDomain,
+    dtype: Union[str, tf.DType] = K.floatx(),
 ) -> Layer:
     mode = ForwardMode(mode)
 
@@ -35,8 +38,8 @@ def get_disconnected_input(
             return inputs
         elif mode == ForwardMode.AFFINE:
             x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs
-            u_c = get_upper(x_0, w_f_u, b_f_u, convex_domain=convex_domain)
-            l_c = get_lower(x_0, w_f_l, b_f_l, convex_domain=convex_domain)
+            u_c = get_upper(x_0, w_f_u, b_f_u, perturbation_domain=perturbation_domain)
+            l_c = get_lower(x_0, w_f_l, b_f_l, perturbation_domain=perturbation_domain)
 
         elif mode == ForwardMode.HYBRID:
             _, u_c, _, _, l_c, _, _ = inputs
@@ -77,7 +80,7 @@ def crown_(
     node: Node,
     ibp: bool,
     affine: bool,
-    convex_domain: Optional[Dict[str, Any]],
+    perturbation_domain: PerturbationDomain,
     input_map: Dict[int, List[tf.Tensor]],
     layer_fn: Callable[[Layer], BackwardLayer],
     backward_bounds: List[tf.Tensor],
@@ -111,18 +114,20 @@ def crown_(
 
     inputs = input_map[id(node)]
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
 
     if isinstance(node.outbound_layer, Model):
-        inputs_tensors = get_disconnected_input(get_mode(ibp, affine), convex_domain, dtype=inputs[0].dtype)(inputs)
+        inputs_tensors = get_disconnected_input(get_mode(ibp, affine), perturbation_domain, dtype=inputs[0].dtype)(
+            inputs
+        )
         _, backward_bounds, _, _ = crown_model(
             model=node.outbound_layer,
             input_tensors=inputs_tensors,
             backward_bounds=backward_bounds,
             ibp=ibp,
             affine=affine,
-            convex_domain=None,
+            perturbation_domain=None,
             finetune=False,
             joint=joint,
             fuse=False,
@@ -160,7 +165,7 @@ def crown_(
                         node=parent,
                         ibp=ibp,
                         affine=affine,
-                        convex_domain=convex_domain,
+                        perturbation_domain=perturbation_domain,
                         input_map=input_map,
                         layer_fn=layer_fn,
                         backward_bounds=backward_bound,
@@ -182,7 +187,7 @@ def crown_(
                 node=parents[0],
                 ibp=ibp,
                 affine=affine,
-                convex_domain=convex_domain,
+                perturbation_domain=perturbation_domain,
                 input_map=input_map,
                 layer_fn=layer_fn,
                 backward_bounds=backward_bounds,
@@ -219,7 +224,7 @@ def get_input_nodes(
     layer_fn: Callable[[Layer], BackwardLayer],
     joint: bool,
     set_mode_layer: Layer,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     **kwargs: Any,
 ) -> Tuple[Dict[int, List[tf.Tensor]], Dict[int, BackwardLayer], Dict[int, List[tf.Tensor]]]:
 
@@ -228,8 +233,8 @@ def get_input_nodes(
     fuse_layer = None
     input_map: Dict[int, List[tf.Tensor]] = {}
     backward_map: Dict[int, BackwardLayer] = {}
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     crown_map: Dict[int, List[tf.Tensor]] = {}
     for depth in keys:
         nodes = dico_nodes[depth]
@@ -258,7 +263,7 @@ def get_input_nodes(
                             backward_map=backward_map,
                             joint=joint,
                             fuse=True,
-                            convex_domain=convex_domain,
+                            perturbation_domain=perturbation_domain,
                             output_map=crown_map,
                             merge_layers=None,  # AKA merge_layers
                             fuse_layer=fuse_layer,
@@ -268,7 +273,7 @@ def get_input_nodes(
 
                         # convert output_crown in the right mode
                         if set_mode_layer is None:
-                            set_mode_layer = Convert2BackwardMode(get_mode(ibp, affine), convex_domain)
+                            set_mode_layer = Convert2BackwardMode(get_mode(ibp, affine), perturbation_domain)
                         output_crown = set_mode_layer(input_tensors + output_crown)
                         output += to_list(output_crown)
                         # crown_map[id(parent)]=output_crown_
@@ -284,7 +289,7 @@ def crown_model(
     slope: Union[str, Slope] = Slope.V_SLOPE,
     ibp: bool = True,
     affine: bool = True,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     finetune: bool = False,
     forward_map: Optional[OutputMapDict] = None,
     softmax_to_linear: bool = True,
@@ -297,6 +302,8 @@ def crown_model(
         back_bounds = []
     if forward_map is None:
         forward_map = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if not isinstance(model, Model):
         raise ValueError()
     # import time
@@ -316,7 +323,11 @@ def crown_model(
 
         def func(layer: Layer) -> Layer:
             return layer_fn_copy(
-                layer, mode=get_mode(ibp, affine), finetune=finetune, convex_domain=convex_domain, slope=slope
+                layer,
+                mode=get_mode(ibp, affine),
+                finetune=finetune,
+                perturbation_domain=perturbation_domain,
+                slope=slope,
             )
 
         layer_fn = func
@@ -336,7 +347,7 @@ def crown_model(
     # generate input_map
     if not finetune:
         joint = True
-    set_mode_layer = Convert2BackwardMode(get_mode(ibp, affine), convex_domain)
+    set_mode_layer = Convert2BackwardMode(get_mode(ibp, affine), perturbation_domain)
 
     input_map, backward_map, crown_map = get_input_nodes(
         model=model,
@@ -347,7 +358,7 @@ def crown_model(
         output_map=forward_map,
         layer_fn=layer_fn,
         joint=joint,
-        convex_domain=convex_domain,
+        perturbation_domain=perturbation_domain,
         set_mode_layer=set_mode_layer,
         **kwargs,
     )
@@ -373,7 +384,7 @@ def crown_model(
                     backward_map=backward_map,
                     joint=joint,
                     fuse=fuse,
-                    convex_domain=convex_domain,
+                    perturbation_domain=perturbation_domain,
                     output_map=crown_map,
                     fuse_layer=fuse_layer,
                 )
@@ -395,7 +406,7 @@ def convert_backward(
     slope: Union[str, Slope] = Slope.V_SLOPE,
     ibp: bool = True,
     affine: bool = True,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     finetune: bool = False,
     forward_map: Optional[OutputMapDict] = None,
     softmax_to_linear: bool = True,
@@ -409,6 +420,8 @@ def convert_backward(
         back_bounds = []
     if forward_map is None:
         forward_map = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if len(back_bounds):
         if len(back_bounds) == 1:
             C = back_bounds[0]
@@ -421,7 +434,7 @@ def convert_backward(
         slope=slope,
         ibp=ibp,
         affine=affine,
-        convex_domain=convex_domain,
+        perturbation_domain=perturbation_domain,
         finetune=finetune,
         forward_map=forward_map,
         softmax_to_linear=softmax_to_linear,
@@ -437,7 +450,7 @@ def convert_backward(
     output = Convert2Mode(
         mode_from=mode_from,
         mode_to=mode_to,
-        convex_domain=convex_domain,
+        perturbation_domain=perturbation_domain,
         dtype=model.layers[0].dtype,
     )(output)
     if mode_to != mode_from and mode_from == ForwardMode.IBP:

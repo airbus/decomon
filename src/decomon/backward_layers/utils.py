@@ -5,11 +5,10 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Flatten
 
+from decomon.core import BoxDomain, GridDomain, PerturbationDomain, Slope
 from decomon.layers.core import ForwardMode, StaticVariables
 from decomon.layers.utils import sort
 from decomon.utils import (
-    ConvexDomainType,
-    Slope,
     get_linear_hull_relu,
     get_lower,
     get_lower_box,
@@ -29,7 +28,7 @@ def backward_add(
     b_u_out: tf.Tensor,
     w_l_out: tf.Tensor,
     b_l_out: tf.Tensor,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
 ) -> List[List[tf.Tensor]]:
     """Backward  LiRPA of inputs_0+inputs_1
@@ -41,14 +40,14 @@ def backward_add(
         b_u_out
         w_l_out
         b_l_out
-        convex_domain
+        perturbation_domain
         mode
 
     Returns:
 
     """
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
     op_flat = Flatten(dtype=K.floatx())  # pas terrible  a revoir
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
@@ -58,10 +57,10 @@ def backward_add(
     elif mode == ForwardMode.HYBRID:
         x, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0 = inputs_0[:nb_tensors]
         x, u_c_1, w_u_1, b_u_1, l_c_1, w_l_1, b_l_1 = inputs_1[:nb_tensors]
-        u_c_0_tmp = get_upper(x, w_u_0, b_u_0, convex_domain=convex_domain)
-        u_c_1_tmp = get_upper(x, w_u_1, b_u_1, convex_domain=convex_domain)
-        l_c_0_tmp = get_lower(x, w_l_0, b_l_0, convex_domain=convex_domain)
-        l_c_1_tmp = get_lower(x, w_l_1, b_l_1, convex_domain=convex_domain)
+        u_c_0_tmp = get_upper(x, w_u_0, b_u_0, perturbation_domain=perturbation_domain)
+        u_c_1_tmp = get_upper(x, w_u_1, b_u_1, perturbation_domain=perturbation_domain)
+        l_c_0_tmp = get_lower(x, w_l_0, b_l_0, perturbation_domain=perturbation_domain)
+        l_c_1_tmp = get_lower(x, w_l_1, b_l_1, perturbation_domain=perturbation_domain)
         u_c_0 = K.minimum(u_c_0, u_c_0_tmp)
         u_c_1 = K.minimum(u_c_1, u_c_1_tmp)
         l_c_0 = K.maximum(l_c_0, l_c_0_tmp)
@@ -69,10 +68,10 @@ def backward_add(
     elif mode == ForwardMode.AFFINE:
         x, w_u_0, b_u_0, w_l_0, b_l_0 = inputs_0[:nb_tensors]
         x, w_u_1, b_u_1, w_l_1, b_l_1 = inputs_1[:nb_tensors]
-        u_c_0 = get_upper(x, w_u_0, b_u_0, convex_domain=convex_domain)
-        u_c_1 = get_upper(x, w_u_1, b_u_1, convex_domain=convex_domain)
-        l_c_0 = get_lower(x, w_l_0, b_l_0, convex_domain=convex_domain)
-        l_c_1 = get_lower(x, w_l_1, b_l_1, convex_domain=convex_domain)
+        u_c_0 = get_upper(x, w_u_0, b_u_0, perturbation_domain=perturbation_domain)
+        u_c_1 = get_upper(x, w_u_1, b_u_1, perturbation_domain=perturbation_domain)
+        l_c_0 = get_lower(x, w_l_0, b_l_0, perturbation_domain=perturbation_domain)
+        l_c_1 = get_lower(x, w_l_1, b_l_1, perturbation_domain=perturbation_domain)
     else:
         raise ValueError(f"Unknown mode {mode}")
 
@@ -145,7 +144,7 @@ def backward_relu_(
     b_u_out: tf.Tensor,
     w_l_out: tf.Tensor,
     b_l_out: tf.Tensor,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
@@ -158,7 +157,7 @@ def backward_relu_(
         b_u_out
         w_l_out
         b_l_out
-        convex_domain
+        perturbation_domain
         slope
         mode
         fast
@@ -167,8 +166,8 @@ def backward_relu_(
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.HYBRID:
@@ -184,16 +183,12 @@ def backward_relu_(
     elif mode == ForwardMode.AFFINE:
         # y, x_0, w_u, b_u, w_l, b_l = x[:6]
         x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
-        upper = get_upper(x_0, w_u, b_u, convex_domain)
-        lower = get_lower(x_0, w_l, b_l, convex_domain)
+        upper = get_upper(x_0, w_u, b_u, perturbation_domain)
+        lower = get_lower(x_0, w_l, b_l, perturbation_domain)
     else:
         raise ValueError(f"Unknown mode {mode}")
 
-    if (
-        len(convex_domain)
-        and ConvexDomainType(convex_domain["name"] == ConvexDomainType.GRID)
-        and mode != ForwardMode.IBP
-    ):
+    if isinstance(perturbation_domain, GridDomain) and mode != ForwardMode.IBP:
 
         raise NotImplementedError()
 
@@ -225,7 +220,7 @@ def backward_softplus_(
     b_u_out: tf.Tensor,
     w_l_out: tf.Tensor,
     b_l_out: tf.Tensor,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
@@ -237,7 +232,7 @@ def backward_softplus_(
         b_u_out
         w_l_out
         b_l_out
-        convex_domain
+        perturbation_domain
         mode
         fast
 
@@ -245,8 +240,8 @@ def backward_softplus_(
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.HYBRID:
@@ -259,8 +254,8 @@ def backward_softplus_(
         lower = l_c
     elif mode == ForwardMode.AFFINE:
         x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
-        upper = get_upper(x_0, w_u, b_u, convex_domain)
-        lower = get_lower(x_0, w_l, b_l, convex_domain)
+        upper = get_upper(x_0, w_u, b_u, perturbation_domain)
+        lower = get_lower(x_0, w_l, b_l, perturbation_domain)
     else:
         raise ValueError(f"Unknown mode {mode}")
 
@@ -273,7 +268,7 @@ def backward_linear_prod(
     x_0: tf.Tensor,
     bounds_x: List[tf.Tensor],
     back_bounds: List[tf.Tensor],
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
 ) -> List[tf.Tensor]:
     """Backward  LiRPA of a subroutine prod
 
@@ -298,7 +293,7 @@ def backward_linear_prod(
         b_u_i = K.reshape(b_u_i, (-1, n_dim))
         b_l_i = K.reshape(b_l_i, (-1, n_dim))
 
-    x_max = get_upper(x_0, w_u_i - w_l_i, b_u_i - b_l_i, convex_domain)
+    x_max = get_upper(x_0, w_u_i - w_l_i, b_u_i - b_l_i, perturbation_domain=perturbation_domain)
     mask_b = o_value - K.sign(x_max)
     mask_a = o_value - mask_b
 
@@ -349,7 +344,7 @@ def backward_maximum(
     b_u_out: tf.Tensor,
     w_l_out: tf.Tensor,
     b_l_out: tf.Tensor,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
 ) -> List[List[tf.Tensor]]:
@@ -362,28 +357,28 @@ def backward_maximum(
         b_u_out
         w_l_out
         b_l_out
-        convex_domain
+        perturbation_domain
         mode
 
     Returns:
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
-    input_step_a_0 = subtract(inputs_0, inputs_1, dc_decomp=False, convex_domain=convex_domain, mode=mode)
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
+    input_step_a_0 = subtract(inputs_0, inputs_1, dc_decomp=False, perturbation_domain=perturbation_domain, mode=mode)
 
-    input_step_0 = relu_(input_step_a_0, dc_decomp=False, convex_domain=convex_domain, mode=mode, **kwargs)
+    input_step_0 = relu_(input_step_a_0, dc_decomp=False, perturbation_domain=perturbation_domain, mode=mode, **kwargs)
 
     _, bounds_1 = backward_add(
-        input_step_0, inputs_1, w_u_out, b_u_out, w_l_out, b_l_out, convex_domain=convex_domain, mode=mode
+        input_step_0, inputs_1, w_u_out, b_u_out, w_l_out, b_l_out, perturbation_domain=perturbation_domain, mode=mode
     )
 
-    input_step_a_1 = subtract(inputs_1, inputs_0, dc_decomp=False, convex_domain=convex_domain, mode=mode)
-    input_step_1 = relu_(input_step_a_1, dc_decomp=False, convex_domain=convex_domain, mode=mode, **kwargs)
+    input_step_a_1 = subtract(inputs_1, inputs_0, dc_decomp=False, perturbation_domain=perturbation_domain, mode=mode)
+    input_step_1 = relu_(input_step_a_1, dc_decomp=False, perturbation_domain=perturbation_domain, mode=mode, **kwargs)
 
     _, bounds_0 = backward_add(
-        input_step_1, inputs_0, w_u_out, b_u_out, w_l_out, b_l_out, convex_domain=convex_domain, mode=mode
+        input_step_1, inputs_0, w_u_out, b_u_out, w_l_out, b_l_out, perturbation_domain=perturbation_domain, mode=mode
     )
 
     return [bounds_0, bounds_1]
@@ -396,7 +391,7 @@ def backward_max_(
     b_u_out: tf.Tensor,
     w_l_out: tf.Tensor,
     b_l_out: tf.Tensor,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis: int = -1,
     **kwargs: Any,
@@ -407,7 +402,7 @@ def backward_max_(
         inputs: list of tensors
         dc_decomp: boolean that indicates
         grad_bounds: boolean that indicates whether
-        convex_domain: the type of convex domain
+        perturbation_domain: the type of perturbation domain
         axis: axis to perform the maximum
     whether we return a difference of convex decomposition of our layer
     we propagate upper and lower bounds on the values of the gradient
@@ -415,8 +410,8 @@ def backward_max_(
     Returns:
         max operation  along an axis
     """
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
     nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
     z_value = K.cast(0.0, inputs[0].dtype)
@@ -537,7 +532,7 @@ def backward_minimum(
     b_u_out: tf.Tensor,
     w_l_out: tf.Tensor,
     b_l_out: tf.Tensor,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
 ) -> List[List[tf.Tensor]]:
@@ -550,15 +545,15 @@ def backward_minimum(
         b_u_out
         w_l_out
         b_l_out
-        convex_domain
+        perturbation_domain
         mode
 
     Returns:
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     w_u_out, b_u_out, w_l_out, b_l_out = backward_minus(w_u_out, b_u_out, w_l_out, b_l_out)
     bounds_0, bounds_1 = backward_maximum(
         inputs_0,
@@ -567,7 +562,7 @@ def backward_minimum(
         b_u_out,
         w_l_out,
         b_l_out,
-        convex_domain=convex_domain,
+        perturbation_domain=perturbation_domain,
         mode=mode,
         **kwargs,
     )
@@ -594,7 +589,7 @@ def backward_minus(
         b_u_out
         w_l_out
         b_l_out
-        convex_domain
+        perturbation_domain
         mode
 
     Returns:
@@ -638,7 +633,7 @@ def backward_subtract(
     b_u_out: tf.Tensor,
     w_l_out: tf.Tensor,
     b_l_out: tf.Tensor,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
 ) -> List[List[tf.Tensor]]:
     """Backward  LiRPA of inputs_0 - inputs_1
@@ -650,18 +645,18 @@ def backward_subtract(
         b_u_out
         w_l_out
         b_l_out
-        convex_domain
+        perturbation_domain
         mode
 
     Returns:
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     inputs_1 = minus(inputs_1, mode=mode)
     bounds_0, bounds_1 = backward_add(
-        inputs_0, inputs_1, w_u_out, b_u_out, w_l_out, b_l_out, convex_domain=convex_domain, mode=mode
+        inputs_0, inputs_1, w_u_out, b_u_out, w_l_out, b_l_out, perturbation_domain=perturbation_domain, mode=mode
     )
 
     bounds_1 = [-bounds_1[0], bounds_1[1], -bounds_1[2], bounds_1[3]]
@@ -675,7 +670,7 @@ def backward_multiply(
     b_u_out: tf.Tensor,
     w_l_out: tf.Tensor,
     b_l_out: tf.Tensor,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
 ) -> List[List[tf.Tensor]]:
     """Backward  LiRPA of element-wise multiply inputs_0*inputs_1
@@ -687,15 +682,15 @@ def backward_multiply(
         b_u_out
         w_l_out
         b_l_out
-        convex_domain
+        perturbation_domain
         mode
 
     Returns:
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
     if mode == ForwardMode.IBP:
         u_0, l_0 = inputs_0
@@ -706,10 +701,10 @@ def backward_multiply(
     elif mode == ForwardMode.AFFINE:
         x_0, w_u_0, b_u_0, w_l_0, b_l_0 = inputs_0
         x_1, w_u_1, b_u_1, w_l_1, b_l_1 = inputs_1
-        u_0 = get_upper(x_0, w_u_0, b_u_0, convex_domain=convex_domain)
-        l_0 = get_lower(x_0, w_l_0, b_l_0, convex_domain=convex_domain)
-        u_1 = get_upper(x_1, w_u_1, b_u_1, convex_domain=convex_domain)
-        l_1 = get_lower(x_1, w_l_1, b_l_1, convex_domain=convex_domain)
+        u_0 = get_upper(x_0, w_u_0, b_u_0, perturbation_domain=perturbation_domain)
+        l_0 = get_lower(x_0, w_l_0, b_l_0, perturbation_domain=perturbation_domain)
+        u_1 = get_upper(x_1, w_u_1, b_u_1, perturbation_domain=perturbation_domain)
+        l_1 = get_lower(x_1, w_l_1, b_l_1, perturbation_domain=perturbation_domain)
     else:
         raise ValueError(f"Unknown mode {mode}")
 
@@ -765,7 +760,7 @@ def backward_sort(
     w_l_out: tf.Tensor,
     b_l_out: tf.Tensor,
     axis: int = -1,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
 ) -> List[tf.Tensor]:
     """Backward  LiRPA of sort
@@ -777,14 +772,14 @@ def backward_sort(
         w_l_out
         b_l_out
         axis
-        convex_domain
+        perturbation_domain
         mode
 
     Returns:
 
     """
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
     z_value = K.cast(0.0, w_u_out.dtype)
 
@@ -795,15 +790,15 @@ def backward_sort(
     elif mode == ForwardMode.AFFINE:
         x_0, w_u, b_u, w_l, b_l = inputs
         y = b_u
-        u_c_0 = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
-        l_c_0 = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
+        u_c_0 = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
+        l_c_0 = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
         u_c = u_c_0
         l_c = l_c_0
     elif mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
         y = u_c
-        u_c_0 = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
-        l_c_0 = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
+        u_c_0 = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
+        l_c_0 = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
         u_c = K.minimum(u_c, u_c_0)
         l_c = K.maximum(l_c, l_c_0)
     else:
@@ -814,7 +809,7 @@ def backward_sort(
     w_tmp = z_value * K.concatenate([y[:, None] * n_dim], 1)
 
     inputs_tmp = [x_0, u_c, w_tmp, u_c, l_c, w_tmp, l_c]
-    outputs_tmp = sort(inputs_tmp, axis=axis, convex_domain=convex_domain, mode=ForwardMode.HYBRID)
+    outputs_tmp = sort(inputs_tmp, axis=axis, perturbation_domain=perturbation_domain, mode=ForwardMode.HYBRID)
     _, _, w_u_tmp, b_u_tmp, _, w_l_tmp, b_l_tmp = outputs_tmp
 
     # w_u_tmp (None, n_dim, y.shape[1:)

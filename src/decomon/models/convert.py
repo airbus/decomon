@@ -9,6 +9,7 @@ from tensorflow.keras.models import Model
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.crown import Convert2Mode
+from decomon.core import BoxDomain, PerturbationDomain, Slope
 from decomon.layers.convert import to_decomon
 from decomon.layers.core import get_mode
 from decomon.models.backward_cloning import convert_backward
@@ -29,7 +30,6 @@ from decomon.models.utils import (
     preprocess_layer,
     split_activation,
 )
-from decomon.utils import Slope
 
 
 def _clone_keras_model(model: Model, layer_fn: Callable[[Layer], List[Layer]]) -> Model:
@@ -89,7 +89,7 @@ def convert(
     layer_fn: Callable[..., Layer] = to_decomon,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     finetune: bool = False,
     forward_map: Optional[OutputMapDict] = None,
     shared: bool = True,
@@ -103,8 +103,8 @@ def convert(
 
     if back_bounds is None:
         back_bounds = []
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if finetune:
         finetune_forward = True
         finetune_backward = True
@@ -126,7 +126,7 @@ def convert(
             slope=slope,
             input_dim=input_dim,
             dc_decomp=False,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             ibp=ibp,
             affine=affine,
             finetune=finetune_forward,
@@ -141,7 +141,7 @@ def convert(
             input_tensors=input_tensors,
             back_bounds=back_bounds,
             slope=slope,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             ibp=ibp,
             affine=affine,
             finetune=finetune_backward,
@@ -156,7 +156,7 @@ def convert(
         mode_from = get_mode(ibp, affine)
         mode_to = get_mode(final_ibp, final_affine)
         output = Convert2Mode(
-            mode_from=mode_from, mode_to=mode_to, convex_domain=convex_domain, dtype=model.layers[0].dtype
+            mode_from=mode_from, mode_to=mode_to, perturbation_domain=perturbation_domain, dtype=model.layers[0].dtype
         )(output)
 
     # build decomon model
@@ -167,7 +167,7 @@ def clone(
     model: Model,
     layer_fn: Callable[..., Layer] = to_decomon,
     slope: Union[str, Slope] = Slope.V_SLOPE,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     method: Union[str, ConvertMethod] = ConvertMethod.CROWN,
     back_bounds: Optional[List[tf.Tensor]] = None,
     finetune: bool = False,
@@ -181,8 +181,8 @@ def clone(
     **kwargs: Any,
 ) -> DecomonModel:
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if back_bounds is None:
         back_bounds = []
     if extra_inputs is None:
@@ -208,7 +208,7 @@ def clone(
 
     z_tensor, input_tensors = get_input_tensors(
         model=model,
-        convex_domain=convex_domain,
+        perturbation_domain=perturbation_domain,
         ibp=ibp,
         affine=affine,
     )
@@ -223,7 +223,7 @@ def clone(
         ibp=ibp,
         affine=affine,
         input_dim=-1,
-        convex_domain=convex_domain,
+        perturbation_domain=perturbation_domain,
         finetune=finetune,
         shared=shared,
         softmax_to_linear=True,
@@ -240,7 +240,7 @@ def clone(
     return DecomonModel(
         inputs=[z_tensor] + back_bounds_from_inputs + extra_inputs,
         outputs=output,
-        convex_domain=convex_domain,
+        perturbation_domain=perturbation_domain,
         dc_decomp=False,
         method=method,
         ibp=final_ibp,

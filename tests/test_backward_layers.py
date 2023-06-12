@@ -4,10 +4,10 @@ from tensorflow.keras.layers import Layer, Reshape
 from tensorflow.python.keras.backend import _get_available_gpus
 
 from decomon.backward_layers.convert import to_backward
+from decomon.core import Slope
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonActivation, DecomonFlatten
 from decomon.layers.decomon_reshape import DecomonReshape
-from decomon.utils import Slope
 
 
 def test_Backward_Activation_1D_box_model(n, activation, mode, floatx, decimal, helpers):
@@ -58,7 +58,7 @@ def test_Backward_Activation_1D_box_model_slope(helpers):
     # to_backward with a given slope => outputs
     outputs_by_slope = {}
     for slope in Slope:
-        layer_backward = to_backward(decomon_layer, slope=slope, mode=mode, convex_domain={})
+        layer_backward = to_backward(decomon_layer, slope=slope, mode=mode)
         assert layer_backward.slope == slope
         outputs = layer_backward(inputs_for_mode)
         f_decomon = K.function(inputs, outputs)

@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
+from decomon.core import PerturbationDomain
 from decomon.layers.core import ForwardMode, StaticVariables
 from decomon.utils import get_lower, get_upper
 
@@ -14,7 +15,7 @@ from decomon.utils import get_lower, get_upper
 def get_upper_linear_hull_max(
     inputs: List[tf.Tensor],
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     axis: int = -1,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
@@ -23,7 +24,7 @@ def get_upper_linear_hull_max(
     Args:
         inputs: list of input tensors
         mode: type of Forward propagation (ibp, affine, or hybrid). Default to hybrid.
-        convex_domain (optional): type of convex domain that encompass the set of perturbations. Defaults to None.
+        perturbation_domain (optional): type of perturbation domain that encompass the set of perturbations. Defaults to None.
         axis (optional): Defaults to -1. See Keras offical documentation backend.max(., axis)
 
     Raises:
@@ -53,15 +54,15 @@ def get_upper_linear_hull_max(
     elif mode == ForwardMode.AFFINE:
 
         x, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
-        u_c = get_upper(x, w_u, b_u, convex_domain=convex_domain)
+        u_c = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
         # assuming axis=-1 u_c.shape=(None, shape, n_dim)
-        l_c = get_lower(x, w_l, b_l, convex_domain=convex_domain)
+        l_c = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
 
     elif mode == ForwardMode.HYBRID:
 
         x, u_c_h, w_u, b_u, l_c_h, w_l, b_l = inputs[:nb_tensor]
-        u_c = K.minimum(u_c_h, get_upper(x, w_u, b_u, convex_domain=convex_domain))
-        l_c = K.maximum(l_c_h, get_lower(x, w_l, b_l, convex_domain=convex_domain))
+        u_c = K.minimum(u_c_h, get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain))
+        l_c = K.maximum(l_c_h, get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain))
 
     # get the shape of the dimension
     n_dim = K.int_shape(inputs[-1])[axis]
@@ -132,7 +133,7 @@ def get_upper_linear_hull_max(
 def get_lower_linear_hull_max(
     inputs: List[tf.Tensor],
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     axis: int = -1,
     finetune_lower: Optional[tf.Tensor] = None,
     **kwargs: Any,
@@ -142,7 +143,7 @@ def get_lower_linear_hull_max(
     Args:
         inputs: list of input tensors
         mode: type of Forward propagation (ibp, affine, or hybrid). Default to hybrid.
-        convex_domain (optional): type of convex domain that encompass the set of perturbations. Defaults to None.
+        perturbation_domain (optional): type of perturbation domain that encompass the set of perturbations. Defaults to None.
         axis (optional): Defaults to -1. See Keras offical documentation backend.max(., axis)
         finetune_lower: If not None, should be a constant tensor used to fine tune the lower relaxation.
 
@@ -171,15 +172,15 @@ def get_lower_linear_hull_max(
     elif mode == ForwardMode.AFFINE:
 
         x, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
-        u_c = get_upper(x, w_u, b_u, convex_domain=convex_domain)
+        u_c = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
         # assuming axis=-1 u_c.shape=(None, shape, n_dim)
-        l_c = get_lower(x, w_l, b_l, convex_domain=convex_domain)
+        l_c = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
 
     elif mode == ForwardMode.HYBRID:
 
         x, u_c_h, w_u, b_u, l_c_h, w_l, b_l = inputs[:nb_tensor]
-        u_c = K.minimum(u_c_h, get_upper(x, w_u, b_u, convex_domain=convex_domain))
-        l_c = K.maximum(l_c_h, get_lower(x, w_l, b_l, convex_domain=convex_domain))
+        u_c = K.minimum(u_c_h, get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain))
+        l_c = K.maximum(l_c_h, get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain))
 
     V = u_c + l_c
     M = -u_c + K.expand_dims(K.max(l_c, axis), axis)

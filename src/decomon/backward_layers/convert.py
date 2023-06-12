@@ -7,8 +7,8 @@ import decomon.backward_layers.backward_maxpooling
 import decomon.backward_layers.backward_merge
 import decomon.backward_layers.deel_lip
 from decomon.backward_layers.core import BackwardLayer
+from decomon.core import BoxDomain, PerturbationDomain, Slope
 from decomon.layers.core import ForwardMode
-from decomon.utils import Slope
 
 _mapping_name2class: Dict[str, Any] = vars(decomon.backward_layers.backward_layers)
 _mapping_name2class.update(vars(decomon.backward_layers.deel_lip))
@@ -20,12 +20,12 @@ def to_backward(
     layer: Layer,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     finetune: bool = False,
     **kwargs: Any,
 ) -> BackwardLayer:
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     class_name = layer.__class__.__name__
     if class_name.startswith("Decomon"):
         class_name = "".join(layer.__class__.__name__.split("Decomon")[1:])
@@ -40,7 +40,7 @@ def to_backward(
         layer,
         slope=slope,
         mode=mode,
-        convex_domain=convex_domain,
+        perturbation_domain=perturbation_domain,
         finetune=finetune,
         dtype=layer.dtype,
         name=backward_layer_name,

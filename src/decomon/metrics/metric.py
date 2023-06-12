@@ -8,6 +8,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Input, Layer
 from tensorflow.keras.models import Model
 
+from decomon.core import BoxDomain, PerturbationDomain
 from decomon.models.models import DecomonModel
 from decomon.utils import get_upper
 
@@ -23,7 +24,7 @@ class MetricLayer(ABC, Layer):
         ibp: bool,
         affine: bool,
         mode: Union[str, MetricMode],
-        convex_domain: Optional[Dict[str, Any]],
+        perturbation_domain: Optional[PerturbationDomain],
         **kwargs: Any,
     ):
         """
@@ -34,7 +35,7 @@ class MetricLayer(ABC, Layer):
                 bounds
             mode: str: 'backward' or 'forward' whether we doforward or
                 backward linear relaxation
-            convex_domain: the type of input convex domain for the
+            perturbation_domain: the type of input perturbation domain for the
                 linear relaxation
             **kwargs
         """
@@ -42,7 +43,11 @@ class MetricLayer(ABC, Layer):
         self.ibp = ibp
         self.affine = affine
         self.mode = MetricMode(mode)
-        self.convex_domain = convex_domain
+        self.perturbation_domain: PerturbationDomain
+        if perturbation_domain is None:
+            self.perturbation_domain = BoxDomain()
+        else:
+            self.perturbation_domain = perturbation_domain
 
     def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
@@ -51,7 +56,7 @@ class MetricLayer(ABC, Layer):
                 "ibp": self.ibp,
                 "affine": self.affine,
                 "mode": self.mode,
-                "convex_domain": self.convex_domain,
+                "perturbation_domain": self.perturbation_domain,
             }
         )
         return config
@@ -76,7 +81,7 @@ class AdversarialCheck(MetricLayer):
         ibp: bool,
         affine: bool,
         mode: Union[str, MetricMode],
-        convex_domain: Optional[Dict[str, Any]],
+        perturbation_domain: Optional[PerturbationDomain],
         **kwargs: Any,
     ):
         """
@@ -87,11 +92,11 @@ class AdversarialCheck(MetricLayer):
                 bounds
             mode: str: 'backward' or 'forward' whether we doforward or
                 backward linear relaxation
-            convex_domain: the type of input convex domain for the
+            perturbation_domain: the type of input perturbation domain for the
                 linear relaxation
             **kwargs
         """
-        super().__init__(ibp=ibp, affine=affine, mode=mode, convex_domain=convex_domain, **kwargs)
+        super().__init__(ibp=ibp, affine=affine, mode=mode, perturbation_domain=perturbation_domain, **kwargs)
 
     def linear_adv(
         self, z_tensor: tf.Tensor, y_tensor: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor
@@ -154,7 +159,7 @@ class AdversarialScore(AdversarialCheck):
         ibp: bool,
         affine: bool,
         mode: Union[str, MetricMode],
-        convex_domain: Optional[Dict[str, Any]],
+        perturbation_domain: Optional[PerturbationDomain],
         **kwargs: Any,
     ):
         """
@@ -165,11 +170,11 @@ class AdversarialScore(AdversarialCheck):
                 bounds
             mode: str: 'backward' or 'forward' whether we doforward or
                 backward linear relaxation
-            convex_domain: the type of input convex domain for the
+            perturbation_domain: the type of input perturbation domain for the
                 linear relaxation
             **kwargs
         """
-        super().__init__(ibp=ibp, affine=affine, mode=mode, convex_domain=convex_domain, **kwargs)
+        super().__init__(ibp=ibp, affine=affine, mode=mode, perturbation_domain=perturbation_domain, **kwargs)
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
         """
@@ -225,8 +230,8 @@ def build_formal_adv_check_model(decomon_model: DecomonModel) -> tf.keras.Model:
     """
     # check type and that backward pass is available
 
-    convex_domain = decomon_model.convex_domain
-    layer = AdversarialCheck(decomon_model.ibp, decomon_model.affine, decomon_model.mode, convex_domain)
+    perturbation_domain = decomon_model.perturbation_domain
+    layer = AdversarialCheck(decomon_model.ibp, decomon_model.affine, decomon_model.mode, perturbation_domain)
     output = decomon_model.output
     input = decomon_model.input
     n_out = decomon_model.output[0].shape[1:]
@@ -248,8 +253,8 @@ def build_formal_adv_model(decomon_model: DecomonModel) -> tf.keras.Model:
     """
     # check type and that backward pass is available
 
-    convex_domain = decomon_model.convex_domain
-    layer = AdversarialScore(decomon_model.ibp, decomon_model.affine, decomon_model.mode, convex_domain)
+    perturbation_domain = decomon_model.perturbation_domain
+    layer = AdversarialScore(decomon_model.ibp, decomon_model.affine, decomon_model.mode, perturbation_domain)
     output = decomon_model.output
     input = decomon_model.input
     n_out = decomon_model.output[0].shape[1:]
@@ -268,7 +273,7 @@ class UpperScore(MetricLayer):
         ibp: bool,
         affine: bool,
         mode: Union[str, MetricMode],
-        convex_domain: Optional[Dict[str, Any]],
+        perturbation_domain: Optional[PerturbationDomain],
         **kwargs: Any,
     ):
         """
@@ -279,11 +284,11 @@ class UpperScore(MetricLayer):
                 bounds
             mode: str: 'backward' or 'forward' whether we doforward or
                 backward linear relaxation
-            convex_domain: the type of input convex domain for the
+            perturbation_domain: the type of input perturbation domain for the
                 linear relaxation
             **kwargs
         """
-        super().__init__(ibp=ibp, affine=affine, mode=mode, convex_domain=convex_domain, **kwargs)
+        super().__init__(ibp=ibp, affine=affine, mode=mode, perturbation_domain=perturbation_domain, **kwargs)
 
     def linear_upper(self, z_tensor: tf.Tensor, y_tensor: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor) -> tf.Tensor:
         w_upper = w_u * y_tensor[:, None]
@@ -340,8 +345,8 @@ def build_formal_upper_model(decomon_model: DecomonModel) -> tf.keras.Model:
     """
     # check type and that backward pass is available
 
-    convex_domain = decomon_model.convex_domain
-    layer = UpperScore(decomon_model.ibp, decomon_model.affine, decomon_model.mode, convex_domain)
+    perturbation_domain = decomon_model.perturbation_domain
+    layer = UpperScore(decomon_model.ibp, decomon_model.affine, decomon_model.mode, perturbation_domain)
     output = decomon_model.output
     input = decomon_model.input
     n_out = decomon_model.output[0].shape[1:]

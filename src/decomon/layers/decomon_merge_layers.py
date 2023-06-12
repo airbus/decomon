@@ -14,6 +14,7 @@ from tensorflow.keras.layers import (
     Subtract,
 )
 
+from decomon.core import PerturbationDomain
 from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.utils import broadcast, multiply, permute_dimensions
 from decomon.utils import maximum, minus, subtract
@@ -43,7 +44,7 @@ class DecomonAdd(DecomonMerge, Add):
 
     def __init__(
         self,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -52,7 +53,7 @@ class DecomonAdd(DecomonMerge, Add):
         **kwargs: Any,
     ):
         super().__init__(
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -123,7 +124,7 @@ class DecomonAverage(DecomonMerge, Average):
 
     def __init__(
         self,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -132,7 +133,7 @@ class DecomonAverage(DecomonMerge, Average):
         **kwargs: Any,
     ):
         super().__init__(
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -202,7 +203,7 @@ class DecomonSubtract(DecomonMerge, Subtract):
 
     def __init__(
         self,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -211,7 +212,7 @@ class DecomonSubtract(DecomonMerge, Subtract):
         **kwargs: Any,
     ):
         super().__init__(
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -230,7 +231,11 @@ class DecomonSubtract(DecomonMerge, Subtract):
         inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs) // n_comp)]
 
         output = subtract(
-            inputs_list[0], inputs_list[1], dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
+            inputs_list[0],
+            inputs_list[1],
+            dc_decomp=self.dc_decomp,
+            perturbation_domain=self.perturbation_domain,
+            mode=self.mode,
         )
         return output
 
@@ -245,7 +250,7 @@ class DecomonMinimum(DecomonMerge, Minimum):
 
     def __init__(
         self,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -254,7 +259,7 @@ class DecomonMinimum(DecomonMerge, Minimum):
         **kwargs: Any,
     ):
         super().__init__(
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -280,11 +285,19 @@ class DecomonMinimum(DecomonMerge, Minimum):
         ]
 
         output = maximum(
-            inputs_list[0], inputs_list[1], dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
+            inputs_list[0],
+            inputs_list[1],
+            dc_decomp=self.dc_decomp,
+            perturbation_domain=self.perturbation_domain,
+            mode=self.mode,
         )
         for j in range(2, len(inputs) // n_comp):
             output = maximum(
-                output, inputs_list[j], dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
+                output,
+                inputs_list[j],
+                dc_decomp=self.dc_decomp,
+                perturbation_domain=self.perturbation_domain,
+                mode=self.mode,
             )
 
         return minus(output, mode=self.mode)
@@ -300,7 +313,7 @@ class DecomonMaximum(DecomonMerge, Maximum):
 
     def __init__(
         self,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -309,7 +322,7 @@ class DecomonMaximum(DecomonMerge, Maximum):
         **kwargs: Any,
     ):
         super().__init__(
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -332,11 +345,19 @@ class DecomonMaximum(DecomonMerge, Maximum):
         inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs) // n_comp)]
 
         output = maximum(
-            inputs_list[0], inputs_list[1], dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
+            inputs_list[0],
+            inputs_list[1],
+            dc_decomp=self.dc_decomp,
+            perturbation_domain=self.perturbation_domain,
+            mode=self.mode,
         )
         for j in range(2, len(inputs) // n_comp):
             output = maximum(
-                output, inputs_list[j], dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
+                output,
+                inputs_list[j],
+                dc_decomp=self.dc_decomp,
+                perturbation_domain=self.perturbation_domain,
+                mode=self.mode,
             )
 
         return output
@@ -353,7 +374,7 @@ class DecomonConcatenate(DecomonMerge, Concatenate):
     def __init__(
         self,
         axis: int = -1,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -363,7 +384,7 @@ class DecomonConcatenate(DecomonMerge, Concatenate):
     ):
         super().__init__(
             axis=axis,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -440,7 +461,7 @@ class DecomonMultiply(DecomonMerge, Multiply):
 
     def __init__(
         self,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -449,7 +470,7 @@ class DecomonMultiply(DecomonMerge, Multiply):
         **kwargs: Any,
     ):
         super().__init__(
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -469,11 +490,19 @@ class DecomonMultiply(DecomonMerge, Multiply):
         inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs) // n_comp)]
 
         output = multiply(
-            inputs_list[0], inputs_list[1], dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
+            inputs_list[0],
+            inputs_list[1],
+            dc_decomp=self.dc_decomp,
+            perturbation_domain=self.perturbation_domain,
+            mode=self.mode,
         )
         for j in range(2, len(inputs) // n_comp):
             output = multiply(
-                output, inputs_list[j], dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
+                output,
+                inputs_list[j],
+                dc_decomp=self.dc_decomp,
+                perturbation_domain=self.perturbation_domain,
+                mode=self.mode,
             )
 
         return output
@@ -490,7 +519,7 @@ class DecomonDot(DecomonMerge, Dot):
     def __init__(
         self,
         axes: Union[int, Tuple[int, int]] = (-1, -1),
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -500,7 +529,7 @@ class DecomonDot(DecomonMerge, Dot):
     ):
         super().__init__(
             axes=axes,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -540,7 +569,7 @@ class DecomonDot(DecomonMerge, Dot):
         inputs_1 = broadcast(inputs_1, n_0, 2, mode=self.mode)
 
         outputs_multiply = multiply(
-            inputs_0, inputs_1, dc_decomp=self.dc_decomp, convex_domain=self.convex_domain, mode=self.mode
+            inputs_0, inputs_1, dc_decomp=self.dc_decomp, perturbation_domain=self.perturbation_domain, mode=self.mode
         )
 
         if self.mode == ForwardMode.IBP:

@@ -24,11 +24,11 @@ def test_decomon_loss():
 
 
 def test_metric():
-    ibp, affine, mode, convex_domain = True, False, MetricMode.BACKWARD, {}
+    ibp, affine, mode, perturbation_domain = True, False, MetricMode.BACKWARD, {}
     for cls in [AdversarialCheck, AdversarialScore, UpperScore]:
-        layer = cls(ibp=ibp, affine=affine, mode=mode, convex_domain=convex_domain)
+        layer = cls(ibp=ibp, affine=affine, mode=mode, perturbation_domain=perturbation_domain)
         config = layer.get_config()
         assert config["ibp"] == ibp
         assert config["affine"] == affine
         assert config["mode"] == mode
-        assert "convex_domain" in config
+        assert "perturbation_domain" in config

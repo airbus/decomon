@@ -12,6 +12,7 @@ from tensorflow.keras.layers import Layer
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.utils.generic_utils import to_list
 
+from decomon.core import BoxDomain, PerturbationDomain, Slope
 from decomon.layers.convert import to_decomon
 from decomon.layers.core import DecomonLayer
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
@@ -22,7 +23,6 @@ from decomon.models.utils import (
     prepare_inputs_for_layer,
     wrap_outputs_from_layer_in_list,
 )
-from decomon.utils import Slope
 
 OutputMapKey = Union[str, int]
 OutputMapVal = Union[List[tf.Tensor], "OutputMapDict"]
@@ -37,7 +37,7 @@ def include_dim_layer_fn(
     input_dim: int,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     ibp: bool = True,
     affine: bool = True,
     finetune: bool = False,
@@ -49,14 +49,14 @@ def include_dim_layer_fn(
         layer_fn
         input_dim
         dc_decomp
-        convex_domain
+        perturbation_domain
         finetune
 
     Returns:
 
     """
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
 
     if not callable(layer_fn):
         raise ValueError("Expected `layer_fn` argument to be a callable.")
@@ -71,7 +71,7 @@ def include_dim_layer_fn(
                     layer,
                     input_dim=input_dim,
                     slope=slope,
-                    convex_domain=convex_domain,
+                    perturbation_domain=perturbation_domain,
                     dc_decomp=dc_decomp,
                     ibp=ibp,
                     affine=affine,
@@ -95,7 +95,7 @@ def convert_forward(
     slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     ibp: bool = True,
     affine: bool = True,
     finetune: bool = False,
@@ -105,8 +105,8 @@ def convert_forward(
     **kwargs: Any,
 ) -> Tuple[List[tf.Tensor], List[tf.Tensor], LayerMapDict, OutputMapDict]:
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
 
     if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
@@ -118,7 +118,7 @@ def convert_forward(
         layer_fn,
         input_dim=input_dim,
         slope=slope,
-        convex_domain=convex_domain,
+        perturbation_domain=perturbation_domain,
         ibp=ibp,
         affine=affine,
         finetune=finetune,

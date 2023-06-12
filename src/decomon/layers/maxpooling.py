@@ -6,6 +6,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.backend import conv2d
 from tensorflow.keras.layers import InputSpec, MaxPooling2D
 
+from decomon.core import PerturbationDomain
 from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.utils import max_
 from decomon.utils import get_lower, get_upper
@@ -31,7 +32,7 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
         strides: Optional[Union[int, Tuple[int, int]]] = None,
         padding: str = "valid",
         data_format: Optional[str] = None,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -45,7 +46,7 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
             strides=strides,
             padding=padding,
             data_format=data_format,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,

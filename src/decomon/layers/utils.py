@@ -8,10 +8,9 @@ from tensorflow.keras.constraints import Constraint
 from tensorflow.keras.initializers import Initializer
 from tensorflow.keras.layers import Layer
 
+from decomon.core import BallDomain, BoxDomain, PerturbationDomain, Slope
 from decomon.layers.core import ForwardMode, StaticVariables
 from decomon.utils import (
-    ConvexDomainType,
-    Slope,
     add,
     get_linear_softplus_hull,
     get_lower,
@@ -67,55 +66,47 @@ def compute_L(W: tf.Tensor) -> tf.Tensor:
     return K.sum(K.sqrt(K.sum(W * W, 1)), 1)
 
 
-def compute_R(z: tf.Tensor, convex_domain: Dict[str, Any]) -> tf.Tensor:
+def compute_R(z: tf.Tensor, perturbation_domain: PerturbationDomain) -> tf.Tensor:
     """We compute the largest L2 distance of the starting point with the global optimum
 
     Args:
         z: Keras Tensor
-        convex_domain: Dictionnary to complement z on the convex domain
+        perturbation_domain: Dictionnary to complement z on the perturbation domain
 
     Returns:
         Keras Tensor an upper bound on the distance
     """
-
-    if len(convex_domain) == 0:
-        convex_domain = dict(name=ConvexDomainType.BOX)
-
-    convex_domain_type = ConvexDomainType(convex_domain["name"])
-    if convex_domain_type == ConvexDomainType.BOX:
+    if isinstance(perturbation_domain, BoxDomain):
         return K.sqrt(K.sum(K.pow((z[:, 1] - z[:, 0]) / 2.0, 2), -1))
-    elif convex_domain_type == ConvexDomainType.BALL and convex_domain["p"] == np.inf:
-        return K.sqrt(K.sum(K.pow(z - z + convex_domain["eps"], 2), -1))
-    elif convex_domain_type == ConvexDomainType.BALL and convex_domain["p"] == 2:
-        return convex_domain["eps"] * (0 * z + 1.0)
+    elif isinstance(perturbation_domain, BallDomain):
+        if perturbation_domain.p == np.inf:
+            return K.sqrt(K.sum(K.pow(z - z + perturbation_domain.eps, 2), -1))
+        elif perturbation_domain.p == 2:
+            return perturbation_domain.eps * (0 * z + 1.0)
+        else:
+            raise NotImplementedError(f"Not implemented for ball domain type with p={perturbation_domain.p}")
     else:
-        raise NotImplementedError()
+        raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
 
 
-def get_start_point(z: tf.Tensor, convex_domain: Dict[str, Any]) -> tf.Tensor:
+def get_start_point(z: tf.Tensor, perturbation_domain: PerturbationDomain) -> tf.Tensor:
     """Create a warm start for the optimization (the mid point to minimize the largest distance between the
     warm start and the global optimum
 
     Args:
         z: Keras Tensor
-        convex_domain: Dictionnary to complement z on the convex domain
+        perturbation_domain: Dictionnary to complement z on the perturbation domain
 
     Returns:
         Keras Tensor
     """
 
-    if len(convex_domain) == 0:
-        return z[:, 0]
+    if isinstance(perturbation_domain, BoxDomain):
+        return (z[:, 0] + z[:, 1]) / 2.0
+    elif isinstance(perturbation_domain, BallDomain):
+        return z
     else:
-        convex_domain_type = ConvexDomainType(convex_domain["name"])
-        if convex_domain_type == ConvexDomainType.BOX:
-            return (z[:, 0] + z[:, 1]) / 2.0
-        elif convex_domain_type and convex_domain["p"] == np.inf:
-            return z
-        elif convex_domain_type and convex_domain["p"] == 2:
-            return z
-        else:
-            raise NotImplementedError()
+        raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
 
 
 def get_coeff_grad(R: tf.Tensor, k: int, g: tf.Tensor) -> tf.Tensor:
@@ -161,7 +152,11 @@ def grad_descent_conv(
 
 
 def grad_descent(
-    z: tf.Tensor, convex_0: List[tf.Tensor], convex_1: List[tf.Tensor], convex_domain: Dict[str, Any], n_iter: int = 5
+    z: tf.Tensor,
+    convex_0: List[tf.Tensor],
+    convex_1: List[tf.Tensor],
+    perturbation_domain: PerturbationDomain,
+    n_iter: int = 5,
 ) -> tf.Tensor:
     """
     Args:
@@ -169,7 +164,7 @@ def grad_descent(
         constant: Keras Tensor, the constant of each component
         W: Keras Tensor, the affine of each component
         b: Keras Tensor, the bias of each component
-        convex_domain: Dictionnary to complement z on the convex domain
+        perturbation_domain: Dictionnary to complement z on the perturbation domain
         n_iter: the number of total iteration
 
     Returns:
@@ -180,8 +175,8 @@ def grad_descent(
     constant_1, W_1, b_1 = convex_1
 
     # init
-    x_k = K.expand_dims(get_start_point(z, convex_domain), -1) + 0 * K.sum(constant_0, 1)[:, None]
-    R = compute_R(z, convex_domain)
+    x_k = K.expand_dims(get_start_point(z, perturbation_domain), -1) + 0 * K.sum(constant_0, 1)[:, None]
+    R = compute_R(z, perturbation_domain)
     n_dim = len(x_k.shape[1:])
     while n_dim > 1:
         R = K.expand_dims(R, -1)
@@ -303,14 +298,14 @@ class Project_initializer_neg(Initializer):
 def softplus_(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
 
     nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
@@ -327,8 +322,8 @@ def softplus_(
         h, g = inputs[-2:]
 
     if mode == ForwardMode.AFFINE:
-        upper = get_upper(x_0, w_u, b_u, convex_domain)
-        lower = get_lower(x_0, w_l, b_l, convex_domain)
+        upper = get_upper(x_0, w_u, b_u, perturbation_domain)
+        lower = get_lower(x_0, w_l, b_l, perturbation_domain)
     elif mode == ForwardMode.HYBRID:
         upper = u_c
         lower = l_c
@@ -399,13 +394,13 @@ def sum(
 def frac_pos(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -417,8 +412,8 @@ def frac_pos(
         return [u_c_out, l_c_out]
     elif mode == ForwardMode.AFFINE:
         x_0, w_u, b_u, w_l, b_l = inputs
-        u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
-        l_c = get_lower(x_0, w_u, b_u, convex_domain=convex_domain)
+        u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
+        l_c = get_lower(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
     elif mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
     else:
@@ -451,7 +446,7 @@ def frac_pos(
 def max_(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis: int = -1,
     finetune: bool = False,
@@ -462,7 +457,7 @@ def max_(
     Args:
         inputs: list of tensors
         dc_decomp: boolean that indicates
-        convex_domain: the type of convex domain
+        perturbation_domain: the type of perturbation domain
         axis: axis to perform the maximum
     whether we return a difference of convex decomposition of our layer
 
@@ -470,8 +465,8 @@ def max_(
         max operation  along an axis
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         h, g = inputs[-2:]
     mode = ForwardMode(mode)
@@ -609,10 +604,10 @@ def max_(
 
     if mode == ForwardMode.HYBRID:
 
-        upper = get_upper(x_0, w_u_out, b_u_out, convex_domain)
+        upper = get_upper(x_0, w_u_out, b_u_out, perturbation_domain)
         u_c_out = K.minimum(upper, u_c_out)
 
-        lower = get_lower(x_0, w_l_out, b_l_out, convex_domain)
+        lower = get_lower(x_0, w_l_out, b_l_out, perturbation_domain)
         l_c_out = K.maximum(lower, l_c_out)
 
     if mode == ForwardMode.HYBRID:
@@ -666,7 +661,7 @@ def multiply(
     inputs_0: List[tf.Tensor],
     inputs_1: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
 ) -> List[tf.Tensor]:
     """LiRPA implementation of (element-wise) multiply(x,y)=-x*y.
@@ -675,7 +670,7 @@ def multiply(
         inputs_0: list of tensors
         inputs_1: list of tensors
         dc_decomp: boolean that indicates
-        convex_domain: the type of convex domain
+        perturbation_domain: the type of perturbation domain
         mode: type of Forward propagation (ibp, affine, or hybrid)
     whether we return a difference of convex decomposition of our layer
     whether we propagate upper and lower bounds on the values of the gradient
@@ -684,8 +679,8 @@ def multiply(
         maximum(inputs_0, inputs_1)
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -697,10 +692,10 @@ def multiply(
     elif mode == ForwardMode.AFFINE:
         x, w_u0, b_u0, w_l0, b_l0 = inputs_0[:nb_tensor]
         _, w_u1, b_u1, w_l1, b_l1 = inputs_1[:nb_tensor]
-        u0 = get_upper(x, w_u0, b_u0, convex_domain=convex_domain)
-        l0 = get_lower(x, w_l0, b_l0, convex_domain=convex_domain)
-        u1 = get_upper(x, w_u1, b_u1, convex_domain=convex_domain)
-        l1 = get_lower(x, w_l1, b_l1, convex_domain=convex_domain)
+        u0 = get_upper(x, w_u0, b_u0, perturbation_domain=perturbation_domain)
+        l0 = get_lower(x, w_l0, b_l0, perturbation_domain=perturbation_domain)
+        u1 = get_upper(x, w_u1, b_u1, perturbation_domain=perturbation_domain)
+        l1 = get_lower(x, w_l1, b_l1, perturbation_domain=perturbation_domain)
     elif mode == ForwardMode.HYBRID:
         x, u0, w_u0, b_u0, l0, w_l0, b_l0 = inputs_0[:nb_tensor]
         _, u1, w_u1, b_u1, l1, w_l1, b_l1 = inputs_1[:nb_tensor]
@@ -912,7 +907,7 @@ def sort(
     inputs: List[tf.Tensor],
     axis: int = -1,
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
 ) -> List[tf.Tensor]:
     """LiRPA implementation of sort by selection
@@ -921,15 +916,15 @@ def sort(
         inputs
         axis
         dc_decomp
-        convex_domain
+        perturbation_domain
         mode
 
     Returns:
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -999,8 +994,12 @@ def sort(
 
             input_i = get_input(mode, i)
             input_j = get_input(mode, j)
-            output_a = maximum(input_i, input_j, mode=mode, convex_domain=convex_domain, dc_decomp=dc_decomp)
-            output_b = minimum(input_i, input_j, mode=mode, convex_domain=convex_domain, dc_decomp=dc_decomp)
+            output_a = maximum(
+                input_i, input_j, mode=mode, perturbation_domain=perturbation_domain, dc_decomp=dc_decomp
+            )
+            output_b = minimum(
+                input_i, input_j, mode=mode, perturbation_domain=perturbation_domain, dc_decomp=dc_decomp
+            )
 
             set_input(output_a, mode, j)
             set_input(output_b, mode, i)
@@ -1030,7 +1029,7 @@ def sort(
 def pow(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
 ) -> List[tf.Tensor]:
     """LiRPA implementation of pow(x )=x**2
@@ -1038,22 +1037,22 @@ def pow(
     Args:
         inputs
         dc_decomp
-        convex_domain
+        perturbation_domain
         mode
 
     Returns:
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
-    return multiply(inputs, inputs, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
+    return multiply(inputs, inputs, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode)
 
 
 def abs(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
 ) -> List[tf.Tensor]:
     """LiRPA implementation of |x|
@@ -1061,27 +1060,28 @@ def abs(
     Args:
         inputs
         dc_decomp
-        convex_domain
+        perturbation_domain
         mode
 
     Returns:
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
-    inputs_0 = relu_(inputs, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
+    inputs_0 = relu_(inputs, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode)
     inputs_1 = minus(
-        relu_(minus(inputs, mode=mode), dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode), mode=mode
+        relu_(minus(inputs, mode=mode), dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode),
+        mode=mode,
     )
 
-    return add(inputs_0, inputs_1, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode)
+    return add(inputs_0, inputs_1, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode)
 
 
 def frac_pos_hull(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
 ) -> List[tf.Tensor]:
     """LiRPA implementation of 1/x for x>0
@@ -1089,15 +1089,15 @@ def frac_pos_hull(
     Args:
         inputs
         dc_decomp
-        convex_domain
+        perturbation_domain
         mode
 
     Returns:
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -1112,8 +1112,8 @@ def frac_pos_hull(
     else:
         raise ValueError(f"Unknown mode {mode}")
     if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-        u_c_affine = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
-        l_c_affine = get_lower(x_0, w_u, b_u, convex_domain=convex_domain)
+        u_c_affine = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
+        l_c_affine = get_lower(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
 
         if mode == ForwardMode.AFFINE:
             u_c = u_c_affine
@@ -1136,7 +1136,7 @@ def frac_pos_hull(
 def min_(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis: int = -1,
     finetune: bool = False,
@@ -1147,7 +1147,7 @@ def min_(
     Args:
         inputs
         dc_decomp
-        convex_domain
+        perturbation_domain
         mode
         axis
 
@@ -1155,13 +1155,13 @@ def min_(
 
     """
     # return - max - x
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     return minus(
         max_(
             minus(inputs, mode=mode),
             dc_decomp=dc_decomp,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             mode=mode,
             axis=axis,
             finetune=finetune,
@@ -1223,7 +1223,7 @@ def expand_dims(
 def log(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
@@ -1232,7 +1232,7 @@ def log(
     Args:
         inputs: list of input tensors
         dc_decomp: boolean that indicates
-        convex_domain: the type of convex input domain
+        perturbation_domain: the type of convex input domain
         mode: type of Forward propagation (ibp, affine, or hybrid)
         **kwargs: extra parameters
     whether we return a difference of convex decomposition of our layer
@@ -1240,8 +1240,8 @@ def log(
     Returns:
         the updated list of tensors
     """
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -1251,8 +1251,8 @@ def log(
     elif mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
         if mode == ForwardMode.AFFINE:
             x_0, w_u, b_u, w_l, b_l = inputs
-            u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
-            l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
+            u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
+            l_c = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
             l_c = K.maximum(K.cast(K.epsilon(), dtype=l_c.dtype), l_c)
         else:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
@@ -1284,7 +1284,7 @@ def log(
 def exp(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
@@ -1294,7 +1294,7 @@ def exp(
     Args:
         inputs: list of input tensors
         dc_decomp: boolean that indicates
-        convex_domain: the type of convex input domain
+        perturbation_domain: the type of convex input domain
         mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: extra parameters
@@ -1303,8 +1303,8 @@ def exp(
     Returns:
         the updated list of tensors
     """
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -1313,8 +1313,8 @@ def exp(
     elif mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
         if mode == ForwardMode.AFFINE:
             x_0, w_u, b_u, w_l, b_l = inputs
-            u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
-            l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
+            u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
+            l_c = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
         else:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
 

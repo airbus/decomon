@@ -14,6 +14,7 @@ from decomon.backward_layers.utils import (
     backward_subtract,
     get_identity_lirpa,
 )
+from decomon.core import BoxDomain, PerturbationDomain
 from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.decomon_merge_layers import (
     DecomonAdd,
@@ -25,7 +26,6 @@ from decomon.layers.decomon_merge_layers import (
     DecomonSubtract,
 )
 from decomon.layers.utils import broadcast, multiply, permute_dimensions, split
-from decomon.utils import Slope
 
 
 class BackwardMerge(ABC, Wrapper):
@@ -38,7 +38,7 @@ class BackwardMerge(ABC, Wrapper):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -48,14 +48,14 @@ class BackwardMerge(ABC, Wrapper):
         self.rec = rec
         if isinstance(self.layer, DecomonLayer):
             self.mode = self.layer.mode
-            self.convex_domain = self.layer.convex_domain
+            self.perturbation_domain = self.layer.perturbation_domain
             self.dc_decomp = self.layer.dc_decomp
         else:
             self.mode = ForwardMode(mode)
-            if convex_domain is None:
-                self.convex_domain = {}
+            if perturbation_domain is None:
+                self.perturbation_domain = BoxDomain()
             else:
-                self.convex_domain = convex_domain
+                self.perturbation_domain = perturbation_domain
             self.dc_decomp = dc_decomp
 
     def get_config(self) -> Dict[str, Any]:
@@ -64,7 +64,7 @@ class BackwardMerge(ABC, Wrapper):
             {
                 "rec": self.rec,
                 "mode": self.mode,
-                "convex_domain": self.convex_domain,
+                "perturbation_domain": self.perturbation_domain,
                 "dc_decomp": self.dc_decomp,
             }
         )
@@ -116,7 +116,7 @@ class BackwardAdd(BackwardMerge):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -124,11 +124,13 @@ class BackwardAdd(BackwardMerge):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
-        self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp).call
+        self.op = DecomonAdd(
+            mode=self.mode, perturbation_domain=self.perturbation_domain, dc_decomp=self.dc_decomp
+        ).call
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
@@ -158,7 +160,7 @@ class BackwardAdd(BackwardMerge):
                     b_u_out,
                     w_l_out,
                     b_l_out,
-                    convex_domain=self.convex_domain,
+                    perturbation_domain=self.perturbation_domain,
                     mode=self.mode,
                 )
                 return [bounds_0, bounds_1]
@@ -172,7 +174,7 @@ class BackwardAverage(BackwardMerge):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -180,11 +182,11 @@ class BackwardAverage(BackwardMerge):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
-        self.op = DecomonAdd(mode=self.mode, convex_domain=self.convex_domain, dc_decomp=False).call
+        self.op = DecomonAdd(mode=self.mode, perturbation_domain=self.perturbation_domain, dc_decomp=False).call
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
 
@@ -216,7 +218,7 @@ class BackwardAverage(BackwardMerge):
                     b_u_out,
                     w_l_out,
                     b_l_out,
-                    convex_domain=self.convex_domain,
+                    perturbation_domain=self.perturbation_domain,
                     mode=self.mode,
                 )
                 input_bounds.append(bounds_1)
@@ -238,7 +240,7 @@ class BackwardSubtract(BackwardMerge):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -246,7 +248,7 @@ class BackwardSubtract(BackwardMerge):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -276,7 +278,7 @@ class BackwardSubtract(BackwardMerge):
             b_u_out,
             w_l_out,
             b_l_out,
-            convex_domain=self.layer.convex_domain,
+            perturbation_domain=self.layer.perturbation_domain,
             mode=self.mode,
         )
 
@@ -289,7 +291,7 @@ class BackwardMaximum(BackwardMerge):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -297,7 +299,7 @@ class BackwardMaximum(BackwardMerge):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -327,7 +329,7 @@ class BackwardMaximum(BackwardMerge):
             b_u_out,
             w_l_out,
             b_l_out,
-            convex_domain=self.layer.convex_domain,
+            perturbation_domain=self.layer.perturbation_domain,
             mode=self.mode,
         )
 
@@ -340,7 +342,7 @@ class BackwardMinimum(BackwardMerge):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -348,7 +350,7 @@ class BackwardMinimum(BackwardMerge):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -378,7 +380,7 @@ class BackwardMinimum(BackwardMerge):
             b_u_out,
             w_l_out,
             b_l_out,
-            convex_domain=self.layer.convex_domain,
+            perturbation_domain=self.layer.perturbation_domain,
             mode=self.mode,
         )
 
@@ -391,7 +393,7 @@ class BackwardConcatenate(BackwardMerge):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -399,7 +401,7 @@ class BackwardConcatenate(BackwardMerge):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -444,7 +446,7 @@ class BackwardMultiply(BackwardMerge):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -452,7 +454,7 @@ class BackwardMultiply(BackwardMerge):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -482,7 +484,7 @@ class BackwardMultiply(BackwardMerge):
             b_u_out,
             w_l_out,
             b_l_out,
-            convex_domain=self.layer.convex_domain,
+            perturbation_domain=self.layer.perturbation_domain,
             mode=self.mode,
         )
 
@@ -495,7 +497,7 @@ class BackwardDot(BackwardMerge):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -503,7 +505,7 @@ class BackwardDot(BackwardMerge):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -548,7 +550,7 @@ class BackwardDot(BackwardMerge):
             inputs_0_broadcasted,
             inputs_1_broadcasted,
             dc_decomp=self.layer.dc_decomp,
-            convex_domain=self.convex_domain,
+            perturbation_domain=self.perturbation_domain,
             mode=self.mode,
         )
 
@@ -576,7 +578,7 @@ class BackwardDot(BackwardMerge):
             b_u,
             w_l,
             b_l,
-            convex_domain=self.convex_domain,
+            perturbation_domain=self.perturbation_domain,
             mode=self.mode,
         )
 

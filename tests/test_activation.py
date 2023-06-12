@@ -6,9 +6,9 @@ import pytest
 import tensorflow.keras.backend as K
 from numpy.testing import assert_almost_equal
 
+from decomon.core import Slope
 from decomon.layers.activations import relu, sigmoid, softmax, softsign, tanh
 from decomon.layers.core import ForwardMode
-from decomon.utils import Slope
 
 
 @pytest.mark.parametrize(

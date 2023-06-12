@@ -18,15 +18,10 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model
 
+from decomon.core import BallDomain, BoxDomain, PerturbationDomain
 from decomon.layers.core import ForwardMode
 from decomon.layers.utils import is_a_merge_layer
-from decomon.utils import (
-    ConvexDomainType,
-    get_lower,
-    get_lower_layer,
-    get_upper,
-    get_upper_layer,
-)
+from decomon.utils import get_lower, get_lower_layer, get_upper, get_upper_layer
 
 try:
     from deel.lip.layers import LipschitzLayer
@@ -75,7 +70,7 @@ def has_merge_layers(model: Model) -> bool:
 
 def get_input_tensors(
     model: Model,
-    convex_domain: Dict[str, Any],
+    perturbation_domain: PerturbationDomain,
     ibp: bool = True,
     affine: bool = True,
 ) -> Tuple[tf.Tensor, List[tf.Tensor]]:
@@ -98,14 +93,16 @@ def get_input_tensors(
                 raise ValueError("Expected that every input layers use the same input_tensor")
 
     input_shape_x: Tuple[int, ...]
-    if len(convex_domain) == 0 or ConvexDomainType(convex_domain["name"]) != ConvexDomainType.BALL:
+    if isinstance(perturbation_domain, BoxDomain):
         input_shape_x = (2, input_dim)
-    else:
+    elif isinstance(perturbation_domain, BallDomain):
         input_shape_x = (input_dim,)
+    else:
+        raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
 
     z_tensor = Input(shape=input_shape_x, dtype=model.layers[0].dtype)
 
-    if len(convex_domain) == 0 or ConvexDomainType(convex_domain["name"]) != ConvexDomainType.BALL:
+    if isinstance(perturbation_domain, BoxDomain):
 
         if ibp:
             u_c_tensor = Lambda(lambda z: z[:, 1], dtype=z_tensor.dtype)(z_tensor)
@@ -117,10 +114,10 @@ def get_input_tensors(
             W = Lambda(lambda z: tf.linalg.diag(z_value * z[:, 0] + o_value), dtype=z_tensor.dtype)(z_tensor)
             b = Lambda(lambda z: z_value * z[:, 1], dtype=z_tensor.dtype)(z_tensor)
 
-    else:
+    elif isinstance(perturbation_domain, BallDomain):
 
-        if convex_domain["p"] == np.inf:
-            radius = convex_domain["eps"]
+        if perturbation_domain.p == np.inf:
+            radius = perturbation_domain.eps
             if ibp:
                 u_c_tensor = Lambda(
                     lambda var: var + K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
@@ -146,8 +143,8 @@ def get_input_tensors(
                     b = z_value * z
                     outputs += [W, b]
                 if ibp:
-                    u_c_out = get_upper(z, W, b, convex_domain)
-                    l_c_out = get_lower(z, W, b, convex_domain)
+                    u_c_out = get_upper(z, W, b, perturbation_domain)
+                    l_c_out = get_lower(z, W, b, perturbation_domain)
                     outputs += [u_c_out, l_c_out]
                 return outputs
 
@@ -156,6 +153,8 @@ def get_input_tensors(
                 u_c_tensor, l_c_tensor = outputs[-2:]
             if affine:
                 W, b = outputs[:2]
+    else:
+        raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
 
     if ibp and affine:
         input_tensors = [z_tensor] + [u_c_tensor, W, b] + [l_c_tensor, W, b]

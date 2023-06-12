@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Type, Union
 import tensorflow as tf
 from tensorflow.keras.layers import Layer
 
+from decomon.core import BoxDomain, PerturbationDomain
 from decomon.keras_utils import get_weight_index_from_name
 
 
@@ -77,7 +78,7 @@ class DecomonLayer(ABC, Layer):
 
     def __init__(
         self,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -87,7 +88,7 @@ class DecomonLayer(ABC, Layer):
     ):
         """
         Args:
-            convex_domain: type of convex input domain (None or dict)
+            perturbation_domain: type of convex input domain (None or dict)
             dc_decomp: boolean that indicates whether we return a
             mode: type of Forward propagation (ibp, affine, or hybrid)
             **kwargs: extra parameters
@@ -96,11 +97,11 @@ class DecomonLayer(ABC, Layer):
         kwargs.pop("slope", None)  # remove it if not used by the decomon layer
         super().__init__(**kwargs)
 
-        if convex_domain is None:
-            convex_domain = {}
+        if perturbation_domain is None:
+            perturbation_domain = BoxDomain()
         self.nb_tensors = StaticVariables(dc_decomp, mode).nb_tensors
         self.dc_decomp = dc_decomp
-        self.convex_domain = convex_domain
+        self.perturbation_domain = perturbation_domain
         self.mode = ForwardMode(mode)
         self.finetune = finetune  # extra optimization with hyperparameters
         self.frozen_weights = False
@@ -118,7 +119,7 @@ class DecomonLayer(ABC, Layer):
                 "fast": self.fast,
                 "finetune": self.finetune,
                 "mode": self.mode,
-                "convex_domain": self.convex_domain,
+                "perturbation_domain": self.perturbation_domain,
             }
         )
         return config

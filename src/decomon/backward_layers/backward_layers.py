@@ -10,12 +10,12 @@ from tensorflow.python.ops import array_ops
 from decomon.backward_layers.activations import get
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import get_affine, get_ibp, get_identity_lirpa
+from decomon.core import GridDomain, Option, PerturbationDomain, Slope
 from decomon.layers.convert import to_decomon
 from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.decomon_layers import DecomonBatchNormalization
 from decomon.layers.utils import ClipAlpha, NonNeg, NonPos
 from decomon.models.utils import get_input_dim
-from decomon.utils import ConvexDomainType, Option, Slope
 
 
 class BackwardDense(BackwardLayer):
@@ -27,7 +27,7 @@ class BackwardDense(BackwardLayer):
         input_dim: int = -1,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -35,7 +35,7 @@ class BackwardDense(BackwardLayer):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -47,7 +47,7 @@ class BackwardDense(BackwardLayer):
                 layer=layer,
                 input_dim=input_dim,
                 dc_decomp=False,
-                convex_domain=self.convex_domain,
+                perturbation_domain=self.perturbation_domain,
                 finetune=False,
                 ibp=get_ibp(self.mode),
                 affine=get_affine(self.mode),
@@ -114,7 +114,7 @@ class BackwardConv2D(BackwardLayer):
         input_dim: int = -1,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -122,7 +122,7 @@ class BackwardConv2D(BackwardLayer):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -133,7 +133,7 @@ class BackwardConv2D(BackwardLayer):
                 layer=layer,
                 input_dim=input_dim,
                 dc_decomp=False,
-                convex_domain=self.convex_domain,
+                perturbation_domain=self.perturbation_domain,
                 finetune=False,
                 ibp=get_ibp(self.mode),
                 affine=get_affine(self.mode),
@@ -178,7 +178,7 @@ class BackwardActivation(BackwardLayer):
         finetune: bool = False,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -186,7 +186,7 @@ class BackwardActivation(BackwardLayer):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -222,7 +222,7 @@ class BackwardActivation(BackwardLayer):
 
         if self.finetune and self.activation_name != "linear":
 
-            if len(self.convex_domain) and ConvexDomainType(self.convex_domain["name"]) == ConvexDomainType.GRID:
+            if isinstance(self.perturbation_domain, GridDomain):
                 if self.activation_name[:4] == "relu":
                     self.alpha_b_l = self.add_weight(
                         shape=(
@@ -268,9 +268,8 @@ class BackwardActivation(BackwardLayer):
         # grid domain
         if self.activation_name[:4] == "relu":
             if (
-                len(self.convex_domain)
-                and ConvexDomainType(self.convex_domain["name"]) == ConvexDomainType.GRID
-                and Option(self.convex_domain["option"]) == Option.lagrangian
+                isinstance(self.perturbation_domain, GridDomain)
+                and self.perturbation_domain.opt_option == Option.lagrangian
                 and self.mode != ForwardMode.IBP
             ):
 
@@ -293,9 +292,8 @@ class BackwardActivation(BackwardLayer):
                 self.grid_finetune = [finetune_grid_neg, finetune_grid_pos]
 
         if (
-            len(self.convex_domain)
-            and ConvexDomainType(self.convex_domain["name"]) == ConvexDomainType.GRID
-            and Option(self.convex_domain["option"]) == Option.milp
+            isinstance(self.perturbation_domain, GridDomain)
+            and self.perturbation_domain.opt_option == Option.milp
             and self.mode != ForwardMode.IBP
         ):
 
@@ -325,7 +323,7 @@ class BackwardActivation(BackwardLayer):
             if self.finetune:
                 w_u_out, b_u_out, w_l_out, b_l_out = self.activation(
                     inputs,
-                    convex_domain=self.convex_domain,
+                    perturbation_domain=self.perturbation_domain,
                     slope=self.slope,
                     mode=self.mode,
                     finetune=self.finetune_param,
@@ -334,7 +332,7 @@ class BackwardActivation(BackwardLayer):
             else:
                 w_u_out, b_u_out, w_l_out, b_l_out = self.activation(
                     inputs,
-                    convex_domain=self.convex_domain,
+                    perturbation_domain=self.perturbation_domain,
                     slope=self.slope,
                     mode=self.mode,
                     finetune_grid=self.grid_finetune,
@@ -387,7 +385,7 @@ class BackwardFlatten(BackwardLayer):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -395,7 +393,7 @@ class BackwardFlatten(BackwardLayer):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -412,7 +410,7 @@ class BackwardReshape(BackwardLayer):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -420,7 +418,7 @@ class BackwardReshape(BackwardLayer):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -437,7 +435,7 @@ class BackwardPermute(BackwardLayer):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -445,7 +443,7 @@ class BackwardPermute(BackwardLayer):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -480,7 +478,7 @@ class BackwardDropout(BackwardLayer):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -488,7 +486,7 @@ class BackwardDropout(BackwardLayer):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -505,7 +503,7 @@ class BackwardBatchNormalization(BackwardLayer):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -513,7 +511,7 @@ class BackwardBatchNormalization(BackwardLayer):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -567,7 +565,7 @@ class BackwardInputLayer(BackwardLayer):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -575,7 +573,7 @@ class BackwardInputLayer(BackwardLayer):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )

@@ -7,9 +7,9 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Layer
 
 from decomon.backward_layers.utils import backward_relu_, backward_softplus_
+from decomon.core import BoxDomain, PerturbationDomain, Slope
 from decomon.layers.core import ForwardMode, StaticVariables
 from decomon.utils import (
-    Slope,
     get_linear_hull_relu,
     get_linear_hull_s_shape,
     get_linear_hull_sigmoid,
@@ -39,7 +39,7 @@ LINEAR = "linear"
 def backward_relu(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     alpha: float = 0.0,
     max_value: Optional[float] = None,
     threshold: float = 0.0,
@@ -52,7 +52,7 @@ def backward_relu(
     Args:
         inputs
         dc_decomp
-        convex_domain
+        perturbation_domain
         alpha
         max_value
         threshold
@@ -63,8 +63,8 @@ def backward_relu(
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
     if dc_decomp:
         raise NotImplementedError()
@@ -95,7 +95,7 @@ def backward_relu(
 def backward_sigmoid(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
@@ -105,7 +105,7 @@ def backward_sigmoid(
     Args:
         inputs
         dc_decomp
-        convex_domain
+        perturbation_domain
         slope
         mode
 
@@ -113,8 +113,8 @@ def backward_sigmoid(
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -136,7 +136,7 @@ def backward_sigmoid(
 def backward_tanh(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
@@ -146,7 +146,7 @@ def backward_tanh(
     Args:
         inputs
         dc_decomp
-        convex_domain
+        perturbation_domain
         slope
         mode
 
@@ -154,8 +154,8 @@ def backward_tanh(
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -177,7 +177,7 @@ def backward_tanh(
 def backward_hard_sigmoid(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
@@ -187,7 +187,7 @@ def backward_hard_sigmoid(
     Args:
         inputs
         dc_decomp
-        convex_domain
+        perturbation_domain
         slope
         mode
 
@@ -195,8 +195,8 @@ def backward_hard_sigmoid(
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -206,7 +206,7 @@ def backward_hard_sigmoid(
 def backward_elu(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
@@ -216,7 +216,7 @@ def backward_elu(
     Args:
         inputs
         dc_decomp
-        convex_domain
+        perturbation_domain
         slope
         mode
 
@@ -224,8 +224,8 @@ def backward_elu(
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -236,7 +236,7 @@ def backward_elu(
 def backward_selu(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
@@ -246,7 +246,7 @@ def backward_selu(
     Args:
         inputs
         dc_decomp
-        convex_domain
+        perturbation_domain
         slope
         mode
 
@@ -254,8 +254,8 @@ def backward_selu(
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -266,7 +266,7 @@ def backward_selu(
 def backward_linear(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
@@ -276,15 +276,15 @@ def backward_linear(
     Args:
         inputs
         dc_decomp
-        convex_domain
+        perturbation_domain
         slope
         mode
 
     Returns:
 
     """
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
     slope = Slope(slope)
     raise NotImplementedError()
@@ -293,7 +293,7 @@ def backward_linear(
 def backward_exponential(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
@@ -303,15 +303,15 @@ def backward_exponential(
     Args:
         inputs
         dc_decomp
-        convex_domain
+        perturbation_domain
         slope
         mode
 
     Returns:
 
     """
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -322,7 +322,7 @@ def backward_exponential(
 def backward_softplus(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
@@ -332,7 +332,7 @@ def backward_softplus(
     Args:
         inputs
         dc_decomp
-        convex_domain
+        perturbation_domain
         slope
         mode
 
@@ -340,8 +340,8 @@ def backward_softplus(
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -363,7 +363,7 @@ def backward_softplus(
 def backward_softsign(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
@@ -376,7 +376,7 @@ def backward_softsign(
         b_u_out
         w_l_out
         b_l_out
-        convex_domain
+        perturbation_domain
         slope: backward slope
         mode
 
@@ -384,11 +384,11 @@ def backward_softsign(
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
 
     bounds = get_linear_hull_s_shape(
-        inputs, func=K.softsign, f_prime=softsign_prime, convex_domain=convex_domain, mode=mode
+        inputs, func=K.softsign, f_prime=softsign_prime, perturbation_domain=perturbation_domain, mode=mode
     )
     shape = np.prod(inputs[-1].shape[1:])
     return [K.reshape(elem, (-1, shape)) for elem in bounds]
@@ -400,16 +400,16 @@ def backward_softsign_(
     b_u_out: tf.Tensor,
     w_l_out: tf.Tensor,
     b_l_out: tf.Tensor,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
-        inputs, func=K.softsign, f_prime=softsign_prime, convex_domain=convex_domain, mode=mode, slope=slope
+        inputs, func=K.softsign, f_prime=softsign_prime, perturbation_domain=perturbation_domain, mode=mode, slope=slope
     )
 
     w_u_0 = K.expand_dims(w_u_0, -1)
@@ -430,7 +430,7 @@ def backward_softsign_(
 def backward_softmax(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis: int = -1,
@@ -441,7 +441,7 @@ def backward_softmax(
     Args:
         inputs
         dc_decomp
-        convex_domain
+        perturbation_domain
         slope
         mode
         axis
@@ -450,8 +450,8 @@ def backward_softmax(
 
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)

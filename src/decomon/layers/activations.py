@@ -6,10 +6,10 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.types.experimental import TensorLike
 
+from decomon.core import BoxDomain, PerturbationDomain, Slope
 from decomon.layers.core import DecomonLayer, ForwardMode, StaticVariables
 from decomon.layers.utils import exp, expand_dims, frac_pos, multiply, softplus_, sum
 from decomon.utils import (
-    Slope,
     get_linear_hull_s_shape,
     get_lower,
     get_upper,
@@ -37,7 +37,7 @@ GROUP_SORT_2 = "GroupSort2"
 def relu(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     alpha: float = 0.0,
     max_value: Optional[float] = None,
     threshold: float = 0.0,
@@ -49,7 +49,7 @@ def relu(
     Args:
         inputs: list of input tensors
         dc_decomp: boolean that indicates
-        convex_domain: type of convex input domain (None or dict)
+        perturbation_domain: type of convex input domain (None or dict)
         alpha: see Keras official documentation
         max_value: see Keras official documentation
         threshold: see Keras official documentation
@@ -62,14 +62,16 @@ def relu(
         the updated list of tensors
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if threshold != 0:
         raise NotImplementedError()
 
     if not alpha and max_value is None:
         # default values: return relu_(x) = max(x, 0)
-        return relu_(inputs, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope, **kwargs)
+        return relu_(
+            inputs, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode, slope=slope, **kwargs
+        )
 
     raise NotImplementedError()
 
@@ -79,7 +81,7 @@ def linear_hull_s_shape(
     func: Callable[[TensorLike], tf.Tensor] = K.sigmoid,
     f_prime: Callable[[TensorLike], tf.Tensor] = sigmoid_prime,
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
 ) -> List[tf.Tensor]:
@@ -90,7 +92,7 @@ def linear_hull_s_shape(
         func: the function (sigmoid, tanh, softsign...)
         f_prime: the derivative of the function (sigmoid_prime...)
         dc_decomp: boolean that indicates
-        convex_domain: type of convex input domain (None or dict)
+        perturbation_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
     whether we return a difference of convex decomposition of our layer
@@ -99,8 +101,8 @@ def linear_hull_s_shape(
         the updated list of tensors
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -110,8 +112,8 @@ def linear_hull_s_shape(
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
     elif mode == ForwardMode.AFFINE:
         x_0, w_u, b_u, w_l, b_l = inputs[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
-        u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
-        l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
+        u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
+        l_c = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
     else:
         raise ValueError(f"Unknown mode {mode}")
 
@@ -122,7 +124,7 @@ def linear_hull_s_shape(
     if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
 
         w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
-            inputs, func=func, f_prime=f_prime, convex_domain=convex_domain, mode=mode
+            inputs, func=func, f_prime=f_prime, perturbation_domain=perturbation_domain, mode=mode
         )
 
         if len(w_u.shape) == len(b_u.shape):
@@ -157,7 +159,7 @@ def linear_hull_s_shape(
 def sigmoid(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
@@ -168,7 +170,7 @@ def sigmoid(
     Args:
         inputs: list of input tensors
         dc_decomp: boolean that indicates
-        convex_domain: type of convex input domain (None or dict)
+        perturbation_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
         **kwargs: see Keras official documentation
     whether we return a difference of convex decomposition of our layer
@@ -177,19 +179,19 @@ def sigmoid(
         the updated list of tensors
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     func = K.sigmoid
     f_prime = sigmoid_prime
     return linear_hull_s_shape(
-        inputs, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope
+        inputs, func, f_prime, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode, slope=slope
     )
 
 
 def tanh(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
@@ -200,7 +202,7 @@ def tanh(
     Args:
         inputs: list of input tensors
         dc_decomp: boolean that indicates
-        convex_domain: type of convex input domain (None or dict)
+        perturbation_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
@@ -210,19 +212,19 @@ def tanh(
         the updated list of tensors
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     func = K.tanh
     f_prime = tanh_prime
     return linear_hull_s_shape(
-        inputs, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope
+        inputs, func, f_prime, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode, slope=slope
     )
 
 
 def hard_sigmoid(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
@@ -233,7 +235,7 @@ def hard_sigmoid(
     Args:
         inputs: list of input tensors
         dc_decomp: boolean that indicates
-        convex_domain: type of convex input domain (None or dict)
+        perturbation_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
@@ -243,8 +245,8 @@ def hard_sigmoid(
         the updated list of tensors
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -254,7 +256,7 @@ def hard_sigmoid(
 def elu(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
@@ -264,7 +266,7 @@ def elu(
     Args:
         inputs: list of input tensors
         dc_decomp: boolean that indicates
-        convex_domain: type of convex input domain (None or dict)
+        perturbation_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
@@ -274,8 +276,8 @@ def elu(
         the updated list of tensors
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -285,7 +287,7 @@ def elu(
 def selu(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
@@ -302,7 +304,7 @@ def selu(
     Args:
         inputs: list of input tensors
         dc_decomp: boolean that indicates
-        convex_domain: type of convex input domain (None or dict)
+        perturbation_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
@@ -311,8 +313,8 @@ def selu(
     Returns:
         the updated list of tensors
     """
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
@@ -322,7 +324,7 @@ def selu(
 def linear(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
@@ -332,7 +334,7 @@ def linear(
     Args:
         inputs: list of input tensors
         dc_decomp: boolean that indicates
-        convex_domain: type of convex input domain (None or dict)
+        perturbation_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
@@ -341,15 +343,15 @@ def linear(
     Returns:
         the updated list of tensors
     """
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     return inputs
 
 
 def exponential(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
@@ -359,7 +361,7 @@ def exponential(
     Args:
         inputs: list of input tensors
         dc_decomp: boolean that indicates
-        convex_domain: type of convex input domain (None or dict)
+        perturbation_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
@@ -369,15 +371,15 @@ def exponential(
         the updated list of tensors
     """
 
-    if convex_domain is None:
-        convex_domain = {}
-    return exp(inputs, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope, **kwargs)
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
+    return exp(inputs, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode, slope=slope, **kwargs)
 
 
 def softplus(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
@@ -387,7 +389,7 @@ def softplus(
     Args:
         inputs: list of input tensors
         dc_decomp: boolean that indicates
-        convex_domain: type of convex input domain (None or dict)
+        perturbation_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
@@ -396,18 +398,18 @@ def softplus(
     Returns:
         the updated list of tensors
     """
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
 
-    return softplus_(inputs, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope)
+    return softplus_(inputs, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode, slope=slope)
 
 
 def softsign(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
@@ -417,7 +419,7 @@ def softsign(
     Args:
         inputs: list of input tensors
         dc_decomp: boolean that indicates
-        convex_domain: type of convex input domain (None or dict)
+        perturbation_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
@@ -427,19 +429,19 @@ def softsign(
         the updated list of tensors
     """
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     func = K.softsign
     f_prime = softsign_prime
     return linear_hull_s_shape(
-        inputs, func, f_prime, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope
+        inputs, func, f_prime, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode, slope=slope
     )
 
 
 def softmax(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis: int = -1,
     clip: bool = True,
@@ -451,7 +453,7 @@ def softmax(
     Args:
         inputs: list of input tensors
         dc_decomp: boolean that indicates
-        convex_domain: type of convex input domain (None or dict)
+        perturbation_domain: type of convex input domain (None or dict)
         mode: type of Forward propagation (ibp, affine, or hybrid)
         slope:
         **kwargs: see Keras official documentation
@@ -460,26 +462,26 @@ def softmax(
     Returns:
         the updated list of tensors
     """
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
 
     outputs_exp = exponential(
-        minus(inputs, mode=mode), dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode, slope=slope
+        minus(inputs, mode=mode), dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode, slope=slope
     )
     outputs = expand_dims(
         frac_pos(
-            sum(outputs_exp, axis=axis, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode),
+            sum(outputs_exp, axis=axis, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode),
             dc_decomp=dc_decomp,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             mode=mode,
         ),
         mode=mode,
         axis=axis,
     )
-    outputs = multiply(outputs_exp, outputs, mode=mode, convex_domain=convex_domain)
+    outputs = multiply(outputs_exp, outputs, mode=mode, perturbation_domain=perturbation_domain)
 
     if mode == ForwardMode.IBP:
         u_c, l_c = outputs
@@ -500,15 +502,15 @@ def softmax(
 def group_sort_2(
     inputs: List[tf.Tensor],
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     data_format: str = "channels_last",
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
 
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
     raise NotImplementedError()
 
