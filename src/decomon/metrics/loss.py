@@ -5,10 +5,11 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Lambda, Layer
 
+from decomon.core import BallDomain, BoxDomain, PerturbationDomain
 from decomon.layers.activations import softmax as softmax_
 from decomon.layers.core import DecomonLayer, ForwardMode, get_mode
 from decomon.models.models import DecomonModel
-from decomon.utils import ConvexDomainType, get_lower, get_upper, set_mode
+from decomon.utils import get_lower, get_upper, set_mode
 
 
 def get_model(model: DecomonModel) -> DecomonModel:
@@ -16,7 +17,7 @@ def get_model(model: DecomonModel) -> DecomonModel:
     affine = model.affine
 
     mode = get_mode(ibp, affine)
-    convex_domain = model.convex_domain
+    perturbation_domain = model.perturbation_domain
 
     inputs = model.inputs
     outputs = model.outputs
@@ -80,7 +81,7 @@ def get_model(model: DecomonModel) -> DecomonModel:
     return DecomonModel(
         inputs=inputs,
         outputs=new_output,
-        convex_domain=model.convex_domain,
+        perturbation_domain=model.perturbation_domain,
         ibp=ibp,
         affine=affine,
         finetune=model.finetune,
@@ -93,13 +94,15 @@ def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
     affine = model.affine
 
     mode = get_mode(ibp, affine)
-    convex_domain = model.convex_domain
+    perturbation_domain = model.perturbation_domain
 
     if affine:
-        if len(convex_domain) == 0 or ConvexDomainType(convex_domain["name"]) == ConvexDomainType.BALL:
+        if isinstance(perturbation_domain, BoxDomain):
             n_comp = 2
-        else:
+        elif isinstance(perturbation_domain, BallDomain):
             n_comp = 1
+        else:
+            raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
 
     n_out = np.prod(model.output[-1].shape[1:])
 
@@ -109,7 +112,7 @@ def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
 
     def upper_affine(x: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, u_ref: tf.Tensor) -> tf.Tensor:
 
-        upper = get_upper(x, w_u, b_u, convex_domain=convex_domain)
+        upper = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
 
         return K.max(upper - u_ref, -1)
 
@@ -164,13 +167,15 @@ def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
     affine = model.affine
 
     mode = get_mode(ibp, affine)
-    convex_domain = model.convex_domain
+    perturbation_domain = model.perturbation_domain
 
     if affine:
-        if len(convex_domain) == 0 or ConvexDomainType(convex_domain["name"]) == ConvexDomainType.BALL:
+        if isinstance(perturbation_domain, BoxDomain):
             n_comp = 2
-        else:
+        elif isinstance(perturbation_domain, BallDomain):
             n_comp = 1
+        else:
+            raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
 
     n_out = np.prod(model.output[-1].shape[1:])
 
@@ -180,7 +185,7 @@ def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
 
     def lower_affine(x: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor, l_ref: tf.Tensor) -> tf.Tensor:
 
-        lower = get_lower(x, w_l, b_l, convex_domain=convex_domain)
+        lower = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
 
         return K.max(l_ref - lower, -1)
 
@@ -237,13 +242,15 @@ def get_adv_loss(
     affine = model.affine
 
     mode = get_mode(ibp, affine)
-    convex_domain = model.convex_domain
+    perturbation_domain = model.perturbation_domain
 
     if affine:
-        if len(convex_domain) == 0 or ConvexDomainType(convex_domain["name"]) == ConvexDomainType.BALL:
+        if isinstance(perturbation_domain, BoxDomain):
             n_comp = 2
-        else:
+        elif isinstance(perturbation_domain, BallDomain):
             n_comp = 1
+        else:
+            raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
 
     n_out = np.prod(model.output[-1].shape[1:])
 
@@ -270,7 +277,7 @@ def get_adv_loss(
         w_adv = w_u_reshaped - w_l_reshaped
         b_adv = K.expand_dims(b_u, -1) - K.expand_dims(b_l, 1)
 
-        upper = get_upper(x, w_adv, b_adv, convex_domain=convex_domain)
+        upper = get_upper(x, w_adv, b_adv, perturbation_domain=perturbation_domain)
 
         t_tensor = 1 - y_tensor
         s_tensor = y_tensor
@@ -290,7 +297,7 @@ def get_adv_loss(
             l_c = y_pred[:, :, 1]
 
             if softmax:
-                u_c, l_c = softmax_([u_c, l_c], mode=mode, convex_domain=convex_domain, clip=False)
+                u_c, l_c = softmax_([u_c, l_c], mode=mode, perturbation_domain=perturbation_domain, clip=False)
 
         elif mode == ForwardMode.AFFINE:
             if len(y_pred.shape) == 3:
@@ -305,7 +312,7 @@ def get_adv_loss(
 
             if softmax:
                 _, w_u, b_u, w_l, b_l = softmax_(
-                    [x_0, w_u, b_u, w_l, b_l], mode=mode, convex_domain=convex_domain, clip=False
+                    [x_0, w_u, b_u, w_l, b_l], mode=mode, perturbation_domain=perturbation_domain, clip=False
                 )
 
         elif mode == ForwardMode.HYBRID:
@@ -323,7 +330,7 @@ def get_adv_loss(
             l_c = y_pred[:, -1, n_comp + n_out :]
 
             _, u_c, w_u, b_u, l_c, w_l, b_l = softmax_(
-                [x_0, u_c, w_u, b_u, l_c, w_l, b_l], mode=mode, convex_domain=convex_domain, clip=False
+                [x_0, u_c, w_u, b_u, l_c, w_l, b_l], mode=mode, perturbation_domain=perturbation_domain, clip=False
             )
 
         else:
@@ -368,7 +375,7 @@ class DecomonLossFusion(DecomonLayer):
         self,
         asymptotic: bool = False,
         backward: bool = False,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -377,7 +384,7 @@ class DecomonLossFusion(DecomonLayer):
         **kwargs: Any,
     ):
         super().__init__(
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -403,12 +410,14 @@ class DecomonLossFusion(DecomonLayer):
 
         if not self.asymptotic:
 
-            u_c, l_c = set_mode(inputs, self.final_mode, self.mode, self.convex_domain)
+            u_c, l_c = set_mode(inputs, self.final_mode, self.mode, self.perturbation_domain)
 
             return -l_c + K.log(K.sum(K.exp(u_c - K.max(u_c, -1)[:, None]), -1))[:, None] + K.max(u_c, -1)[:, None]
 
         else:
-            u_c, l_c = set_mode(inputs, self.final_mode, self.mode, self.convex_domain)  # (None, n_out), (None, n_out)
+            u_c, l_c = set_mode(
+                inputs, self.final_mode, self.mode, self.perturbation_domain
+            )  # (None, n_out), (None, n_out)
             shape = u_c.shape[-1]
 
             def adv_ibp(u_c: tf.Tensor, l_c: tf.Tensor, y_tensor: tf.Tensor) -> tf.Tensor:
@@ -433,7 +442,7 @@ class DecomonLossFusion(DecomonLayer):
 
         if not self.asymptotic:
 
-            u_c, l_c = set_mode(inputs, self.final_mode, self.mode, self.convex_domain)
+            u_c, l_c = set_mode(inputs, self.final_mode, self.mode, self.perturbation_domain)
             return K.softmax(u_c)
 
         else:
@@ -461,7 +470,7 @@ class DecomonRadiusRobust(DecomonLayer):
     def __init__(
         self,
         backward: bool = False,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -470,7 +479,7 @@ class DecomonRadiusRobust(DecomonLayer):
         **kwargs: Any,
     ):
         super().__init__(
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -482,7 +491,7 @@ class DecomonRadiusRobust(DecomonLayer):
         if self.mode == ForwardMode.IBP:
             raise NotImplementedError
 
-        if len(self.convex_domain):
+        if not isinstance(self.perturbation_domain, BoxDomain):
             raise NotImplementedError()
 
         self.backward = backward
@@ -579,18 +588,20 @@ def build_radius_robust_model(model: DecomonModel) -> DecomonModel:
     affine = model.affine
 
     mode = get_mode(ibp, affine)
-    convex_domain = model.convex_domain
+    perturbation_domain = model.perturbation_domain
 
     inputs = model.input
     output = model.output
 
-    layer_robust = DecomonRadiusRobust(mode=mode, convex_domain=convex_domain, backward=model.backward_bounds)
+    layer_robust = DecomonRadiusRobust(
+        mode=mode, perturbation_domain=perturbation_domain, backward=model.backward_bounds
+    )
     output_robust = layer_robust(output)
 
     return DecomonModel(
         inputs=inputs,
         outputs=output_robust,
-        convex_domain=model.convex_domain,
+        perturbation_domain=model.perturbation_domain,
         ibp=ibp,
         affine=affine,
         finetune=model.finetune,
@@ -603,7 +614,7 @@ def build_crossentropy_model(model: DecomonModel) -> DecomonModel:
     affine = model.affine
 
     mode = get_mode(ibp, affine)
-    convex_domain = model.convex_domain
+    perturbation_domain = model.perturbation_domain
 
     inputs = model.input
     output = model.output
@@ -614,7 +625,7 @@ def build_crossentropy_model(model: DecomonModel) -> DecomonModel:
     return DecomonModel(
         inputs=inputs,
         outputs=output_fusion,
-        convex_domain=model.convex_domain,
+        perturbation_domain=model.perturbation_domain,
         ibp=ibp,
         affine=affine,
         finetune=model.finetune,
@@ -627,7 +638,7 @@ def build_asymptotic_crossentropy_model(model: DecomonModel) -> DecomonModel:
     affine = model.affine
 
     mode = get_mode(ibp, affine)
-    convex_domain = model.convex_domain
+    perturbation_domain = model.perturbation_domain
 
     inputs = model.input
     output = model.output
@@ -638,7 +649,7 @@ def build_asymptotic_crossentropy_model(model: DecomonModel) -> DecomonModel:
     return DecomonModel(
         inputs=inputs,
         outputs=output_fusion,
-        convex_domain=model.convex_domain,
+        perturbation_domain=model.perturbation_domain,
         ibp=ibp,
         affine=affine,
         finetune=model.finetune,

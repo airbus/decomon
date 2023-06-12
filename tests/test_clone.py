@@ -8,6 +8,7 @@ from tensorflow.keras.layers import Activation, Dense, Flatten, Input, Reshape
 from tensorflow.keras.models import Sequential
 
 from decomon.backward_layers.utils import get_affine, get_ibp
+from decomon.core import Slope
 from decomon.layers.core import ForwardMode, get_mode
 from decomon.layers.decomon_reshape import DecomonReshape
 from decomon.models import clone
@@ -17,7 +18,6 @@ from decomon.models.utils import (
     get_ibp_affine_from_method,
     has_merge_layers,
 )
-from decomon.utils import Slope
 
 try:
     import deel.lip

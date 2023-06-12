@@ -20,6 +20,7 @@ from tensorflow.keras.layers import (
 from tensorflow.python.keras.utils import conv_utils
 from tensorflow.python.keras.utils.generic_utils import to_list
 
+from decomon.core import PerturbationDomain, Slope
 from decomon.keras_utils import get_weight_index
 from decomon.layers import activations
 from decomon.layers.core import DecomonLayer, ForwardMode
@@ -29,7 +30,7 @@ from decomon.layers.utils import (
     NonPos,
     Project_initializer_pos,
 )
-from decomon.utils import ConvexDomainType, Slope, get_lower, get_upper
+from decomon.utils import get_lower, get_upper
 
 
 class DecomonConv2D(DecomonLayer, Conv2D):
@@ -44,7 +45,7 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         self,
         filters: int,
         kernel_size: Union[int, Tuple[int, int]],
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -57,7 +58,7 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         super().__init__(
             filters=filters,
             kernel_size=kernel_size,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -272,7 +273,7 @@ class DecomonConv2D(DecomonLayer, Conv2D):
 
             else:
                 # check for linearity
-                x_max = get_upper(x_0, w_u - w_l, b_u - b_l, self.convex_domain)
+                x_max = get_upper(x_0, w_u - w_l, b_u - b_l, self.perturbation_domain)
                 mask_b = o_value - K.sign(x_max)
 
                 def step_pos(x: tf.Tensor, _: List[tf.Tensor]) -> Tuple[tf.Tensor, List[tf.Tensor]]:
@@ -295,8 +296,8 @@ class DecomonConv2D(DecomonLayer, Conv2D):
 
         # add bias
         if self.mode == ForwardMode.HYBRID:
-            upper = get_upper(x_0, w_u_out, b_u_out, self.convex_domain)
-            lower = get_lower(x_0, w_l_out, b_l_out, self.convex_domain)
+            upper = get_upper(x_0, w_u_out, b_u_out, self.perturbation_domain)
+            lower = get_lower(x_0, w_l_out, b_l_out, self.perturbation_domain)
 
             u_c_out = K.minimum(upper, u_c_out)
 
@@ -315,9 +316,9 @@ class DecomonConv2D(DecomonLayer, Conv2D):
                 l_c_out = K.bias_add(l_c_out, self.bias, data_format=self.data_format)
 
         if self.mode == ForwardMode.HYBRID:
-            upper = get_upper(x_0, w_u_out, b_u_out, self.convex_domain)
+            upper = get_upper(x_0, w_u_out, b_u_out, self.perturbation_domain)
             u_c_out = K.minimum(upper, u_c_out)
-            lower = get_lower(x_0, w_l_out, b_l_out, self.convex_domain)
+            lower = get_lower(x_0, w_l_out, b_l_out, self.perturbation_domain)
             l_c_out = K.maximum(lower, l_c_out)
 
         if self.mode == ForwardMode.HYBRID:
@@ -431,7 +432,7 @@ class DecomonDense(DecomonLayer, Dense):
     def __init__(
         self,
         units: int,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -444,7 +445,7 @@ class DecomonDense(DecomonLayer, Dense):
         super().__init__(
             units=units,
             kernel_constraint=None,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -647,8 +648,8 @@ class DecomonDense(DecomonLayer, Dense):
                 g_out = K.bias_add(g_out, K.minimum(z_value, self.bias), data_format="channels_last")
 
         if self.mode == ForwardMode.HYBRID:
-            upper = get_upper(x_0, w_u_out, b_u_out, self.convex_domain)
-            lower = get_lower(x_0, w_l_out, b_l_out, self.convex_domain)
+            upper = get_upper(x_0, w_u_out, b_u_out, self.perturbation_domain)
+            lower = get_lower(x_0, w_l_out, b_l_out, self.perturbation_domain)
 
             l_c_out = K.maximum(lower, l_c_out)
             u_c_out = K.minimum(upper, u_c_out)
@@ -720,7 +721,7 @@ class DecomonActivation(DecomonLayer, Activation):
     def __init__(
         self,
         activation: str,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         slope: Union[str, Slope] = Slope.V_SLOPE,
@@ -732,7 +733,7 @@ class DecomonActivation(DecomonLayer, Activation):
 
         super().__init__(
             activation=activation,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -777,7 +778,7 @@ class DecomonActivation(DecomonLayer, Activation):
                     inputs,
                     mode=self.mode,
                     dc_decomp=self.dc_decomp,
-                    convex_domain=self.convex_domain,
+                    perturbation_domain=self.perturbation_domain,
                     finetune=self.beta_l_f,
                     slope=self.slope,
                 )
@@ -786,13 +787,17 @@ class DecomonActivation(DecomonLayer, Activation):
                     inputs,
                     mode=self.mode,
                     dc_decomp=self.dc_decomp,
-                    convex_domain=self.convex_domain,
+                    perturbation_domain=self.perturbation_domain,
                     finetune=[self.beta_u_f, self.beta_l_f],
                     slope=self.slope,
                 )
         else:
             output = self.activation(
-                inputs, mode=self.mode, convex_domain=self.convex_domain, dc_decomp=self.dc_decomp, slope=self.slope
+                inputs,
+                mode=self.mode,
+                perturbation_domain=self.perturbation_domain,
+                dc_decomp=self.dc_decomp,
+                slope=self.slope,
             )
             return output
 
@@ -832,7 +837,7 @@ class DecomonFlatten(DecomonLayer, Flatten):
     def __init__(
         self,
         data_format: Optional[str] = None,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -847,7 +852,7 @@ class DecomonFlatten(DecomonLayer, Flatten):
         """
         super().__init__(
             data_format=data_format,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -961,7 +966,7 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
         gamma_regularizer: Optional[str] = None,
         beta_constraint: Optional[str] = None,
         gamma_constraint: Optional[str] = None,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -983,7 +988,7 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
             gamma_regularizer=gamma_regularizer,
             beta_constraint=beta_constraint,
             gamma_constraint=gamma_constraint,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -1120,7 +1125,7 @@ class DecomonDropout(DecomonLayer, Dropout):
         rate: float,
         noise_shape: Optional[Tuple[int, ...]] = None,
         seed: Optional[int] = None,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -1132,7 +1137,7 @@ class DecomonDropout(DecomonLayer, Dropout):
             rate=rate,
             noise_shape=noise_shape,
             seed=seed,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -1176,7 +1181,7 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
         name: Optional[str] = None,
         ragged: Optional[bool] = None,
         type_spec: Optional[tf.TypeSpec] = None,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -1195,7 +1200,7 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
                 sparse=sparse,
                 name=name,
                 ragged=ragged,
-                convex_domain=convex_domain,
+                perturbation_domain=perturbation_domain,
                 dc_decomp=dc_decomp,
                 mode=mode,
                 finetune=finetune,

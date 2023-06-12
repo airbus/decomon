@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Union
 import tensorflow as tf
 from tensorflow.keras.layers import Layer, Wrapper
 
+from decomon.core import BoxDomain, PerturbationDomain
 from decomon.layers.core import DecomonLayer, ForwardMode
 
 
@@ -17,7 +18,7 @@ class BackwardLayer(ABC, Wrapper):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -27,14 +28,14 @@ class BackwardLayer(ABC, Wrapper):
         self.rec = rec
         if isinstance(self.layer, DecomonLayer):
             self.mode = self.layer.mode
-            self.convex_domain = self.layer.convex_domain
+            self.perturbation_domain = self.layer.perturbation_domain
             self.dc_decomp = self.layer.dc_decomp
         else:
             self.mode = ForwardMode(mode)
-            if convex_domain is None:
-                self.convex_domain = {}
+            if perturbation_domain is None:
+                self.perturbation_domain = BoxDomain()
             else:
-                self.convex_domain = convex_domain
+                self.perturbation_domain = perturbation_domain
             self.dc_decomp = dc_decomp
 
     def get_config(self) -> Dict[str, Any]:
@@ -43,7 +44,7 @@ class BackwardLayer(ABC, Wrapper):
             {
                 "rec": self.rec,
                 "mode": self.mode,
-                "convex_domain": self.convex_domain,
+                "perturbation_domain": self.perturbation_domain,
                 "dc_decomp": self.dc_decomp,
             }
         )

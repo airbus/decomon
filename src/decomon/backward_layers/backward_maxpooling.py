@@ -7,8 +7,9 @@ from tensorflow.keras.layers import Flatten, Layer
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import backward_max_
+from decomon.core import PerturbationDomain
 from decomon.layers.core import ForwardMode
-from decomon.utils import Slope, get_lower, get_upper
+from decomon.utils import get_lower, get_upper
 
 
 class BackwardMaxPooling2D(BackwardLayer):
@@ -25,7 +26,7 @@ class BackwardMaxPooling2D(BackwardLayer):
         layer: Layer,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -33,7 +34,7 @@ class BackwardMaxPooling2D(BackwardLayer):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -50,7 +51,7 @@ class BackwardMaxPooling2D(BackwardLayer):
         strides: Tuple[int, int],
         padding: str,
         data_format: str,
-        convex_domain: Dict[str, Any],
+        perturbation_domain: PerturbationDomain,
     ) -> List[tf.Tensor]:
         if self.fast:
             return self._pooling_function_fast(
@@ -63,7 +64,7 @@ class BackwardMaxPooling2D(BackwardLayer):
                 strides=strides,
                 padding=padding,
                 data_format=data_format,
-                convex_domain=convex_domain,
+                perturbation_domain=perturbation_domain,
             )
         else:
             return self._pooling_function_not_fast(
@@ -76,7 +77,7 @@ class BackwardMaxPooling2D(BackwardLayer):
                 strides=strides,
                 padding=padding,
                 data_format=data_format,
-                convex_domain=convex_domain,
+                perturbation_domain=perturbation_domain,
             )
 
     def _pooling_function_fast(
@@ -90,15 +91,15 @@ class BackwardMaxPooling2D(BackwardLayer):
         strides: Tuple[int, int],
         padding: str,
         data_format: str,
-        convex_domain: Dict[str, Any],
+        perturbation_domain: PerturbationDomain,
     ) -> List[tf.Tensor]:
 
         if self.mode == ForwardMode.HYBRID:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:7]
         elif self.mode == ForwardMode.AFFINE:
             x_0, w_u, b_u, w_l, b_l = inputs[:5]
-            u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
-            l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
+            u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
+            l_c = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
         elif self.mode == ForwardMode.IBP:
             u_c, l_c = inputs[:2]
         else:
@@ -138,7 +139,7 @@ class BackwardMaxPooling2D(BackwardLayer):
         strides: Tuple[int, int],
         padding: str,
         data_format: str,
-        convex_domain: Dict[str, Any],
+        perturbation_domain: PerturbationDomain,
     ) -> List[tf.Tensor]:
         """
         Args:
@@ -220,7 +221,7 @@ class BackwardMaxPooling2D(BackwardLayer):
             b_u_out,
             w_l_out,
             b_l_out,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             mode=self.mode,
             axis=-1,
         )
@@ -275,5 +276,5 @@ class BackwardMaxPooling2D(BackwardLayer):
             strides=self.strides,
             padding=self.padding,
             data_format=self.data_format,
-            convex_domain=self.convex_domain,
+            perturbation_domain=self.perturbation_domain,
         )

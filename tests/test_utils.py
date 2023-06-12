@@ -48,7 +48,7 @@ def test_get_upper_box_numpy(n, floatx, decimal, helpers):
     upper_pred = np.sum(W_u_ * x_expand, 1) + b_u_
     upper_pred = upper_pred.max(0)
 
-    upper = get_upper(x_0, W_u, b_u, {})
+    upper = get_upper(x_0, W_u, b_u)
 
     f_upper = K.function([x_0, W_u, b_u], upper)
     upper_ = f_upper([x_0_, W_u_, b_u_]).max()
@@ -63,7 +63,7 @@ def test_get_upper_box(n, floatx, decimal, helpers):
     x, y, x_0, u_c, W_u, b_u, _, _, _, _, _ = inputs
     _, _, x_0_, u_c_, W_u_, b_u_, _, _, _, _, _ = inputs_
 
-    upper = get_upper(x_0, W_u, b_u, {})
+    upper = get_upper(x_0, W_u, b_u)
 
     f_upper = K.function([x_0, W_u, b_u], upper)
 
@@ -94,7 +94,7 @@ def test_get_lower_box(n, floatx, decimal, helpers):
     inputs_ = helpers.get_standard_values_1d_box(n)
     x, y, x_0, _, _, _, l_c, W_l, b_l, _, _ = inputs
 
-    lower = get_lower(x_0, W_l, b_l, {})
+    lower = get_lower(x_0, W_l, b_l)
 
     f_lower = K.function(inputs, lower)
     f_l = K.function(inputs, l_c)
@@ -123,8 +123,8 @@ def test_get_lower_upper_box(n, floatx, decimal, helpers):
     inputs_ = helpers.get_standard_values_1d_box(n)
     x, y, x_0, _, W_u, b_u, _, W_l, b_l, _, _ = inputs
 
-    lower = get_lower(x_0, W_l, b_l, {})
-    upper = get_upper(x_0, W_u, b_u, {})
+    lower = get_lower(x_0, W_l, b_l)
+    upper = get_upper(x_0, W_u, b_u)
 
     f_lower = K.function(inputs, lower)
     f_upper = K.function(inputs, upper)

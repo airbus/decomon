@@ -8,8 +8,8 @@ import decomon.layers.decomon_merge_layers
 import decomon.layers.decomon_reshape
 import decomon.layers.deel_lip
 import decomon.layers.maxpooling
+from decomon.core import BallDomain, BoxDomain, GridDomain, PerturbationDomain, Slope
 from decomon.layers.core import DEEL_LIP, DecomonLayer, ForwardMode, get_mode
-from decomon.utils import ConvexDomainType, Slope
 
 # mapping between decomon class names and actual classes
 _mapping_name2class = vars(decomon.layers.decomon_layers)
@@ -24,7 +24,7 @@ def to_decomon(
     input_dim: int,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     finetune: bool = False,
     ibp: bool = True,
     affine: bool = True,
@@ -39,11 +39,11 @@ def to_decomon(
     Args:
         layer: a Keras Layer
         input_dim: an integer that represents the dim
-            of the input convex domain
+            of the input perturbation domain
         slope:
         dc_decomp: boolean that indicates whether we return a difference
             of convex decomposition of our layer
-        convex_domain: the type of convex domain
+        perturbation_domain: the type of perturbation domain
         ibp: boolean that indicates whether we propagate constant bounds
         affine: boolean that indicates whether we propagate affine
             bounds
@@ -53,8 +53,8 @@ def to_decomon(
     """
 
     # get class name
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
 
     mode = get_mode(ibp=ibp, affine=affine)
     layer_decomon = _to_decomon_wo_input_init(
@@ -62,7 +62,7 @@ def to_decomon(
         namespace=_mapping_name2class,
         slope=slope,
         dc_decomp=dc_decomp,
-        convex_domain=convex_domain,
+        perturbation_domain=perturbation_domain,
         finetune=finetune,
         mode=mode,
         shared=shared,
@@ -70,7 +70,7 @@ def to_decomon(
     )
 
     input_tensors = _prepare_input_tensors(
-        layer=layer, input_dim=input_dim, dc_decomp=dc_decomp, convex_domain=convex_domain, mode=mode
+        layer=layer, input_dim=input_dim, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode
     )
     layer_decomon(input_tensors)
     layer_decomon.reset_layer(layer)
@@ -84,14 +84,14 @@ def _to_decomon_wo_input_init(
     namespace: Dict[str, Any],
     slope: Union[str, Slope] = Slope.V_SLOPE,
     dc_decomp: bool = False,
-    convex_domain: Optional[Dict[str, Any]] = None,
+    perturbation_domain: Optional[PerturbationDomain] = None,
     finetune: bool = False,
     mode: ForwardMode = ForwardMode.HYBRID,
     shared: bool = True,
     fast: bool = True,
 ) -> DecomonLayer:
-    if convex_domain is None:
-        convex_domain = {}
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     class_name = layer.__class__.__name__
     # check if layer has a built argument that built is set to True
     if hasattr(layer, "built"):
@@ -101,7 +101,7 @@ def _to_decomon_wo_input_init(
     config_layer = layer.get_config()
     config_layer["name"] = layer.name + "_decomon"
     config_layer["dc_decomp"] = dc_decomp
-    config_layer["convex_domain"] = convex_domain
+    config_layer["perturbation_domain"] = perturbation_domain
 
     config_layer["mode"] = mode
     config_layer["finetune"] = finetune
@@ -120,16 +120,18 @@ def _to_decomon_wo_input_init(
 
 
 def _prepare_input_tensors(
-    layer: Layer, input_dim: int, dc_decomp: bool, convex_domain: Dict[str, Any], mode: ForwardMode
+    layer: Layer, input_dim: int, dc_decomp: bool, perturbation_domain: PerturbationDomain, mode: ForwardMode
 ) -> List[tf.Tensor]:
     original_input_shapes = get_layer_input_shape(layer)
     decomon_input_shapes: List[List[Optional[int]]] = [list(input_shape[1:]) for input_shape in original_input_shapes]
     n_input = len(decomon_input_shapes)
 
-    if len(convex_domain) == 0 or ConvexDomainType(convex_domain["name"]) == ConvexDomainType.BOX:
+    if isinstance(perturbation_domain, BoxDomain):
         x_input = Input((2, input_dim), dtype=layer.dtype)
-    else:
+    elif isinstance(perturbation_domain, BallDomain):
         x_input = Input((input_dim,), dtype=layer.dtype)
+    else:
+        raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
 
     w_input = [Input(tuple([input_dim] + decomon_input_shapes[i])) for i in range(n_input)]
     y_input = [Input(tuple(decomon_input_shapes[i])) for i in range(n_input)]

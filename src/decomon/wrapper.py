@@ -4,10 +4,10 @@ import numpy as np
 import numpy.typing as npt
 import tensorflow as tf
 
+from decomon.core import BallDomain, BoxDomain, GridDomain
 from decomon.models.convert import clone
 from decomon.models.models import DecomonModel
 from decomon.models.utils import ConvertMethod
-from decomon.utils import ConvexDomainType
 
 IntegerType = Union[int, np.int_]
 """Alias for integers types."""
@@ -72,10 +72,7 @@ def get_adv_box(
     if not isinstance(model, DecomonModel):
         decomon_model = clone(model)
     else:
-        assert len(model.convex_domain) == 0 or ConvexDomainType(model.convex_domain["name"]) in [
-            ConvexDomainType.BOX,
-            ConvexDomainType.GRID,
-        ]
+        assert isinstance(model.perturbation_domain, (BoxDomain, GridDomain))
         decomon_model = model
 
     n_split = 1
@@ -299,10 +296,7 @@ def check_adv_box(
     if not isinstance(model, DecomonModel):
         decomon_model = clone(model)
     else:
-        assert len(model.convex_domain) == 0 or ConvexDomainType(model.convex_domain["name"]) in [
-            ConvexDomainType.BOX,
-            ConvexDomainType.GRID,
-        ]
+        assert isinstance(model.perturbation_domain, (BoxDomain, GridDomain))
         decomon_model = model
 
     ibp = decomon_model.ibp
@@ -504,10 +498,7 @@ def get_range_box(
     if not (isinstance(model, DecomonModel)):
         decomon_model = clone(model)
     else:
-        assert len(model.convex_domain) == 0 or ConvexDomainType(model.convex_domain["name"]) in [
-            ConvexDomainType.BOX,
-            ConvexDomainType.GRID,
-        ]
+        assert isinstance(model.perturbation_domain, (BoxDomain, GridDomain))
         decomon_model = model
 
     n_split = 1
@@ -684,18 +675,18 @@ def get_range_noise(
     """
 
     # check that the model is a DecomonModel, else do the conversion
-    convex_domain = {"name": ConvexDomainType.BALL, "p": p, "eps": max(0, eps)}
+    perturbation_domain = BallDomain(p=p, eps=max(0, eps))
 
     if not isinstance(model, DecomonModel):
         decomon_model = clone(
             model,
             method=ConvertMethod.CROWN_FORWARD_HYBRID,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
         )
     else:
         decomon_model = model
         if eps >= 0:
-            decomon_model.set_domain(convex_domain)
+            decomon_model.set_domain(perturbation_domain)
 
     # reshape x_mmin, x_max
     input_shape = list(decomon_model.input_shape[1:])
@@ -840,10 +831,7 @@ def refine_box(
     if not isinstance(model, DecomonModel):
         decomon_model = clone(model)
     else:
-        assert len(model.convex_domain) == 0 or ConvexDomainType(model.convex_domain["name"]) in [
-            ConvexDomainType.BOX,
-            ConvexDomainType.GRID,
-        ]
+        assert isinstance(model.perturbation_domain, (BoxDomain, GridDomain))
         decomon_model = model
 
     # reshape x_mmin, x_max
@@ -959,17 +947,17 @@ def get_adv_noise(
         numpy array, vector with upper bounds for adversarial attacks
     """
 
-    convex_domain = {"name": ConvexDomainType.BALL, "p": p, "eps": max(0, eps)}
+    perturbation_domain = BallDomain(p=p, eps=max(0, eps))
 
     # check that the model is a DecomonModel, else do the conversion
     if not isinstance(model, DecomonModel):
-        decomon_model = clone(model, convex_domain=convex_domain)
+        decomon_model = clone(model, perturbation_domain=perturbation_domain)
     else:
         decomon_model = model
         if eps >= 0:
-            decomon_model.set_domain(convex_domain)
+            decomon_model.set_domain(perturbation_domain)
 
-    eps = model.convex_domain["eps"]
+    eps = model.perturbation_domain.eps
 
     # reshape x_mmin, x_max
     input_shape = list(decomon_model.input_shape[1:])

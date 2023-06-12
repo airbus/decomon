@@ -6,6 +6,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import InputSpec, Layer
 
 from decomon.backward_layers.utils import merge_with_previous
+from decomon.core import PerturbationDomain
 from decomon.layers.core import ForwardMode
 from decomon.utils import get_lower, get_upper
 
@@ -35,10 +36,10 @@ class Fuse(Layer):
 
 
 class Convert2BackwardMode(Layer):
-    def __init__(self, mode: Union[str, ForwardMode], convex_domain: Optional[Dict[str, Any]], **kwargs: Any):
+    def __init__(self, mode: Union[str, ForwardMode], perturbation_domain: PerturbationDomain, **kwargs: Any):
         super().__init__(**kwargs)
         self.mode = ForwardMode(mode)
-        self.convex_domain = convex_domain
+        self.perturbation_domain = perturbation_domain
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
         inputs_wo_backward_bounds = inputs[:-4]
@@ -55,13 +56,13 @@ class Convert2BackwardMode(Layer):
             return [x_0] + backward_bounds
 
         elif self.mode == ForwardMode.IBP:
-            u_c_out = get_upper(x_0, w_u_out, b_u_out, convex_domain={})
-            l_c_out = get_lower(x_0, w_l_out, b_l_out, convex_domain={})
+            u_c_out = get_upper(x_0, w_u_out, b_u_out, perturbation_domain=self.perturbation_domain)
+            l_c_out = get_lower(x_0, w_l_out, b_l_out, perturbation_domain=self.perturbation_domain)
             return [u_c_out, l_c_out]
 
         elif self.mode == ForwardMode.HYBRID:
-            u_c_out = get_upper(x_0, w_u_out, b_u_out, convex_domain=self.convex_domain)
-            l_c_out = get_lower(x_0, w_l_out, b_l_out, convex_domain=self.convex_domain)
+            u_c_out = get_upper(x_0, w_u_out, b_u_out, perturbation_domain=self.perturbation_domain)
+            l_c_out = get_lower(x_0, w_l_out, b_l_out, perturbation_domain=self.perturbation_domain)
             return [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
 
         else:
@@ -69,7 +70,7 @@ class Convert2BackwardMode(Layer):
 
     def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
-        config.update({"mode": self.mode, "convex_domain": self.convex_domain})
+        config.update({"mode": self.mode, "perturbation_domain": self.perturbation_domain})
         return config
 
 
@@ -112,19 +113,19 @@ class Convert2Mode(Layer):
         self,
         mode_from: Union[str, ForwardMode],
         mode_to: Union[str, ForwardMode],
-        convex_domain: Optional[Dict[str, Any]],
+        perturbation_domain: PerturbationDomain,
         **kwargs: Any,
     ):
         super().__init__(**kwargs)
         self.mode_from = ForwardMode(mode_from)
         self.mode_to = ForwardMode(mode_to)
-        self.convex_domain = convex_domain
+        self.perturbation_domain = perturbation_domain
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
         mode_from = self.mode_from
         mode_to = self.mode_to
-        convex_domain = self.convex_domain
+        perturbation_domain = self.perturbation_domain
 
         if mode_from == mode_to:
             return inputs
@@ -146,8 +147,8 @@ class Convert2Mode(Layer):
         if mode_from == ForwardMode.AFFINE:
             _, w_u, b_u, w_l, b_l = inputs
             if mode_to in [ForwardMode.IBP, ForwardMode.HYBRID]:
-                u_c = get_upper(x_0, w_u, b_u, convex_domain=convex_domain)
-                l_c = get_lower(x_0, w_l, b_l, convex_domain=convex_domain)
+                u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
+                l_c = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
         elif mode_from == ForwardMode.IBP:
             u_c, l_c = inputs
         elif mode_from == ForwardMode.HYBRID:
@@ -166,5 +167,7 @@ class Convert2Mode(Layer):
 
     def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
-        config.update({"mode_from": self.mode_from, "mode_to": self.mode_to, "convex_domain": self.convex_domain})
+        config.update(
+            {"mode_from": self.mode_from, "mode_to": self.mode_to, "perturbation_domain": self.perturbation_domain}
+        )
         return config

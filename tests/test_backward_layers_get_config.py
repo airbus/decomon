@@ -30,6 +30,7 @@ from decomon.backward_layers.crown import (
     MergeWithPrevious,
 )
 from decomon.backward_layers.deel_lip import BackwardGroupSort2
+from decomon.core import BoxDomain
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import (
     DecomonActivation,
@@ -151,7 +152,7 @@ def test_deel_lip():
 
 def test_crown():
     mode = ForwardMode.AFFINE
-    convex_domain = {}
+    perturbation_domain = BoxDomain()
     input_shape_layer = (1, 2, 4)
     backward_shape_layer = (2, 5, 10)
 
@@ -159,10 +160,10 @@ def test_crown():
     config = layer.get_config()
     assert config["mode"] == mode
 
-    layer = Convert2BackwardMode(mode=mode, convex_domain=convex_domain)
+    layer = Convert2BackwardMode(mode=mode, perturbation_domain=perturbation_domain)
     config = layer.get_config()
     assert config["mode"] == mode
-    assert "convex_domain" in config
+    assert "perturbation_domain" in config
 
     layer = MergeWithPrevious(input_shape_layer=input_shape_layer, backward_shape_layer=backward_shape_layer)
     config = layer.get_config()

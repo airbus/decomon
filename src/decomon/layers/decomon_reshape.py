@@ -4,6 +4,7 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import InputSpec, Layer, Permute, Reshape
 
+from decomon.core import PerturbationDomain
 from decomon.layers.core import DecomonLayer, ForwardMode
 
 
@@ -17,7 +18,7 @@ class DecomonReshape(DecomonLayer, Reshape):
     def __init__(
         self,
         target_shape: Tuple[int, ...],
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -32,7 +33,7 @@ class DecomonReshape(DecomonLayer, Reshape):
         """
         super().__init__(
             target_shape=target_shape,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,
@@ -133,7 +134,7 @@ class DecomonPermute(DecomonLayer, Permute):
     def __init__(
         self,
         dims: Tuple[int, ...],
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         finetune: bool = False,
@@ -148,7 +149,7 @@ class DecomonPermute(DecomonLayer, Permute):
         """
         super().__init__(
             dims=dims,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
             finetune=finetune,

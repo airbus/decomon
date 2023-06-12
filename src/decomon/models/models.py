@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Optional, Union
 import tensorflow as tf
 from keras.engine.functional import get_network_config
 
+from decomon.core import BoxDomain, GridDomain, Option, PerturbationDomain
 from decomon.layers.core import StaticVariables
 from decomon.models.utils import ConvertMethod
-from decomon.utils import ConvexDomainType, Option
 
 
 class DecomonModel(tf.keras.Model):
@@ -14,7 +14,7 @@ class DecomonModel(tf.keras.Model):
         self,
         inputs: Union[tf.Tensor, List[tf.Tensor]],
         outputs: Union[tf.Tensor, List[tf.Tensor]],
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         method: Union[str, ConvertMethod] = ConvertMethod.FORWARD_AFFINE,
         ibp: bool = True,
@@ -25,9 +25,9 @@ class DecomonModel(tf.keras.Model):
         **kwargs: Any,
     ):
         super().__init__(inputs, outputs, **kwargs)
-        if convex_domain is None:
-            convex_domain = {}
-        self.convex_domain = convex_domain
+        if perturbation_domain is None:
+            perturbation_domain = BoxDomain()
+        self.perturbation_domain = perturbation_domain
         self.nb_tensors = StaticVariables(dc_decomp).nb_tensors
         self.dc_decomp = dc_decomp
         self.method = ConvertMethod(method)
@@ -37,12 +37,12 @@ class DecomonModel(tf.keras.Model):
         self.backward_bounds = backward_bounds
         self.shared = shared
 
-    def set_domain(self, convex_domain: Dict[str, Any]) -> None:
-        convex_domain = _check_domain(self.convex_domain, convex_domain)
-        self.convex_domain = convex_domain
+    def set_domain(self, perturbation_domain: PerturbationDomain) -> None:
+        perturbation_domain = _check_domain(self.perturbation_domain, perturbation_domain)
+        self.perturbation_domain = perturbation_domain
         for layer in self.layers:
-            if hasattr(layer, "convex_domain"):
-                layer.convex_domain = self.convex_domain
+            if hasattr(layer, "perturbation_domain"):
+                layer.perturbation_domain = self.perturbation_domain
 
     def freeze_weights(self) -> None:
         for layer in self.layers:
@@ -75,31 +75,19 @@ class DecomonModel(tf.keras.Model):
         return copy.deepcopy(get_network_config(self, config=config))
 
 
-def _check_domain(convex_domain_prev: Dict[str, Any], convex_domain: Dict[str, Any]) -> Dict[str, Any]:
-    if len(convex_domain) == 0:
-        convex_domain_type = ConvexDomainType.BOX
-    else:
-        convex_domain_type = ConvexDomainType(convex_domain["name"])
+def _check_domain(
+    perturbation_domain_prev: PerturbationDomain, perturbation_domain: PerturbationDomain
+) -> PerturbationDomain:
+    if type(perturbation_domain) != type(perturbation_domain_prev):
+        raise NotImplementedError("We can only change the parameters of the perturbation domain, not its type.")
 
-    if len(convex_domain_prev) == 0:
-        convex_domain_prev_type = ConvexDomainType.BOX
-    else:
-        convex_domain_prev_type = ConvexDomainType(convex_domain_prev["name"])
-
-    if convex_domain_prev_type != convex_domain_type:
-        raise NotImplementedError("We can only change the parameters of the convex domain, not its nature.")
-
-    return convex_domain
+    return perturbation_domain
 
 
 def get_AB(model: DecomonModel) -> Dict[str, List[tf.Variable]]:
     dico_AB: Dict[str, List[tf.Variable]] = {}
-    convex_domain = model.convex_domain
-    if not (
-        len(convex_domain)
-        and ConvexDomainType(convex_domain["name"]) == ConvexDomainType.GRID
-        and Option(convex_domain["option"]) == Option.milp
-    ):
+    perturbation_domain = model.perturbation_domain
+    if not (isinstance(perturbation_domain, GridDomain) and perturbation_domain.opt_option == Option.milp):
         return dico_AB
 
     for layer in model.layers:
@@ -114,12 +102,8 @@ def get_AB(model: DecomonModel) -> Dict[str, List[tf.Variable]]:
 
 def get_AB_finetune(model: DecomonModel) -> Dict[str, tf.Variable]:
     dico_AB: Dict[str, tf.Variable] = {}
-    convex_domain = model.convex_domain
-    if not (
-        len(convex_domain)
-        and ConvexDomainType(convex_domain["name"]) == ConvexDomainType.GRID
-        and Option(convex_domain["option"]) == Option.milp
-    ):
+    perturbation_domain = model.perturbation_domain
+    if not (isinstance(perturbation_domain, GridDomain) and perturbation_domain.opt_option == Option.milp):
         return dico_AB
 
     if not model.finetune:

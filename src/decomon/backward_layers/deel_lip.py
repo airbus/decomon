@@ -5,6 +5,7 @@ from tensorflow.keras.layers import Layer
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import get_affine, get_ibp
+from decomon.core import PerturbationDomain
 from decomon.layers.convert import to_decomon
 from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonLayer
@@ -29,7 +30,7 @@ class BackwardGroupSort2(BackwardLayer):
         input_dim: int = -1,
         rec: int = 1,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        convex_domain: Optional[Dict[str, Any]] = None,
+        perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         **kwargs: Any,
     ):
@@ -37,7 +38,7 @@ class BackwardGroupSort2(BackwardLayer):
             layer=layer,
             rec=rec,
             mode=mode,
-            convex_domain=convex_domain,
+            perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             **kwargs,
         )
@@ -47,7 +48,7 @@ class BackwardGroupSort2(BackwardLayer):
                 layer=layer,
                 input_dim=input_dim,
                 dc_decomp=False,
-                convex_domain=self.convex_domain,
+                perturbation_domain=self.perturbation_domain,
                 finetune=False,
                 ibp=get_ibp(self.mode),
                 affine=get_affine(self.mode),
