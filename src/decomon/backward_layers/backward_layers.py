@@ -340,18 +340,7 @@ class BackwardActivation(BackwardLayer):
                     finetune_grid=self.grid_finetune,
                 )
         else:
-            y = inputs[-1]
-            shape = np.prod(y.shape[1:])
-
-            z_value = K.cast(0.0, self.dtype)
-            o_value = K.cast(1.0, self.dtype)
-            y_flat = K.reshape(y, [-1, shape])
-
-            w_u_out, w_l_out = [o_value + z_value * y_flat] * 2
-            b_u_out, b_l_out = [z_value * y_flat] * 2
-
-            w_u_out = tf.linalg.diag(w_u_out)
-            w_l_out = tf.linalg.diag(w_l_out)
+            w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
         if len(w_u_out.shape) == 2:
             w_u_out = tf.linalg.diag(w_u_out)
@@ -412,19 +401,7 @@ class BackwardFlatten(BackwardLayer):
         )
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        y = inputs[-1]
-        shape = np.prod(y.shape[1:])
-
-        z_value = K.cast(0.0, self.dtype)
-        o_value = K.cast(1.0, self.dtype)
-        y_flat = K.reshape(y, [-1, shape])
-
-        w_u_out, w_l_out = [o_value + z_value * y_flat] * 2
-        b_u_out, b_l_out = [z_value * y_flat] * 2
-        w_u_out = tf.linalg.diag(w_u_out)
-        w_l_out = tf.linalg.diag(w_l_out)
-
-        return [w_u_out, b_u_out, w_l_out, b_l_out]
+        return get_identity_lirpa(inputs)
 
 
 class BackwardReshape(BackwardLayer):
@@ -449,20 +426,7 @@ class BackwardReshape(BackwardLayer):
         )
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
-        y = inputs[-1]
-        shape = np.prod(y.shape[1:])
-
-        z_value = K.cast(0.0, self.dtype)
-        o_value = K.cast(1.0, self.dtype)
-        y_flat = K.reshape(y, [-1, shape])
-
-        w_u_out, w_l_out = [o_value + z_value * y_flat] * 2
-        b_u_out, b_l_out = [z_value * y_flat] * 2
-        w_u_out = tf.linalg.diag(w_u_out)
-        w_l_out = tf.linalg.diag(w_l_out)
-
-        return [w_u_out, b_u_out, w_l_out, b_l_out]
+        return get_identity_lirpa(inputs)
 
 
 class BackwardPermute(BackwardLayer):
@@ -489,20 +453,10 @@ class BackwardPermute(BackwardLayer):
         self.op = layer.call
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
-        y = inputs[-1]
-        shape = np.prod(y.shape[1:])
-        z_value = K.cast(0.0, self.dtype)
-        o_value = K.cast(1.0, self.dtype)
-        y_flat = K.reshape(y, [-1, shape])
-
-        w_u_out, w_l_out = [o_value + z_value * y_flat] * 2
-        b_u_out, b_l_out = [z_value * y_flat] * 2
-        w_u_out = tf.linalg.diag(w_u_out)
-        w_l_out = tf.linalg.diag(w_l_out)
+        w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
         # w_u_out (None, n_in, n_out)
-
+        y = inputs[-1]
         n_dim = w_u_out.shape[1]
         n_out = w_u_out.shape[-1]
         shape = list(y.shape[1:])
@@ -540,20 +494,7 @@ class BackwardDropout(BackwardLayer):
         )
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
-        y = inputs[-1]
-        shape = np.prod(y.shape[1:])
-
-        z_value = K.cast(0.0, self.dtype)
-        o_value = K.cast(1.0, self.dtype)
-        y_flat = K.reshape(y, [-1, shape])
-
-        w_u_out, w_l_out = [o_value + z_value * y_flat] * 2
-        b_u_out, b_l_out = [z_value * y_flat] * 2
-        w_u_out = tf.linalg.diag(w_u_out)
-        w_l_out = tf.linalg.diag(w_l_out)
-
-        return [w_u_out, b_u_out, w_l_out, b_l_out]
+        return get_identity_lirpa(inputs)
 
 
 class BackwardBatchNormalization(BackwardLayer):
