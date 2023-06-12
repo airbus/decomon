@@ -209,33 +209,22 @@ class BackwardAverage(BackwardMerge):
                     inputs_0 = inputs[:n_comp]
                 else:
                     inputs_0 = self.op(inputs[: n_comp * j])
-                if len(bounds) == 0:
-                    bounds_0, bounds_1 = backward_add(
-                        inputs_0,
-                        inputs_1,
-                        w_u_out,
-                        b_u_out,
-                        w_l_out,
-                        b_l_out,
-                        convex_domain=self.convex_domain,
-                        mode=self.mode,
-                    )
-                else:
-                    w_out_u_, b_out_u_, w_out_l_, b_out_l_ = bounds[-1]
-                    bounds_0, bounds_1 = backward_add(
-                        inputs_0,
-                        inputs_1,
-                        w_out_u_,
-                        b_out_u_,
-                        w_out_l_,
-                        b_out_l_,
-                        convex_domain=self.convex_domain,
-                        mode=self.mode,
-                    )
+                bounds_0, bounds_1 = backward_add(
+                    inputs_0,
+                    inputs_1,
+                    w_u_out,
+                    b_u_out,
+                    w_l_out,
+                    b_l_out,
+                    convex_domain=self.convex_domain,
+                    mode=self.mode,
+                )
                 input_bounds.append(bounds_1)
                 bounds.append(bounds_0)
                 if j == 1:
                     input_bounds.append(bounds_0)
+                # update bounds to use for next iteration
+                w_u_out, b_u_out, w_l_out, b_l_out = bounds_0
 
             input_bounds = input_bounds[::-1]
             return [[1.0 / n_elem * elem_i for elem_i in elem] for elem in input_bounds]
