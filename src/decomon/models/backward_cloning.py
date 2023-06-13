@@ -116,7 +116,7 @@ def crown_(
 
     if isinstance(node.outbound_layer, Model):
         inputs_tensors = get_disconnected_input(get_mode(ibp, affine), convex_domain, dtype=inputs[0].dtype)(inputs)
-        _, backward_bounds_, _, _ = crown_model(
+        _, backward_bounds, _, _ = crown_model(
             model=node.outbound_layer,
             input_tensors=inputs_tensors,
             backward_bounds=backward_bounds,
@@ -133,24 +133,18 @@ def crown_(
         backward_layer = retrieve_layer(node=node, layer_fn=layer_fn, backward_map=backward_map, joint=joint)
 
         if id(node) not in output_map:
-            backward_bounds_ = backward_layer(inputs)
-            output_map[id(node)] = backward_bounds_
+            backward_bounds_new = backward_layer(inputs)
+            output_map[id(node)] = backward_bounds_new
         else:
-            backward_bounds_ = output_map[id(node)]
+            backward_bounds_new = output_map[id(node)]
 
-        if not isinstance(backward_bounds_, list):
-            backward_bounds_ = [e for e in backward_bounds_]
             # import pdb; pdb.set_trace()
         if len(backward_bounds):
             if merge_layers is None:
-                merge_layers = MergeWithPrevious(backward_bounds_[0].shape, backward_bounds[0].shape)
-            backward_tmp = merge_layers(backward_bounds_ + backward_bounds)
-            backward_bounds_ = backward_tmp
-
-    if not isinstance(backward_bounds_, list):
-        backward_bounds = [e for e in backward_bounds_]
-    else:
-        backward_bounds = backward_bounds_
+                merge_layers = MergeWithPrevious(backward_bounds_new[0].shape, backward_bounds[0].shape)
+            backward_bounds = merge_layers(backward_bounds_new + backward_bounds)
+        else:
+            backward_bounds = backward_bounds_new
 
     parents = node.parent_nodes
 
