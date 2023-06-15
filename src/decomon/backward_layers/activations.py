@@ -7,8 +7,8 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Layer
 
 from decomon.backward_layers.utils import backward_relu_, backward_softplus_
-from decomon.core import BoxDomain, PerturbationDomain, Slope
-from decomon.layers.core import ForwardMode, StaticVariables
+from decomon.core import BoxDomain, InputsOutputsSpec, PerturbationDomain, Slope
+from decomon.layers.core import ForwardMode
 from decomon.utils import (
     get_linear_hull_relu,
     get_linear_hull_s_shape,
@@ -74,7 +74,7 @@ def backward_relu(
 
     if not alpha and max_value is None:
         # default values: return relu_(x) = max(x, 0)
-        nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+        nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
         if mode == ForwardMode.IBP:
             upper, lower = inputs[:nb_tensors]
         elif mode == ForwardMode.AFFINE:
@@ -118,7 +118,7 @@ def backward_sigmoid(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
-    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
 
     if mode == ForwardMode.IBP:
         upper, lower = inputs[:nb_tensors]
@@ -159,7 +159,7 @@ def backward_tanh(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
-    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
 
     if mode == ForwardMode.IBP:
         upper, lower = inputs[:nb_tensors]
@@ -345,7 +345,7 @@ def backward_softplus(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
-    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
 
     if mode == ForwardMode.IBP:
         upper, lower = inputs[:nb_tensors]

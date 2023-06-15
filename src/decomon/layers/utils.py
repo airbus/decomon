@@ -8,8 +8,14 @@ from tensorflow.keras.constraints import Constraint
 from tensorflow.keras.initializers import Initializer
 from tensorflow.keras.layers import Layer
 
-from decomon.core import BallDomain, BoxDomain, PerturbationDomain, Slope
-from decomon.layers.core import ForwardMode, StaticVariables
+from decomon.core import (
+    BallDomain,
+    BoxDomain,
+    InputsOutputsSpec,
+    PerturbationDomain,
+    Slope,
+)
+from decomon.layers.core import ForwardMode
 from decomon.utils import (
     add,
     get_linear_softplus_hull,
@@ -308,7 +314,7 @@ def softplus_(
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
 
-    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
     elif mode == ForwardMode.IBP:
@@ -470,7 +476,7 @@ def max_(
     if dc_decomp:
         h, g = inputs[-2:]
     mode = ForwardMode(mode)
-    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
 
     if mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
@@ -684,7 +690,7 @@ def multiply(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
-    nb_tensor = StaticVariables(dc_decomp, mode=mode).nb_tensors
+    nb_tensor = InputsOutputsSpec(dc_decomp, mode=mode).nb_tensors
 
     if mode == ForwardMode.IBP:
         u0, l0 = inputs_0[:nb_tensor]
@@ -765,7 +771,7 @@ def permute_dimensions(
     mode = ForwardMode(mode)
     index = np.arange(len(inputs[0].shape))
     index = np.insert(np.delete(index, axis), axis_perm, axis)
-    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.IBP:
         return [
             K.permute_dimensions(inputs[2], index),
@@ -814,7 +820,7 @@ def broadcast(inputs: List[tf.Tensor], n: int, axis: int, mode: Union[str, Forwa
     Returns:
 
     """
-    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
     mode = ForwardMode(mode)
     if mode == ForwardMode.IBP:
         u_c, l_c = inputs[:nb_tensor]
@@ -867,7 +873,7 @@ def split(
 
     """
     mode = ForwardMode(mode)
-    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.IBP:
         u_c, l_c = inputs[:nb_tensor]
     elif mode == ForwardMode.HYBRID:
@@ -930,7 +936,7 @@ def sort(
     mode = ForwardMode(mode)
     # remove grad bounds
 
-    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
 
     if mode == ForwardMode.IBP:
         u_c, l_c = inputs[:nb_tensor]
@@ -1101,7 +1107,7 @@ def frac_pos_hull(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
-    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
 
     if mode == ForwardMode.IBP:
         u_c, l_c = inputs[:nb_tensor]
@@ -1179,7 +1185,7 @@ def expand_dims(
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     mode = ForwardMode(mode)
-    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.IBP:
         u_c, l_c = inputs[:nb_tensor]
     elif mode == ForwardMode.AFFINE:

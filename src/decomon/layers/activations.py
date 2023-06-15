@@ -6,8 +6,8 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.types.experimental import TensorLike
 
-from decomon.core import BoxDomain, PerturbationDomain, Slope
-from decomon.layers.core import DecomonLayer, ForwardMode, StaticVariables
+from decomon.core import BoxDomain, InputsOutputsSpec, PerturbationDomain, Slope
+from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.utils import exp, expand_dims, frac_pos, multiply, softplus_, sum
 from decomon.utils import (
     get_linear_hull_s_shape,
@@ -107,11 +107,11 @@ def linear_hull_s_shape(
         raise NotImplementedError()
     mode = ForwardMode(mode)
     if mode == ForwardMode.IBP:
-        u_c, l_c = inputs[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
+        u_c, l_c = inputs[: InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode).nb_tensors]
     elif mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode).nb_tensors]
     elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = inputs[: StaticVariables(dc_decomp=dc_decomp, mode=mode).nb_tensors]
+        x_0, w_u, b_u, w_l, b_l = inputs[: InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode).nb_tensors]
         u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
         l_c = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
     else:

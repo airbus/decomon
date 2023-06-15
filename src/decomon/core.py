@@ -3,6 +3,8 @@ from typing import Union
 
 import numpy as np
 
+from decomon.layers import ForwardMode
+
 
 class Option(Enum):
     lagrangian = "lagrangian"
@@ -48,3 +50,35 @@ class BallDomain(PerturbationDomain):
         except:
             raise ValueError(p_error_msg)
         self.p = p
+
+
+class InputsOutputsSpec:
+    """Storing specifications for inputs and outputs of decomon/backward layer/model."""
+
+    def __init__(self, dc_decomp: bool = False, mode: Union[str, ForwardMode] = ForwardMode.HYBRID):
+        """
+        Args:
+            dc_decomp: boolean that indicates whether we return a
+                difference of convex decomposition of our layer
+            mode: type of Forward propagation (ibp, affine, or hybrid)
+        gradient
+        """
+
+        self.mode = ForwardMode(mode)
+        self.dc_decomp = dc_decomp
+
+    @property
+    def nb_tensors(self):
+        if self.mode == ForwardMode.HYBRID:
+            nb_tensors = 7
+        elif self.mode == ForwardMode.IBP:
+            nb_tensors = 2
+        elif self.mode == ForwardMode.AFFINE:
+            nb_tensors = 5
+        else:
+            raise NotImplementedError(f"unknown forward mode {mode}")
+
+        if self.dc_decomp:
+            nb_tensors += 2
+
+        return nb_tensors

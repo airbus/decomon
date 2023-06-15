@@ -5,8 +5,14 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Flatten
 
-from decomon.core import BoxDomain, GridDomain, PerturbationDomain, Slope
-from decomon.layers.core import ForwardMode, StaticVariables
+from decomon.core import (
+    BoxDomain,
+    GridDomain,
+    InputsOutputsSpec,
+    PerturbationDomain,
+    Slope,
+)
+from decomon.layers.core import ForwardMode
 from decomon.layers.utils import sort
 from decomon.utils import (
     get_linear_hull_relu,
@@ -50,7 +56,7 @@ def backward_add(
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
     op_flat = Flatten(dtype=K.floatx())  # pas terrible  a revoir
-    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.IBP:
         u_c_0, l_c_0 = inputs_0[:nb_tensors]
         u_c_1, l_c_1 = inputs_1[:nb_tensors]
@@ -169,7 +175,7 @@ def backward_relu_(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
-    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.HYBRID:
         # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
@@ -243,7 +249,7 @@ def backward_softplus_(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
-    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
         upper = u_c
@@ -413,7 +419,7 @@ def backward_max_(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
-    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
     z_value = K.cast(0.0, inputs[0].dtype)
 
     if mode == ForwardMode.HYBRID:

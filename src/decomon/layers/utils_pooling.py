@@ -4,8 +4,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
-from decomon.core import PerturbationDomain
-from decomon.layers.core import ForwardMode, StaticVariables
+from decomon.core import InputsOutputsSpec, PerturbationDomain
+from decomon.layers.core import ForwardMode
 from decomon.utils import get_lower, get_upper
 
 # step 1: compute (x_i, y_i) such that x_i[j]=l_j if j==i else u_j
@@ -45,7 +45,7 @@ def get_upper_linear_hull_max(
     if axis != -1 and axis < 0:
         raise NotImplementedError()  # to do
 
-    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
 
     if mode == ForwardMode.IBP:
 
@@ -171,7 +171,7 @@ def get_lower_linear_hull_max(
     if axis != -1 and axis < 0:
         raise NotImplementedError()  # to do
 
-    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
 
     if mode == ForwardMode.IBP:
 
