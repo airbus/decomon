@@ -14,8 +14,6 @@ from decomon.core import (
 )
 from decomon.keras_utils import get_weight_index_from_name
 
-DEEL_LIP = "deel-lip>"
-
 
 class DecomonLayer(ABC, Layer):
     """Abstract class that contains the common information of every implemented layers for Forward LiRPA"""
