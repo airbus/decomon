@@ -136,44 +136,6 @@ class DecomonConv2D(DecomonLayer, Conv2D):
 
         self.built = True
 
-    def get_backward_weights(self, inputs: List[tf.Tensor], flatten: bool = True) -> Tuple[tf.Tensor, tf.Tensor]:
-        # DEPRECATED
-        z_value = K.cast(0.0, self.dtype)
-        o_value = K.cast(1.0, self.dtype)
-
-        b_u = inputs[-1]
-        n_in = np.prod(b_u.shape[1:])
-        identity_tensor = K.cast(self.diag_op(z_value * Flatten(dtype=self.dtype)(b_u[0][None]) + o_value), self.dtype)
-        identity_tensor = K.reshape(identity_tensor, [-1] + list(b_u.shape[1:]))
-        if self.kernel is None:
-            raise RuntimeError("self.kernel cannot be None when calling get_backward_weights()")
-        w = K.conv2d(
-            identity_tensor,
-            self.kernel,
-            strides=self.strides,
-            padding=self.padding,
-            data_format=self.data_format,
-            dilation_rate=self.dilation_rate,
-        )
-        if flatten:
-            if self.data_format == "channels_last":
-                c_in, height, width, c_out = w.shape
-                w = K.reshape(w, (c_in * height * width, c_out))
-            else:
-                c_out, height, width, c_in = w.shape
-                w = K.reshape(w, (c_out, c_in * height * width))
-                w = K.transpose(w, (1, 0))
-
-        w = K.reshape(w, (n_in, -1))
-        if self.use_bias:
-            if self.bias is None:
-                raise RuntimeError("self.bias cannot be None when calling get_backward_weights()")
-            n_repeat = int(w.shape[-1] / self.bias.shape[-1])
-            b = K.reshape(K.repeat(self.bias[None], n_repeat), (-1,))
-        else:
-            b = K.cast(0.0, self.dtype) * w[1][None]
-        return w, b
-
     def share_weights(self, layer: Layer) -> None:
         if not self.shared:
             return
