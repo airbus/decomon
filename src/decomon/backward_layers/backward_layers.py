@@ -525,7 +525,7 @@ class BackwardBatchNormalization(BackwardLayer):
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
 
-        y = inputs[0]
+        y = inputs[-1]
         w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
 
         n_dim = y.shape[1:]
