@@ -79,7 +79,7 @@ def get_toeplitz_channels_last(conv_layer: Conv2D, flatten: bool = True) -> tf.T
         None, None, None, None, None
     ]  # (1,1,c_in, c_out, filter_size^2)
 
-    """element-wise multiplication is only compatible with float32"""
+    # element-wise multiplication is only compatible with float32
     diag_patches_ = K.cast(diag_patches_, "float32")
     kernel = K.cast(kernel, "float32")
 
@@ -97,7 +97,6 @@ def get_toeplitz_channels_last(conv_layer: Conv2D, flatten: bool = True) -> tf.T
         return w
 
 
-### utils_conv.py
 def get_toeplitz_channels_first(conv_layer: Conv2D, flatten: bool = True) -> tf.Tensor:
     """Express formally the affine component of the convolution for data_format=channels_first
     Conv is a linear operator but its affine component is implicit
