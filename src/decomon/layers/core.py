@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Type, Union
 import tensorflow as tf
 from tensorflow.keras.layers import Layer
 
-from decomon.core import BoxDomain, PerturbationDomain
+from decomon.core import BoxDomain, InputsOutputsSpec, PerturbationDomain
 from decomon.keras_utils import get_weight_index_from_name
 
 
@@ -34,35 +34,6 @@ def get_mode(ibp: bool = True, affine: bool = True) -> ForwardMode:
             return ForwardMode.IBP
     else:
         return ForwardMode.AFFINE
-
-
-class StaticVariables:
-    """Storing static values on the number of input tensors for our layers"""
-
-    def __init__(self, dc_decomp: bool = False, mode: Union[str, ForwardMode] = ForwardMode.HYBRID):
-        """
-        Args:
-            dc_decomp: boolean that indicates whether we return a
-                difference of convex decomposition of our layer
-            mode: type of Forward propagation (ibp, affine, or hybrid)
-        gradient
-        """
-
-        self.mode = ForwardMode(mode)
-
-        if self.mode == ForwardMode.HYBRID:
-            nb_tensors = 7
-        elif self.mode == ForwardMode.IBP:
-            nb_tensors = 2
-        elif self.mode == ForwardMode.AFFINE:
-            nb_tensors = 5
-        else:
-            raise NotImplementedError(f"unknown forward mode {mode}")
-
-        if dc_decomp:
-            nb_tensors += 2
-
-        self.nb_tensors = nb_tensors
 
 
 class DecomonLayer(ABC, Layer):
@@ -99,7 +70,7 @@ class DecomonLayer(ABC, Layer):
 
         if perturbation_domain is None:
             perturbation_domain = BoxDomain()
-        self.nb_tensors = StaticVariables(dc_decomp, mode).nb_tensors
+        self.nb_tensors = InputsOutputsSpec(dc_decomp, mode).nb_tensors
         self.dc_decomp = dc_decomp
         self.perturbation_domain = perturbation_domain
         self.mode = ForwardMode(mode)

@@ -7,8 +7,15 @@ from tensorflow.keras.layers import Lambda, Layer
 from tensorflow.math import greater_equal
 from tensorflow.types.experimental import TensorLike
 
-from decomon.core import BallDomain, BoxDomain, GridDomain, PerturbationDomain, Slope
-from decomon.layers.core import ForwardMode, StaticVariables
+from decomon.core import (
+    BallDomain,
+    BoxDomain,
+    GridDomain,
+    InputsOutputsSpec,
+    PerturbationDomain,
+    Slope,
+)
+from decomon.layers.core import ForwardMode
 
 TensorFunction = Callable[[TensorLike], tf.Tensor]
 
@@ -746,7 +753,7 @@ def add(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
-    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
     if dc_decomp:
         h_0, g_0 = inputs_0[-2:]
         h_1, g_1 = inputs_1[-2:]
@@ -814,7 +821,7 @@ def relu_(
     z_value = K.cast(0.0, dtype=x[0].dtype)
     o_value = K.cast(1.0, dtype=x[0].dtype)
 
-    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.HYBRID:
         x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:nb_tensors]
     elif mode == ForwardMode.IBP:
@@ -888,7 +895,7 @@ def minus(
 
     """
     mode = ForwardMode(mode)
-    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.IBP:
         u_c, l_c = inputs[:nb_tensor]
     elif mode == ForwardMode.AFFINE:
@@ -1035,7 +1042,7 @@ def get_linear_hull_s_shape(
     o_value = K.cast(1.0, dtype=x[0].dtype)
     t_value = K.cast(2.0, dtype=x[0].dtype)
 
-    nb_tensor = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
     if mode == ForwardMode.IBP:
         u_c, l_c = x[:nb_tensor]
     elif mode == ForwardMode.HYBRID:
