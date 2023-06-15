@@ -675,14 +675,6 @@ def get_linear_softplus_hull(
     else:
         raise ValueError(f"Unknown slope {slope}")
 
-    if "finetune" in kwargs:
-        # weighted linear combination
-        alpha_l = kwargs["finetune"]
-        alpha_l = alpha_l[None]
-
-        w_l = alpha_l * w_l
-        b_l = alpha_l * b_l + (o_value - alpha_l) * K.maximum(lower, z_value)
-
     index_dead = -K.clip(K.sign(upper) - o_value, -o_value, z_value)
 
     w_u = (o_value - index_dead) * w_u
