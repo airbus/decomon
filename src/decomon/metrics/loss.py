@@ -5,9 +5,15 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Lambda, Layer
 
-from decomon.core import BallDomain, BoxDomain, PerturbationDomain
+from decomon.core import (
+    BallDomain,
+    BoxDomain,
+    ForwardMode,
+    PerturbationDomain,
+    get_mode,
+)
 from decomon.layers.activations import softmax as softmax_
-from decomon.layers.core import DecomonLayer, ForwardMode, get_mode
+from decomon.layers.core import DecomonLayer
 from decomon.models.models import DecomonModel
 from decomon.utils import get_lower, get_upper, set_mode
 

@@ -1,4 +1,4 @@
-from decomon.layers.core import ForwardMode
+from decomon.core import ForwardMode
 from decomon.metrics.loss import DecomonLossFusion, DecomonRadiusRobust
 from decomon.metrics.metric import (
     AdversarialCheck,

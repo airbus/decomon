@@ -11,11 +11,11 @@ from tensorflow.keras.layers import Layer
 from decomon.core import (
     BallDomain,
     BoxDomain,
+    ForwardMode,
     InputsOutputsSpec,
     PerturbationDomain,
     Slope,
 )
-from decomon.layers.core import ForwardMode
 from decomon.utils import (
     add,
     get_linear_softplus_hull,

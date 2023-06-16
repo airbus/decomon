@@ -4,8 +4,7 @@ import tensorflow.keras.backend as K
 from numpy.testing import assert_almost_equal
 
 from decomon.backward_layers.activations import backward_relu, backward_softsign
-from decomon.core import Slope
-from decomon.layers.core import ForwardMode
+from decomon.core import ForwardMode, Slope
 
 
 @pytest.mark.parametrize(

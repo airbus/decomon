@@ -10,12 +10,12 @@ from tensorflow.types.experimental import TensorLike
 from decomon.core import (
     BallDomain,
     BoxDomain,
+    ForwardMode,
     GridDomain,
     InputsOutputsSpec,
     PerturbationDomain,
     Slope,
 )
-from decomon.layers.core import ForwardMode
 
 TensorFunction = Callable[[TensorLike], tf.Tensor]
 

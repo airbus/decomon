@@ -6,7 +6,7 @@ import pytest
 import tensorflow.keras.backend as K
 from numpy.testing import assert_allclose, assert_almost_equal
 
-from decomon.layers.core import ForwardMode
+from decomon.core import ForwardMode
 from decomon.layers.utils import add, get_lower, get_upper, max_, maximum, minus, relu_
 from decomon.utils import subtract
 

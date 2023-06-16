@@ -11,9 +11,9 @@ from decomon.backward_layers.activations import get
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import get_affine, get_ibp, get_identity_lirpa
 from decomon.backward_layers.utils_conv import get_toeplitz
-from decomon.core import GridDomain, Option, PerturbationDomain, Slope
+from decomon.core import ForwardMode, GridDomain, Option, PerturbationDomain, Slope
 from decomon.layers.convert import to_decomon
-from decomon.layers.core import DecomonLayer, ForwardMode
+from decomon.layers.core import DecomonLayer
 from decomon.layers.decomon_layers import DecomonBatchNormalization
 from decomon.layers.utils import ClipAlpha, NonNeg, NonPos
 from decomon.models.utils import get_input_dim

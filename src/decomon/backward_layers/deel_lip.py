@@ -5,9 +5,8 @@ from tensorflow.keras.layers import Layer
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import get_affine, get_ibp
-from decomon.core import PerturbationDomain
+from decomon.core import ForwardMode, PerturbationDomain
 from decomon.layers.convert import to_decomon
-from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonLayer
 
 logger = logging.getLogger(__name__)

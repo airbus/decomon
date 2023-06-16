@@ -4,8 +4,8 @@ from typing import Any, Dict, List, Optional, Union
 import tensorflow as tf
 from tensorflow.keras.layers import Layer
 
-from decomon.core import PerturbationDomain
-from decomon.layers.core import DecomonLayer, ForwardMode
+from decomon.core import ForwardMode, PerturbationDomain
+from decomon.layers.core import DecomonLayer
 from decomon.layers.decomon_merge_layers import DecomonConcatenate
 from decomon.layers.decomon_reshape import DecomonReshape
 from decomon.layers.utils import ClipAlpha, expand_dims, max_, min_, sort

@@ -17,8 +17,7 @@ from decomon.backward_layers.crown import (
     Fuse,
     MergeWithPrevious,
 )
-from decomon.core import BoxDomain, PerturbationDomain, Slope
-from decomon.layers.core import ForwardMode, get_mode
+from decomon.core import BoxDomain, ForwardMode, PerturbationDomain, Slope, get_mode
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.forward_cloning import OutputMapDict
 from decomon.models.utils import get_depth_dict

@@ -7,8 +7,7 @@ from tensorflow.keras.layers import Flatten, Layer
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import backward_max_
-from decomon.core import PerturbationDomain
-from decomon.layers.core import ForwardMode
+from decomon.core import ForwardMode, PerturbationDomain
 from decomon.utils import get_lower, get_upper
 
 

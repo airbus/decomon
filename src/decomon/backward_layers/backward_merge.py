@@ -14,8 +14,8 @@ from decomon.backward_layers.utils import (
     backward_subtract,
     get_identity_lirpa,
 )
-from decomon.core import BoxDomain, PerturbationDomain
-from decomon.layers.core import DecomonLayer, ForwardMode
+from decomon.core import BoxDomain, ForwardMode, PerturbationDomain
+from decomon.layers.core import DecomonLayer
 from decomon.layers.decomon_merge_layers import (
     DecomonAdd,
     DecomonConcatenate,

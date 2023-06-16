@@ -6,8 +6,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import InputSpec, Layer
 
 from decomon.backward_layers.utils import merge_with_previous
-from decomon.core import PerturbationDomain
-from decomon.layers.core import ForwardMode
+from decomon.core import ForwardMode, PerturbationDomain
 from decomon.utils import get_lower, get_upper
 
 

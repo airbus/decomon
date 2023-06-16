@@ -30,8 +30,7 @@ from decomon.backward_layers.crown import (
     MergeWithPrevious,
 )
 from decomon.backward_layers.deel_lip import BackwardGroupSort2
-from decomon.core import BoxDomain
-from decomon.layers.core import ForwardMode
+from decomon.core import BoxDomain, ForwardMode
 from decomon.layers.decomon_layers import (
     DecomonActivation,
     DecomonBatchNormalization,
