@@ -4,8 +4,8 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import InputSpec, Layer, Permute, Reshape
 
-from decomon.core import PerturbationDomain
-from decomon.layers.core import DecomonLayer, ForwardMode
+from decomon.core import ForwardMode, PerturbationDomain
+from decomon.layers.core import DecomonLayer
 
 
 class DecomonReshape(DecomonLayer, Reshape):

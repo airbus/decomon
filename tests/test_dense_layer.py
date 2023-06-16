@@ -8,8 +8,8 @@ from numpy.testing import assert_almost_equal
 from tensorflow.keras.layers import Dense
 
 from decomon.backward_layers.utils import get_affine, get_ibp
+from decomon.core import ForwardMode
 from decomon.layers.convert import to_decomon
-from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonDense
 from decomon.models.utils import split_activation
 

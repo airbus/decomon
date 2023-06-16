@@ -20,10 +20,10 @@ from tensorflow.keras.layers import (
 from tensorflow.python.keras.utils import conv_utils
 from tensorflow.python.keras.utils.generic_utils import to_list
 
-from decomon.core import PerturbationDomain, Slope
+from decomon.core import ForwardMode, PerturbationDomain, Slope
 from decomon.keras_utils import get_weight_index
 from decomon.layers import activations
-from decomon.layers.core import DecomonLayer, ForwardMode
+from decomon.layers.core import DecomonLayer
 from decomon.layers.utils import (
     ClipAlpha,
     ClipAlphaAndSumtoOne,

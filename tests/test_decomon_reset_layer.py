@@ -4,7 +4,7 @@ import tensorflow as tf
 from numpy.testing import assert_almost_equal
 from tensorflow.keras.layers import BatchNormalization, Conv2D, Dense, Flatten
 
-from decomon.layers.core import ForwardMode
+from decomon.core import ForwardMode
 from decomon.layers.decomon_layers import (
     DecomonBatchNormalization,
     DecomonConv2D,

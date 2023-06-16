@@ -4,8 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
-from decomon.core import InputsOutputsSpec, PerturbationDomain
-from decomon.layers.core import ForwardMode
+from decomon.core import ForwardMode, InputsOutputsSpec, PerturbationDomain
 from decomon.utils import get_lower, get_upper
 
 # step 1: compute (x_i, y_i) such that x_i[j]=l_j if j==i else u_j

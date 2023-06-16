@@ -14,8 +14,8 @@ from tensorflow.keras.layers import (
     Subtract,
 )
 
-from decomon.core import PerturbationDomain
-from decomon.layers.core import DecomonLayer, ForwardMode
+from decomon.core import ForwardMode, PerturbationDomain
+from decomon.layers.core import DecomonLayer
 from decomon.layers.utils import broadcast, multiply, permute_dimensions
 from decomon.utils import maximum, minus, subtract
 

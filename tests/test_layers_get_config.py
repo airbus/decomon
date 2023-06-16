@@ -1,6 +1,6 @@
 import pytest
 
-from decomon.layers.core import ForwardMode
+from decomon.core import ForwardMode
 from decomon.layers.decomon_layers import (
     DecomonActivation,
     DecomonBatchNormalization,

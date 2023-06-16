@@ -8,8 +8,8 @@ from tensorflow.keras.layers import Conv2D
 from tensorflow.python.keras.backend import _get_available_gpus
 
 from decomon.backward_layers.utils import get_affine, get_ibp
+from decomon.core import ForwardMode
 from decomon.layers.convert import to_decomon
-from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonConv2D
 
 

@@ -1,7 +1,6 @@
 import tensorflow.python.keras.backend as K
 
-from decomon.core import Slope
-from decomon.layers.core import ForwardMode
+from decomon.core import ForwardMode, Slope
 from decomon.layers.decomon_layers import DecomonActivation
 
 

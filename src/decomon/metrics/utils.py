@@ -2,8 +2,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import tensorflow as tf
 
-from decomon.core import BoxDomain, PerturbationDomain
-from decomon.layers.core import ForwardMode
+from decomon.core import BoxDomain, ForwardMode, PerturbationDomain
 from decomon.layers.utils import exp, expand_dims, log, sum
 from decomon.utils import add, minus
 

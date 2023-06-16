@@ -3,8 +3,6 @@ from typing import Union
 
 import numpy as np
 
-from decomon.layers import ForwardMode
-
 
 class Option(Enum):
     lagrangian = "lagrangian"
@@ -50,6 +48,30 @@ class BallDomain(PerturbationDomain):
         except:
             raise ValueError(p_error_msg)
         self.p = p
+
+
+class ForwardMode(Enum):
+    """The different forward (from input to output) linear based relaxation perturbation analysis."""
+
+    IBP = "ibp"
+    """Propagation of constant bounds from input to output."""
+
+    AFFINE = "affine"
+    """Propagation of affine bounds from input to output."""
+
+    HYBRID = "hybrid"
+    """Propagation of constant and affines bounds from input to output."""
+
+
+def get_mode(ibp: bool = True, affine: bool = True) -> ForwardMode:
+
+    if ibp:
+        if affine:
+            return ForwardMode.HYBRID
+        else:
+            return ForwardMode.IBP
+    else:
+        return ForwardMode.AFFINE
 
 
 class InputsOutputsSpec:

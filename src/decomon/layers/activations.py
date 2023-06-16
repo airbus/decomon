@@ -6,8 +6,14 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.types.experimental import TensorLike
 
-from decomon.core import BoxDomain, InputsOutputsSpec, PerturbationDomain, Slope
-from decomon.layers.core import DecomonLayer, ForwardMode
+from decomon.core import (
+    BoxDomain,
+    ForwardMode,
+    InputsOutputsSpec,
+    PerturbationDomain,
+    Slope,
+)
+from decomon.layers.core import DecomonLayer
 from decomon.layers.utils import exp, expand_dims, frac_pos, multiply, softplus_, sum
 from decomon.utils import (
     get_linear_hull_s_shape,

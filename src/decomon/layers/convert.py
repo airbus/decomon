@@ -8,8 +8,16 @@ import decomon.layers.decomon_merge_layers
 import decomon.layers.decomon_reshape
 import decomon.layers.deel_lip
 import decomon.layers.maxpooling
-from decomon.core import BallDomain, BoxDomain, GridDomain, PerturbationDomain, Slope
-from decomon.layers.core import DEEL_LIP, DecomonLayer, ForwardMode, get_mode
+from decomon.core import (
+    BallDomain,
+    BoxDomain,
+    ForwardMode,
+    GridDomain,
+    PerturbationDomain,
+    Slope,
+    get_mode,
+)
+from decomon.layers.core import DEEL_LIP, DecomonLayer
 
 # mapping between decomon class names and actual classes
 _mapping_name2class = vars(decomon.layers.decomon_layers)

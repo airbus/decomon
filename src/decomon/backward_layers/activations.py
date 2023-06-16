@@ -7,8 +7,13 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Layer
 
 from decomon.backward_layers.utils import backward_relu_, backward_softplus_
-from decomon.core import BoxDomain, InputsOutputsSpec, PerturbationDomain, Slope
-from decomon.layers.core import ForwardMode
+from decomon.core import (
+    BoxDomain,
+    ForwardMode,
+    InputsOutputsSpec,
+    PerturbationDomain,
+    Slope,
+)
 from decomon.utils import (
     get_linear_hull_relu,
     get_linear_hull_s_shape,

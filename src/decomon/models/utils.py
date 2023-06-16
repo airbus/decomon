@@ -18,8 +18,7 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model
 
-from decomon.core import BallDomain, BoxDomain, PerturbationDomain
-from decomon.layers.core import ForwardMode
+from decomon.core import BallDomain, BoxDomain, ForwardMode, PerturbationDomain
 from decomon.layers.utils import is_a_merge_layer
 from decomon.utils import get_lower, get_lower_layer, get_upper, get_upper_layer
 

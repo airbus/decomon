@@ -4,8 +4,7 @@ from tensorflow.keras.layers import Layer, Reshape
 from tensorflow.python.keras.backend import _get_available_gpus
 
 from decomon.backward_layers.convert import to_backward
-from decomon.core import Slope
-from decomon.layers.core import ForwardMode
+from decomon.core import ForwardMode, Slope
 from decomon.layers.decomon_layers import DecomonActivation, DecomonFlatten
 from decomon.layers.decomon_reshape import DecomonReshape
 

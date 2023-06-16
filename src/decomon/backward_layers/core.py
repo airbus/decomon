@@ -4,8 +4,8 @@ from typing import Any, Dict, List, Optional, Union
 import tensorflow as tf
 from tensorflow.keras.layers import Layer, Wrapper
 
-from decomon.core import BoxDomain, PerturbationDomain
-from decomon.layers.core import DecomonLayer, ForwardMode
+from decomon.core import BoxDomain, ForwardMode, PerturbationDomain
+from decomon.layers.core import DecomonLayer
 
 
 class BackwardLayer(ABC, Wrapper):

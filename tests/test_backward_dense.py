@@ -2,7 +2,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Dense, Input
 
 from decomon.backward_layers.convert import to_backward
-from decomon.layers.core import ForwardMode
+from decomon.core import ForwardMode
 from decomon.layers.decomon_layers import DecomonDense
 
 

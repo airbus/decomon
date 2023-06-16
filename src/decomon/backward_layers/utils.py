@@ -7,12 +7,12 @@ from tensorflow.keras.layers import Flatten
 
 from decomon.core import (
     BoxDomain,
+    ForwardMode,
     GridDomain,
     InputsOutputsSpec,
     PerturbationDomain,
     Slope,
 )
-from decomon.layers.core import ForwardMode
 from decomon.layers.utils import sort
 from decomon.utils import (
     get_linear_hull_relu,

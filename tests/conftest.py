@@ -19,8 +19,7 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model, Sequential
 
-from decomon.core import Slope
-from decomon.layers.core import ForwardMode
+from decomon.core import ForwardMode, Slope
 from decomon.models.utils import ConvertMethod
 
 

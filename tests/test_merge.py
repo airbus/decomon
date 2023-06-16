@@ -16,8 +16,8 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.models import Model
 
 from decomon.backward_layers.utils import get_affine, get_ibp
+from decomon.core import ForwardMode
 from decomon.layers.convert import to_decomon
-from decomon.layers.core import ForwardMode
 from decomon.layers.decomon_merge_layers import (
     DecomonAdd,
     DecomonAverage,
