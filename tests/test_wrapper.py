@@ -5,7 +5,7 @@ from tensorflow.keras.layers import Activation, Dense
 from tensorflow.keras.models import Sequential
 
 from decomon import get_lower_box, get_range_box, get_upper_box
-from decomon.backward_layers.utils import get_affine, get_ibp
+from decomon.core import get_affine, get_ibp
 from decomon.models import clone
 
 

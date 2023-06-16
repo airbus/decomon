@@ -8,8 +8,8 @@ from numpy.testing import assert_almost_equal
 from tensorflow.keras.layers import Conv2D, Input
 from tensorflow.keras.models import Model
 
-from decomon.backward_layers.utils import get_affine, get_ibp
 from decomon.backward_layers.utils_conv import get_toeplitz
+from decomon.core import get_affine, get_ibp
 from decomon.layers.convert import to_decomon
 
 
