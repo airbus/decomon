@@ -3,7 +3,7 @@
 
 import tensorflow.keras.backend as K
 
-from decomon.backward_layers.utils import get_affine, get_ibp
+from decomon.core import get_affine, get_ibp
 from decomon.models.backward_cloning import convert_backward
 from decomon.models.forward_cloning import convert_forward
 

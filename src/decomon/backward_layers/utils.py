@@ -853,17 +853,3 @@ def get_identity_lirpa(inputs: List[tf.Tensor]) -> List[tf.Tensor]:
     w_l_out = tf.linalg.diag(w_l_out)
 
     return [w_u_out, b_u_out, w_l_out, b_l_out]
-
-
-def get_ibp(mode: Union[str, ForwardMode] = ForwardMode.HYBRID) -> bool:
-    mode = ForwardMode(mode)
-    if mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
-        return True
-    return False
-
-
-def get_affine(mode: Union[str, ForwardMode] = ForwardMode.HYBRID) -> bool:
-    mode = ForwardMode(mode)
-    if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-        return True
-    return False

@@ -7,8 +7,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Activation, Dense, Flatten, Input, Reshape
 from tensorflow.keras.models import Sequential
 
-from decomon.backward_layers.utils import get_affine, get_ibp
-from decomon.core import ForwardMode, Slope, get_mode
+from decomon.core import ForwardMode, Slope, get_affine, get_ibp, get_mode
 from decomon.layers.decomon_reshape import DecomonReshape
 from decomon.models import clone
 from decomon.models.convert import FeedDirection, get_direction

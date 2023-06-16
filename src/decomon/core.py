@@ -74,6 +74,20 @@ def get_mode(ibp: bool = True, affine: bool = True) -> ForwardMode:
         return ForwardMode.AFFINE
 
 
+def get_ibp(mode: Union[str, ForwardMode] = ForwardMode.HYBRID) -> bool:
+    mode = ForwardMode(mode)
+    if mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
+        return True
+    return False
+
+
+def get_affine(mode: Union[str, ForwardMode] = ForwardMode.HYBRID) -> bool:
+    mode = ForwardMode(mode)
+    if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
+        return True
+    return False
+
+
 class InputsOutputsSpec:
     """Storing specifications for inputs and outputs of decomon/backward layer/model."""
 

@@ -15,8 +15,7 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model, Sequential
 
-from decomon.backward_layers.utils import get_affine, get_ibp
-from decomon.core import ForwardMode
+from decomon.core import ForwardMode, get_affine, get_ibp
 from decomon.models.forward_cloning import convert_forward
 
 
