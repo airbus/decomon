@@ -17,6 +17,9 @@ from decomon.layers.core import DecomonLayer, ForwardMode
 from decomon.layers.decomon_layers import DecomonBatchNormalization
 from decomon.layers.utils import ClipAlpha, NonNeg, NonPos
 from decomon.models.utils import get_input_dim
+from decomon.utils import ConvexDomainType, Option, Slope
+from decomon.backward_layers.utils_conv import get_toeplitz
+
 
 
 class BackwardDense(BackwardLayer):
