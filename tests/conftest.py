@@ -103,6 +103,26 @@ def axis(request):
     return request.param
 
 
+@pytest.fixture(params=[1, 2, 11])
+def channels(request):
+    return request.param
+
+
+@pytest.fixture(params=[1, 2, 3])
+def filter_size(request):
+    return request.param
+
+
+@pytest.fixture(params=[1, 2])
+def strides(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def flatten(request):
+    return request.param
+
+
 @pytest.fixture(params=[0, 1, 2, 3, 4, 5, 6])
 def finetune_odd(request) -> Optional[np.ndarray]:
     # hard code several configuration of finetune for images odd=1 (6, 6, 2)

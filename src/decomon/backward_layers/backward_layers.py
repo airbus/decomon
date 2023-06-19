@@ -10,6 +10,7 @@ from tensorflow.python.ops import array_ops
 from decomon.backward_layers.activations import get
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import get_affine, get_ibp, get_identity_lirpa
+from decomon.backward_layers.utils_conv import get_toeplitz
 from decomon.core import GridDomain, Option, PerturbationDomain, Slope
 from decomon.layers.convert import to_decomon
 from decomon.layers.core import DecomonLayer, ForwardMode
@@ -142,19 +143,48 @@ class BackwardConv2D(BackwardLayer):
             )
         self.frozen_weights = False
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        weight, bias = self.layer.get_backward_weights(inputs)
+    def get_affine_components(self, inputs: List[tf.Tensor]) -> Tuple[tf.Tensor, tf.Tensor]:
+        """Express the implicit affine matrix of the convolution layer.
+
+        Conv is a linear operator but its affine component is implicit
+        we use im2col and extract_patches to express the affine matrix
+        Note that this matrix is Toeplitz
+
+        Args:
+            inputs: list of input tensors
+        Returns:
+            the affine operators W, b : conv(inputs)= W.inputs + b
+        """
+
+        w_out_u_ = get_toeplitz(self.layer, True)
+        output_shape = self.layer.get_output_shape_at(0)
+        if isinstance(output_shape, list):
+            output_shape = output_shape[-1]
+        output_shape = output_shape[1:]
+        if self.layer.data_format == "channels_last":
+            b_out_u_ = K.reshape(K.zeros(output_shape, dtype=self.layer.dtype), (-1, output_shape[-1]))
+        else:
+            b_out_u_ = K.permute_dimensions(
+                K.reshape(K.zeros(output_shape, dtype=self.layer.dtype), (-1, output_shape[0])), (1, 0)
+            )
+
+        if self.layer.use_bias:
+            bias_ = K.cast(self.layer.bias, self.layer.dtype)
+            b_out_u_ = b_out_u_ + bias_[None]
+        b_out_u_ = K.flatten(b_out_u_)
 
         z_value = K.cast(0.0, self.dtype)
-        y = inputs[-1]
-        shape = np.prod(y.shape[1:])
-        y_flatten = K.reshape(z_value * y, (-1, np.prod(shape), 1))  # (None, n_in, 1)
-        w_u_out = y_flatten + K.expand_dims(weight, 0)
-        w_l_out = w_u_out
-        b_u_out = K.sum(y_flatten, 1) + bias
-        b_l_out = b_u_out
+        y_ = inputs[-1]
+        shape = np.prod(y_.shape[1:])
+        y_flatten = K.reshape(z_value * y_, (-1, np.prod(shape)))  # (None, n_in)
+        w_out_ = K.sum(y_flatten, -1)[:, None, None] + w_out_u_
+        b_out_ = K.sum(y_flatten, -1)[:, None] + b_out_u_
 
-        return [w_u_out, b_u_out, w_l_out, b_l_out]
+        return w_out_, b_out_
+
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+        weight_, bias_ = self.get_affine_components(inputs)
+        return [weight_, bias_] * 2
 
     def freeze_weights(self) -> None:
         if not self.frozen_weights:

@@ -137,7 +137,7 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         self.built = True
 
     def get_backward_weights(self, inputs: List[tf.Tensor], flatten: bool = True) -> Tuple[tf.Tensor, tf.Tensor]:
-
+        # DEPRECATED
         z_value = K.cast(0.0, self.dtype)
         o_value = K.cast(1.0, self.dtype)
 
