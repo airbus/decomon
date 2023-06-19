@@ -80,9 +80,13 @@ def get_upper_linear_hull_max(
     l_c_reshaped = K.expand_dims(l_c, -1)  # (1, shape, n_dim, 1)
     u_c_reshaped = K.expand_dims(u_c, -1)  # (1, shape, n_dim, 1)
 
-    corners = mask * l_c_reshaped + (o_value - mask) * u_c_reshaped  # (1, shape, n_dim, n_dim)
+    # detect collapsed dimensions: lower[i]==upper[i]
+    index_collapse = o_value-K.sign(l_c_reshaped-u_c_reshaped)
+
+    corners = mask * l_c_reshaped + (o_value - mask) * (u_c_reshaped)  # (1, shape, n_dim, n_dim)
     # add the corners containing all the upper bounds
-    corners = K.concatenate([corners, u_c_reshaped], axis=-1)  # (None, shape, n_dim, n_dim+1)
+    corners_collapse = K.concatenate([corners, u_c_reshaped+o_value*index_collapse], axis=-1)  # (None, shape, n_dim, n_dim+1)
+    corners = K.concatenate([corners, u_c_reshaped], axis=-1)
 
     if axis != -1:
         corners_pred = K.max(corners, axis=axis)  # (None, shape_, n_dim+1)
@@ -92,10 +96,11 @@ def get_upper_linear_hull_max(
     # include bias in corners
     if axis != -1:
         bias_corner = o_value + tf.math.reduce_sum(z_value * corners, axis, keepdims=True)
-        corners = K.concatenate([corners, bias_corner], axis=axis)  # (None, shape_, n_dim+1, n_dim+1)
+        corners_collapse = K.concatenate([corners_collapse, bias_corner], axis=axis)  # (None, shape_, n_dim+1, n_dim+1)
+
     else:
         bias_corner = o_value + tf.math.reduce_sum(z_value * corners, -2, keepdims=True)
-        corners = K.concatenate([corners, bias_corner], axis=-2)
+        corners_collapse = K.concatenate([corners_collapse, bias_corner], axis=-2)
 
     dimensions = np.arange(len(corners.shape))
     if axis != -1:
@@ -103,13 +108,13 @@ def get_upper_linear_hull_max(
     else:
         dim_permutation = np.concatenate([dimensions[:-2], dimensions[-1:], [dimensions[-2]]])
 
-    corners = K.permute_dimensions(corners, dim_permutation)  # do it properly for different axis !!!
-    # corners_ = K.permute_dimensions(corners, ())
+    corners_collapse = K.permute_dimensions(corners_collapse, dim_permutation)
     # tf.linalg.solve works only for float32
     if dtype != dtype32:
-        corners = K.cast(corners, dtype32)
+        corners_collapse = K.cast(corners_collapse, dtype32)
         corners_pred = K.cast(corners_pred, dtype32)
-    w_hull = tf.linalg.solve(matrix=corners, rhs=K.expand_dims(corners_pred, -1))  # (None, shape_, n_dim+1, 1)
+    w_hull = tf.linalg.solve(matrix=corners_collapse, rhs=K.expand_dims(corners_pred, -1))  # (None, shape_, n_dim+1, 1)
+    
     if dtype != dtype32:
         w_hull = K.cast(w_hull, dtype=dtype)
 
