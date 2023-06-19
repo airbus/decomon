@@ -81,11 +81,14 @@ def get_upper_linear_hull_max(
     u_c_reshaped = K.expand_dims(u_c, -1)  # (1, shape, n_dim, 1)
 
     # detect collapsed dimensions: lower[i]==upper[i]
-    index_collapse = o_value-K.sign(l_c_reshaped-u_c_reshaped)
+    index_collapse = o_value - K.sign(l_c_reshaped - u_c_reshaped)
 
     corners = mask * l_c_reshaped + (o_value - mask) * (u_c_reshaped)  # (1, shape, n_dim, n_dim)
+    corners_collapse = mask * l_c_reshaped + (o_value - mask) * (u_c_reshaped + index_collapse)
     # add the corners containing all the upper bounds
-    corners_collapse = K.concatenate([corners, u_c_reshaped+o_value*index_collapse], axis=-1)  # (None, shape, n_dim, n_dim+1)
+    corners_collapse = K.concatenate(
+        [corners_collapse, u_c_reshaped + index_collapse], axis=-1
+    )  # (None, shape, n_dim, n_dim+1)
     corners = K.concatenate([corners, u_c_reshaped], axis=-1)
 
     if axis != -1:
@@ -114,7 +117,7 @@ def get_upper_linear_hull_max(
         corners_collapse = K.cast(corners_collapse, dtype32)
         corners_pred = K.cast(corners_pred, dtype32)
     w_hull = tf.linalg.solve(matrix=corners_collapse, rhs=K.expand_dims(corners_pred, -1))  # (None, shape_, n_dim+1, 1)
-    
+
     if dtype != dtype32:
         w_hull = K.cast(w_hull, dtype=dtype)
 
