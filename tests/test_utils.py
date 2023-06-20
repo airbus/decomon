@@ -412,24 +412,33 @@ def test_func_with_1_input(decomon_func, tensor_func, tensor_func_kwargs, odd, m
 
 # DC_DECOMP = FALSE
 def test_max_nodc(odd, helpers):
+    dc_decomp = False
+    mode = ForwardMode.HYBRID
 
-    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
 
-    output = max_(inputs[2:], dc_decomp=False)
+    output = max_(inputs_for_mode, dc_decomp=dc_decomp, mode=mode)
     f_max = K.function(inputs, output)
     assert len(f_max(inputs_)) == 7
 
 
 def test_maximum_nodc(odd, helpers):
+    dc_decomp = False
+    mode = ForwardMode.HYBRID
 
-    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_1 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=dc_decomp)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=dc_decomp)
+    inputs_for_mode_0 = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_0, mode=mode, dc_decomp=dc_decomp)
+    inputs_for_mode_1 = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_1, mode=mode, dc_decomp=dc_decomp)
+    input_ref_0 = helpers.get_input_ref_from_full_inputs(inputs=inputs_0)
+    input_ref_1 = helpers.get_input_ref_from_full_inputs(inputs=inputs_1)
 
-    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
-    output = maximum(inputs_0[2:], inputs_1[2:], dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
+    output = maximum(inputs_for_mode_0, inputs_for_mode_1, dc_decomp=dc_decomp, mode=mode)
 
-    f_ref = K.function(inputs_0 + inputs_1, K.maximum(inputs_0[1], inputs_1[1]))
+    f_ref = K.function(inputs_0 + inputs_1, K.maximum(input_ref_0, input_ref_1))
     f_maximum = K.function(inputs_0 + inputs_1, output)
 
     assert len(f_maximum(inputs_ + inputs_)) == 7
@@ -437,38 +446,53 @@ def test_maximum_nodc(odd, helpers):
 
 
 def test_minus_nodc(odd, helpers):
+    dc_decomp = False
+    mode = ForwardMode.HYBRID
 
-    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
 
-    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
-    output = minus(inputs_0[2:], dc_decomp=False)
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
+    output = minus(inputs_for_mode, dc_decomp=dc_decomp, mode=mode)
 
-    f_ref = K.function(inputs_0, -inputs_0[1])
-    f_minus = K.function(inputs_0, output)
+    f_ref = K.function(inputs, -inputs[1])
+    f_minus = K.function(inputs, output)
 
     assert len(f_minus(inputs_)) == 7
     f_ref(inputs_)
 
 
 def test_add_nodc(odd, helpers):
+    dc_decomp = False
+    mode = ForwardMode.HYBRID
 
-    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_1 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=False)
-    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=False)
-    output = add(inputs_0[2:], inputs_1[2:], dc_decomp=False)
-    f_ref = K.function(inputs_0 + inputs_1, inputs_0[1] + inputs_1[1])
+    inputs_0 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=dc_decomp)
+    inputs_1 = helpers.get_tensor_decomposition_multid_box(odd, dc_decomp=dc_decomp)
+    inputs_for_mode_0 = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_0, mode=mode, dc_decomp=dc_decomp)
+    inputs_for_mode_1 = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_1, mode=mode, dc_decomp=dc_decomp)
+    input_ref_0 = helpers.get_input_ref_from_full_inputs(inputs=inputs_0)
+    input_ref_1 = helpers.get_input_ref_from_full_inputs(inputs=inputs_1)
+
+    inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
+
+    output = add(inputs_for_mode_0, inputs_for_mode_1, dc_decomp=dc_decomp, mode=mode)
+    f_ref = K.function(inputs_0 + inputs_1, input_ref_0 + input_ref_1)
     f_add = K.function(inputs_0 + inputs_1, output)
     assert len(f_add(inputs_ + inputs_)) == 7
     f_ref(inputs_ + inputs_)
 
 
 def test_relu_1D_box_nodc(n, helpers):
+    dc_decomp = False
+    mode = ForwardMode.HYBRID
 
-    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=False)
-    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=False)
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
 
-    output = relu_(inputs[2:], dc_decomp=False)
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
+
+    output = relu_(inputs_for_mode, dc_decomp=dc_decomp, mode=mode)
     lower = get_lower(z, W_l, b_l)
     upper = get_upper(z, W_u, b_u)
 
@@ -478,5 +502,5 @@ def test_relu_1D_box_nodc(n, helpers):
     np.min(f_lower(inputs_))
     np.max(f_upper(inputs_))
 
-    f_relu_ = K.function(inputs[2:], output)
-    assert len(f_relu_(inputs_[2:])) == 7
+    f_relu_ = K.function(inputs, output)
+    assert len(f_relu_(inputs_)) == 7
