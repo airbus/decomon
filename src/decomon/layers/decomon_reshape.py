@@ -4,7 +4,7 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import InputSpec, Layer, Permute, Reshape
 
-from decomon.core import ForwardMode, PerturbationDomain
+from decomon.core import ForwardMode, PerturbationDomain, get_affine, get_ibp
 from decomon.layers.core import DecomonLayer
 
 
@@ -73,27 +73,23 @@ class DecomonReshape(DecomonLayer, Reshape):
         def op(x: tf.Tensor) -> tf.Tensor:
             return Reshape.call(self, x)
 
-        nb_tensors = self.nb_tensors
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        dtype = x.dtype
+        empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+
         if self.dc_decomp:
-            h, g = inputs[-2:]
             h_out = op(h)
             g_out = op(g)
-            nb_tensors -= 2
-
-        if self.mode == ForwardMode.HYBRID:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
-        elif self.mode == ForwardMode.IBP:
-            u_c, l_c = inputs[:nb_tensors]
-        elif self.mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
         else:
-            raise ValueError(f"Unknown mode {self.mode}")
+            h_out, g_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
+        if self.ibp:
             u_c_out = op(u_c)
             l_c_out = op(l_c)
+        else:
+            u_c_out, l_c_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
+        if self.affine:
             b_u_out = op(b_u)
             b_l_out = op(b_l)
 
@@ -108,20 +104,12 @@ class DecomonReshape(DecomonLayer, Reshape):
 
                 w_u_out = K.rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]
                 w_l_out = K.rnn(step_function=step_func, inputs=w_l, initial_states=[], unroll=False)[1]
-
-        if self.mode == ForwardMode.HYBRID:
-            output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
-        elif self.mode == ForwardMode.AFFINE:
-            output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
-        elif self.mode == ForwardMode.IBP:
-            output = [u_c_out, l_c_out]
         else:
-            raise ValueError(f"Unknown mode {self.mode}")
+            w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
-        if self.dc_decomp:
-            output += [h_out, g_out]
-
-        return output
+        return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+        )
 
 
 class DecomonPermute(DecomonLayer, Permute):
@@ -191,27 +179,23 @@ class DecomonPermute(DecomonLayer, Permute):
         def op(x: tf.Tensor) -> tf.Tensor:
             return Permute.call(self, x)
 
-        nb_tensors = self.nb_tensors
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        dtype = x.dtype
+        empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+
         if self.dc_decomp:
-            h, g = inputs[-2:]
             h_out = op(h)
             g_out = op(g)
-            nb_tensors -= 2
-
-        if self.mode == ForwardMode.HYBRID:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
-        elif self.mode == ForwardMode.IBP:
-            u_c, l_c = inputs[:nb_tensors]
-        elif self.mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
         else:
-            raise ValueError(f"Unknown mode {self.mode}")
+            h_out, g_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
+        if self.ibp:
             u_c_out = op(u_c)
             l_c_out = op(l_c)
+        else:
+            u_c_out, l_c_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
+        if self.affine:
             b_u_out = op(b_u)
             b_l_out = op(b_l)
 
@@ -225,17 +209,9 @@ class DecomonPermute(DecomonLayer, Permute):
 
                 w_u_out = K.rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]
                 w_l_out = K.rnn(step_function=step_func, inputs=w_l, initial_states=[], unroll=False)[1]
-
-        if self.mode == ForwardMode.HYBRID:
-            output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
-        elif self.mode == ForwardMode.AFFINE:
-            output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
-        elif self.mode == ForwardMode.IBP:
-            output = [u_c_out, l_c_out]
         else:
-            raise ValueError(f"Unknown mode {self.mode}")
+            w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
-        if self.dc_decomp:
-            output += [h_out, g_out]
-
-        return output
+        return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+        )

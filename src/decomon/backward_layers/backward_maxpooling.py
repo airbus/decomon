@@ -6,7 +6,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Flatten, Layer
 
 from decomon.backward_layers.core import BackwardLayer
-from decomon.backward_layers.utils import backward_max_
+from decomon.backward_layers.utils import backward_max_, get_identity_lirpa
 from decomon.core import ForwardMode, PerturbationDomain
 from decomon.utils import get_lower, get_upper
 
@@ -39,46 +39,6 @@ class BackwardMaxPooling2D(BackwardLayer):
         )
         raise NotImplementedError()
 
-    def _pooling_function(
-        self,
-        inputs: List[tf.Tensor],
-        w_u_out: tf.Tensor,
-        b_u_out: tf.Tensor,
-        w_l_out: tf.Tensor,
-        b_l_out: tf.Tensor,
-        pool_size: Tuple[int, int],
-        strides: Tuple[int, int],
-        padding: str,
-        data_format: str,
-        perturbation_domain: PerturbationDomain,
-    ) -> List[tf.Tensor]:
-        if self.fast:
-            return self._pooling_function_fast(
-                inputs=inputs,
-                w_u_out=w_u_out,
-                b_u_out=b_u_out,
-                w_l_out=w_l_out,
-                b_l_out=b_l_out,
-                pool_size=pool_size,
-                strides=strides,
-                padding=padding,
-                data_format=data_format,
-                perturbation_domain=perturbation_domain,
-            )
-        else:
-            return self._pooling_function_not_fast(
-                inputs=inputs,
-                w_u_out=w_u_out,
-                b_u_out=b_u_out,
-                w_l_out=w_l_out,
-                b_l_out=b_l_out,
-                pool_size=pool_size,
-                strides=strides,
-                padding=padding,
-                data_format=data_format,
-                perturbation_domain=perturbation_domain,
-            )
-
     def _pooling_function_fast(
         self,
         inputs: List[tf.Tensor],
@@ -86,28 +46,17 @@ class BackwardMaxPooling2D(BackwardLayer):
         b_u_out: tf.Tensor,
         w_l_out: tf.Tensor,
         b_l_out: tf.Tensor,
-        pool_size: Tuple[int, int],
-        strides: Tuple[int, int],
-        padding: str,
-        data_format: str,
-        perturbation_domain: PerturbationDomain,
     ) -> List[tf.Tensor]:
 
-        if self.mode == ForwardMode.HYBRID:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:7]
-        elif self.mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = inputs[:5]
-            u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
-            l_c = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
-        elif self.mode == ForwardMode.IBP:
-            u_c, l_c = inputs[:2]
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        if self.mode == ForwardMode.AFFINE:
+            u_c = get_upper(x, w_u, b_u, perturbation_domain=self.perturbation_domain)
+            l_c = get_lower(x, w_l, b_l, perturbation_domain=self.perturbation_domain)
 
         op_flat = Flatten()
 
-        b_u_pooled = K.pool2d(u_c, pool_size, strides, padding, data_format, pool_mode="max")
-        b_l_pooled = K.pool2d(l_c, pool_size, strides, padding, data_format, pool_mode="max")
+        b_u_pooled = K.pool2d(u_c, self.pool_size, self.strides, self.padding, self.data_format, pool_mode="max")
+        b_l_pooled = K.pool2d(l_c, self.pool_size, self.strides, self.padding, self.data_format, pool_mode="max")
 
         b_u_pooled = K.expand_dims(K.expand_dims(op_flat(b_u_pooled), 1), -1)
         b_l_pooled = K.expand_dims(K.expand_dims(op_flat(b_l_pooled), 1), -1)
@@ -134,11 +83,6 @@ class BackwardMaxPooling2D(BackwardLayer):
         b_u_out: tf.Tensor,
         w_l_out: tf.Tensor,
         b_l_out: tf.Tensor,
-        pool_size: Tuple[int, int],
-        strides: Tuple[int, int],
-        padding: str,
-        data_format: str,
-        perturbation_domain: PerturbationDomain,
     ) -> List[tf.Tensor]:
         """
         Args:
@@ -151,76 +95,53 @@ class BackwardMaxPooling2D(BackwardLayer):
         Returns:
 
         """
-
-        if self.mode == ForwardMode.HYBRID:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:7]
-        elif self.mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = inputs[:5]
-            u_c, l_c = 0, 0
-        elif self.mode == ForwardMode.IBP:
-            u_c, l_c = inputs[:2]
-            b_u, w_l, b_l, w_u = 0, 0, 0, 0
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
-
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        dtype = x.dtype
+        empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
         y = inputs[-1]
-
         input_shape = K.int_shape(y)
 
-        if data_format in [None, "channels_last"]:
+        if self.data_format in [None, "channels_last"]:
             axis = -1
         else:
             axis = 1
 
         # initialize vars
-        x_0, u_c_list, w_u_list, b_u_list, l_c_list, w_l_list, b_l_list = None, None, None, None, None, None, None
+        u_c_tmp, w_u_tmp, b_u_tmp, l_c_tmp, w_l_tmp, b_l_tmp = (
+            empty_tensor,
+            empty_tensor,
+            empty_tensor,
+            empty_tensor,
+            empty_tensor,
+            empty_tensor,
+        )
 
-        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            u_c_list = K.concatenate([self.internal_op(elem) for elem in tf.split(u_c, input_shape[-1], -1)], -2)
-            l_c_list = K.concatenate([self.internal_op(elem) for elem in tf.split(l_c, input_shape[-1], -1)], -2)
+        if self.ibp:
+            u_c_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(u_c, input_shape[-1], -1)], -2)
+            l_c_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(l_c, input_shape[-1], -1)], -2)
 
-        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
+        if self.affine:
+            b_u_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(b_u, input_shape[-1], -1)], -2)
+            b_l_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(b_l, input_shape[-1], -1)], -2)
+            w_u_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(w_u, input_shape[-1], -1)], -2)
+            w_l_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(w_l, input_shape[-1], -1)], -2)
 
-            b_u_list = K.concatenate([self.internal_op(elem) for elem in tf.split(b_u, input_shape[-1], -1)], -2)
-            b_l_list = K.concatenate([self.internal_op(elem) for elem in tf.split(b_l, input_shape[-1], -1)], -2)
-            w_u_list = K.concatenate([self.internal_op(elem) for elem in tf.split(w_u, input_shape[-1], -1)], -2)
-            w_l_list = K.concatenate([self.internal_op(elem) for elem in tf.split(w_l, input_shape[-1], -1)], -2)
-
-        if self.mode == ForwardMode.IBP:
-            output_list = [
-                u_c_list,
-                l_c_list,
-            ]
-        elif self.mode == ForwardMode.HYBRID:
-            output_list = [
-                x_0,
-                u_c_list,
-                w_u_list,
-                b_u_list,
-                l_c_list,
-                w_l_list,
-                b_l_list,
-            ]
-        elif self.mode == ForwardMode.AFFINE:
-            output_list = [
-                x_0,
-                u_c_list,
-                w_u_list,
-                b_u_list,
-                l_c_list,
-                w_l_list,
-                b_l_list,
-            ]
+        if self.dc_decomp:
+            raise NotImplementedError()
         else:
-            raise ValueError(f"Unknown mode {self.mode}")
+            h_tmp, g_tmp = empty_tensor, empty_tensor
+
+        outputs_tmp = self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x, u_c_tmp, w_u_tmp, b_u_tmp, l_c_tmp, w_l_tmp, b_l_tmp, h_tmp, g_tmp]
+        )
 
         w_u_out, b_u_out, w_l_out, b_l_out = backward_max_(
-            output_list,
+            outputs_tmp,
             w_u_out,
             b_u_out,
             w_l_out,
             b_l_out,
-            perturbation_domain=perturbation_domain,
+            perturbation_domain=self.perturbation_domain,
             mode=self.mode,
             dc_decomp=self.dc_decomp,
             axis=-1,
@@ -243,7 +164,7 @@ class BackwardMaxPooling2D(BackwardLayer):
         w_list = [self.internal_op(identity_mat) for identity_mat in id_list]
 
         # flatten
-        weights = [K.reshape(op_flat(weights), (n_dim, -1, np.prod(pool_size))) for weights in w_list]
+        weights = [K.reshape(op_flat(weights), (n_dim, -1, np.prod(self.pool_size))) for weights in w_list]
 
         n_0 = weights[0].shape[1]
         n_1 = weights[0].shape[2]
@@ -263,18 +184,20 @@ class BackwardMaxPooling2D(BackwardLayer):
         return [w_u_out, b_u_out, w_l_out, b_l_out]
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
-        inputs_wo_backward_bounds = inputs[:-4]
-        w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
-        return self._pooling_function(
-            inputs=inputs_wo_backward_bounds,
-            w_u_out=w_u_out,
-            b_u_out=b_u_out,
-            w_l_out=w_l_out,
-            b_l_out=b_l_out,
-            pool_size=self.pool_size,
-            strides=self.strides,
-            padding=self.padding,
-            data_format=self.data_format,
-            perturbation_domain=self.perturbation_domain,
-        )
+        w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa()
+        if self.fast:
+            return self._pooling_function_fast(
+                inputs=inputs,
+                w_u_out=w_u_out,
+                b_u_out=b_u_out,
+                w_l_out=w_l_out,
+                b_l_out=b_l_out,
+            )
+        else:
+            return self._pooling_function_not_fast(
+                inputs=inputs,
+                w_u_out=w_u_out,
+                b_u_out=b_u_out,
+                w_l_out=w_l_out,
+                b_l_out=b_l_out,
+            )

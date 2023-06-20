@@ -63,55 +63,45 @@ class DecomonAdd(DecomonMerge, Add):
         )
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+        # splits the inputs
+        (
+            inputs_x,
+            inputs_u_c,
+            inputs_w_u,
+            inputs_b_u,
+            inputs_l_c,
+            inputs_w_l,
+            inputs_b_l,
+            inputs_h,
+            inputs_g,
+        ) = self.inputs_outputs_spec.get_fullinputs_by_type_from_inputsformode_to_merge(inputs)
+        x_out = inputs_x[0]
+        dtype = x_out.dtype
+        empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+
+        # outputs
+        if self.ibp:
+            u_c_out = sum(inputs_u_c)
+            l_c_out = sum(inputs_l_c)
+        else:
+            u_c_out, l_c_out = empty_tensor, empty_tensor
+
+        if self.affine:
+            b_u_out = sum(inputs_b_u)
+            b_l_out = sum(inputs_b_l)
+            w_u_out = sum(inputs_w_u)
+            w_l_out = sum(inputs_w_l)
+        else:
+            w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
         if self.dc_decomp:
             raise NotImplementedError()
-
-        n_comp = self.nb_tensors
-
-        # splits the inputs
-        if self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-            inputs_x = inputs[::n_comp]
-            output_x = inputs_x[0]
-
-        if self.mode == ForwardMode.IBP:
-            inputs_u_c = inputs[::n_comp]
-            inputs_l_c = inputs[1::n_comp]
-        elif self.mode == ForwardMode.HYBRID:
-            inputs_u_c = inputs[1::n_comp]
-            inputs_w_u = inputs[2::n_comp]
-            inputs_b_u = inputs[3::n_comp]
-            inputs_l_c = inputs[4::n_comp]
-            inputs_w_l = inputs[5::n_comp]
-            inputs_b_l = inputs[6::n_comp]
-        elif self.mode == ForwardMode.AFFINE:
-            inputs_w_u = inputs[1::n_comp]
-            inputs_b_u = inputs[2::n_comp]
-            inputs_w_l = inputs[3::n_comp]
-            inputs_b_l = inputs[4::n_comp]
         else:
-            raise ValueError(f"Unknown mode {self.mode}")
+            h_out, g_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            output_u_c = sum(inputs_u_c)
-            output_l_c = sum(inputs_l_c)
-        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-            output_b_u = sum(inputs_b_u)
-            output_b_l = sum(inputs_b_l)
-
-            output_w_u = sum(inputs_w_u)
-            output_w_l = sum(inputs_w_l)
-
-        if self.mode == ForwardMode.IBP:
-            output = [output_u_c, output_l_c]
-        elif self.mode == ForwardMode.AFFINE:
-            output = [output_x, output_w_u, output_b_u, output_w_l, output_b_l]
-        elif self.mode == ForwardMode.HYBRID:
-            output = [output_x, output_u_c, output_w_u, output_b_u, output_l_c, output_w_l, output_b_l]
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
-
-        return output
+        return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x_out, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+        )
 
 
 class DecomonAverage(DecomonMerge, Average):
@@ -144,53 +134,45 @@ class DecomonAverage(DecomonMerge, Average):
         self.op = Lambda(lambda x: sum(x) / len(x))
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+        # splits the inputs
+        (
+            inputs_x,
+            inputs_u_c,
+            inputs_w_u,
+            inputs_b_u,
+            inputs_l_c,
+            inputs_w_l,
+            inputs_b_l,
+            inputs_h,
+            inputs_g,
+        ) = self.inputs_outputs_spec.get_fullinputs_by_type_from_inputsformode_to_merge(inputs)
+        x_out = inputs_x[0]
+        dtype = x_out.dtype
+        empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+
+        # outputs
+        if self.ibp:
+            u_c_out = self.op(inputs_u_c)
+            l_c_out = self.op(inputs_l_c)
+        else:
+            u_c_out, l_c_out = empty_tensor, empty_tensor
+
+        if self.affine:
+            b_u_out = self.op(inputs_b_u)
+            b_l_out = self.op(inputs_b_l)
+            w_u_out = self.op(inputs_w_u)
+            w_l_out = self.op(inputs_w_l)
+        else:
+            w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
         if self.dc_decomp:
             raise NotImplementedError()
-
-        n_comp = self.nb_tensors
-
-        # splits the inputs
-        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-            output_x = inputs[0]
-        if self.mode == ForwardMode.IBP:
-            inputs_u_c = inputs[::n_comp]
-            inputs_l_c = inputs[1::n_comp]
-        elif self.mode == ForwardMode.HYBRID:
-            inputs_u_c = inputs[1::n_comp]
-            inputs_w_u = inputs[2::n_comp]
-            inputs_b_u = inputs[3::n_comp]
-            inputs_l_c = inputs[4::n_comp]
-            inputs_w_l = inputs[5::n_comp]
-            inputs_b_l = inputs[6::n_comp]
-        elif self.mode == ForwardMode.AFFINE:
-            inputs_w_u = inputs[1::n_comp]
-            inputs_b_u = inputs[2::n_comp]
-            inputs_w_l = inputs[3::n_comp]
-            inputs_b_l = inputs[4::n_comp]
         else:
-            raise ValueError(f"Unknown mode {self.mode}")
+            h_out, g_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            output_u_c = self.op(inputs_u_c)
-            output_l_c = self.op(inputs_l_c)
-        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-            output_b_u = self.op(inputs_b_u)
-            output_b_l = self.op(inputs_b_l)
-
-            output_w_u = self.op(inputs_w_u)
-            output_w_l = self.op(inputs_w_l)
-
-        if self.mode == ForwardMode.IBP:
-            output = [output_u_c, output_l_c]
-        elif self.mode == ForwardMode.AFFINE:
-            output = [output_x, output_w_u, output_b_u, output_w_l, output_b_l]
-        elif self.mode == ForwardMode.HYBRID:
-            output = [output_x, output_u_c, output_w_u, output_b_u, output_l_c, output_w_l, output_b_l]
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
-
-        return output
+        return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x_out, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+        )
 
 
 class DecomonSubtract(DecomonMerge, Subtract):
@@ -227,8 +209,11 @@ class DecomonSubtract(DecomonMerge, Subtract):
             raise NotImplementedError()
 
         # splits the inputs
-        n_comp = self.nb_tensors
-        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs) // n_comp)]
+        inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
+
+        # check number of inputs
+        if len(inputs_list) != 2:
+            raise ValueError("This layer is intended to merge only 2 layers.")
 
         output = subtract(
             inputs_list[0],
@@ -273,34 +258,32 @@ class DecomonMinimum(DecomonMerge, Minimum):
         if self.dc_decomp:
             raise NotImplementedError()
 
-        n_comp = self.nb_tensors
-
-        # check there is more than one input
-        if len(inputs) == n_comp:
-            return inputs
-
         # splits the inputs
-        inputs_list = [
-            minus(inputs[n_comp * i : n_comp * (i + 1)], mode=self.mode) for i in range(len(inputs) // n_comp)
-        ]
+        inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
+        # look at minus the input to apply maximum
+        inputs_list = [minus(single_inputs, mode=self.mode, dc_decomp=self.dc_decomp) for single_inputs in inputs_list]
 
-        output = maximum(
-            inputs_list[0],
-            inputs_list[1],
-            dc_decomp=self.dc_decomp,
-            perturbation_domain=self.perturbation_domain,
-            mode=self.mode,
-        )
-        for j in range(2, len(inputs) // n_comp):
+        #  check number of inputs
+        if len(inputs_list) == 1:  # nothing to merge
+            return inputs
+        else:
             output = maximum(
-                output,
-                inputs_list[j],
+                inputs_list[0],
+                inputs_list[1],
                 dc_decomp=self.dc_decomp,
                 perturbation_domain=self.perturbation_domain,
                 mode=self.mode,
             )
+            for j in range(2, len(inputs_list)):
+                output = maximum(
+                    output,
+                    inputs_list[j],
+                    dc_decomp=self.dc_decomp,
+                    perturbation_domain=self.perturbation_domain,
+                    mode=self.mode,
+                )
 
-        return minus(output, mode=self.mode)
+            return minus(output, mode=self.mode, dc_decomp=self.dc_decomp)
 
 
 class DecomonMaximum(DecomonMerge, Maximum):
@@ -336,29 +319,28 @@ class DecomonMaximum(DecomonMerge, Maximum):
         if self.dc_decomp:
             raise NotImplementedError()
 
-        n_comp = self.nb_tensors
-
-        # check there is more than one input
-        if len(inputs) == n_comp:
-            return inputs
         # splits the inputs
-        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs) // n_comp)]
+        inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
 
-        output = maximum(
-            inputs_list[0],
-            inputs_list[1],
-            dc_decomp=self.dc_decomp,
-            perturbation_domain=self.perturbation_domain,
-            mode=self.mode,
-        )
-        for j in range(2, len(inputs) // n_comp):
+        #  check number of inputs
+        if len(inputs_list) == 1:  # nothing to merge
+            return inputs
+        else:
             output = maximum(
-                output,
-                inputs_list[j],
+                inputs_list[0],
+                inputs_list[1],
                 dc_decomp=self.dc_decomp,
                 perturbation_domain=self.perturbation_domain,
                 mode=self.mode,
             )
+            for j in range(2, len(inputs_list)):
+                output = maximum(
+                    output,
+                    inputs_list[j],
+                    dc_decomp=self.dc_decomp,
+                    perturbation_domain=self.perturbation_domain,
+                    mode=self.mode,
+                )
 
         return output
 
@@ -403,52 +385,45 @@ class DecomonConcatenate(DecomonMerge, Concatenate):
             self.op_w = Concatenate(axis=self.axis + 1)
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+        # splits the inputs
+        (
+            inputs_x,
+            inputs_u_c,
+            inputs_w_u,
+            inputs_b_u,
+            inputs_l_c,
+            inputs_w_l,
+            inputs_b_l,
+            inputs_h,
+            inputs_g,
+        ) = self.inputs_outputs_spec.get_fullinputs_by_type_from_inputsformode_to_merge(inputs)
+        x_out = inputs_x[0]
+        dtype = x_out.dtype
+        empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+
+        # outputs
+        if self.ibp:
+            u_c_out = self.op(inputs_u_c)
+            l_c_out = self.op(inputs_l_c)
+        else:
+            u_c_out, l_c_out = empty_tensor, empty_tensor
+
+        if self.affine:
+            b_u_out = self.op(inputs_b_u)
+            b_l_out = self.op(inputs_b_l)
+            w_u_out = self.op_w(inputs_w_u)
+            w_l_out = self.op_w(inputs_w_l)
+        else:
+            w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
+
         if self.dc_decomp:
             raise NotImplementedError()
-
-        n_comp = self.nb_tensors
-
-        # splits the inputs
-        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-            inputs_x = inputs[::n_comp]
-            output_x = inputs_x[0]
-        if self.mode == ForwardMode.IBP:
-            inputs_u_c = inputs[::n_comp]
-            inputs_l_c = inputs[1::n_comp]
-        elif self.mode == ForwardMode.HYBRID:
-            inputs_u_c = inputs[1::n_comp]
-            inputs_w_u = inputs[2::n_comp]
-            inputs_b_u = inputs[3::n_comp]
-            inputs_l_c = inputs[4::n_comp]
-            inputs_w_l = inputs[5::n_comp]
-            inputs_b_l = inputs[6::n_comp]
-        elif self.mode == ForwardMode.AFFINE:
-            inputs_w_u = inputs[1::n_comp]
-            inputs_b_u = inputs[2::n_comp]
-            inputs_w_l = inputs[3::n_comp]
-            inputs_b_l = inputs[4::n_comp]
         else:
-            raise ValueError(f"Unknown mode {self.mode}")
+            h_out, g_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            output_u_c = self.op(inputs_u_c)
-            output_l_c = self.op(inputs_l_c)
-        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-            output_b_u = self.op(inputs_b_u)
-            output_b_l = self.op(inputs_b_l)
-
-            output_w_u = self.op_w(inputs_w_u)
-            output_w_l = self.op_w(inputs_w_l)
-
-        if self.mode == ForwardMode.IBP:
-            output = [output_u_c, output_l_c]
-        elif self.mode == ForwardMode.AFFINE:
-            output = [output_x, output_w_u, output_b_u, output_w_l, output_b_l]
-        elif self.mode == ForwardMode.HYBRID:
-            output = [output_x, output_u_c, output_w_u, output_b_u, output_l_c, output_w_l, output_b_l]
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
-        return output
+        return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x_out, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+        )
 
 
 class DecomonMultiply(DecomonMerge, Multiply):
@@ -484,28 +459,30 @@ class DecomonMultiply(DecomonMerge, Multiply):
         if self.dc_decomp:
             raise NotImplementedError()
 
-        n_comp = self.nb_tensors
-
         # splits the inputs
-        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs) // n_comp)]
+        inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
 
-        output = multiply(
-            inputs_list[0],
-            inputs_list[1],
-            dc_decomp=self.dc_decomp,
-            perturbation_domain=self.perturbation_domain,
-            mode=self.mode,
-        )
-        for j in range(2, len(inputs) // n_comp):
+        #  check number of inputs
+        if len(inputs_list) == 1:  # nothing to merge
+            return inputs
+        else:
             output = multiply(
-                output,
-                inputs_list[j],
+                inputs_list[0],
+                inputs_list[1],
                 dc_decomp=self.dc_decomp,
                 perturbation_domain=self.perturbation_domain,
                 mode=self.mode,
             )
+            for j in range(2, len(inputs_list)):
+                output = multiply(
+                    output,
+                    inputs_list[j],
+                    dc_decomp=self.dc_decomp,
+                    perturbation_domain=self.perturbation_domain,
+                    mode=self.mode,
+                )
 
-        return output
+            return output
 
 
 class DecomonDot(DecomonMerge, Dot):
@@ -547,57 +524,55 @@ class DecomonDot(DecomonMerge, Dot):
         if self.dc_decomp:
             raise NotImplementedError()
 
-        n_comp = self.nb_tensors
+        # splits the inputs
+        inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
 
-        # permute dimensions and reshape
-        inputs_0 = inputs[:n_comp]
-        inputs_1 = inputs[n_comp:]
-
-        if self.mode == ForwardMode.IBP:
-            n_0 = len(inputs_0[0].shape) - 2
-            n_1 = len(inputs_1[0].shape) - 2
-        elif self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-            n_0 = len(inputs_0[-1].shape) - 2
-            n_1 = len(inputs_1[-1].shape) - 2
+        #  check number of inputs
+        if len(inputs_list) == 1:  # nothing to merge
+            return inputs
+        elif len(inputs_list) == 2:
+            inputs_0, inputs_1 = inputs_list
         else:
-            raise ValueError(f"Unknown mode {self.mode}")
+            raise NotImplementedError("This layer is not implemented to merge more than 2 layers.")
+
+        input_shape_0 = self.inputs_outputs_spec.get_input_shape(inputs_0)
+        input_shape_1 = self.inputs_outputs_spec.get_input_shape(inputs_1)
+        n_0 = len(input_shape_0) - 2
+        n_1 = len(input_shape_1) - 2
 
         inputs_0 = permute_dimensions(inputs_0, self.axes[0], mode=self.mode, dc_decomp=self.dc_decomp)
         inputs_1 = permute_dimensions(inputs_1, self.axes[1], mode=self.mode, dc_decomp=self.dc_decomp)
-
         inputs_0 = broadcast(inputs_0, n_1, -1, mode=self.mode, dc_decomp=self.dc_decomp)
         inputs_1 = broadcast(inputs_1, n_0, 2, mode=self.mode, dc_decomp=self.dc_decomp)
-
         outputs_multiply = multiply(
             inputs_0, inputs_1, dc_decomp=self.dc_decomp, perturbation_domain=self.perturbation_domain, mode=self.mode
         )
 
-        if self.mode == ForwardMode.IBP:
-            u_c, l_c = outputs_multiply[: self.nb_tensors]
-        elif self.mode == ForwardMode.AFFINE:
-            x, w_u, b_u, w_l, b_l = outputs_multiply[: self.nb_tensors]
-        elif self.mode == ForwardMode.HYBRID:
-            x, u_c, w_u, b_u, l_c, w_l, b_l = outputs_multiply[: self.nb_tensors]
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(
+            outputs_multiply
+        )
+        dtype = x.dtype
+        empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
-        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
+        if self.ibp:
             u_c_out = K.sum(u_c, 1)
             l_c_out = K.sum(l_c, 1)
+        else:
+            u_c_out, l_c_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
+        if self.affine:
             w_u_out = K.sum(w_u, 2)
             b_u_out = K.sum(b_u, 1)
             w_l_out = K.sum(w_l, 2)
             b_l_out = K.sum(b_l, 1)
-
-        if self.mode == ForwardMode.IBP:
-            outputs = [u_c_out, l_c_out]
-        elif self.mode == ForwardMode.AFFINE:
-            outputs = [x, w_u_out, b_u_out, w_l_out, b_l_out]
-        elif self.mode == ForwardMode.HYBRID:
-            outputs = [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
         else:
-            raise ValueError(f"Unknown mode {self.mode}")
+            w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
-        return outputs
+        if self.dc_decomp:
+            raise NotImplementedError()
+        else:
+            h_out, g_out = empty_tensor, empty_tensor
+
+        return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+        )

@@ -4,7 +4,14 @@ from typing import Any, Dict, List, Optional, Union
 import tensorflow as tf
 from tensorflow.keras.layers import Layer, Wrapper
 
-from decomon.core import BoxDomain, ForwardMode, PerturbationDomain
+from decomon.core import (
+    BoxDomain,
+    ForwardMode,
+    InputsOutputsSpec,
+    PerturbationDomain,
+    get_affine,
+    get_ibp,
+)
 from decomon.layers.core import DecomonLayer
 
 
@@ -37,6 +44,15 @@ class BackwardLayer(ABC, Wrapper):
             else:
                 self.perturbation_domain = perturbation_domain
             self.dc_decomp = dc_decomp
+        self.inputs_outputs_spec = InputsOutputsSpec(dc_decomp=self.dc_decomp, mode=self.mode)
+
+    @property
+    def ibp(self) -> bool:
+        return get_ibp(self.mode)
+
+    @property
+    def affine(self) -> bool:
+        return get_affine(self.mode)
 
     def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
