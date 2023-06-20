@@ -158,23 +158,9 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         if not isinstance(inputs, list):
             raise ValueError("A merge layer should be called on a list of inputs.")
 
-        if self.mode == ForwardMode.HYBRID:
-            if self.dc_decomp:
-                x_0, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs[: self.nb_tensors]
-            else:
-                x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: self.nb_tensors]
-        elif self.mode == ForwardMode.IBP:
-            if self.dc_decomp:
-                u_c, l_c, h, g = inputs[: self.nb_tensors]
-            else:
-                u_c, l_c = inputs[: self.nb_tensors]
-        elif self.mode == ForwardMode.AFFINE:
-            if self.dc_decomp:
-                x_0, w_u, b_u, w_l, b_l, h, g = inputs[: self.nb_tensors]
-            else:
-                x_0, w_u, b_u, w_l, b_l = inputs[: self.nb_tensors]
-        else:
-            raise ValueError(f"unknown  forward mode {self.mode}")
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        dtype = x.dtype
+        empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
         def conv_pos(x: tf.Tensor) -> tf.Tensor:
             return K.conv2d(
@@ -199,13 +185,16 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         if self.dc_decomp:
             h_out = conv_pos(h) + conv_neg(g)
             g_out = conv_pos(g) + conv_neg(h)
+        else:
+            h_out, g_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
+        if self.ibp:
             u_c_out = conv_pos(u_c) + conv_neg(l_c)
             l_c_out = conv_pos(l_c) + conv_neg(u_c)
+        else:
+            u_c_out, l_c_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-
+        if self.affine:
             y = K.conv2d(
                 b_u,
                 self.kernel,
@@ -235,7 +224,7 @@ class DecomonConv2D(DecomonLayer, Conv2D):
 
             else:
                 # check for linearity
-                x_max = get_upper(x_0, w_u - w_l, b_u - b_l, self.perturbation_domain)
+                x_max = get_upper(x, w_u - w_l, b_u - b_l, self.perturbation_domain)
                 mask_b = o_value - K.sign(x_max)
 
                 def step_pos(x: tf.Tensor, _: List[tf.Tensor]) -> Tuple[tf.Tensor, List[tf.Tensor]]:
@@ -255,47 +244,35 @@ class DecomonConv2D(DecomonLayer, Conv2D):
                     K.rnn(step_function=step_pos, inputs=w_l, initial_states=[], unroll=False)[1]
                     + K.rnn(step_function=step_neg, inputs=w_u, initial_states=[], unroll=False)[1]
                 )
+        else:
+            w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
-        # add bias
         if self.mode == ForwardMode.HYBRID:
-            upper = get_upper(x_0, w_u_out, b_u_out, self.perturbation_domain)
-            lower = get_lower(x_0, w_l_out, b_l_out, self.perturbation_domain)
-
+            upper = get_upper(x, w_u_out, b_u_out, self.perturbation_domain)
+            lower = get_lower(x, w_l_out, b_l_out, self.perturbation_domain)
             u_c_out = K.minimum(upper, u_c_out)
-
             l_c_out = K.maximum(lower, l_c_out)
 
         if self.use_bias:
             if self.dc_decomp:
                 g_out = K.bias_add(g_out, K.minimum(z_value, self.bias), data_format=self.data_format)
                 h_out = K.bias_add(h_out, K.maximum(z_value, self.bias), data_format=self.data_format)
-
-            if self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
+            if self.affine:
                 b_u_out = K.bias_add(b_u_out, self.bias, data_format=self.data_format)
                 b_l_out = K.bias_add(b_l_out, self.bias, data_format=self.data_format)
-            if self.mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
+            if self.ibp:
                 u_c_out = K.bias_add(u_c_out, self.bias, data_format=self.data_format)
                 l_c_out = K.bias_add(l_c_out, self.bias, data_format=self.data_format)
 
         if self.mode == ForwardMode.HYBRID:
-            upper = get_upper(x_0, w_u_out, b_u_out, self.perturbation_domain)
+            upper = get_upper(x, w_u_out, b_u_out, self.perturbation_domain)
             u_c_out = K.minimum(upper, u_c_out)
-            lower = get_lower(x_0, w_l_out, b_l_out, self.perturbation_domain)
+            lower = get_lower(x, w_l_out, b_l_out, self.perturbation_domain)
             l_c_out = K.maximum(lower, l_c_out)
 
-        if self.mode == ForwardMode.HYBRID:
-            output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
-        elif self.mode == ForwardMode.IBP:
-            output = [u_c_out, l_c_out]
-        elif self.mode == ForwardMode.AFFINE:
-            output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
-
-        if self.dc_decomp:
-            output += [h_out, g_out]
-
-        return output
+        return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+        )
 
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         """
@@ -430,14 +407,7 @@ class DecomonDense(DecomonLayer, Dense):
 
         assert len(input_shape) >= self.nb_tensors
 
-        if self.mode == ForwardMode.IBP:
-            input_dim = input_shape[0][-1]
-        elif self.mode == ForwardMode.HYBRID:
-            input_dim = input_shape[1][-1]
-        elif self.mode == ForwardMode.AFFINE:
-            input_dim = input_shape[2][-1]
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
+        input_dim = input_shape[-1][-1]
 
         if not self.shared:
             self.kernel = self.add_weight(
@@ -541,32 +511,27 @@ class DecomonDense(DecomonLayer, Dense):
         kernel_pos = K.maximum(z_value, self.kernel)
         kernel_neg = K.minimum(z_value, self.kernel)
 
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        dtype = x.dtype
+        empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+
         if self.dc_decomp:
-            h, g = inputs[-2:]
             h_out = K.dot(h, kernel_pos) + K.dot(g, kernel_neg)
             g_out = K.dot(g, kernel_pos) + K.dot(h, kernel_neg)
-            rest = 2
         else:
-            rest = 0
-        if self.mode == ForwardMode.HYBRID:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: self.nb_tensors - rest]
-        elif self.mode == ForwardMode.IBP:
-            u_c, l_c = inputs[: self.nb_tensors - rest]
-        elif self.mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = inputs[: self.nb_tensors - rest]
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
+            h_out, g_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
+        if self.ibp:
             if not self.has_backward_bounds:
                 u_c_out = self.op_dot(u_c, kernel_pos) + self.op_dot(l_c, kernel_neg)
                 l_c_out = self.op_dot(l_c, kernel_pos) + self.op_dot(u_c, kernel_neg)
             else:
                 u_c_out = self.op_dot(u_c, kernel_pos_back) + self.op_dot(l_c, kernel_neg_back)
                 l_c_out = self.op_dot(l_c, kernel_pos_back) + self.op_dot(u_c, kernel_neg_back)
+        else:
+            u_c_out, l_c_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-
+        if self.affine:
             if len(w_u.shape) == len(b_u.shape):
                 y = K.dot(b_u, self.kernel)
                 w_u_out = K.expand_dims(0 * y, 1) + K.expand_dims(self.kernel, 0)
@@ -584,22 +549,23 @@ class DecomonDense(DecomonLayer, Dense):
                 else:
 
                     raise NotImplementedError()  # bug somewhere
+        else:
+            w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
         if self.use_bias:
-
             if not self.has_backward_bounds:
-                if self.mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
+                if self.ibp:
                     u_c_out = K.bias_add(u_c_out, self.bias, data_format="channels_last")
                     l_c_out = K.bias_add(l_c_out, self.bias, data_format="channels_last")
-                if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
+                if self.affine:
                     b_u_out = K.bias_add(b_u_out, self.bias, data_format="channels_last")
                     b_l_out = K.bias_add(b_l_out, self.bias, data_format="channels_last")
             else:
                 b = K.sum(back_bound * self.bias[None, None], 1)
-                if self.mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
+                if self.ibp:
                     u_c_out = u_c_out + b
                     l_c_out = l_c_out + b
-                if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
+                if self.affine:
                     b_u_out = b_u_out + b
                     b_l_out = b_l_out + b
 
@@ -610,23 +576,14 @@ class DecomonDense(DecomonLayer, Dense):
                 g_out = K.bias_add(g_out, K.minimum(z_value, self.bias), data_format="channels_last")
 
         if self.mode == ForwardMode.HYBRID:
-            upper = get_upper(x_0, w_u_out, b_u_out, self.perturbation_domain)
-            lower = get_lower(x_0, w_l_out, b_l_out, self.perturbation_domain)
-
+            upper = get_upper(x, w_u_out, b_u_out, self.perturbation_domain)
+            lower = get_lower(x, w_l_out, b_l_out, self.perturbation_domain)
             l_c_out = K.maximum(lower, l_c_out)
             u_c_out = K.minimum(upper, u_c_out)
 
-        if self.mode == ForwardMode.HYBRID:
-            output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
-        if self.mode == ForwardMode.AFFINE:
-            output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
-        if self.mode == ForwardMode.IBP:
-            output = [u_c_out, l_c_out]
-
-        if self.dc_decomp:
-            output += [h_out, g_out]
-
-        return output
+        return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+        )
 
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         """
@@ -864,46 +821,35 @@ class DecomonFlatten(DecomonLayer, Flatten):
         def op(x: tf.Tensor) -> tf.Tensor:
             return Flatten.call(self, x)
 
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        dtype = x.dtype
+        empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+
         if self.dc_decomp:
-            h, g = inputs[-2:]
             h_out = op(h)
             g_out = op(g)
-        if self.mode == ForwardMode.HYBRID:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: self.nb_tensors]
-        elif self.mode == ForwardMode.IBP:
-            u_c, l_c = inputs[: self.nb_tensors]
-        elif self.mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = inputs[: self.nb_tensors]
         else:
-            raise ValueError(f"Unknown mode {self.mode}")
+            h_out, g_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
+        if self.ibp:
             u_c_out = op(u_c)
             l_c_out = op(l_c)
+        else:
+            u_c_out, l_c_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
+        if self.affine:
             b_u_out = op(b_u)
             b_l_out = op(b_l)
-
+            input_dim = x.shape[-1]
             output_shape = np.prod(list(K.int_shape(b_u_out))[1:])
-            input_dim = K.int_shape(x_0)[-1]
-
             w_u_out = K.reshape(w_u, (-1, input_dim, output_shape))
             w_l_out = K.reshape(w_l, (-1, input_dim, output_shape))
-
-        if self.mode == ForwardMode.HYBRID:
-            output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
-        elif self.mode == ForwardMode.IBP:
-            output = [u_c_out, l_c_out]
-        elif self.mode == ForwardMode.AFFINE:
-            output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
         else:
-            raise ValueError(f"Unknown mode {self.mode}")
+            w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
-        if self.dc_decomp:
-            output += [h_out, g_out]
-
-        return output
+        return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+        )
 
 
 class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
@@ -999,15 +945,9 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
         def call_op(x: tf.Tensor, training: bool) -> tf.Tensor:
             return BatchNormalization.call(self, x, training=training)
 
-        if self.dc_decomp:
-            raise NotImplementedError()
-
-        if self.mode == ForwardMode.HYBRID:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: self.nb_tensors]
-        elif self.mode == ForwardMode.IBP:
-            u_c, l_c = inputs[: self.nb_tensors]
-        elif self.mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = inputs[: self.nb_tensors]
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        dtype = x.dtype
+        empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
         y = call_op(inputs[-1], training=training)
 
@@ -1027,16 +967,15 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
         moving_mean = K.reshape(self.moving_mean + z_value, shape)
         moving_variance = K.reshape(self.moving_variance + z_value, shape)
 
-        if self.mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
-
+        if self.ibp:
             u_c_0 = (u_c - moving_mean) / K.sqrt(moving_variance + self.epsilon)
             l_c_0 = (l_c - moving_mean) / K.sqrt(moving_variance + self.epsilon)
-
             u_c_out = K.maximum(z_value, gamma) * u_c_0 + K.minimum(z_value, gamma) * l_c_0 + beta
             l_c_out = K.maximum(z_value, gamma) * l_c_0 + K.minimum(z_value, gamma) * u_c_0 + beta
+        else:
+            u_c_out, l_c_out = empty_tensor, empty_tensor
 
-        if self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-
+        if self.affine:
             b_u_0 = (b_u - moving_mean) / K.sqrt(moving_variance + self.epsilon)
             b_l_0 = (b_l - moving_mean) / K.sqrt(moving_variance + self.epsilon)
 
@@ -1050,15 +989,17 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
             w_l_0 = w_l / K.sqrt(moving_variance + self.epsilon)
             w_u_out = K.maximum(z_value, gamma) * w_u_0 + K.minimum(z_value, gamma) * w_l_0
             w_l_out = K.maximum(z_value, gamma) * w_l_0 + K.minimum(z_value, gamma) * w_u_0
+        else:
+            w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
-        if self.mode == ForwardMode.HYBRID:
-            output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
-        if self.mode == ForwardMode.IBP:
-            output = [u_c_out, l_c_out]
-        if self.mode == ForwardMode.AFFINE:
-            output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
+        if self.dc_decomp:
+            raise NotImplementedError()
+        else:
+            h_out, g_out = empty_tensor, empty_tensor
 
-        return output
+        return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+        )
 
     @property
     def keras_weights_names(self) -> List[str]:

@@ -157,161 +157,86 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
     def _pooling_function_fast(
         self,
         inputs: List[tf.Tensor],
-        pool_size: Tuple[int, int],
-        strides: Tuple[int, int],
-        padding: str,
-        data_format: str,
-        mode: ForwardMode,
     ) -> List[tf.Tensor]:
 
-        if self.dc_decomp:
-            raise NotImplementedError()
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        dtype = x.dtype
+        empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
-        if mode == ForwardMode.HYBRID:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: self.nb_tensors]
-        elif mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = inputs[: self.nb_tensors]
-        elif mode == ForwardMode.IBP:
-            u_c, l_c = inputs[: self.nb_tensors]
-        else:
-            raise ValueError(f"Unknown mode {mode}")
+        if self.mode == ForwardMode.AFFINE:
+            u_c = get_upper(x, w_u, b_u)
+            l_c = get_lower(x, w_l, b_l)
 
-        if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            l_c_out = K.pool2d(l_c, pool_size, strides, padding, data_format, pool_mode="max")
-            u_c_out = K.pool2d(u_c, pool_size, strides, padding, data_format, pool_mode="max")
+        l_c_out = K.pool2d(l_c, self.pool_size, self.strides, self.padding, self.data_format, pool_mode="max")
+        u_c_out = K.pool2d(u_c, self.pool_size, self.strides, self.padding, self.data_format, pool_mode="max")
 
-        if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-
-            if mode == ForwardMode.AFFINE:
-                u_c = get_upper(x_0, w_u, b_u)
-                l_c = get_lower(x_0, w_l, b_l)
-
-                l_c_out = K.pool2d(l_c, pool_size, strides, padding, data_format, pool_mode="max")
-                u_c_out = K.pool2d(u_c, pool_size, strides, padding, data_format, pool_mode="max")
-
-            n_in = x_0.shape[-1]
+        if self.affine:
+            n_in = x.shape[-1]
             w_u_out = K.concatenate([0 * K.expand_dims(u_c_out, 1)] * n_in, 1)
             w_l_out = w_u_out
             b_u_out = u_c_out
             b_l_out = l_c_out
-
-        if mode == ForwardMode.IBP:
-            output = [u_c_out, l_c_out]
-        elif mode == ForwardMode.HYBRID:
-            output = [
-                x_0,
-                u_c_out,
-                w_u_out,
-                b_u_out,
-                l_c_out,
-                w_l_out,
-                b_l_out,
-            ]
-        elif mode == ForwardMode.AFFINE:
-            output = [
-                x_0,
-                w_u_out,
-                b_u_out,
-                w_l_out,
-                b_l_out,
-            ]
         else:
-            raise ValueError(f"Unknown mode {mode}")
-        return output
+            w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
+
+        if self.dc_decomp:
+            raise NotImplementedError()
+        else:
+            h_out, g_out = empty_tensor, empty_tensor
+
+        return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+        )
 
     def _pooling_function_not_fast(
         self,
         inputs: List[tf.Tensor],
-        pool_size: Tuple[int, int],
-        strides: Tuple[int, int],
-        padding: str,
-        data_format: str,
-        mode: ForwardMode,
     ) -> List[tf.Tensor]:
-        nb_tensors = self.nb_tensors
-        if self.dc_decomp:
-            h, g = inputs[-2:]
-            nb_tensors -= 2
-
-        if mode == ForwardMode.HYBRID:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
-        elif mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
-        elif mode == ForwardMode.IBP:
-            u_c, l_c = inputs[:nb_tensors]
-        else:
-            raise ValueError(f"Unknown mode {mode}")
-
-        input_shape = K.int_shape(inputs[-1])
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        dtype = x.dtype
+        empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+        input_shape = self.inputs_outputs_spec.get_input_shape(inputs)
+        n_split = input_shape[-1]
 
         if self.dc_decomp:
-            h_list = K.concatenate(
-                [self.internal_op(elem) for elem in tf.split(h, input_shape[-1], -1)],
+            h_out = K.concatenate(
+                [self.internal_op(elem) for elem in tf.split(h, n_split, -1)],
                 -2,
             )
-            g_list = K.concatenate(
-                [self.internal_op(elem) for elem in tf.split(g, input_shape[-1], -1)],
+            g_out = K.concatenate(
+                [self.internal_op(elem) for elem in tf.split(g, n_split, -1)],
                 -2,
             )
-
-        if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            u_c_list = K.concatenate([self.internal_op(elem) for elem in tf.split(u_c, input_shape[-1], -1)], -2)
-            l_c_list = K.concatenate([self.internal_op(elem) for elem in tf.split(l_c, input_shape[-1], -1)], -2)
-
-        if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-
-            b_u_list = K.concatenate([self.internal_op(elem) for elem in tf.split(b_u, input_shape[-1], -1)], -2)
-            b_l_list = K.concatenate([self.internal_op(elem) for elem in tf.split(b_l, input_shape[-1], -1)], -2)
-            w_u_list = K.concatenate([self.internal_op(elem) for elem in tf.split(w_u, input_shape[-1], -1)], -2)
-            w_l_list = K.concatenate([self.internal_op(elem) for elem in tf.split(w_l, input_shape[-1], -1)], -2)
-
-        if mode == ForwardMode.IBP:
-            output_list = [u_c_list, l_c_list]
-        elif mode == ForwardMode.HYBRID:
-            output_list = [
-                x_0,
-                u_c_list,
-                w_u_list,
-                b_u_list,
-                l_c_list,
-                w_l_list,
-                b_l_list,
-            ]
-        elif mode == ForwardMode.AFFINE:
-            output_list = [
-                x_0,
-                w_u_list,
-                b_u_list,
-                w_l_list,
-                b_l_list,
-            ]
         else:
-            raise ValueError(f"Unknown mode {mode}")
-        if self.dc_decomp:
-            output_list += [h_list, g_list]
+            h_out, g_out = empty_tensor, empty_tensor
 
-        output = max_(output_list, axis=-1, dc_decomp=self.dc_decomp, mode=mode)
-
-        return output
-
-    def _pooling_function(
-        self,
-        inputs: List[tf.Tensor],
-        pool_size: Tuple[int, int],
-        strides: Tuple[int, int],
-        padding: str,
-        data_format: str,
-        mode: ForwardMode,
-    ) -> List[tf.Tensor]:
-
-        if self.fast:
-            return self._pooling_function_fast(inputs, pool_size, strides, padding, data_format, mode)
+        if self.ibp:
+            u_c_out = K.concatenate([self.internal_op(elem) for elem in tf.split(u_c, n_split, -1)], -2)
+            l_c_out = K.concatenate([self.internal_op(elem) for elem in tf.split(l_c, n_split, -1)], -2)
         else:
-            return self._pooling_function_not_fast(inputs, pool_size, strides, padding, data_format, mode)
+            u_c_out, l_c_out = empty_tensor, empty_tensor
+
+        if self.affine:
+            b_u_out = K.concatenate([self.internal_op(elem) for elem in tf.split(b_u, n_split, -1)], -2)
+            b_l_out = K.concatenate([self.internal_op(elem) for elem in tf.split(b_l, n_split, -1)], -2)
+            w_u_out = K.concatenate([self.internal_op(elem) for elem in tf.split(w_u, n_split, -1)], -2)
+            w_l_out = K.concatenate([self.internal_op(elem) for elem in tf.split(w_l, n_split, -1)], -2)
+        else:
+            w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
+
+        outputs = self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+        )
+
+        return max_(
+            outputs, axis=-1, dc_decomp=self.dc_decomp, mode=self.mode, perturbation_domain=self.perturbation_domain
+        )
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
-        return self._pooling_function(inputs, self.pool_size, self.strides, self.padding, self.data_format, self.mode)
+        if self.fast:
+            return self._pooling_function_fast(inputs)
+        else:
+            return self._pooling_function_not_fast(inputs)
 
 
 # Aliases

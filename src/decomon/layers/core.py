@@ -4,7 +4,14 @@ from typing import Any, Dict, List, Optional, Type, Union
 import tensorflow as tf
 from tensorflow.keras.layers import Layer
 
-from decomon.core import BoxDomain, ForwardMode, InputsOutputsSpec, PerturbationDomain
+from decomon.core import (
+    BoxDomain,
+    ForwardMode,
+    InputsOutputsSpec,
+    PerturbationDomain,
+    get_affine,
+    get_ibp,
+)
 from decomon.keras_utils import get_weight_index_from_name
 
 DEEL_LIP = "deel-lip>"
@@ -44,7 +51,8 @@ class DecomonLayer(ABC, Layer):
 
         if perturbation_domain is None:
             perturbation_domain = BoxDomain()
-        self.nb_tensors = InputsOutputsSpec(dc_decomp, mode).nb_tensors
+        self.inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+        self.nb_tensors = self.inputs_outputs_spec.nb_tensors
         self.dc_decomp = dc_decomp
         self.perturbation_domain = perturbation_domain
         self.mode = ForwardMode(mode)
@@ -54,6 +62,14 @@ class DecomonLayer(ABC, Layer):
         self.shared = shared
         self.fast = fast
         self.has_backward_bounds = False  # optimizing Forward LiRPA for adversarial perturbation
+
+    @property
+    def ibp(self) -> bool:
+        return get_ibp(self.mode)
+
+    @property
+    def affine(self) -> bool:
+        return get_affine(self.mode)
 
     def get_config(self) -> Dict[str, Any]:
         config = super().get_config()

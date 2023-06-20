@@ -166,6 +166,54 @@ class InputsOutputsSpec:
 
         return [x, u_c, w_u, b_u, l_c, w_l, b_l, h, g]
 
+    def get_fullinputs_by_type_from_inputsformode_to_merge(
+        self, inputsformode: List[tf.Tensor]
+    ) -> List[List[tf.Tensor]]:
+        dtype = inputsformode[0].dtype
+        nb_tensors_by_input = self.nb_tensors
+        nb_inputs = len(inputsformode) // nb_tensors_by_input
+        nonelike_tensor = self.get_empty_tensor(dtype=dtype)
+        nonelike_tensor_list = [nonelike_tensor] * nb_inputs
+        if self.mode == ForwardMode.HYBRID:
+            inputs_x = inputsformode[0::nb_tensors_by_input]
+            inputs_u_c = inputsformode[1::nb_tensors_by_input]
+            inputs_w_u = inputsformode[2::nb_tensors_by_input]
+            inputs_b_u = inputsformode[3::nb_tensors_by_input]
+            inputs_l_c = inputsformode[4::nb_tensors_by_input]
+            inputs_w_l = inputsformode[5::nb_tensors_by_input]
+            inputs_b_l = inputsformode[6::nb_tensors_by_input]
+        elif self.mode == ForwardMode.IBP:
+            inputs_u_c = inputsformode[0::nb_tensors_by_input]
+            inputs_l_c = inputsformode[1::nb_tensors_by_input]
+            inputs_x, inputs_w_u, inputs_b_u, inputs_w_l, inputs_b_l = (
+                nonelike_tensor_list,
+                nonelike_tensor_list,
+                nonelike_tensor_list,
+                nonelike_tensor_list,
+                nonelike_tensor_list,
+            )
+        elif self.mode == ForwardMode.AFFINE:
+            inputs_x = inputsformode[0::nb_tensors_by_input]
+            inputs_w_u = inputsformode[1::nb_tensors_by_input]
+            inputs_b_u = inputsformode[2::nb_tensors_by_input]
+            inputs_w_l = inputsformode[3::nb_tensors_by_input]
+            inputs_b_l = inputsformode[4::nb_tensors_by_input]
+            inputs_u_c, inputs_l_c = nonelike_tensor_list, nonelike_tensor_list
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
+
+        if self.dc_decomp:
+            inputs_h = inputsformode[nb_tensors_by_input - 2 :: nb_tensors_by_input]
+            inputs_g = inputsformode[nb_tensors_by_input - 1 :: nb_tensors_by_input]
+        else:
+            inputs_h, inputs_g = nonelike_tensor_list, nonelike_tensor_list
+
+        return [inputs_x, inputs_u_c, inputs_w_u, inputs_b_u, inputs_l_c, inputs_w_l, inputs_b_l, inputs_h, inputs_g]
+
+    def split_inputsformode_to_merge(self, inputsformode: List[tf.Tensor]) -> List[List[tf.Tensor]]:
+        n_comp = self.nb_tensors
+        return [inputsformode[n_comp * i : n_comp * (i + 1)] for i in range(len(inputsformode) // n_comp)]
+
     def extract_inputsformode_from_fullinputs(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs
         if self.mode == ForwardMode.HYBRID:

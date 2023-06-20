@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from itertools import chain
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
@@ -14,7 +15,14 @@ from decomon.backward_layers.utils import (
     backward_subtract,
     get_identity_lirpa,
 )
-from decomon.core import BoxDomain, ForwardMode, PerturbationDomain
+from decomon.core import (
+    BoxDomain,
+    ForwardMode,
+    InputsOutputsSpec,
+    PerturbationDomain,
+    get_affine,
+    get_ibp,
+)
 from decomon.layers.core import DecomonLayer
 from decomon.layers.decomon_merge_layers import (
     DecomonAdd,
@@ -57,6 +65,15 @@ class BackwardMerge(ABC, Wrapper):
             else:
                 self.perturbation_domain = perturbation_domain
             self.dc_decomp = dc_decomp
+        self.inputs_outputs_spec = InputsOutputsSpec(dc_decomp=self.dc_decomp, mode=self.mode)
+
+    @property
+    def ibp(self) -> bool:
+        return get_ibp(self.mode)
+
+    @property
+    def affine(self) -> bool:
+        return get_affine(self.mode)
 
     def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
@@ -133,38 +150,28 @@ class BackwardAdd(BackwardMerge):
         ).call
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
-
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
-        n_comp = 2
-        if self.mode == ForwardMode.AFFINE:
-            n_comp = 5
-        if self.mode == ForwardMode.HYBRID:
-            n_comp = 7
 
-        n_elem = len(inputs) // n_comp
-
-        if n_elem == 1:
+        inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
+        #  check number of inputs
+        if len(inputs_list) == 1:  # nothing to merge
             return [[w_u_out, b_u_out, w_l_out, b_l_out]]
+        elif len(inputs_list) == 2:
+            bounds_0, bounds_1 = backward_add(
+                inputs_list[0],
+                inputs_list[1],
+                w_u_out,
+                b_u_out,
+                w_l_out,
+                b_l_out,
+                perturbation_domain=self.perturbation_domain,
+                mode=self.mode,
+                dc_decomp=self.dc_decomp,
+            )
+            return [bounds_0, bounds_1]
+
         else:
-            if n_elem > 2:
-                raise NotImplementedError()
-            else:
-
-                inputs_0 = inputs[:n_comp]
-                inputs_1 = inputs[n_comp:]
-
-                bounds_0, bounds_1 = backward_add(
-                    inputs_0,
-                    inputs_1,
-                    w_u_out,
-                    b_u_out,
-                    w_l_out,
-                    b_l_out,
-                    perturbation_domain=self.perturbation_domain,
-                    mode=self.mode,
-                    dc_decomp=self.dc_decomp,
-                )
-                return [bounds_0, bounds_1]
+            raise NotImplementedError("This layer is intended to merge only 2 layers.")
 
 
 class BackwardAverage(BackwardMerge):
@@ -193,25 +200,21 @@ class BackwardAverage(BackwardMerge):
 
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
-        n_comp = 2
-        if self.mode == ForwardMode.AFFINE:
-            n_comp = 5
-        if self.mode == ForwardMode.HYBRID:
-            n_comp = 7
-
-        n_elem = len(inputs) // n_comp
-        if n_elem == 1:
+        inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
+        n_elem = len(inputs_list)
+        #  check number of inputs
+        if n_elem == 1:  # nothing to merge
             return [[w_u_out, b_u_out, w_l_out, b_l_out]]
         else:
             bounds: List[List[tf.Tensor]] = []
             input_bounds: List[List[tf.Tensor]] = []
 
-            for j in np.arange(1, n_elem)[::-1]:
-                inputs_1 = inputs[n_comp * j : n_comp * (j + 1)]
+            for j in range(n_elem - 1, 0, -1):
+                inputs_1 = inputs_list[j]
                 if j == 1:
-                    inputs_0 = inputs[:n_comp]
+                    inputs_0 = inputs_list[0]
                 else:
-                    inputs_0 = self.op(inputs[: n_comp * j])
+                    inputs_0 = self.op(list(chain(*inputs_list[: (j - 1)])))  # merge (j-1) first inputs
                 bounds_0, bounds_1 = backward_add(
                     inputs_0,
                     inputs_1,
@@ -258,20 +261,13 @@ class BackwardSubtract(BackwardMerge):
             raise KeyError()
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+        w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
-        inputs_wo_backward_bounds = inputs[:-4]
-        w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
+        inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
+        n_elem = len(inputs_list)
 
-        n_comp = 4
-        if self.mode == ForwardMode.AFFINE:
-            n_comp = 6
-        if self.mode == ForwardMode.HYBRID:
-            n_comp = 8
-
-        n_elem = len(inputs_wo_backward_bounds) // n_comp
-        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs_wo_backward_bounds) // n_comp)]
         if n_elem != 2:
-            raise ValueError()
+            raise NotImplementedError("This layer is intended to merge only 2 layers.")
 
         return backward_subtract(
             inputs_list[0],
@@ -310,20 +306,13 @@ class BackwardMaximum(BackwardMerge):
             raise KeyError()
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+        w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
-        inputs_wo_backward_bounds = inputs[:-4]
-        w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
+        inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
+        n_elem = len(inputs_list)
 
-        n_comp = 4
-        if self.mode == ForwardMode.AFFINE:
-            n_comp = 6
-        if self.mode == ForwardMode.HYBRID:
-            n_comp = 8
-
-        n_elem = len(inputs_wo_backward_bounds) // n_comp
-        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs_wo_backward_bounds) // n_comp)]
         if n_elem != 2:
-            raise ValueError()
+            raise NotImplementedError("This layer is intended to merge only 2 layers.")
 
         return backward_maximum(
             inputs_list[0],
@@ -362,20 +351,13 @@ class BackwardMinimum(BackwardMerge):
             raise KeyError()
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+        w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
-        inputs_wo_backward_bounds = inputs[:-4]
-        w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
+        inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
+        n_elem = len(inputs_list)
 
-        n_comp = 4
-        if self.mode == ForwardMode.AFFINE:
-            n_comp = 6
-        if self.mode == ForwardMode.HYBRID:
-            n_comp = 8
-
-        n_elem = len(inputs_wo_backward_bounds) // n_comp
-        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs_wo_backward_bounds) // n_comp)]
         if n_elem != 2:
-            raise ValueError()
+            raise NotImplementedError("This layer is intended to merge only 2 layers.")
 
         return backward_minimum(
             inputs_list[0],
@@ -416,20 +398,11 @@ class BackwardConcatenate(BackwardMerge):
         self.axis = self.layer.axis
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
-        inputs_wo_backward_bounds = inputs[:-4]
-        w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
+        w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
-        n_comp = 4
-        if self.mode == ForwardMode.AFFINE:
-            n_comp = 6
-        if self.mode == ForwardMode.HYBRID:
-            n_comp = 8
-
-        n_elem = len(inputs_wo_backward_bounds) // n_comp
-        n_list = [
-            inputs[n_comp * i : n_comp * (i + 1)][0].shape[self.axis]
-            for i in range(len(inputs_wo_backward_bounds) // n_comp)
-        ]
+        inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
+        n_elem = len(inputs_list)
+        n_list = [self.inputs_outputs_spec.get_input_shape(subinputs)[self.axis] for subinputs in inputs_list]
         axis_w = self.axis
         if axis_w != -1:
             axis_w += 1
@@ -467,20 +440,13 @@ class BackwardMultiply(BackwardMerge):
             raise KeyError()
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+        w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
-        inputs_wo_backward_bounds = inputs[:-4]
-        w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
+        inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
+        n_elem = len(inputs_list)
 
-        n_comp = 4
-        if self.mode == ForwardMode.AFFINE:
-            n_comp = 6
-        if self.mode == ForwardMode.HYBRID:
-            n_comp = 8
-
-        n_elem = len(inputs_wo_backward_bounds) // n_comp
-        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs_wo_backward_bounds) // n_comp)]
         if n_elem != 2:
-            raise ValueError()
+            raise NotImplementedError("This layer is intended to merge only 2 layers.")
 
         return backward_multiply(
             inputs_list[0],
@@ -524,20 +490,13 @@ class BackwardDot(BackwardMerge):
         raise NotImplementedError()
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+        w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
-        inputs_wo_backward_bounds = inputs[:-4]
-        w_u_out, b_u_out, w_l_out, b_l_out = inputs[-4:]
+        inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
+        n_elem = len(inputs_list)
 
-        n_comp = 4
-        if self.mode == ForwardMode.AFFINE:
-            n_comp = 6
-        if self.mode == ForwardMode.HYBRID:
-            n_comp = 8
-
-        n_elem = len(inputs_wo_backward_bounds) // n_comp
-        inputs_list = [inputs[n_comp * i : n_comp * (i + 1)] for i in range(len(inputs_wo_backward_bounds) // n_comp)]
         if n_elem != 2:
-            raise ValueError()
+            raise NotImplementedError("This layer is intended to merge only 2 layers.")
 
         # permute dimensions and reshape
         inputs_0 = inputs_list[0]
@@ -564,7 +523,7 @@ class BackwardDot(BackwardMerge):
         for elem in split(inputs_multiplied, axis=self.axes[0], mode=self.mode):
             inputs_add += elem
 
-        bounds = self.op.call(inputs_add + inputs[-4:])
+        bounds = self.op.call(inputs_add)
         n = len(inputs_add)
         bounds = [[1.0 / n * elem for elem in bounds_i] for bounds_i in bounds]
 
