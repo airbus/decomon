@@ -1,4 +1,5 @@
 import warnings
+from typing import List, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -154,3 +155,44 @@ def get_toeplitz_channels_first(conv_layer: Conv2D, flatten: bool = True) -> tf.
         return K.reshape(w, (w_in * h_in * c_in, w_out * h_out * c_out))
     else:
         return w
+
+
+def get_affine_components(conv_layer: Conv2D, inputs: List[tf.Tensor]) -> Tuple[tf.Tensor, tf.Tensor]:
+    """Express the implicit affine matrix of the convolution layer.
+
+    Conv is a linear operator but its affine component is implicit
+    we use im2col and extract_patches to express the affine matrix
+    Note that this matrix is Toeplitz
+
+    Args:
+        conv_layer: Keras Conv2D layer or Decomon Conv2D layer
+        inputs: list of input tensors
+    Returns:
+        the affine operators W, b : conv(inputs)= W.inputs + b
+    """
+
+    w_out_u_ = get_toeplitz(conv_layer, True)
+    output_shape = conv_layer.get_output_shape_at(0)
+    if isinstance(output_shape, list):
+        output_shape = output_shape[-1]
+    output_shape = output_shape[1:]
+    if conv_layer.data_format == "channels_last":
+        b_out_u_ = K.reshape(K.zeros(output_shape, dtype=conv_layer.dtype), (-1, output_shape[-1]))
+    else:
+        b_out_u_ = K.permute_dimensions(
+            K.reshape(K.zeros(output_shape, dtype=conv_layer.dtype), (-1, output_shape[0])), (1, 0)
+        )
+
+    if conv_layer.use_bias:
+        bias_ = K.cast(conv_layer.bias, conv_layer.dtype)
+        b_out_u_ = b_out_u_ + bias_[None]
+    b_out_u_ = K.flatten(b_out_u_)
+
+    z_value = K.cast(0.0, conv_layer.dtype)
+    y_ = inputs[-1]
+    shape = np.prod(y_.shape[1:])
+    y_flatten = K.reshape(z_value * y_, (-1, np.prod(shape)))  # (None, n_in)
+    w_out_ = K.sum(y_flatten, -1)[:, None, None] + w_out_u_
+    b_out_ = K.sum(y_flatten, -1)[:, None] + b_out_u_
+
+    return w_out_, b_out_
