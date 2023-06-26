@@ -12,6 +12,8 @@ from decomon.core import (
     InputsOutputsSpec,
     PerturbationDomain,
     Slope,
+    get_affine,
+    get_ibp,
 )
 from decomon.layers.core import DecomonLayer
 from decomon.layers.utils import exp, expand_dims, frac_pos, multiply, softplus_, sum
@@ -109,30 +111,26 @@ def linear_hull_s_shape(
 
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    if dc_decomp:
-        raise NotImplementedError()
-    mode = ForwardMode(mode)
-    if mode == ForwardMode.IBP:
-        u_c, l_c = inputs[: InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode).nb_tensors]
-    elif mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[: InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode).nb_tensors]
-    elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = inputs[: InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode).nb_tensors]
-        u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
-        l_c = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
-    else:
-        raise ValueError(f"Unknown mode {mode}")
 
-    if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
+    mode = ForwardMode(mode)
+    affine = get_affine(mode)
+    ibp = get_ibp(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    dtype = x.dtype
+    empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+
+    if ibp:
         u_c_out = func(u_c)
         l_c_out = func(l_c)
+    else:
+        u_c_out, l_c_out = empty_tensor, empty_tensor
 
-    if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-
+    if affine:
         w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
             inputs, func=func, f_prime=f_prime, perturbation_domain=perturbation_domain, mode=mode
         )
-
         if len(w_u.shape) == len(b_u.shape):
             # it happens with the convert function to spare memory footprint
             n_dim = np.prod(w_u.shape[1:])
@@ -143,23 +141,22 @@ def linear_hull_s_shape(
             w_l_out = M * K.concatenate([K.expand_dims(w_l_0, 1)] * n_dim, 1)
             b_u_out = b_u_0
             b_l_out = b_l_0
-
         else:
             w_u_out = K.expand_dims(w_u_0, 1) * w_u  # pour l'instant
             b_u_out = b_u_0 + w_u_0 * b_u
             w_l_out = K.expand_dims(w_l_0, 1) * w_l
             b_l_out = b_l_0 + w_l_0 * b_l
-
-    if mode == ForwardMode.IBP:
-        output = [u_c_out, l_c_out]
-    elif mode == ForwardMode.HYBRID:
-        output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
-    elif mode == ForwardMode.AFFINE:
-        output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
     else:
-        raise ValueError(f"Unknown mode {mode}")
+        w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
-    return output
+    if dc_decomp:
+        raise NotImplementedError()
+    else:
+        h_out, g_out = empty_tensor, empty_tensor
+
+    return inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+        [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+    )
 
 
 def sigmoid(
@@ -349,8 +346,6 @@ def linear(
     Returns:
         the updated list of tensors
     """
-    if perturbation_domain is None:
-        perturbation_domain = BoxDomain()
     return inputs
 
 
@@ -473,6 +468,8 @@ def softmax(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
+    ibp = get_ibp(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
 
     outputs_exp = exponential(
         minus(inputs, mode=mode), dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode, slope=slope
@@ -488,21 +485,12 @@ def softmax(
         axis=axis,
     )
     outputs = multiply(outputs_exp, outputs, mode=mode, perturbation_domain=perturbation_domain)
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(outputs)
+    if ibp:
+        u_c = K.minimum(u_c, 1.0)
+        l_c = K.maximum(l_c, 0.0)
 
-    if mode == ForwardMode.IBP:
-        u_c, l_c = outputs
-        if clip:
-            return [K.minimum(u_c, 1.0), K.maximum(l_c, 0.0)]
-        else:
-            return outputs
-    if mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = outputs
-        if clip:
-            u_c = K.minimum(u_c, 1.0)
-            l_c = K.maximum(l_c, 0.0)
-        return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
-
-    return outputs
+    return inputs_outputs_spec.extract_outputsformode_from_fulloutputs([x, u_c, w_u, b_u, l_c, w_l, b_l, h, g])
 
 
 def group_sort_2(

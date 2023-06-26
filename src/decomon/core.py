@@ -1,7 +1,9 @@
 from enum import Enum
-from typing import Union
+from typing import List, Tuple, Union
 
 import numpy as np
+import tensorflow as tf
+from tensorflow.keras import backend as K
 
 
 class Option(Enum):
@@ -104,7 +106,7 @@ class InputsOutputsSpec:
         self.dc_decomp = dc_decomp
 
     @property
-    def nb_tensors(self):
+    def nb_tensors(self) -> int:
         if self.mode == ForwardMode.HYBRID:
             nb_tensors = 7
         elif self.mode == ForwardMode.IBP:
@@ -112,9 +114,75 @@ class InputsOutputsSpec:
         elif self.mode == ForwardMode.AFFINE:
             nb_tensors = 5
         else:
-            raise NotImplementedError(f"unknown forward mode {mode}")
+            raise NotImplementedError(f"unknown forward mode {self.mode}")
 
         if self.dc_decomp:
             nb_tensors += 2
 
         return nb_tensors
+
+    def get_input_shape(self, inputsformode: List[tf.Tensor]) -> tf.TensorShape:
+        return inputsformode[-1].shape
+
+    def get_fullinputs_from_inputsformode(self, inputsformode: List[tf.Tensor]) -> List[tf.Tensor]:
+        dtype = inputsformode[0].dtype
+        nb_tensors = self.nb_tensors
+        nonelike_tensor = self.get_empty_tensor(dtype=dtype)
+        if self.dc_decomp:
+            if self.mode == ForwardMode.HYBRID:
+                x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputsformode[:nb_tensors]
+            elif self.mode == ForwardMode.IBP:
+                u_c, l_c, h, g = inputsformode[:nb_tensors]
+                x, w_u, b_u, w_l, b_l = (
+                    nonelike_tensor,
+                    nonelike_tensor,
+                    nonelike_tensor,
+                    nonelike_tensor,
+                    nonelike_tensor,
+                )
+            elif self.mode == ForwardMode.AFFINE:
+                x, w_u, b_u, w_l, b_l, h, g = inputsformode[:nb_tensors]
+                u_c, l_c = nonelike_tensor, nonelike_tensor
+            else:
+                raise ValueError(f"Unknown mode {self.mode}")
+        else:
+            h, g = nonelike_tensor, nonelike_tensor
+            if self.mode == ForwardMode.HYBRID:
+                x, u_c, w_u, b_u, l_c, w_l, b_l = inputsformode[:nb_tensors]
+            elif self.mode == ForwardMode.IBP:
+                u_c, l_c = inputsformode[:nb_tensors]
+                x, w_u, b_u, w_l, b_l = (
+                    nonelike_tensor,
+                    nonelike_tensor,
+                    nonelike_tensor,
+                    nonelike_tensor,
+                    nonelike_tensor,
+                )
+            elif self.mode == ForwardMode.AFFINE:
+                x, w_u, b_u, w_l, b_l = inputsformode[:nb_tensors]
+                u_c, l_c = nonelike_tensor, nonelike_tensor
+            else:
+                raise ValueError(f"Unknown mode {self.mode}")
+
+        return [x, u_c, w_u, b_u, l_c, w_l, b_l, h, g]
+
+    def extract_inputsformode_from_fullinputs(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs
+        if self.mode == ForwardMode.HYBRID:
+            inputsformode = [x, u_c, w_u, b_u, l_c, w_l, b_l]
+        elif self.mode == ForwardMode.IBP:
+            inputsformode = [u_c, l_c]
+        elif self.mode == ForwardMode.AFFINE:
+            inputsformode = [x, w_u, b_u, w_l, b_l]
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
+        if self.dc_decomp:
+            inputsformode += [h, g]
+        return inputsformode
+
+    def extract_outputsformode_from_fulloutputs(self, outputs: List[tf.Tensor]) -> List[tf.Tensor]:
+        return self.extract_inputsformode_from_fullinputs(outputs)
+
+    @staticmethod
+    def get_empty_tensor(dtype: Union[str, tf.DType] = K.floatx()) -> tf.Tensor:
+        return tf.constant([], dtype=dtype)

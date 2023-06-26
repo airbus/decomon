@@ -162,6 +162,7 @@ class BackwardAdd(BackwardMerge):
                     b_l_out,
                     perturbation_domain=self.perturbation_domain,
                     mode=self.mode,
+                    dc_decomp=self.dc_decomp,
                 )
                 return [bounds_0, bounds_1]
 
@@ -220,6 +221,7 @@ class BackwardAverage(BackwardMerge):
                     b_l_out,
                     perturbation_domain=self.perturbation_domain,
                     mode=self.mode,
+                    dc_decomp=self.dc_decomp,
                 )
                 input_bounds.append(bounds_1)
                 bounds.append(bounds_0)
@@ -280,6 +282,7 @@ class BackwardSubtract(BackwardMerge):
             b_l_out,
             perturbation_domain=self.layer.perturbation_domain,
             mode=self.mode,
+            dc_decomp=self.dc_decomp,
         )
 
 
@@ -331,6 +334,7 @@ class BackwardMaximum(BackwardMerge):
             b_l_out,
             perturbation_domain=self.layer.perturbation_domain,
             mode=self.mode,
+            dc_decomp=self.dc_decomp,
         )
 
 
@@ -382,6 +386,7 @@ class BackwardMinimum(BackwardMerge):
             b_l_out,
             perturbation_domain=self.layer.perturbation_domain,
             mode=self.mode,
+            dc_decomp=self.dc_decomp,
         )
 
 
@@ -486,6 +491,7 @@ class BackwardMultiply(BackwardMerge):
             b_l_out,
             perturbation_domain=self.layer.perturbation_domain,
             mode=self.mode,
+            dc_decomp=self.dc_decomp,
         )
 
 
@@ -540,11 +546,11 @@ class BackwardDot(BackwardMerge):
         n_0 = len(inputs_0[0].shape) - 2
         n_1 = len(inputs_1[0].shape) - 2
 
-        input_0_permuted = permute_dimensions(inputs_0, self.axes[0], mode=self.mode)
-        input_1_permuted = permute_dimensions(inputs_1, self.axes[1], mode=self.mode)
+        input_0_permuted = permute_dimensions(inputs_0, self.axes[0], mode=self.mode, dc_decomp=self.dc_decomp)
+        input_1_permuted = permute_dimensions(inputs_1, self.axes[1], mode=self.mode, dc_decomp=self.dc_decomp)
 
-        inputs_0_broadcasted = broadcast(input_0_permuted, n_1, -1, mode=self.mode)
-        inputs_1_broadcasted = broadcast(input_1_permuted, n_0, 2, mode=self.mode)
+        inputs_0_broadcasted = broadcast(input_0_permuted, n_1, -1, mode=self.mode, dc_decomp=self.dc_decomp)
+        inputs_1_broadcasted = broadcast(input_1_permuted, n_0, 2, mode=self.mode, dc_decomp=self.dc_decomp)
 
         inputs_multiplied = multiply(
             inputs_0_broadcasted,
@@ -580,6 +586,7 @@ class BackwardDot(BackwardMerge):
             b_l,
             perturbation_domain=self.perturbation_domain,
             mode=self.mode,
+            dc_decomp=self.dc_decomp,
         )
 
         shape_0 = [-1, 1] + list(input_0_permuted[0].shape[1:]) + list(w_u.shape[3:])

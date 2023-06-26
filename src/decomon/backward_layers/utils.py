@@ -12,6 +12,8 @@ from decomon.core import (
     InputsOutputsSpec,
     PerturbationDomain,
     Slope,
+    get_affine,
+    get_ibp,
 )
 from decomon.layers.utils import sort
 from decomon.utils import (
@@ -36,6 +38,7 @@ def backward_add(
     b_l_out: tf.Tensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    dc_decomp: bool = False,
 ) -> List[List[tf.Tensor]]:
     """Backward  LiRPA of inputs_0+inputs_1
 
@@ -55,31 +58,30 @@ def backward_add(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
+    affine = get_affine(mode)
     op_flat = Flatten(dtype=K.floatx())  # pas terrible  a revoir
-    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-    if mode == ForwardMode.IBP:
-        u_c_0, l_c_0 = inputs_0[:nb_tensors]
-        u_c_1, l_c_1 = inputs_1[:nb_tensors]
-    elif mode == ForwardMode.HYBRID:
-        x, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0 = inputs_0[:nb_tensors]
-        x, u_c_1, w_u_1, b_u_1, l_c_1, w_l_1, b_l_1 = inputs_1[:nb_tensors]
-        u_c_0_tmp = get_upper(x, w_u_0, b_u_0, perturbation_domain=perturbation_domain)
-        u_c_1_tmp = get_upper(x, w_u_1, b_u_1, perturbation_domain=perturbation_domain)
-        l_c_0_tmp = get_lower(x, w_l_0, b_l_0, perturbation_domain=perturbation_domain)
-        l_c_1_tmp = get_lower(x, w_l_1, b_l_1, perturbation_domain=perturbation_domain)
-        u_c_0 = K.minimum(u_c_0, u_c_0_tmp)
-        u_c_1 = K.minimum(u_c_1, u_c_1_tmp)
-        l_c_0 = K.maximum(l_c_0, l_c_0_tmp)
-        l_c_1 = K.maximum(l_c_1, l_c_1_tmp)
-    elif mode == ForwardMode.AFFINE:
-        x, w_u_0, b_u_0, w_l_0, b_l_0 = inputs_0[:nb_tensors]
-        x, w_u_1, b_u_1, w_l_1, b_l_1 = inputs_1[:nb_tensors]
-        u_c_0 = get_upper(x, w_u_0, b_u_0, perturbation_domain=perturbation_domain)
-        u_c_1 = get_upper(x, w_u_1, b_u_1, perturbation_domain=perturbation_domain)
-        l_c_0 = get_lower(x, w_l_0, b_l_0, perturbation_domain=perturbation_domain)
-        l_c_1 = get_lower(x, w_l_1, b_l_1, perturbation_domain=perturbation_domain)
-    else:
-        raise ValueError(f"Unknown mode {mode}")
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    x_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0, h_0, g_0 = inputs_outputs_spec.get_fullinputs_from_inputsformode(
+        inputs_0
+    )
+    x_1, u_c_1, w_u_1, b_u_1, l_c_1, w_l_1, b_l_1, h_1, g_1 = inputs_outputs_spec.get_fullinputs_from_inputsformode(
+        inputs_1
+    )
+    if affine:
+        u_c_0_tmp = get_upper(x_0, w_u_0, b_u_0, perturbation_domain=perturbation_domain)
+        u_c_1_tmp = get_upper(x_1, w_u_1, b_u_1, perturbation_domain=perturbation_domain)
+        l_c_0_tmp = get_lower(x_0, w_l_0, b_l_0, perturbation_domain=perturbation_domain)
+        l_c_1_tmp = get_lower(x_1, w_l_1, b_l_1, perturbation_domain=perturbation_domain)
+        if mode == ForwardMode.HYBRID:
+            u_c_0 = K.minimum(u_c_0, u_c_0_tmp)
+            u_c_1 = K.minimum(u_c_1, u_c_1_tmp)
+            l_c_0 = K.maximum(l_c_0, l_c_0_tmp)
+            l_c_1 = K.maximum(l_c_1, l_c_1_tmp)
+        else:
+            u_c_0 = u_c_0_tmp
+            u_c_1 = u_c_1_tmp
+            l_c_0 = l_c_0_tmp
+            l_c_1 = l_c_1_tmp
 
     u_c_0 = op_flat(u_c_0)
     u_c_1 = op_flat(u_c_1)
@@ -113,6 +115,7 @@ def backward_relu_(
     perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    dc_decomp: bool = False,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Backward  LiRPA of relu
@@ -135,37 +138,23 @@ def backward_relu_(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
-    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-    if mode == ForwardMode.HYBRID:
-        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
-        upper = u_c
-        lower = l_c
-    elif mode == ForwardMode.IBP:
-        # y, x_0, u_c, l_c = x[:4]
-        u_c, l_c = inputs[:nb_tensors]
-        upper = u_c
-        lower = l_c
-    elif mode == ForwardMode.AFFINE:
-        # y, x_0, w_u, b_u, w_l, b_l = x[:6]
-        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
-        upper = get_upper(x_0, w_u, b_u, perturbation_domain)
-        lower = get_lower(x_0, w_l, b_l, perturbation_domain)
-    else:
-        raise ValueError(f"Unknown mode {mode}")
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    if mode == ForwardMode.AFFINE:
+        u_c = get_upper(x, w_u, b_u)
+        l_c = get_lower(x, w_l, b_l)
 
     if isinstance(perturbation_domain, GridDomain) and mode != ForwardMode.IBP:
-
         raise NotImplementedError()
 
-    shape = np.prod(upper.shape[1:])
-    upper = K.reshape(upper, [-1, shape])
-    lower = K.reshape(lower, [-1, shape])
+    shape = np.prod(u_c.shape[1:])
+    u_c = K.reshape(u_c, [-1, shape])
+    l_c = K.reshape(l_c, [-1, shape])
 
-    z_value = K.cast(0.0, upper.dtype)
+    z_value = K.cast(0.0, u_c.dtype)
 
     #############
-    w_u_tmp, b_u_tmp, w_l_tmp, b_l_tmp = get_linear_hull_relu(upper, lower, slope=slope, **kwargs)
+    w_u_tmp, b_u_tmp, w_l_tmp, b_l_tmp = get_linear_hull_relu(u_c, l_c, slope=slope, **kwargs)
 
     w_u_tmp = K.expand_dims(w_u_tmp, -1)
     w_l_tmp = K.expand_dims(w_l_tmp, -1)
@@ -188,6 +177,7 @@ def backward_softplus_(
     b_l_out: tf.Tensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    dc_decomp: bool = False,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Backward  LiRPA of relu
@@ -208,25 +198,15 @@ def backward_softplus_(
 
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    mode = ForwardMode(mode)
-    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-    if mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
-        upper = u_c
-        lower = l_c
-    elif mode == ForwardMode.IBP:
-        u_c, l_c = inputs[:nb_tensors]
-        upper = u_c
-        lower = l_c
-    elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
-        upper = get_upper(x_0, w_u, b_u, perturbation_domain)
-        lower = get_lower(x_0, w_l, b_l, perturbation_domain)
-    else:
-        raise ValueError(f"Unknown mode {mode}")
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    if mode == ForwardMode.AFFINE:
+        u_c = get_upper(x, w_u, b_u)
+        l_c = get_lower(x, w_l, b_l)
 
-    shape = np.prod(upper.shape[1:])
-    upper = K.reshape(upper, [-1, shape])
+    shape = np.prod(u_c.shape[1:])
+    u_c = K.reshape(u_c, [-1, shape])
+    l_c = K.reshape(l_c, [-1, shape])
     raise NotImplementedError()
 
 
@@ -312,6 +292,7 @@ def backward_maximum(
     b_l_out: tf.Tensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    dc_decomp: bool = False,
     **kwargs: Any,
 ) -> List[List[tf.Tensor]]:
     """Backward  LiRPA of maximum(inputs_0, inputs_1)
@@ -332,19 +313,40 @@ def backward_maximum(
 
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    input_step_a_0 = subtract(inputs_0, inputs_1, dc_decomp=False, perturbation_domain=perturbation_domain, mode=mode)
-
-    input_step_0 = relu_(input_step_a_0, dc_decomp=False, perturbation_domain=perturbation_domain, mode=mode, **kwargs)
-
+    input_step_a_0 = subtract(
+        inputs_0, inputs_1, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode
+    )
+    input_step_0 = relu_(
+        input_step_a_0, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode, **kwargs
+    )
     _, bounds_1 = backward_add(
-        input_step_0, inputs_1, w_u_out, b_u_out, w_l_out, b_l_out, perturbation_domain=perturbation_domain, mode=mode
+        input_step_0,
+        inputs_1,
+        w_u_out,
+        b_u_out,
+        w_l_out,
+        b_l_out,
+        perturbation_domain=perturbation_domain,
+        mode=mode,
+        dc_decomp=dc_decomp,
     )
 
-    input_step_a_1 = subtract(inputs_1, inputs_0, dc_decomp=False, perturbation_domain=perturbation_domain, mode=mode)
-    input_step_1 = relu_(input_step_a_1, dc_decomp=False, perturbation_domain=perturbation_domain, mode=mode, **kwargs)
-
+    input_step_a_1 = subtract(
+        inputs_1, inputs_0, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode
+    )
+    input_step_1 = relu_(
+        input_step_a_1, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode, **kwargs
+    )
     _, bounds_0 = backward_add(
-        input_step_1, inputs_0, w_u_out, b_u_out, w_l_out, b_l_out, perturbation_domain=perturbation_domain, mode=mode
+        input_step_1,
+        inputs_0,
+        w_u_out,
+        b_u_out,
+        w_l_out,
+        b_l_out,
+        perturbation_domain=perturbation_domain,
+        mode=mode,
+        dc_decomp=dc_decomp,
     )
 
     return [bounds_0, bounds_1]
@@ -360,6 +362,7 @@ def backward_max_(
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis: int = -1,
+    dc_decomp: bool = False,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Backward  LiRPA of max
@@ -379,34 +382,28 @@ def backward_max_(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
-    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-    z_value = K.cast(0.0, inputs[0].dtype)
-
-    if mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
-        y = u_c
-    elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
-        y = b_u
-    elif mode == ForwardMode.IBP:
-        u_c, l_c = inputs[:nb_tensor]
-        y = u_c
-    else:
-        raise ValueError(f"Unknown mode {mode}")
-
-    input_shape = K.int_shape(y)
+    affine = get_affine(mode)
+    ibp = get_ibp(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    dtype = x.dtype
+    input_shape = inputs_outputs_spec.get_input_shape(inputs)
     max_dim = input_shape[axis]
+    empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+    empty_tensor_list = [empty_tensor] * max_dim
+    z_value = K.cast(0.0, dtype=dtype)
 
     # do some transpose so that the last axis is also at the end
-    if mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
-
+    if ibp:
         u_c_list = tf.split(u_c, max_dim, axis)
         l_c_list = tf.split(l_c, max_dim, axis)
         u_c_tmp = u_c_list[0] + z_value * (u_c_list[0])
         l_c_tmp = l_c_list[0] + z_value * (l_c_list[0])
+    else:
+        u_c_list, l_c_list = empty_tensor_list, empty_tensor_list
+        u_c_tmp, l_c_tmp = empty_tensor, empty_tensor
 
-    if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-
+    if affine:
         b_u_list = tf.split(b_u, max_dim, axis)
         b_l_list = tf.split(b_l, max_dim, axis)
         b_u_tmp = b_u_list[0] + z_value * (b_u_list[0])
@@ -420,57 +417,40 @@ def backward_max_(
             w_l_list = tf.split(w_l, max_dim, axis + 1)
         w_u_tmp = w_u_list[0] + z_value * (w_u_list[0])
         w_l_tmp = w_l_list[0] + z_value * (w_l_list[0])
+    else:
+        b_u_list, b_l_list, w_u_list, w_l_list = (
+            empty_tensor_list,
+            empty_tensor_list,
+            empty_tensor_list,
+            empty_tensor_list,
+        )
+        b_u_tmp, b_l_tmp, w_u_tmp, w_l_tmp = empty_tensor, empty_tensor, empty_tensor, empty_tensor
+
+    if dc_decomp:
+        raise NotImplementedError()
+    else:
+        h_list, g_list = empty_tensor_list, empty_tensor_list
+        h_tmp, g_tmp = empty_tensor, empty_tensor
 
     outputs = []
-    output_tmp = []  # store output at every level
-    if mode == ForwardMode.HYBRID:
-        output_tmp = [
-            x_0,
-            u_c_tmp,
-            w_u_tmp,
-            b_u_tmp,
-            l_c_tmp,
-            w_l_tmp,
-            b_l_tmp,
-        ]
-
-        for i in range(1, max_dim):
-            output_i = [x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
-            outputs.append([[elem for elem in output_tmp], output_i])
-            output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
-
-    if mode == ForwardMode.IBP:
-        output_tmp = [
-            u_c_tmp,
-            l_c_tmp,
-        ]
-
-        for i in range(1, max_dim):
-            output_i = [u_c_list[i], l_c_list[i]]
-            outputs.append([[elem for elem in output_tmp], output_i])
-            output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
-
-    if mode == ForwardMode.AFFINE:
-        output_tmp = [
-            x_0,
-            w_u_tmp,
-            b_u_tmp,
-            w_l_tmp,
-            b_l_tmp,
-        ]
-
-        for i in range(1, max_dim):
-            output_i = [x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
-            outputs.append([[elem for elem in output_tmp], output_i])
-            output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
+    output_tmp = inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+        [x, u_c_tmp, w_u_tmp, b_u_tmp, l_c_tmp, w_l_tmp, b_l_tmp, h_tmp, g_tmp]
+    )
+    for i in range(1, max_dim):
+        output_i = inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i], h_list[i], g_list[i]]
+        )
+        outputs.append([[elem for elem in output_tmp], output_i])
+        output_tmp = maximum(
+            output_tmp, output_i, dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain
+        )
 
     outputs = outputs[::-1]
     bounds = []
-
     if len(outputs) > 0:
         for (input_0, input_1) in outputs:
             bounds_0, bounds_1 = backward_maximum(
-                input_0, input_1, w_u_out, b_u_out, w_l_out, b_l_out, mode=mode, **kwargs
+                input_0, input_1, w_u_out, b_u_out, w_l_out, b_l_out, mode=mode, dc_decomp=dc_decomp, **kwargs
             )
             bounds.append(bounds_1)
             w_u_out, b_u_out, w_l_out, b_l_out = bounds_0
@@ -500,6 +480,7 @@ def backward_minimum(
     b_l_out: tf.Tensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    dc_decomp: bool = False,
     **kwargs: Any,
 ) -> List[List[tf.Tensor]]:
     """Backward  LiRPA of minimum(inputs_0, inputs_1)
@@ -530,6 +511,7 @@ def backward_minimum(
         b_l_out,
         perturbation_domain=perturbation_domain,
         mode=mode,
+        dc_decomp=dc_decomp,
         **kwargs,
     )
 
@@ -601,6 +583,7 @@ def backward_subtract(
     b_l_out: tf.Tensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    dc_decomp: bool = False,
 ) -> List[List[tf.Tensor]]:
     """Backward  LiRPA of inputs_0 - inputs_1
 
@@ -620,9 +603,17 @@ def backward_subtract(
 
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    inputs_1 = minus(inputs_1, mode=mode)
+    inputs_1 = minus(inputs_1, mode=mode, dc_decomp=dc_decomp)
     bounds_0, bounds_1 = backward_add(
-        inputs_0, inputs_1, w_u_out, b_u_out, w_l_out, b_l_out, perturbation_domain=perturbation_domain, mode=mode
+        inputs_0,
+        inputs_1,
+        w_u_out,
+        b_u_out,
+        w_l_out,
+        b_l_out,
+        perturbation_domain=perturbation_domain,
+        mode=mode,
+        dc_decomp=dc_decomp,
     )
 
     bounds_1 = [-bounds_1[0], bounds_1[1], -bounds_1[2], bounds_1[3]]
@@ -638,6 +629,7 @@ def backward_multiply(
     b_l_out: tf.Tensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    dc_decomp: bool = False,
 ) -> List[List[tf.Tensor]]:
     """Backward  LiRPA of element-wise multiply inputs_0*inputs_1
 
@@ -658,40 +650,38 @@ def backward_multiply(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
-    if mode == ForwardMode.IBP:
-        u_0, l_0 = inputs_0
-        u_1, l_1 = inputs_1
-    elif mode == ForwardMode.HYBRID:
-        x_0, u_0, w_u_0, b_u_0, l_0, w_l_0, b_l_0 = inputs_0
-        x_1, u_1, w_u_1, b_u_1, l_1, w_l_1, b_l_1 = inputs_1
-    elif mode == ForwardMode.AFFINE:
-        x_0, w_u_0, b_u_0, w_l_0, b_l_0 = inputs_0
-        x_1, w_u_1, b_u_1, w_l_1, b_l_1 = inputs_1
-        u_0 = get_upper(x_0, w_u_0, b_u_0, perturbation_domain=perturbation_domain)
-        l_0 = get_lower(x_0, w_l_0, b_l_0, perturbation_domain=perturbation_domain)
-        u_1 = get_upper(x_1, w_u_1, b_u_1, perturbation_domain=perturbation_domain)
-        l_1 = get_lower(x_1, w_l_1, b_l_1, perturbation_domain=perturbation_domain)
-    else:
-        raise ValueError(f"Unknown mode {mode}")
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    x_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0, h_0, g_0 = inputs_outputs_spec.get_fullinputs_from_inputsformode(
+        inputs_0
+    )
+    x_1, u_c_1, w_u_1, b_u_1, l_c_1, w_l_1, b_l_1, h_1, g_1 = inputs_outputs_spec.get_fullinputs_from_inputsformode(
+        inputs_1
+    )
 
-    z_value = K.cast(0.0, u_0.dtype)
+    if mode == ForwardMode.AFFINE:
+        u_c_0 = get_upper(x_0, w_u_0, b_u_0, perturbation_domain=perturbation_domain)
+        l_c_0 = get_lower(x_0, w_l_0, b_l_0, perturbation_domain=perturbation_domain)
+        u_c_1 = get_upper(x_1, w_u_1, b_u_1, perturbation_domain=perturbation_domain)
+        l_c_1 = get_lower(x_1, w_l_1, b_l_1, perturbation_domain=perturbation_domain)
 
-    n = np.prod(u_0.shape[1:])
+    z_value = K.cast(0.0, u_c_0.dtype)
+
+    n = np.prod(u_c_0.shape[1:])
     n_shape = [-1, n]
     # broadcast dimensions if needed
     n_out = len(w_u_out.shape[1:])
     for _ in range(n_out):
         n_shape += [1]
-    a_u_0 = K.reshape(u_1, n_shape)
-    a_u_1 = K.reshape(u_0, n_shape)
+    a_u_0 = K.reshape(u_c_1, n_shape)
+    a_u_1 = K.reshape(u_c_0, n_shape)
 
-    b_u_0 = K.reshape((K.maximum(l_0, z_value) * u_1 + K.minimum(l_0, z_value) * l_1 - u_1 * l_0), n_shape)
-    b_u_1 = K.reshape((K.maximum(l_1, z_value) * u_0 + K.minimum(l_1, z_value) * l_0 - u_0 * l_1), n_shape)
+    b_u_0 = K.reshape((K.maximum(l_c_0, z_value) * u_c_1 + K.minimum(l_c_0, z_value) * l_c_1 - u_c_1 * l_c_0), n_shape)
+    b_u_1 = K.reshape((K.maximum(l_c_1, z_value) * u_c_0 + K.minimum(l_c_1, z_value) * l_c_0 - u_c_0 * l_c_1), n_shape)
 
-    a_l_0 = K.reshape(l_1, n_shape)
-    a_l_1 = K.reshape(l_0, n_shape)
-    b_l_0 = K.reshape((K.maximum(l_0, z_value) * l_1 + K.minimum(l_0, z_value) * u_1 - l_1 * l_0), n_shape)
-    b_l_1 = K.reshape((K.maximum(l_1, z_value) * l_0 + K.minimum(l_1, z_value) * u_0 - l_0 * l_1), n_shape)
+    a_l_0 = K.reshape(l_c_1, n_shape)
+    a_l_1 = K.reshape(l_c_0, n_shape)
+    b_l_0 = K.reshape((K.maximum(l_c_0, z_value) * l_c_1 + K.minimum(l_c_0, z_value) * u_c_1 - l_c_1 * l_c_0), n_shape)
+    b_l_1 = K.reshape((K.maximum(l_c_1, z_value) * l_c_0 + K.minimum(l_c_1, z_value) * u_c_0 - l_c_0 * l_c_1), n_shape)
 
     # upper
     w_u_out_max = K.maximum(w_u_out, z_value)
@@ -728,6 +718,7 @@ def backward_sort(
     axis: int = -1,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    dc_decomp: bool = False,
 ) -> List[tf.Tensor]:
     """Backward  LiRPA of sort
 
@@ -747,35 +738,28 @@ def backward_sort(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
+    affine = get_affine(mode)
     z_value = K.cast(0.0, w_u_out.dtype)
-
-    # build the tightest contain bounds for inputs_
-    if mode == ForwardMode.IBP:
-        u_c, l_c = inputs
-        y = u_c
-    elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = inputs
-        y = b_u
-        u_c_0 = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
-        l_c_0 = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
-        u_c = u_c_0
-        l_c = l_c_0
-    elif mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
-        y = u_c
-        u_c_0 = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
-        l_c_0 = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
-        u_c = K.minimum(u_c, u_c_0)
-        l_c = K.maximum(l_c, l_c_0)
-    else:
-        raise ValueError(f"Unknown mode {mode}")
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    if affine:
+        u_c_tmp = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
+        l_c_tmp = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
+        if mode == ForwardMode.HYBRID:
+            u_c = K.minimum(u_c, u_c_tmp)
+            l_c = K.maximum(l_c, l_c_tmp)
+        else:
+            u_c = u_c_tmp
+            l_c = l_c_tmp
 
     # build fake inputs with no linearity
-    n_dim = np.prod(y.shape[1:])
-    w_tmp = z_value * K.concatenate([y[:, None] * n_dim], 1)
+    n_dim = np.prod(u_c.shape[1:])
+    w_tmp = z_value * K.concatenate([u_c[:, None] * n_dim], 1)
 
-    inputs_tmp = [x_0, u_c, w_tmp, u_c, l_c, w_tmp, l_c]
-    outputs_tmp = sort(inputs_tmp, axis=axis, perturbation_domain=perturbation_domain, mode=ForwardMode.HYBRID)
+    inputs_tmp = [x, u_c, w_tmp, u_c, l_c, w_tmp, l_c]
+    outputs_tmp = sort(
+        inputs_tmp, axis=axis, perturbation_domain=perturbation_domain, mode=ForwardMode.HYBRID, dc_decomp=False
+    )
     _, _, w_u_tmp, b_u_tmp, _, w_l_tmp, b_l_tmp = outputs_tmp
 
     # w_u_tmp (None, n_dim, y.shape[1:)

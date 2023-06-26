@@ -18,7 +18,14 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model
 
-from decomon.core import BallDomain, BoxDomain, ForwardMode, PerturbationDomain
+from decomon.core import (
+    BallDomain,
+    BoxDomain,
+    ForwardMode,
+    InputsOutputsSpec,
+    PerturbationDomain,
+    get_mode,
+)
 from decomon.layers.utils import is_a_merge_layer
 from decomon.utils import get_lower, get_lower_layer, get_upper, get_upper_layer
 
@@ -91,6 +98,11 @@ def get_input_tensors(
             if not np.allclose(input_shape, input_shape_default):
                 raise ValueError("Expected that every input layers use the same input_tensor")
 
+    mode = get_mode(ibp=ibp, affine=affine)
+    dc_decomp = False
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    empty_tensor = inputs_outputs_spec.get_empty_tensor()
+
     input_shape_x: Tuple[int, ...]
     if isinstance(perturbation_domain, BoxDomain):
         input_shape_x = (2, input_dim)
@@ -100,6 +112,14 @@ def get_input_tensors(
         raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
 
     z_tensor = Input(shape=input_shape_x, dtype=model.layers[0].dtype)
+    u_c_tensor, l_c_tensor, W, b, h, g = (
+        empty_tensor,
+        empty_tensor,
+        empty_tensor,
+        empty_tensor,
+        empty_tensor,
+        empty_tensor,
+    )
 
     if isinstance(perturbation_domain, BoxDomain):
 
@@ -155,14 +175,9 @@ def get_input_tensors(
     else:
         raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
 
-    if ibp and affine:
-        input_tensors = [z_tensor] + [u_c_tensor, W, b] + [l_c_tensor, W, b]
-    elif ibp and not affine:
-        input_tensors = [u_c_tensor, l_c_tensor]
-    elif not ibp and affine:
-        input_tensors = [z_tensor] + [W, b] + [W, b]
-    else:
-        raise NotImplementedError("not ibp and not affine not implemented")
+    input_tensors = inputs_outputs_spec.extract_inputsformode_from_fullinputs(
+        [z_tensor, u_c_tensor, W, b, l_c_tensor, W, b, h, g]
+    )
 
     return z_tensor, input_tensors
 
@@ -379,40 +394,30 @@ class Convert2Mode(Layer):
         if mode_from == mode_to:
             return inputs
 
-        if mode_from in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-            x_0 = inputs[0]
         else:
-            u_c, l_c = inputs
-            if mode_to in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-                x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
-                z_value = K.cast(0.0, u_c.dtype)
-                o_value = K.cast(1.0, u_c.dtype)
+            dc_decomp = False
+            inputs_outputs_spec_from = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode_from)
+            inputs_outputs_spec_to = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode_to)
+
+            x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec_from.get_fullinputs_from_inputsformode(inputs)
+            dtype = x.dtype
+
+            if mode_from == ForwardMode.IBP and mode_to in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
+                x = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
+                z_value = K.cast(0.0, dtype=dtype)
                 w = tf.linalg.diag(z_value * l_c)
                 w_u = w
                 b_u = u_c
                 w_l = w
                 b_l = l_c
 
-        if mode_from == ForwardMode.AFFINE:
-            _, w_u, b_u, w_l, b_l = inputs
-            if mode_to in [ForwardMode.IBP, ForwardMode.HYBRID]:
-                u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
-                l_c = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
-        elif mode_from == ForwardMode.IBP:
-            u_c, l_c = inputs
-        elif mode_from == ForwardMode.HYBRID:
-            _, u_c, w_u, b_u, l_c, w_l, b_l = inputs
-        else:
-            raise ValueError(f"Unknwon mode {self.mode}")
+            if mode_from == ForwardMode.AFFINE and mode_to in [ForwardMode.IBP, ForwardMode.HYBRID]:
+                u_c = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
+                l_c = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
 
-        if mode_to == ForwardMode.IBP:
-            return [u_c, l_c]
-        elif mode_to == ForwardMode.AFFINE:
-            return [x_0, w_u, b_u, w_l, b_l]
-        elif mode_to == ForwardMode.HYBRID:
-            return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
-        else:
-            raise ValueError(f"Unknwon mode {self.mode}")
+            return inputs_outputs_spec_to.extract_outputsformode_from_fulloutputs(
+                [x, u_c, w_u, b_u, l_c, w_l, b_l, h, g]
+            )
 
     def get_config(self) -> Dict[str, Any]:
         config = super().get_config()

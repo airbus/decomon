@@ -79,20 +79,15 @@ def backward_relu(
 
     if not alpha and max_value is None:
         # default values: return relu_(x) = max(x, 0)
-        nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-        if mode == ForwardMode.IBP:
-            upper, lower = inputs[:nb_tensors]
-        elif mode == ForwardMode.AFFINE:
-            z, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
-            upper = get_upper(z, w_u, b_u)
-            lower = get_lower(z, w_l, b_l)
-        elif mode == ForwardMode.HYBRID:
-            _, upper, _, _, lower, _, _ = inputs[:nb_tensors]
-        else:
-            raise ValueError(f"Unknown mode {mode}")
-        bounds = get_linear_hull_relu(upper, lower, slope=slope, **kwargs)
-        shape = np.prod(inputs[-1].shape[1:])
-        return [K.reshape(elem, (-1, shape)) for elem in bounds]
+        inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        input_shape = inputs_outputs_spec.get_input_shape(inputs)
+        if mode == ForwardMode.AFFINE:
+            u_c = get_upper(x, w_u, b_u)
+            l_c = get_lower(x, w_l, b_l)
+        bounds = get_linear_hull_relu(upper=u_c, lower=l_c, slope=slope, **kwargs)
+        dim = np.prod(input_shape[1:])
+        return [K.reshape(elem, (-1, dim)) for elem in bounds]
 
     raise NotImplementedError()
 
@@ -123,19 +118,12 @@ def backward_sigmoid(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
-    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-
-    if mode == ForwardMode.IBP:
-        upper, lower = inputs[:nb_tensors]
-    elif mode == ForwardMode.AFFINE:
-        z, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
-        upper = get_upper(z, w_u, b_u)
-        lower = get_lower(z, w_l, b_l)
-    elif mode == ForwardMode.HYBRID:
-        _, upper, _, _, lower, _, _ = inputs[:nb_tensors]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
-    return get_linear_hull_sigmoid(upper, lower, slope=slope, **kwargs)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    if mode == ForwardMode.AFFINE:
+        u_c = get_upper(x, w_u, b_u)
+        l_c = get_lower(x, w_l, b_l)
+    return get_linear_hull_sigmoid(u_c, l_c, slope=slope, **kwargs)
 
 
 def backward_tanh(
@@ -164,19 +152,12 @@ def backward_tanh(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
-    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-
-    if mode == ForwardMode.IBP:
-        upper, lower = inputs[:nb_tensors]
-    elif mode == ForwardMode.AFFINE:
-        z, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
-        upper = get_upper(z, w_u, b_u)
-        lower = get_lower(z, w_l, b_l)
-    elif mode == ForwardMode.HYBRID:
-        _, upper, _, _, lower, _, _ = inputs[:nb_tensors]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
-    return get_linear_hull_tanh(upper, lower, slope=slope, **kwargs)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    if mode == ForwardMode.AFFINE:
+        u_c = get_upper(x, w_u, b_u)
+        l_c = get_lower(x, w_l, b_l)
+    return get_linear_hull_tanh(u_c, l_c, slope=slope, **kwargs)
 
 
 def backward_hard_sigmoid(
@@ -350,19 +331,12 @@ def backward_softplus(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
-    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-
-    if mode == ForwardMode.IBP:
-        upper, lower = inputs[:nb_tensors]
-    elif mode == ForwardMode.AFFINE:
-        z, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
-        upper = get_upper(z, w_u, b_u)
-        lower = get_lower(z, w_l, b_l)
-    elif mode == ForwardMode.HYBRID:
-        _, upper, _, _, lower, _, _ = inputs[:nb_tensors]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
-    return get_linear_softplus_hull(upper, lower, slope=slope, **kwargs)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    if mode == ForwardMode.AFFINE:
+        u_c = get_upper(x, w_u, b_u)
+        l_c = get_lower(x, w_l, b_l)
+    return get_linear_softplus_hull(u_c, l_c, slope=slope, **kwargs)
 
 
 def backward_softsign(
