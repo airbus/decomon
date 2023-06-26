@@ -5,7 +5,6 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import InputSpec, Layer
 
-from decomon.backward_layers.utils import merge_with_previous
 from decomon.core import ForwardMode, PerturbationDomain
 from decomon.utils import get_lower, get_upper
 
@@ -107,66 +106,41 @@ class MergeWithPrevious(Layer):
         return config
 
 
-class Convert2Mode(Layer):
-    def __init__(
-        self,
-        mode_from: Union[str, ForwardMode],
-        mode_to: Union[str, ForwardMode],
-        perturbation_domain: PerturbationDomain,
-        **kwargs: Any,
-    ):
-        super().__init__(**kwargs)
-        self.mode_from = ForwardMode(mode_from)
-        self.mode_to = ForwardMode(mode_to)
-        self.perturbation_domain = perturbation_domain
+def merge_with_previous(inputs: List[tf.Tensor]) -> List[tf.Tensor]:
+    w_u_out, b_u_out, w_l_out, b_l_out, w_b_u, b_b_u, w_b_l, b_b_l = inputs
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+    # w_u_out (None, n_h_in, n_h_out)
+    # w_b_u (None, n_h_out, n_out)
 
-        mode_from = self.mode_from
-        mode_to = self.mode_to
-        perturbation_domain = self.perturbation_domain
+    # w_u_out_ (None, n_h_in, n_h_out, 1)
+    # w_b_u_ (None, 1, n_h_out, n_out)
+    # w_u_out_*w_b_u_ (None, n_h_in, n_h_out, n_out)
 
-        if mode_from == mode_to:
-            return inputs
+    # result (None, n_h_in, n_out)
 
-        if mode_from in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-            x_0 = inputs[0]
-        else:
-            u_c, l_c = inputs
-            if mode_to in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-                x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
-                z_value = K.cast(0.0, u_c.dtype)
-                o_value = K.cast(1.0, u_c.dtype)
-                w = tf.linalg.diag(z_value * l_c)
-                w_u = w
-                b_u = u_c
-                w_l = w
-                b_l = l_c
+    if len(w_u_out.shape) == 2:
+        w_u_out = tf.linalg.diag(w_u_out)
 
-        if mode_from == ForwardMode.AFFINE:
-            _, w_u, b_u, w_l, b_l = inputs
-            if mode_to in [ForwardMode.IBP, ForwardMode.HYBRID]:
-                u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
-                l_c = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
-        elif mode_from == ForwardMode.IBP:
-            u_c, l_c = inputs
-        elif mode_from == ForwardMode.HYBRID:
-            _, u_c, w_u, b_u, l_c, w_l, b_l = inputs
-        else:
-            raise ValueError(f"Unknwon mode {self.mode}")
+    if len(w_l_out.shape) == 2:
+        w_l_out = tf.linalg.diag(w_l_out)
 
-        if mode_to == ForwardMode.IBP:
-            return [u_c, l_c]
-        elif mode_to == ForwardMode.AFFINE:
-            return [x_0, w_u, b_u, w_l, b_l]
-        elif mode_to == ForwardMode.HYBRID:
-            return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
-        else:
-            raise ValueError(f"Unknwon mode {self.mode}")
+    if len(w_b_u.shape) == 2:
+        w_b_u = tf.linalg.diag(w_b_u)
 
-    def get_config(self) -> Dict[str, Any]:
-        config = super().get_config()
-        config.update(
-            {"mode_from": self.mode_from, "mode_to": self.mode_to, "perturbation_domain": self.perturbation_domain}
-        )
-        return config
+    if len(w_b_l.shape) == 2:
+        w_b_l = tf.linalg.diag(w_b_l)
+
+    # import pdb; pdb.set_trace()
+
+    z_value = K.cast(0.0, dtype=w_u_out.dtype)
+    w_b_u_pos = K.maximum(w_b_u, z_value)
+    w_b_u_neg = K.minimum(w_b_u, z_value)
+    w_b_l_pos = K.maximum(w_b_l, z_value)
+    w_b_l_neg = K.minimum(w_b_l, z_value)
+
+    w_u = K.batch_dot(w_u_out, w_b_u_pos, (-1, -2)) + K.batch_dot(w_l_out, w_b_u_neg, (-1, -2))
+    w_l = K.batch_dot(w_l_out, w_b_l_pos, (-1, -2)) + K.batch_dot(w_u_out, w_b_l_neg, (-1, -2))
+    b_u = K.batch_dot(b_u_out, w_b_u_pos, (-1, -2)) + K.batch_dot(b_l_out, w_b_u_neg, (-1, -2)) + b_b_u
+    b_l = K.batch_dot(b_l_out, w_b_l_pos, (-1, -2)) + K.batch_dot(b_u_out, w_b_l_neg, (-1, -2)) + b_b_l
+
+    return [w_u, b_u, w_l, b_l]

@@ -17,20 +17,12 @@ from decomon.backward_layers.backward_merge import (
     BackwardAdd,
     BackwardAverage,
     BackwardConcatenate,
-    BackwardDot,
     BackwardMaximum,
     BackwardMinimum,
     BackwardMultiply,
     BackwardSubtract,
 )
-from decomon.backward_layers.crown import (
-    Convert2BackwardMode,
-    Convert2Mode,
-    Fuse,
-    MergeWithPrevious,
-)
 from decomon.backward_layers.deel_lip import BackwardGroupSort2
-from decomon.core import BoxDomain, ForwardMode
 from decomon.layers.decomon_layers import (
     DecomonActivation,
     DecomonBatchNormalization,
@@ -42,7 +34,6 @@ from decomon.layers.decomon_merge_layers import (
     DecomonAdd,
     DecomonAverage,
     DecomonConcatenate,
-    DecomonDot,
     DecomonMaximum,
     DecomonMinimum,
     DecomonMultiply,
@@ -147,24 +138,3 @@ def test_deel_lip():
     layer = BackwardGroupSort2(layer=sublayer)
     config = layer.get_config()
     assert config["layer"]["class_name"] == sublayer.__class__.__name__
-
-
-def test_crown():
-    mode = ForwardMode.AFFINE
-    perturbation_domain = BoxDomain()
-    input_shape_layer = (1, 2, 4)
-    backward_shape_layer = (2, 5, 10)
-
-    layer = Fuse(mode=mode)
-    config = layer.get_config()
-    assert config["mode"] == mode
-
-    layer = Convert2BackwardMode(mode=mode, perturbation_domain=perturbation_domain)
-    config = layer.get_config()
-    assert config["mode"] == mode
-    assert "perturbation_domain" in config
-
-    layer = MergeWithPrevious(input_shape_layer=input_shape_layer, backward_shape_layer=backward_shape_layer)
-    config = layer.get_config()
-    assert config["input_shape_layer"] == input_shape_layer
-    assert config["backward_shape_layer"] == backward_shape_layer

@@ -8,7 +8,6 @@ from tensorflow.keras.layers import Input, InputLayer, Lambda, Layer
 from tensorflow.keras.models import Model
 
 from decomon.backward_layers.core import BackwardLayer
-from decomon.backward_layers.crown import Convert2Mode
 from decomon.core import BoxDomain, PerturbationDomain, Slope, get_mode
 from decomon.layers.convert import to_decomon
 from decomon.models.backward_cloning import convert_backward
@@ -20,6 +19,7 @@ from decomon.models.forward_cloning import (
 )
 from decomon.models.models import DecomonModel
 from decomon.models.utils import (
+    Convert2Mode,
     ConvertMethod,
     FeedDirection,
     convert_deellip_to_keras,
