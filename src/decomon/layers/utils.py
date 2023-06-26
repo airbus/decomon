@@ -15,6 +15,8 @@ from decomon.core import (
     InputsOutputsSpec,
     PerturbationDomain,
     Slope,
+    get_affine,
+    get_ibp,
 )
 from decomon.utils import (
     add,
@@ -313,51 +315,37 @@ def softplus_(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
 
-    nb_tensors = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-    if mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
-    elif mode == ForwardMode.IBP:
-        u_c, l_c = inputs[:nb_tensors]
-    elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
-
-    if dc_decomp:
-        h, g = inputs[-2:]
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    dtype = x.dtype
+    empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
     if mode == ForwardMode.AFFINE:
-        upper = get_upper(x_0, w_u, b_u, perturbation_domain)
-        lower = get_lower(x_0, w_l, b_l, perturbation_domain)
-    elif mode == ForwardMode.HYBRID:
-        upper = u_c
-        lower = l_c
-    elif mode == ForwardMode.IBP:
-        upper = u_c
-        lower = l_c
-    else:
-        raise ValueError(f"Unknown mode {mode}")
+        u_c = get_upper(x, w_u, b_u, perturbation_domain)
+        l_c = get_lower(x, w_l, b_l, perturbation_domain)
 
-    u_c_out = K.softplus(upper)
-    l_c_out = K.softplus(lower)
+    u_c_out = K.softplus(u_c)
+    l_c_out = K.softplus(l_c)
 
     if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
 
-        w_u_out, b_u_out, w_l_out, b_l_out = get_linear_softplus_hull(upper=upper, lower=lower, slope=slope, **kwargs)
+        w_u_out, b_u_out, w_l_out, b_l_out = get_linear_softplus_hull(upper=u_c, lower=l_c, slope=slope, **kwargs)
         b_u_out = w_u_out * b_u + b_u_out
         b_l_out = w_l_out * b_l + b_l_out
         w_u_out = K.expand_dims(w_u_out, 1) * w_u
         w_l_out = K.expand_dims(w_l_out, 1) * w_l
-
-    if mode == ForwardMode.IBP:
-        return [u_c_out, l_c_out]
-    elif mode == ForwardMode.AFFINE:
-        return [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
-    elif mode == ForwardMode.HYBRID:
-        return [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
-        raise ValueError(f"Unknown mode {mode}")
+        w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
+
+    if dc_decomp:
+        raise NotImplementedError("Not yet implemented for dc_decomp=True")
+    else:
+        h_out, g_out = empty_tensor, empty_tensor
+
+    return inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+        [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+    )
 
 
 def sum(
@@ -367,34 +355,41 @@ def sum(
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
-
-    if dc_decomp:
-        raise NotImplementedError()
     mode = ForwardMode(mode)
-    if mode == ForwardMode.IBP:
-        return [K.sum(inputs[0], axis=axis), K.sum(inputs[1], axis=axis)]
-    elif mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-        if mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = inputs
-        else:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
-            u_c_out = K.sum(u_c, axis=axis)
-            l_c_out = K.sum(l_c, axis=axis)
+    ibp = get_ibp(mode)
+    affine = get_affine(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
 
-        axis_w = -1
-        if axis != -1:
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    dtype = x.dtype
+    empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+
+    if ibp:
+        u_c_out = K.sum(u_c, axis=axis)
+        l_c_out = K.sum(l_c, axis=axis)
+    else:
+        u_c_out, l_c_out = empty_tensor, empty_tensor
+
+    if affine:
+        if axis == -1:
+            axis_w = -1
+        else:
             axis_w = axis + 1
         w_u_out = K.sum(w_u, axis=axis_w)
         w_l_out = K.sum(w_l, axis=axis_w)
         b_u_out = K.sum(b_u, axis=axis)
         b_l_out = K.sum(b_l, axis=axis)
-
-        if mode == ForwardMode.AFFINE:
-            return [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
-        else:
-            return [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
-        raise ValueError(f"Unknown mode {mode}")
+        w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
+
+    if dc_decomp:
+        raise NotImplementedError("Not yet implemented for dc_decomp=True")
+    else:
+        h_out, g_out = empty_tensor, empty_tensor
+
+    return inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+        [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+    )
 
 
 def frac_pos(
@@ -407,45 +402,46 @@ def frac_pos(
 
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    if dc_decomp:
-        raise NotImplementedError()
+
     mode = ForwardMode(mode)
-    # frac_pos is convex for positive values
-    if mode == ForwardMode.IBP:
-        u_c, l_c = inputs
-        u_c_out = 1.0 / l_c
-        l_c_out = 1.0 / u_c
-        return [u_c_out, l_c_out]
-    elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = inputs
-        u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
-        l_c = get_lower(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
-    elif mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
-    else:
-        raise ValueError(f"Mode {mode} unknown")
+    affine = get_affine(mode)
+    ibp = get_ibp(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    dtype = x.dtype
+    empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+
+    if mode == ForwardMode.AFFINE:
+        u_c = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
+        l_c = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
 
     u_c_out = 1.0 / l_c
     l_c_out = 1.0 / u_c
 
-    w_u_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, K.epsilon())
-    b_u_0 = l_c_out - w_u_0 * l_c
+    if affine:
+        w_u_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, K.epsilon())
+        b_u_0 = l_c_out - w_u_0 * l_c
 
-    y = (u_c + l_c) / 2.0
-    b_l_0 = 2.0 / y
-    w_l_0 = -1 / y**2
+        y = (u_c + l_c) / 2.0
+        b_l_0 = 2.0 / y
+        w_l_0 = -1 / y**2
 
-    w_u_out = w_u_0[:, None] * w_l
-    b_u_out = b_u_0 * b_l + b_u_0
-    w_l_out = w_l_0[:, None] * w_u
-    b_l_out = b_l_0 * b_u + b_l_0
-
-    if mode == ForwardMode.AFFINE:
-        return [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
-    elif mode == ForwardMode.HYBRID:
-        return [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
+        w_u_out = w_u_0[:, None] * w_l
+        b_u_out = b_u_0 * b_l + b_u_0
+        w_l_out = w_l_0[:, None] * w_u
+        b_l_out = b_l_0 * b_u + b_l_0
     else:
-        raise ValueError(f"Mode {mode} unknown")
+        w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
+
+    if dc_decomp:
+        raise NotImplementedError("Not yet implemented for dc_decomp=True")
+    else:
+        h_out, g_out = empty_tensor, empty_tensor
+
+    return inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+        [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+    )
 
 
 # convex hull of the maximum between two functions
@@ -473,19 +469,18 @@ def max_(
 
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    if dc_decomp:
-        h, g = inputs[-2:]
     mode = ForwardMode(mode)
-    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
+    affine = get_affine(mode)
+    ibp = get_ibp(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec_no_dc = InputsOutputsSpec(dc_decomp=False, mode=mode)
 
-    if mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
-    elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
-    elif mode == ForwardMode.IBP:
-        u_c, l_c = inputs[:nb_tensor]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
+    input_shape = K.int_shape(inputs[-1])
+    max_dim = input_shape[axis]
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    dtype = x.dtype
+    empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+    empty_tensors_list = [empty_tensor] * max_dim
 
     if mode == ForwardMode.IBP and not dc_decomp:
         u_c_out = K.max(u_c, axis=axis)
@@ -493,24 +488,18 @@ def max_(
 
         return [u_c_out, l_c_out]
 
-    input_shape = K.int_shape(inputs[-1])
-    max_dim = input_shape[axis]
-
     # do some transpose so that the last axis is also at the end
 
-    if dc_decomp:
-        h_list = tf.split(h, max_dim, axis)
-        g_list = tf.split(g, max_dim, axis)
-
-    if mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
-
+    if ibp:
         u_c_list = tf.split(u_c, max_dim, axis)
         l_c_list = tf.split(l_c, max_dim, axis)
         u_c_tmp = u_c_list[0] + 0 * (u_c_list[0])
         l_c_tmp = l_c_list[0] + 0 * (l_c_list[0])
+    else:
+        u_c_tmp, l_c_tmp = empty_tensor, empty_tensor
+        u_c_list, l_c_list = empty_tensors_list, empty_tensors_list
 
-    if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-
+    if affine:
         b_u_list = tf.split(b_u, max_dim, axis)
         b_l_list = tf.split(b_l, max_dim, axis)
         b_u_tmp = b_u_list[0] + 0 * (b_u_list[0])
@@ -529,67 +518,59 @@ def max_(
             key = [e for e in kwargs.keys()][0]
             params = kwargs[key][0]
             params_split = [e[0] for e in tf.split(params[None], max_dim, axis)]
+        else:
+            params_split = [False] * max_dim
 
-    output_tmp = []
-    if mode == ForwardMode.HYBRID:
-        output_tmp = [
-            x_0,
-            u_c_tmp,
-            w_u_tmp,
-            b_u_tmp,
-            l_c_tmp,
-            w_l_tmp,
-            b_l_tmp,
-        ]
-
-        for i in range(1, max_dim):
-            output_i = [x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
-            if finetune:
-                output_tmp = maximum(
-                    output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune, finetune_params=params_split[i]
-                )
-            else:
-                output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
-
-    elif mode == ForwardMode.IBP:
-        output_tmp = [
-            u_c_tmp,
-            l_c_tmp,
-        ]
-
-        for i in range(1, max_dim):
-            output_i = [u_c_list[i], l_c_list[i]]
-            output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune)
-
-    elif mode == ForwardMode.AFFINE:
-        output_tmp = [
-            x_0,
-            w_u_tmp,
-            b_u_tmp,
-            w_l_tmp,
-            b_l_tmp,
-        ]
-
-        for i in range(1, max_dim):
-            output_i = [x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
-            if finetune:
-                output_tmp = maximum(
-                    output_tmp, output_i, dc_decomp=False, mode=mode, finetune=finetune, finetune_params=params_split[i]
-                )
-            else:
-                output_tmp = maximum(output_tmp, output_i, dc_decomp=False, mode=mode)
     else:
-        raise ValueError(f"Unknown mode {mode}")
+        w_u_tmp, b_u_tmp, w_l_tmp, b_l_tmp = empty_tensor, empty_tensor, empty_tensor, empty_tensor
+        w_u_list, b_u_list, w_l_list, b_l_list = (
+            empty_tensors_list,
+            empty_tensors_list,
+            empty_tensors_list,
+            empty_tensors_list,
+        )
+        params_split = [False] * max_dim
+
+    h_tmp, g_tmp = None, None
+    output_tmp = inputs_outputs_spec_no_dc.extract_outputsformode_from_fulloutputs(
+        [
+            x,
+            u_c_tmp,
+            w_u_tmp,
+            b_u_tmp,
+            l_c_tmp,
+            w_l_tmp,
+            b_l_tmp,
+            h_tmp,
+            g_tmp,
+        ]
+    )
+    for i in range(1, max_dim):
+        output_i = inputs_outputs_spec_no_dc.extract_outputsformode_from_fulloutputs(
+            [x, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i], None, None]
+        )
+        output_tmp = maximum(
+            output_tmp,
+            output_i,
+            dc_decomp=False,
+            mode=mode,
+            finetune=finetune,
+            finetune_params=params_split[i],
+            perturbation_domain=perturbation_domain,
+        )
 
     # reduce the dimension
-    if mode == ForwardMode.IBP:
-        u_c_out, l_c_out = output_tmp[:nb_tensor]
-    elif mode == ForwardMode.AFFINE:
-        _, w_u_out, b_u_out, w_l_out, b_l_out = output_tmp[:nb_tensor]
-    elif mode == ForwardMode.HYBRID:
-        _, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out = output_tmp[:nb_tensor]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
+    (
+        _,
+        u_c_out,
+        w_u_out,
+        b_u_out,
+        l_c_out,
+        w_l_out,
+        b_l_out,
+        _,
+        _,
+    ) = inputs_outputs_spec_no_dc.get_fullinputs_from_inputsformode(output_tmp)
 
     if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
         u_c_out = K.squeeze(u_c_out, axis)
@@ -607,28 +588,20 @@ def max_(
     if dc_decomp:
         g_out = K.sum(g, axis=axis)
         h_out = K.max(h + g, axis=axis) - g_out
+    else:
+        g_out, h_out = empty_tensor, empty_tensor
 
     if mode == ForwardMode.HYBRID:
 
-        upper = get_upper(x_0, w_u_out, b_u_out, perturbation_domain)
+        upper = get_upper(x, w_u_out, b_u_out, perturbation_domain)
         u_c_out = K.minimum(upper, u_c_out)
 
-        lower = get_lower(x_0, w_l_out, b_l_out, perturbation_domain)
+        lower = get_lower(x, w_l_out, b_l_out, perturbation_domain)
         l_c_out = K.maximum(lower, l_c_out)
 
-    if mode == ForwardMode.HYBRID:
-        output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
-    elif mode == ForwardMode.IBP:
-        output = [u_c_out, l_c_out]
-    elif mode == ForwardMode.AFFINE:
-        output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
-
-    if dc_decomp:
-        output += [h_out, g_out]
-
-    return output
+    return inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+        [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+    )
 
 
 def softmax_to_linear(model: keras.Model) -> Tuple[keras.Model, bool]:
@@ -687,26 +660,27 @@ def multiply(
 
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    if dc_decomp:
-        raise NotImplementedError()
-    mode = ForwardMode(mode)
-    nb_tensor = InputsOutputsSpec(dc_decomp, mode=mode).nb_tensors
 
-    if mode == ForwardMode.IBP:
-        u0, l0 = inputs_0[:nb_tensor]
-        u1, l1 = inputs_1[:nb_tensor]
-    elif mode == ForwardMode.AFFINE:
-        x, w_u0, b_u0, w_l0, b_l0 = inputs_0[:nb_tensor]
-        _, w_u1, b_u1, w_l1, b_l1 = inputs_1[:nb_tensor]
-        u0 = get_upper(x, w_u0, b_u0, perturbation_domain=perturbation_domain)
-        l0 = get_lower(x, w_l0, b_l0, perturbation_domain=perturbation_domain)
-        u1 = get_upper(x, w_u1, b_u1, perturbation_domain=perturbation_domain)
-        l1 = get_lower(x, w_l1, b_l1, perturbation_domain=perturbation_domain)
-    elif mode == ForwardMode.HYBRID:
-        x, u0, w_u0, b_u0, l0, w_l0, b_l0 = inputs_0[:nb_tensor]
-        _, u1, w_u1, b_u1, l1, w_l1, b_l1 = inputs_1[:nb_tensor]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
+    mode = ForwardMode(mode)
+    affine = get_affine(mode)
+    ibp = get_ibp(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+
+    x_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0, h_0, g_0 = inputs_outputs_spec.get_fullinputs_from_inputsformode(
+        inputs_0
+    )
+    x_1, u_c_1, w_u_1, b_u_1, l_c_1, w_l_1, b_l_1, h_1, g_1 = inputs_outputs_spec.get_fullinputs_from_inputsformode(
+        inputs_1
+    )
+    dtype = x_0.dtype
+    empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+
+    if mode == ForwardMode.AFFINE:
+        u_c_0 = get_upper(x_0, w_u_0, b_u_0, perturbation_domain=perturbation_domain)
+        l_c_0 = get_lower(x_0, w_l_0, b_l_0, perturbation_domain=perturbation_domain)
+        u_c_1 = get_upper(x_1, w_u_1, b_u_1, perturbation_domain=perturbation_domain)
+        l_c_1 = get_lower(x_1, w_l_1, b_l_1, perturbation_domain=perturbation_domain)
+
     # using McCormick's inequalities to derive bounds
     # xy<= x_u*y + x*y_L - xU*y_L
     # xy<= x*y_u + x_L*y - x_L*y_U
@@ -714,45 +688,59 @@ def multiply(
     # xy >=x_L*y + x*y_L -x_L*y_L
     # xy >= x_U*y + x*y_U - x_U*y_U
 
-    if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-        u_c_0_out = K.maximum(u0 * u1, u0 * l1) + K.maximum(u0 * l1, l0 * l1) - u0 * l1
-        u_c_1_out = K.maximum(u1 * u0, u1 * l0) + K.maximum(u1 * l0, l1 * l0) - u1 * l0
+    if ibp:
+        u_c_0_out = K.maximum(u_c_0 * u_c_1, u_c_0 * l_c_1) + K.maximum(u_c_0 * l_c_1, l_c_0 * l_c_1) - u_c_0 * l_c_1
+        u_c_1_out = K.maximum(u_c_1 * u_c_0, u_c_1 * l_c_0) + K.maximum(u_c_1 * l_c_0, l_c_1 * l_c_0) - u_c_1 * l_c_0
         u_c_out = K.minimum(u_c_0_out, u_c_1_out)
-        l_c_out = K.minimum(l0 * l1, l0 * u1) + K.minimum(l0 * l1, u0 * l1) - l0 * l1
+        l_c_out = K.minimum(l_c_0 * l_c_1, l_c_0 * u_c_1) + K.minimum(l_c_0 * l_c_1, u_c_0 * l_c_1) - l_c_0 * l_c_1
+    else:
+        u_c_out, l_c_out = empty_tensor, empty_tensor
 
-    if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
+    if affine:
         # xy <= x_u * y + x * y_L - xU * y_L
-        cx_u_pos = K.maximum(u0, 0.0)
-        cx_u_neg = K.minimum(u0, 0.0)
+        cx_u_pos = K.maximum(u_c_0, 0.0)
+        cx_u_neg = K.minimum(u_c_0, 0.0)
 
-        cy_l_pos = K.maximum(l1, 0.0)
-        cy_l_neg = K.minimum(l1, 0.0)
+        cy_l_pos = K.maximum(l_c_1, 0.0)
+        cy_l_neg = K.minimum(l_c_1, 0.0)
         w_u_out = (
-            cx_u_pos[:, None] * w_u1 + cx_u_neg[:, None] * w_l1 + cy_l_pos[:, None] * w_u0 + cy_l_neg[:, None] * w_l0
+            cx_u_pos[:, None] * w_u_1
+            + cx_u_neg[:, None] * w_l_1
+            + cy_l_pos[:, None] * w_u_0
+            + cy_l_neg[:, None] * w_l_0
         )
-        b_u_out = cx_u_pos * b_u1 + cx_u_neg * b_l1 + cy_l_pos * b_u0 + cy_l_neg * b_l0 - u0 * l1
+        b_u_out = cx_u_pos * b_u_1 + cx_u_neg * b_l_1 + cy_l_pos * b_u_0 + cy_l_neg * b_l_0 - u_c_0 * l_c_1
 
         # xy >= x_U*y + x*y_U - x_U*y_U
-        cx_l_pos = K.maximum(l0, 0.0)
-        cx_l_neg = K.minimum(l0, 0.0)
+        cx_l_pos = K.maximum(l_c_0, 0.0)
+        cx_l_neg = K.minimum(l_c_0, 0.0)
 
         w_l_out = (
-            cx_l_pos[:, None] * w_l1 + cx_l_neg[:, None] * w_u1 + cy_l_pos[:, None] * w_l0 + cy_l_neg[:, None] * w_u0
+            cx_l_pos[:, None] * w_l_1
+            + cx_l_neg[:, None] * w_u_1
+            + cy_l_pos[:, None] * w_l_0
+            + cy_l_neg[:, None] * w_u_0
         )
-        b_l_out = cx_l_pos * b_l1 + cx_l_neg * b_u1 + cy_l_pos * b_l0 + cy_l_neg * b_u0 - l0 * l1
-
-    if mode == ForwardMode.IBP:
-        return [u_c_out, l_c_out]
-    elif mode == ForwardMode.AFFINE:
-        return [x, w_u_out, b_u_out, w_l_out, b_l_out]
-    elif mode == ForwardMode.HYBRID:
-        return [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
+        b_l_out = cx_l_pos * b_l_1 + cx_l_neg * b_u_1 + cy_l_pos * b_l_0 + cy_l_neg * b_u_0 - l_c_0 * l_c_1
     else:
-        raise ValueError(f"Unknown mode {mode}")
+        w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
+
+    if dc_decomp:
+        raise NotImplementedError("Not yet implemented for dc_decomp=True")
+    else:
+        h_out, g_out = empty_tensor, empty_tensor
+
+    return inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+        [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+    )
 
 
 def permute_dimensions(
-    inputs: List[tf.Tensor], axis: int, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, axis_perm: int = 1
+    inputs: List[tf.Tensor],
+    axis: int,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    axis_perm: int = 1,
+    dc_decomp: bool = False,
 ) -> List[tf.Tensor]:
     """LiRPA implementation of (element-wise) permute(x,axis)
 
@@ -766,49 +754,50 @@ def permute_dimensions(
 
     """
 
-    if len(inputs[0].shape) <= 2:
-        return inputs
     mode = ForwardMode(mode)
-    index = np.arange(len(inputs[0].shape))
+    affine = get_affine(mode)
+    ibp = get_ibp(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    dtype = x.dtype
+    empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+
+    input_shape = inputs_outputs_spec.get_input_shape(inputs)
+    if len(input_shape) <= 2:
+        # not enough dim to permute
+        return inputs
+    index = np.arange(len(input_shape))
     index = np.insert(np.delete(index, axis), axis_perm, axis)
-    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-    if mode == ForwardMode.IBP:
-        return [
-            K.permute_dimensions(inputs[2], index),
-            K.permute_dimensions(inputs[3], index),
-        ]
+    index_w = np.arange(len(input_shape) + 1)
+    index_w = np.insert(np.delete(index_w, axis), axis_perm + 1, axis)
+
+    if ibp:
+        u_c_out = K.permute_dimensions(u_c, index)
+        l_c_out = K.permute_dimensions(l_c, index)
     else:
-        index_w = np.arange(len(inputs[0].shape) + 1)
-        index_w = np.insert(np.delete(index_w, axis), axis_perm + 1, axis)
+        u_c_out, l_c_out = empty_tensor, empty_tensor
+    if affine:
+        w_u_out = K.permute_dimensions(w_u, index_w)
+        b_u_out = K.permute_dimensions(b_u, index)
+        w_l_out = K.permute_dimensions(w_l, index_w)
+        b_l_out = K.permute_dimensions(b_l, index)
+    else:
+        w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
-        if mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
-            return [
-                x_0,
-                K.permute_dimensions(w_u, index_w),
-                K.permute_dimensions(b_u, index),
-                K.permute_dimensions(w_l, index_w),
-                K.permute_dimensions(b_l, index),
-            ]
+    if dc_decomp:
+        raise NotImplementedError("Not yet implemented for dc_decomp=True")
+    else:
+        h_out, g_out = empty_tensor, empty_tensor
 
-        elif mode == ForwardMode.HYBRID:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
-
-            return [
-                x_0,
-                K.permute_dimensions(u_c, index),
-                K.permute_dimensions(w_u, index_w),
-                K.permute_dimensions(b_u, index),
-                K.permute_dimensions(l_c, index),
-                K.permute_dimensions(w_l, index_w),
-                K.permute_dimensions(b_l, index),
-            ]
-
-        else:
-            raise ValueError(f"Unknown mode {mode}")
+    return inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+        [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+    )
 
 
-def broadcast(inputs: List[tf.Tensor], n: int, axis: int, mode: Union[str, ForwardMode]) -> List[tf.Tensor]:
+def broadcast(
+    inputs: List[tf.Tensor], n: int, axis: int, mode: Union[str, ForwardMode], dc_decomp: bool = False
+) -> List[tf.Tensor]:
     """LiRPA implementation of broadcasting
 
     Args:
@@ -820,18 +809,16 @@ def broadcast(inputs: List[tf.Tensor], n: int, axis: int, mode: Union[str, Forwa
     Returns:
 
     """
-    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
     mode = ForwardMode(mode)
-    if mode == ForwardMode.IBP:
-        u_c, l_c = inputs[:nb_tensor]
-    elif mode == ForwardMode.AFFINE:
-        x, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
-    elif mode == ForwardMode.HYBRID:
-        x, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
+    affine = get_affine(mode)
+    ibp = get_ibp(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
 
-    if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    dtype = x.dtype
+    empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+
+    if ibp:
         for _ in range(n):
             u_c = K.expand_dims(u_c, axis)
             l_c = K.expand_dims(l_c, axis)
@@ -841,27 +828,22 @@ def broadcast(inputs: List[tf.Tensor], n: int, axis: int, mode: Union[str, Forwa
     else:
         axis_w = -1
 
-    if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
+    if affine:
         for _ in range(n):
             b_u = K.expand_dims(b_u, axis)
             b_l = K.expand_dims(b_l, axis)
             w_u = K.expand_dims(w_u, axis_w)
             w_l = K.expand_dims(w_l, axis_w)
 
-    if mode == ForwardMode.IBP:
-        output = [u_c, l_c]
-    elif mode == ForwardMode.AFFINE:
-        output = [x, w_u, b_u, w_l, b_l]
-    elif mode == ForwardMode.HYBRID:
-        output = [x, u_c, w_u, b_u, l_c, w_l, b_l]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
-    return output
+    if dc_decomp:
+        raise NotImplementedError("Not yet implemented for dc_decomp=True")
+
+    return inputs_outputs_spec.extract_outputsformode_from_fulloutputs([x, u_c, w_u, b_u, l_c, w_l, b_l, h, g])
 
 
 def split(
-    inputs: List[tf.Tensor], axis: int = -1, mode: Union[str, ForwardMode] = ForwardMode.HYBRID
-) -> List[tf.Tensor]:
+    inputs: List[tf.Tensor], axis: int = -1, mode: Union[str, ForwardMode] = ForwardMode.HYBRID, dc_decomp: bool = False
+) -> List[List[tf.Tensor]]:
     """LiRPA implementation of split
 
     Args:
@@ -873,40 +855,49 @@ def split(
 
     """
     mode = ForwardMode(mode)
-    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-    if mode == ForwardMode.IBP:
-        u_c, l_c = inputs[:nb_tensor]
-    elif mode == ForwardMode.HYBRID:
-        x, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
-    elif mode == ForwardMode.AFFINE:
-        x, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
+    affine = get_affine(mode)
+    ibp = get_ibp(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    n = 1
+
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    dtype = x.dtype
+    empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+    empty_tensor_list = [empty_tensor] * n
+
+    if ibp:
+        u_c_list = tf.split(u_c, num_or_size_splits=n, axis=axis)
+        l_c_list = tf.split(l_c, num_or_size_splits=n, axis=axis)
     else:
-        raise ValueError(f"Unknown mode {mode}")
+        u_c_list, l_c_list = empty_tensor_list, empty_tensor_list
 
-    if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-        u_list = tf.split(u_c, 1, axis=axis)
-        l_list = tf.split(l_c, 1, axis=axis)
-        n = len(u_list)
-
-    if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-        b_u_list = tf.split(b_u, 1, axis=axis)
-        b_l_list = tf.split(b_l, 1, axis=axis)
-        n = len(b_u_list)
+    if affine:
+        b_u_list = tf.split(b_u, num_or_size_splits=n, axis=axis)
+        b_l_list = tf.split(b_l, num_or_size_splits=n, axis=axis)
 
         if axis != -1:
             axis += 1
-        w_u_list = tf.split(w_u, 1, axis=axis)
-        w_l_list = tf.split(w_l, 1, axis=axis)
-
-    if mode == ForwardMode.IBP:
-        outputs = [[u_list[i], l_list[i]] for i in range(n)]
-    elif mode == ForwardMode.AFFINE:
-        outputs = [[x, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]] for i in range(n)]
-    elif mode == ForwardMode.HYBRID:
-        outputs = [[x, u_list[i], w_u_list[i], b_u_list[i], l_list[i], w_l_list[i], b_l_list[i]] for i in range(n)]
+        w_u_list = tf.split(w_u, num_or_size_splits=n, axis=axis)
+        w_l_list = tf.split(w_l, num_or_size_splits=n, axis=axis)
     else:
-        raise ValueError(f"Unknown mode {mode}")
-    return outputs
+        w_u_list, b_u_list, w_l_list, b_l_list = (
+            empty_tensor_list,
+            empty_tensor_list,
+            empty_tensor_list,
+            empty_tensor_list,
+        )
+
+    if dc_decomp:
+        raise NotImplementedError("Not yet implemented for dc_decomp=True")
+    else:
+        h_list, g_list = empty_tensor_list, empty_tensor_list
+
+    return [
+        inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+            [x, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i], h_list[i], g_list[i]]
+        )
+        for i in range(n)
+    ]
 
 
 def sort(
@@ -931,75 +922,63 @@ def sort(
 
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    if dc_decomp:
-        raise NotImplementedError()
+
     mode = ForwardMode(mode)
-    # remove grad bounds
+    affine = get_affine(mode)
+    ibp = get_ibp(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
 
-    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-
-    if mode == ForwardMode.IBP:
-        u_c, l_c = inputs[:nb_tensor]
-    elif mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
-    elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    input_shape = inputs_outputs_spec.get_input_shape(inputs)
+    dtype = x.dtype
+    empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
     if axis == -1:
-        n = inputs[-1].shape[-1]
-        axis = len(inputs[-1].shape) - 1
+        n = input_shape[-1]
+        axis = len(input_shape) - 1
     else:
-        n = inputs[-1].shape[axis]
+        n = input_shape[axis]
+
+    empty_tensor_list = [empty_tensor] * n
 
     # what about splitting elements
     op_split = lambda x: tf.split(x, n, axis=axis)
-    if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
+    if ibp:
         u_c_list = op_split(u_c)
         l_c_list = op_split(l_c)
+    else:
+        u_c_list, l_c_list = empty_tensor_list, empty_tensor_list
 
-    if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
+    if affine:
         w_u_list = tf.split(w_u, n, axis=axis + 1)
         b_u_list = op_split(b_u)
         w_l_list = tf.split(w_l, n, axis=axis + 1)
         b_l_list = op_split(b_l)
+    else:
+        w_u_list, b_u_list, w_l_list, b_l_list = (
+            empty_tensor_list,
+            empty_tensor_list,
+            empty_tensor_list,
+            empty_tensor_list,
+        )
 
-    def get_input(mode: ForwardMode, i: int) -> List[tf.Tensor]:
-        if mode == ForwardMode.IBP:
-            return [u_c_list[i], l_c_list[i]]
-        elif mode == ForwardMode.AFFINE:
-            return [x_0, w_u_list[i], b_u_list[i], w_l_list[i], b_l_list[i]]
-        elif mode == ForwardMode.HYBRID:
-            return [x_0, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i]]
-        else:
-            raise ValueError(f"Unknown mode {mode}")
-
-    def set_input(inputs: List[tf.Tensor], mode: ForwardMode, i: int) -> None:
-        if mode == ForwardMode.IBP:
-            u_i, l_i = inputs
-        elif mode == ForwardMode.AFFINE:
-            _, w_u_i, b_u_i, w_l_i, b_l_i = inputs
-        elif mode == ForwardMode.HYBRID:
-            _, u_i, w_u_i, b_u_i, l_i, w_l_i, b_l_i = inputs
-        else:
-            raise ValueError(f"Unknown mode {mode}")
-
-        if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            u_c_list[i] = u_i
-            l_c_list[i] = l_i
-        if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-            w_u_list[i] = w_u_i
-            w_l_list[i] = w_l_i
-            b_u_list[i] = b_u_i
-            b_l_list[i] = b_l_i
+    if dc_decomp:
+        raise NotImplementedError("Not yet implemented for dc_decomp=True")
+    else:
+        h_list, g_list = empty_tensor_list, empty_tensor_list
 
     # use selection sort
     for i in range(n - 1):
         for j in range(i + 1, n):
 
-            input_i = get_input(mode, i)
-            input_j = get_input(mode, j)
+            input_i = inputs_outputs_spec.extract_inputsformode_from_fullinputs(
+                [x, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i], h_list[i], g_list[i]]
+            )
+            input_j = inputs_outputs_spec.extract_inputsformode_from_fullinputs(
+                [x, u_c_list[j], w_u_list[j], b_u_list[j], l_c_list[j], w_l_list[j], b_l_list[j], h_list[j], g_list[j]]
+            )
+
+            # max and min of splitted inputs
             output_a = maximum(
                 input_i, input_j, mode=mode, perturbation_domain=perturbation_domain, dc_decomp=dc_decomp
             )
@@ -1007,29 +986,53 @@ def sort(
                 input_i, input_j, mode=mode, perturbation_domain=perturbation_domain, dc_decomp=dc_decomp
             )
 
-            set_input(output_a, mode, j)
-            set_input(output_b, mode, i)
+            # update lists
+            (
+                x,
+                u_c_list[j],
+                w_u_list[j],
+                b_u_list[j],
+                l_c_list[j],
+                w_l_list[j],
+                b_l_list[j],
+                h_list[j],
+                g_list[j],
+            ) = inputs_outputs_spec.get_fullinputs_from_inputsformode(output_a)
+            (
+                x,
+                u_c_list[i],
+                w_u_list[i],
+                b_u_list[i],
+                l_c_list[i],
+                w_l_list[i],
+                b_l_list[i],
+                h_list[i],
+                g_list[i],
+            ) = inputs_outputs_spec.get_fullinputs_from_inputsformode(output_b)
 
     op_concatenate = lambda x: K.concatenate(x, axis)
     # update the inputs
-    if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
+    if ibp:
         u_c_out = op_concatenate(u_c_list)
         l_c_out = op_concatenate(l_c_list)
-    if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
+    else:
+        u_c_out, l_c_out = empty_tensor, empty_tensor
+    if affine:
         w_u_out = K.concatenate(w_u_list, axis + 1)
         w_l_out = K.concatenate(w_l_list, axis + 1)
         b_u_out = op_concatenate(b_u_list)
         b_l_out = op_concatenate(b_l_list)
-
-    if mode == ForwardMode.IBP:
-        output = [u_c_out, l_c_out]
-    elif mode == ForwardMode.AFFINE:
-        output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
-    elif mode == ForwardMode.HYBRID:
-        output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
-        raise ValueError(f"Unknown mode {mode}")
-    return output
+        w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
+
+    if dc_decomp:
+        raise NotImplementedError("Not yet implemented for dc_decomp=True")
+    else:
+        h_out, g_out = empty_tensor, empty_tensor
+
+    return inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+        [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+    )
 
 
 def pow(
@@ -1104,27 +1107,20 @@ def frac_pos_hull(
 
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    if dc_decomp:
-        raise NotImplementedError()
+
     mode = ForwardMode(mode)
-    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
+    affine = get_affine(mode)
+    ibp = get_ibp(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
 
-    if mode == ForwardMode.IBP:
-        u_c, l_c = inputs[:nb_tensor]
-    elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
-    elif mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
-    if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-        u_c_affine = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
-        l_c_affine = get_lower(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
-
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    if affine:
+        u_c_affine = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
+        l_c_affine = get_lower(x, w_u, b_u, perturbation_domain=perturbation_domain)
         if mode == ForwardMode.AFFINE:
             u_c = u_c_affine
             l_c = l_c_affine
-        else:
+        else:  # hybrid
             u_c = K.minimum(u_c_affine, u_c)
             l_c = K.maximum(l_c, l_c_affine)
 
@@ -1185,45 +1181,43 @@ def expand_dims(
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     mode = ForwardMode(mode)
-    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-    if mode == ForwardMode.IBP:
-        u_c, l_c = inputs[:nb_tensor]
-    elif mode == ForwardMode.AFFINE:
-        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
-    elif mode == ForwardMode.HYBRID:
-        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensor]
-    else:
-        raise ValueError(f"Unknown mode {mode}")
+    affine = get_affine(mode)
+    ibp = get_ibp(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
 
-    if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-        if axis == -1:
-            axis_w = axis
-        else:
-            axis_w = axis + 1
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    dtype = x.dtype
+    empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
+
+    if axis == -1:
+        axis_w = axis
+    else:
+        axis_w = axis + 1
 
     op = lambda t: K.expand_dims(t, axis)
 
-    if mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
+    if ibp:
         u_c_out = op(u_c)
         l_c_out = op(l_c)
+    else:
+        u_c_out, l_c_out = empty_tensor, empty_tensor
 
-    if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-
+    if affine:
         b_u_out = op(b_u)
         b_l_out = op(b_l)
         w_u_out = K.expand_dims(w_u, axis_w)
         w_l_out = K.expand_dims(w_l, axis_w)
-
-    if mode == ForwardMode.IBP:
-        output = [u_c_out, l_c_out]
-    elif mode == ForwardMode.AFFINE:
-        output = [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
-    elif mode == ForwardMode.HYBRID:
-        output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
-        raise ValueError(f"Unknown mode {mode}")
+        w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
-    return output
+    if dc_decomp:
+        raise NotImplementedError("Not yet implemented for dc_decomp=True")
+    else:
+        h_out, g_out = empty_tensor, empty_tensor
+
+    return inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+        [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+    )
 
 
 def log(
@@ -1248,24 +1242,25 @@ def log(
     """
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    if dc_decomp:
-        raise NotImplementedError()
+
     mode = ForwardMode(mode)
-    if mode == ForwardMode.IBP:
-        u_c, l_c = inputs
-        return [K.log(u_c), K.log(l_c)]
-    elif mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-        if mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = inputs
-            u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
-            l_c = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
-            l_c = K.maximum(K.cast(K.epsilon(), dtype=l_c.dtype), l_c)
-        else:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
+    affine = get_affine(mode)
+    ibp = get_ibp(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
 
-        u_c_out = K.log(u_c)
-        l_c_out = K.log(l_c)
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    dtype = x.dtype
+    empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
+    if mode == ForwardMode.AFFINE:
+        u_c = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
+        l_c = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
+        l_c = K.maximum(K.cast(K.epsilon(), dtype=l_c.dtype), l_c)
+
+    u_c_out = K.log(u_c)
+    l_c_out = K.log(l_c)
+
+    if affine:
         y = (u_c + l_c) / 2.0
 
         w_l_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, K.epsilon())
@@ -1278,13 +1273,17 @@ def log(
         b_u_out = w_u_0 * b_u + b_u_0
         w_l_out = w_l_0[:, None] * w_l
         b_l_out = w_l_0 * b_l + b_l_0
-
-        if mode == ForwardMode.AFFINE:
-            return [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
-        else:
-            return [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
-        raise ValueError(f"Unknown mode {mode}")
+        w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
+
+    if dc_decomp:
+        raise NotImplementedError("Not yet implemented for dc_decomp=True")
+    else:
+        h_out, g_out = empty_tensor, empty_tensor
+
+    return inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+        [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+    )
 
 
 def exp(
@@ -1311,22 +1310,24 @@ def exp(
     """
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    if dc_decomp:
-        raise NotImplementedError()
+
     mode = ForwardMode(mode)
-    if mode == ForwardMode.IBP:
-        return [K.exp(e) for e in inputs]
-    elif mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-        if mode == ForwardMode.AFFINE:
-            x_0, w_u, b_u, w_l, b_l = inputs
-            u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
-            l_c = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
-        else:
-            x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs
+    affine = get_affine(mode)
+    ibp = get_ibp(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
 
-        u_c_out = K.exp(u_c)
-        l_c_out = K.exp(l_c)
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    dtype = x.dtype
+    empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
+    if mode == ForwardMode.AFFINE:
+        u_c = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
+        l_c = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
+
+    u_c_out = K.exp(u_c)
+    l_c_out = K.exp(l_c)
+
+    if affine:
         y = (u_c + l_c) / 2.0  # do finetuneting
 
         w_u_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, K.epsilon())
@@ -1339,10 +1340,14 @@ def exp(
         b_u_out = w_u_0 * b_u + b_u_0
         w_l_out = w_l_0[:, None] * w_l
         b_l_out = w_l_0 * b_l + b_l_0
-
-        if mode == ForwardMode.AFFINE:
-            return [x_0, w_u_out, b_u_out, w_l_out, b_l_out]
-        else:
-            return [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
     else:
-        raise ValueError(f"Unknown mode {mode}")
+        w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
+
+    if dc_decomp:
+        raise NotImplementedError("Not yet implemented for dc_decomp=True")
+    else:
+        h_out, g_out = empty_tensor, empty_tensor
+
+    return inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
+        [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
+    )

@@ -222,6 +222,7 @@ class BackwardMaxPooling2D(BackwardLayer):
             b_l_out,
             perturbation_domain=perturbation_domain,
             mode=self.mode,
+            dc_decomp=self.dc_decomp,
             axis=-1,
         )
 

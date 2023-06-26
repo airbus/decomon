@@ -562,11 +562,11 @@ class DecomonDot(DecomonMerge, Dot):
         else:
             raise ValueError(f"Unknown mode {self.mode}")
 
-        inputs_0 = permute_dimensions(inputs_0, self.axes[0], mode=self.mode)
-        inputs_1 = permute_dimensions(inputs_1, self.axes[1], mode=self.mode)
+        inputs_0 = permute_dimensions(inputs_0, self.axes[0], mode=self.mode, dc_decomp=self.dc_decomp)
+        inputs_1 = permute_dimensions(inputs_1, self.axes[1], mode=self.mode, dc_decomp=self.dc_decomp)
 
-        inputs_0 = broadcast(inputs_0, n_1, -1, mode=self.mode)
-        inputs_1 = broadcast(inputs_1, n_0, 2, mode=self.mode)
+        inputs_0 = broadcast(inputs_0, n_1, -1, mode=self.mode, dc_decomp=self.dc_decomp)
+        inputs_1 = broadcast(inputs_1, n_0, 2, mode=self.mode, dc_decomp=self.dc_decomp)
 
         outputs_multiply = multiply(
             inputs_0, inputs_1, dc_decomp=self.dc_decomp, perturbation_domain=self.perturbation_domain, mode=self.mode

@@ -33,7 +33,6 @@ class DecomonModel(tf.keras.Model):
         if perturbation_domain is None:
             perturbation_domain = BoxDomain()
         self.perturbation_domain = perturbation_domain
-        self.nb_tensors = InputsOutputsSpec(dc_decomp).nb_tensors
         self.dc_decomp = dc_decomp
         self.method = ConvertMethod(method)
         self.ibp = ibp

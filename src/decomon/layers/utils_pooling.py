@@ -4,7 +4,13 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
-from decomon.core import ForwardMode, InputsOutputsSpec, PerturbationDomain
+from decomon.core import (
+    ForwardMode,
+    InputsOutputsSpec,
+    PerturbationDomain,
+    get_affine,
+    get_ibp,
+)
 from decomon.utils import get_lower, get_upper
 
 # step 1: compute (x_i, y_i) such that x_i[j]=l_j if j==i else u_j
@@ -16,6 +22,7 @@ def get_upper_linear_hull_max(
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     perturbation_domain: Optional[PerturbationDomain] = None,
     axis: int = -1,
+    dc_decomp: bool = False,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Compute the linear hull that overapproximates max along the axis dimension
@@ -32,39 +39,35 @@ def get_upper_linear_hull_max(
     Returns:
         list of output tensors. The upper linear relaxation of max(., axis) in the mode format
     """
+    mode = ForwardMode(mode)
+    affine = get_affine(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    dtype = x.dtype
+    input_shape = inputs_outputs_spec.get_input_shape(inputs)
 
     # attention if axis=-1 or axis=n
-    dtype = inputs[-1].dtype
     dtype32 = "float32"
-    mode = ForwardMode(mode)
     o_value = K.cast(1.0, dtype)
     z_value = K.cast(0.0, dtype)
-    if axis == len(inputs[-1].shape):
+    if axis == len(input_shape):
         axis = -1
     if axis != -1 and axis < 0:
         raise NotImplementedError()  # to do
 
-    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-
-    if mode == ForwardMode.IBP:
-
-        u_c, l_c = inputs[:nb_tensor]
-
-    elif mode == ForwardMode.AFFINE:
-
-        x, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
-        u_c = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
-        # assuming axis=-1 u_c.shape=(None, shape, n_dim)
-        l_c = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
-
-    elif mode == ForwardMode.HYBRID:
-
-        x, u_c_h, w_u, b_u, l_c_h, w_l, b_l = inputs[:nb_tensor]
-        u_c = K.minimum(u_c_h, get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain))
-        l_c = K.maximum(l_c_h, get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain))
+    if affine:
+        u_c_affine = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
+        l_c_affine = get_lower(x, w_u, b_u, perturbation_domain=perturbation_domain)
+        if mode == ForwardMode.AFFINE:
+            u_c = u_c_affine
+            l_c = l_c_affine
+        else:  # hybrid
+            u_c = K.minimum(u_c_affine, u_c)
+            l_c = K.maximum(l_c, l_c_affine)
 
     # get the shape of the dimension
-    n_dim = K.int_shape(inputs[-1])[axis]
+    n_dim = input_shape[axis]
 
     # expand dim/broadcast
     mask = tf.linalg.diag(tf.ones((n_dim), dtype=dtype))  # (n_dim, n_dim)
@@ -143,6 +146,7 @@ def get_lower_linear_hull_max(
     perturbation_domain: Optional[PerturbationDomain] = None,
     axis: int = -1,
     finetune_lower: Optional[tf.Tensor] = None,
+    dc_decomp: bool = False,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
     """Compute the linear hull that overapproximates max along the axis dimension
@@ -160,34 +164,30 @@ def get_lower_linear_hull_max(
     Returns:
         list of output tensors. The lower linear relaxation of max(., axis) in the mode format
     """
-
-    dtype = inputs[-1].dtype
     mode = ForwardMode(mode)
+    affine = get_affine(mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    dtype = x.dtype
+    input_shape = inputs_outputs_spec.get_input_shape(inputs)
+
     o_value = K.cast(1.0, dtype)
     z_value = K.cast(0.0, dtype)
-    if axis == len(inputs[-1].shape):
+    if axis == len(input_shape):
         axis = -1
     if axis != -1 and axis < 0:
         raise NotImplementedError()  # to do
 
-    nb_tensor = InputsOutputsSpec(dc_decomp=False, mode=mode).nb_tensors
-
-    if mode == ForwardMode.IBP:
-
-        u_c, l_c = inputs[:nb_tensor]
-
-    elif mode == ForwardMode.AFFINE:
-
-        x, w_u, b_u, w_l, b_l = inputs[:nb_tensor]
-        u_c = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
-        # assuming axis=-1 u_c.shape=(None, shape, n_dim)
-        l_c = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
-
-    elif mode == ForwardMode.HYBRID:
-
-        x, u_c_h, w_u, b_u, l_c_h, w_l, b_l = inputs[:nb_tensor]
-        u_c = K.minimum(u_c_h, get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain))
-        l_c = K.maximum(l_c_h, get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain))
+    if affine:
+        u_c_affine = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
+        l_c_affine = get_lower(x, w_u, b_u, perturbation_domain=perturbation_domain)
+        if mode == ForwardMode.AFFINE:
+            u_c = u_c_affine
+            l_c = l_c_affine
+        else:  # hybrid
+            u_c = K.minimum(u_c_affine, u_c)
+            l_c = K.maximum(l_c, l_c_affine)
 
     V = u_c + l_c
     M = -u_c + K.expand_dims(K.max(l_c, axis), axis)

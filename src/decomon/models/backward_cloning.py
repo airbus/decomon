@@ -11,7 +11,15 @@ from tensorflow.python.keras.utils.generic_utils import to_list
 from decomon.backward_layers.backward_merge import BackwardMerge
 from decomon.backward_layers.convert import to_backward
 from decomon.backward_layers.core import BackwardLayer
-from decomon.core import BoxDomain, ForwardMode, PerturbationDomain, Slope, get_mode
+from decomon.core import (
+    BoxDomain,
+    ForwardMode,
+    InputsOutputsSpec,
+    PerturbationDomain,
+    Slope,
+    get_affine,
+    get_mode,
+)
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.crown import Convert2BackwardMode, Fuse, MergeWithPrevious
 from decomon.models.forward_cloning import OutputMapDict
@@ -25,32 +33,27 @@ def get_disconnected_input(
     dtype: Union[str, tf.DType] = K.floatx(),
 ) -> Layer:
     mode = ForwardMode(mode)
+    dc_decomp = False
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    affine = get_affine(mode)
 
     def disco_priv(inputs: List[tf.Tensor]) -> List[tf.Tensor]:
-
-        if mode == ForwardMode.IBP:
-            return inputs
-        elif mode == ForwardMode.AFFINE:
-            x_0, w_f_u, b_f_u, w_f_l, b_f_l = inputs
-            u_c = get_upper(x_0, w_f_u, b_f_u, perturbation_domain=perturbation_domain)
-            l_c = get_lower(x_0, w_f_l, b_f_l, perturbation_domain=perturbation_domain)
-
-        elif mode == ForwardMode.HYBRID:
-            _, u_c, _, _, l_c, _, _ = inputs
-        else:
-            raise ValueError("Unknown mode.")
-
-        x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
-        w_u = tf.linalg.diag(K.cast(0.0, x_0.dtype) * u_c + K.cast(1.0, x_0.dtype))
-        b_u = K.cast(0.0, x_0.dtype) * u_c
-        # w_u_ = tf.linalg.diag(K.cast(0., x_0.dtype)*u_c)
+        x, u_c, w_f_u, b_f_u, l_c, w_f_l, b_f_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        dtype = x.dtype
+        empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
         if mode == ForwardMode.AFFINE:
-            return [x_0, w_u, b_u, w_u, b_u]
-        if mode == ForwardMode.HYBRID:
-            return [x_0, u_c, w_u, b_u, l_c, w_u, b_u]
+            u_c = get_upper(x, w_f_u, b_f_u, perturbation_domain=perturbation_domain)
+            l_c = get_lower(x, w_f_l, b_f_l, perturbation_domain=perturbation_domain)
+
+        if affine:
+            x = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
+            w_u = tf.linalg.diag(K.cast(0.0, x.dtype) * u_c + K.cast(1.0, x.dtype))
+            b_u = K.cast(0.0, x.dtype) * u_c
         else:
-            raise ValueError("Unknown mode.")
+            w_u, b_u = empty_tensor, empty_tensor
+
+        return inputs_outputs_spec.extract_outputsformode_from_fulloutputs([x, u_c, w_u, b_u, l_c, w_u, b_u])
 
     return Lambda(disco_priv, dtype=dtype)
 
