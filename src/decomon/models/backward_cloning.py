@@ -4,23 +4,18 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from keras.engine.node import Node
-from tensorflow.keras.layers import Average, Concatenate, Lambda, Layer
+from tensorflow.keras.layers import Concatenate, Lambda, Layer
 from tensorflow.keras.models import Model
-from tensorflow.python.keras.utils.generic_utils import has_arg, to_list
+from tensorflow.python.keras.utils.generic_utils import to_list
 
 from decomon.backward_layers.backward_merge import BackwardMerge
 from decomon.backward_layers.convert import to_backward
 from decomon.backward_layers.core import BackwardLayer
-from decomon.backward_layers.crown import (
-    Convert2BackwardMode,
-    Convert2Mode,
-    Fuse,
-    MergeWithPrevious,
-)
 from decomon.core import BoxDomain, ForwardMode, PerturbationDomain, Slope, get_mode
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
+from decomon.models.crown import Convert2BackwardMode, Fuse, MergeWithPrevious
 from decomon.models.forward_cloning import OutputMapDict
-from decomon.models.utils import get_depth_dict
+from decomon.models.utils import Convert2Mode, get_depth_dict
 from decomon.utils import get_lower, get_upper
 
 

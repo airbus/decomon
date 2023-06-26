@@ -355,3 +355,68 @@ def get_inner_layers(model: Model) -> int:
         else:
             count += 1
     return count
+
+
+class Convert2Mode(Layer):
+    def __init__(
+        self,
+        mode_from: Union[str, ForwardMode],
+        mode_to: Union[str, ForwardMode],
+        perturbation_domain: PerturbationDomain,
+        **kwargs: Any,
+    ):
+        super().__init__(**kwargs)
+        self.mode_from = ForwardMode(mode_from)
+        self.mode_to = ForwardMode(mode_to)
+        self.perturbation_domain = perturbation_domain
+
+    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+
+        mode_from = self.mode_from
+        mode_to = self.mode_to
+        perturbation_domain = self.perturbation_domain
+
+        if mode_from == mode_to:
+            return inputs
+
+        if mode_from in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
+            x_0 = inputs[0]
+        else:
+            u_c, l_c = inputs
+            if mode_to in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
+                x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
+                z_value = K.cast(0.0, u_c.dtype)
+                o_value = K.cast(1.0, u_c.dtype)
+                w = tf.linalg.diag(z_value * l_c)
+                w_u = w
+                b_u = u_c
+                w_l = w
+                b_l = l_c
+
+        if mode_from == ForwardMode.AFFINE:
+            _, w_u, b_u, w_l, b_l = inputs
+            if mode_to in [ForwardMode.IBP, ForwardMode.HYBRID]:
+                u_c = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
+                l_c = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
+        elif mode_from == ForwardMode.IBP:
+            u_c, l_c = inputs
+        elif mode_from == ForwardMode.HYBRID:
+            _, u_c, w_u, b_u, l_c, w_l, b_l = inputs
+        else:
+            raise ValueError(f"Unknwon mode {self.mode}")
+
+        if mode_to == ForwardMode.IBP:
+            return [u_c, l_c]
+        elif mode_to == ForwardMode.AFFINE:
+            return [x_0, w_u, b_u, w_l, b_l]
+        elif mode_to == ForwardMode.HYBRID:
+            return [x_0, u_c, w_u, b_u, l_c, w_l, b_l]
+        else:
+            raise ValueError(f"Unknwon mode {self.mode}")
+
+    def get_config(self) -> Dict[str, Any]:
+        config = super().get_config()
+        config.update(
+            {"mode_from": self.mode_from, "mode_to": self.mode_to, "perturbation_domain": self.perturbation_domain}
+        )
+        return config

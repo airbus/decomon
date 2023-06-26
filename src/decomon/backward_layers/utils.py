@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Union
 
 import numpy as np
 import tensorflow as tf
@@ -102,46 +102,6 @@ def backward_add(
     b_l_out_1 = lower_0
 
     return [[w_u_out_0, b_u_out_0, w_l_out_0, b_l_out_0], [w_u_out_1, b_u_out_1, w_l_out_1, b_l_out_1]]
-
-
-def merge_with_previous(inputs: List[tf.Tensor]) -> List[tf.Tensor]:
-    w_u_out, b_u_out, w_l_out, b_l_out, w_b_u, b_b_u, w_b_l, b_b_l = inputs
-
-    # w_u_out (None, n_h_in, n_h_out)
-    # w_b_u (None, n_h_out, n_out)
-
-    # w_u_out_ (None, n_h_in, n_h_out, 1)
-    # w_b_u_ (None, 1, n_h_out, n_out)
-    # w_u_out_*w_b_u_ (None, n_h_in, n_h_out, n_out)
-
-    # result (None, n_h_in, n_out)
-
-    if len(w_u_out.shape) == 2:
-        w_u_out = tf.linalg.diag(w_u_out)
-
-    if len(w_l_out.shape) == 2:
-        w_l_out = tf.linalg.diag(w_l_out)
-
-    if len(w_b_u.shape) == 2:
-        w_b_u = tf.linalg.diag(w_b_u)
-
-    if len(w_b_l.shape) == 2:
-        w_b_l = tf.linalg.diag(w_b_l)
-
-    # import pdb; pdb.set_trace()
-
-    z_value = K.cast(0.0, dtype=w_u_out.dtype)
-    w_b_u_pos = K.maximum(w_b_u, z_value)
-    w_b_u_neg = K.minimum(w_b_u, z_value)
-    w_b_l_pos = K.maximum(w_b_l, z_value)
-    w_b_l_neg = K.minimum(w_b_l, z_value)
-
-    w_u = K.batch_dot(w_u_out, w_b_u_pos, (-1, -2)) + K.batch_dot(w_l_out, w_b_u_neg, (-1, -2))
-    w_l = K.batch_dot(w_l_out, w_b_l_pos, (-1, -2)) + K.batch_dot(w_u_out, w_b_l_neg, (-1, -2))
-    b_u = K.batch_dot(b_u_out, w_b_u_pos, (-1, -2)) + K.batch_dot(b_l_out, w_b_u_neg, (-1, -2)) + b_b_u
-    b_l = K.batch_dot(b_l_out, w_b_l_pos, (-1, -2)) + K.batch_dot(b_u_out, w_b_l_neg, (-1, -2)) + b_b_l
-
-    return [w_u, b_u, w_l, b_l]
 
 
 def backward_relu_(
