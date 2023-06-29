@@ -858,8 +858,13 @@ def split(
     affine = get_affine(mode)
     ibp = get_ibp(mode)
     inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
-    n = 1
 
+    input_shape = inputs_outputs_spec.get_input_shape(inputs)
+    if axis == -1:
+        n = input_shape[-1]
+        axis = len(input_shape) - 1
+    else:
+        n = input_shape[axis]
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
     dtype = x.dtype
     empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
