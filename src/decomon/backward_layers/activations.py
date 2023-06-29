@@ -6,7 +6,6 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Layer
 
-from decomon.backward_layers.utils import backward_relu_, backward_softplus_
 from decomon.core import (
     BoxDomain,
     ForwardMode,

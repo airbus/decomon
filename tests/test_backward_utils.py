@@ -9,7 +9,6 @@ from tensorflow.keras.layers import Input
 from decomon.backward_layers.utils import (
     backward_add,
     backward_maximum,
-    backward_relu_,
     backward_subtract,
 )
 
@@ -20,35 +19,6 @@ def add_op(x, y):
 
 def subtract_op(x, y):
     return x - y
-
-
-def test_relu_backward_1D_box(n, mode, floatx, decimal, helpers):
-    dc_decomp = False
-
-    #  tensor inputs
-    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
-    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
-
-    # numpy inputs
-    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
-    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs=inputs_)
-    batchsize = input_ref_.shape[0]
-
-    x_, y_, z_, u_c_, W_u_, B_u_, l_c_, W_l_, B_l_ = inputs_
-
-    # backward outputs
-    w_out = Input((1, 1), dtype=K.floatx())
-    b_out = Input((1), dtype=K.floatx())
-    outputs = backward_relu_(inputs_for_mode, w_out, b_out, w_out, b_out, mode=mode)
-    f_decomon = K.function(inputs + [w_out, b_out], outputs)
-    outputs_ = f_decomon(inputs_ + [np.ones((batchsize, 1, 1)), np.zeros((batchsize, 1))])
-
-    # check bounds consistency
-    helpers.assert_backward_layer_output_properties_box_linear(
-        full_inputs=inputs_,
-        backward_outputs=outputs_,
-        decimal=decimal,
-    )
 
 
 @pytest.mark.parametrize(
