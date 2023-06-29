@@ -327,11 +327,10 @@ def max_(
         w_l_tmp = w_l_list[0] + 0 * (w_l_list[0])
 
         if finetune:
-            key = [e for e in kwargs.keys()][0]
-            params = kwargs[key][0]
+            params = kwargs["finetune_params"]
             params_split = [e[0] for e in tf.split(params[None], max_dim, axis)]
         else:
-            params_split = [False] * max_dim
+            params_split = [empty_tensor] * max_dim
 
     else:
         w_u_tmp, b_u_tmp, w_l_tmp, b_l_tmp = empty_tensor, empty_tensor, empty_tensor, empty_tensor
