@@ -247,12 +247,6 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         else:
             w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
-        if self.mode == ForwardMode.HYBRID:
-            upper = get_upper(x, w_u_out, b_u_out, self.perturbation_domain)
-            lower = get_lower(x, w_l_out, b_l_out, self.perturbation_domain)
-            u_c_out = K.minimum(upper, u_c_out)
-            l_c_out = K.maximum(lower, l_c_out)
-
         if self.use_bias:
             if self.dc_decomp:
                 g_out = K.bias_add(g_out, K.minimum(z_value, self.bias), data_format=self.data_format)
