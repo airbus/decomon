@@ -184,7 +184,7 @@ class BackwardMaxPooling2D(BackwardLayer):
         return [w_u_out, b_u_out, w_l_out, b_l_out]
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa()
+        w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
         if self.fast:
             return self._pooling_function_fast(
                 inputs=inputs,
