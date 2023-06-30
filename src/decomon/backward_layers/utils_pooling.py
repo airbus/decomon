@@ -1,11 +1,15 @@
 # step1: create the kernel used in max_pooling
 # should be a non trainable variable
 # compute the toeplitz matrix
-
+from typing import Any, Dict, List, Optional, Union, Tuple
 import numpy as np
 import tensorflow as tf
+import tensorflow.keras.backend as K
 from decomon.backward_layers.utils_conv import get_affine_components
 from tensorflow.keras.layers import MaxPooling2D, Conv2D
+from decomon.layers.maxpooling import DecomonMaxPooling2D
+from decomon.layers.core import ForwardMode
+from decomon.core import PerturbationDomain
 
 
 #(pool_size, pool_size, channels, channels*2**pool_size)
@@ -22,32 +26,42 @@ def get_conv_pooling(pool_layer: MaxPooling2D)-> Tuple[tf.Tensor, tf.Tensor]:
                         np.eye(pooling).reshape( 
                             (pooling, pool_size_x, pool_size_y)),
                              (1,2, 0))[:,:,None, :], 1, -2)
-    
     op_conv = Conv2D(pooling, (pool_size_x, pool_size_y), 
                         padding=padding, 
                         strides=strides, use_bias=False, data_format=data_format)
 
     if data_format== "channels_last":
-        channel_pool = pool_layer.get_input_shape_at(0)[-1]
+        # should also work with a Decomon layer
+        channel_pool = pool_layer.get_input_shape_at(0)
+        if isinstance(channel_pool, list):
+            channel_pool= channel_pool[-1]
+        channel_pool= channel_pool[-1]
         axis_split = -1
     else:
         channel_pool = pool_layer.get_input_shape_at(0)[1]
+        if isinstance(channel_pool, list):
+            channel_pool= channel_pool[-1]
+        channel_pool= channel_pool[1]
         axis_split = 1
-        
-    conv_input = tf.split(pool_layer.get_input_at(0), channel_pool, axis=axis_split)[0]
+
+    pool_input = pool_layer.get_input_at(0)
+    if isinstance(pool_input, list):
+        pool_input = pool_input[-1]
+    conv_input = tf.split(pool_input, channel_pool, axis=axis_split)[0]
     op_conv(conv_input)
     op_conv.set_weights([kernel_pool])
     op_conv.trainable=False
     op_conv._trainable_weights=[]
 
-    # retrieve the linear hull
-    fake_inputs = pool_layer.get_input_at(0)
-    w_conv_u, b_conv_u = get_affine_components(op_conv, [fake_inputs])
-
+    w_conv_u, b_conv_u = get_affine_components(op_conv, [pool_input])
+    
     # reshape it given the input
-    w_conv_u = K.reshape(K.repeat(w_conv_u, channel_pool, 2),\
-     (pool_size_x, pool_size_y, channel_pool, -1, pooling))
-    b_conv_u = K.reshape(b_conv_u, (-1, pooling))
+    w_shape = w_conv_u.shape
+    dim = int(np.prod(w_shape[2:])/(pooling))
+    w_conv_u = K.reshape(tf.repeat(w_conv_u, channel_pool, 2),\
+     (-1, pool_size_x, pool_size_y, channel_pool, dim, pooling))
+    b_conv_u = K.reshape(b_conv_u, (-1, dim, pooling))
+    
     # to check
     return w_conv_u, b_conv_u
 
@@ -112,8 +126,6 @@ def get_maxpooling_linear_hull(w_conv_pool: tf.Tensor, b_conv_pool: tf.Tensor,
                                 mode:Union[str, ForwardMode],
                                 perturbation_domain: Optional[PerturbationDomain]) -> Tuple[tf.Tensor, tf.Tensor]:
 
-    #w_conv_u, b_conv_u = get_conv_pooling(pool_ayer) 
-    #:::: done at build time and not in trainable weights
     # forward propagation to bound the second  step of maxpooling, aka maximum
     # we need a routine for applying a linear function
     inputs_max =  apply_linear_bounds(w_conv_pool, b_conv_pool, 
@@ -130,5 +142,8 @@ def get_maxpooling_linear_hull(w_conv_pool: tf.Tensor, b_conv_pool: tf.Tensor,
     hull_max_upper = get_upper_linear_hull_max(inputs_max, mode, perturbation_domain, axis=-1, 
                                 finetune_upper=finetune_upper)
 
-    return merge_with_previous(hull_max_upper+hull_max_lower, [w_conv_pool, b_conv_pool]*2)
+    # shape issue !!!!
+
+    return merge_with_previous(hull_max_upper+hull_max_lower,\
+                               [w_conv_pool, b_conv_pool]*2)
 
