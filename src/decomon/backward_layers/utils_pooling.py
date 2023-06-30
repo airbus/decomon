@@ -10,7 +10,8 @@ from tensorflow.keras.layers import MaxPooling2D, Conv2D
 from decomon.layers.maxpooling import DecomonMaxPooling2D
 from decomon.layers.core import ForwardMode
 from decomon.core import PerturbationDomain
-
+from decomon.layers.utils_pooling import get_lower_linear_hull_max, get_upper_linear_hull_max
+from decomon.backward_layers.utils import merge_with_previous
 
 #(pool_size, pool_size, channels, channels*2**pool_size)
 def get_conv_pooling(pool_layer: MaxPooling2D)-> Tuple[tf.Tensor, tf.Tensor]:
@@ -54,16 +55,19 @@ def get_conv_pooling(pool_layer: MaxPooling2D)-> Tuple[tf.Tensor, tf.Tensor]:
     op_conv._trainable_weights=[]
 
     w_conv_u, b_conv_u = get_affine_components(op_conv, [pool_input])
-    
     # reshape it given the input
-    w_shape = w_conv_u.shape
-    dim = int(np.prod(w_shape[2:])/(pooling))
-    w_conv_u = K.reshape(tf.repeat(w_conv_u, channel_pool, 2),\
-     (-1, pool_size_x, pool_size_y, channel_pool, dim, pooling))
-    b_conv_u = K.reshape(b_conv_u, (-1, dim, pooling))
-    
+
+    pooling_shape = pool_input.get_shape().as_list()[1:]
+    w_shape = w_conv_u.get_shape().as_list()
+
+    dim = int(np.prod(w_shape[1:])*channel_pool/(pooling*np.prod(pooling_shape)))
+    w_conv_u = tf.repeat(w_conv_u, channel_pool, 2)
+    w_conv_u = tf.repeat(K.reshape(w_conv_u, [-1]+pooling_shape+[dim, pooling]), channel_pool, -2)
+    b_conv_u = tf.repeat(K.reshape(b_conv_u, (-1, dim, pooling)), channel_pool, -2)
+
     # to check
     return w_conv_u, b_conv_u
+
 
 def apply_linear_bounds(kernel:tf.Tensor, bias:tf.Tensor, 
                         inputs: List[tf.Tensor], 
@@ -86,30 +90,47 @@ def apply_linear_bounds(kernel:tf.Tensor, bias:tf.Tensor,
         raise ValueError(f"Unknown mode {mode}")
 
     if mode in [ForwardMode.HYBRID, ForwardMode.IBP]:
-        #if not self.has_backward_bounds:
-        u_c_out = op_dot(u_c, kernel_pos) + op_dot(l_c, kernel_neg)
-        l_c_out = op_dot(l_c, kernel_pos) + op_dot(u_c, kernel_neg)
 
-        u_c_out = K.bias_add(u_c_out, bias, data_format="channels_last")
-        l_c_out = K.bias_add(l_c_out, bias, data_format="channels_last")
+        # expand u_c, l_c
+        axis_sum = len(u_c.shape)
+        u_c = K.expand_dims(K.expand_dims(u_c, -1), -1)
+        l_c = K.expand_dims(K.expand_dims(l_c, -1), -1)
+        u_c_out = K.sum(u_c*kernel_pos + l_c*kernel_neg, np.arange(1, axis_sum))
+        l_c_out = K.sum(l_c*kernel_pos + u_c*kernel_neg, np.arange(1, axis_sum))
+        
+        u_c_out += bias
+        l_c_out += bias
+        #u_c_out = K.bias_add(u_c_out, bias, data_format="channels_last")
+        #l_c_out = K.bias_add(l_c_out, bias, data_format="channels_last")
 
     if mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
+        axis_sum = len(b_u.shape)
+        b_u = K.expand_dims(K.expand_dims(b_u, -1), -1)
+        b_l = K.expand_dims(K.expand_dims(b_l, -1), -1)
+        
+        b_u_out = K.sum(b_u*kernel_pos + b_l*kernel_neg, np.arange(1, axis_sum))
+        b_l_out = K.sum(b_l*kernel_pos + b_u*kernel_neg, np.arange(1, axis_sum))
+        
+        b_u_out += bias
+        b_l_out += bias
+        
+        w_u = K.expand_dims(K.expand_dims(w_u, -1), -1)
+        w_l = K.expand_dims(K.expand_dims(w_l, -1), -1)
+        kernel_pos_w = K.expand_dims(kernel_pos, 1)
+        kernel_neg_w = K.expand_dims(kernel_neg, 1)
 
-        b_u_out = op_dot(b_u, kernel_pos) + op_dot(b_l, kernel_neg)
-        b_l_out = op_dot(b_l, kernel_pos) + op_dot(b_u, kernel_neg)
+        w_u_out = K.sum(w_u*kernel_pos_w + w_l*kernel_neg_w, np.arange(2, axis_sum+1))
+        w_l_out = K.sum(w_l*kernel_pos_w + w_u*kernel_neg_w, np.arange(2, axis_sum+1))
 
-        b_u_out = K.bias_add(b_u_out, bias, data_format="channels_last")
-        b_l_out = K.bias_add(b_l_out, bias, data_format="channels_last")
-
-        w_u_out = op_dot(w_u, kernel_pos) + op_dot(w_l, kernel_neg)
-        w_l_out = op_dot(w_l, kernel_pos) + op_dot(w_u, kernel_neg)
-
+    # not necessary anymore with Nolwen's trick
+    """
     if mode == ForwardMode.HYBRID:
         upper = get_upper(x_0, w_u_out, b_u_out, perturbation_domain)
         lower = get_lower(x_0, w_l_out, b_l_out, perturbation_domain)
 
         l_c_out = K.maximum(lower, l_c_out)
         u_c_out = K.minimum(upper, u_c_out)
+    """
 
     if mode == ForwardMode.HYBRID:
         output = [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
@@ -137,13 +158,23 @@ def get_maxpooling_linear_hull(w_conv_pool: tf.Tensor, b_conv_pool: tf.Tensor,
     # finetune !!!!
     finetune_lower=None
     finetune_upper=None
-    hull_max_lower = get_lower_linear_hull_max(inputs_max, mode, perturbation_domain, axis=-1, 
+    w_hull_l, b_hull_l = get_lower_linear_hull_max(inputs_max, mode, perturbation_domain, axis=-1, 
                                 finetune_lower=finetune_lower)
-    hull_max_upper = get_upper_linear_hull_max(inputs_max, mode, perturbation_domain, axis=-1, 
+
+    w_hull_u, b_hull_u = get_upper_linear_hull_max(inputs_max, mode, perturbation_domain, axis=-1, 
                                 finetune_upper=finetune_upper)
+    shape_w = w_hull_l.get_shape().as_list()[1:]
+    shape_prod = np.prod(shape_w)
+    w_hull_l = K.sum(K.reshape(tf.linalg.diag(K.reshape(w_hull_l, (-1, shape_prod))), [-1, shape_prod]+shape_w), -1)
+    w_hull_u = K.sum(K.reshape(tf.linalg.diag(K.reshape(w_hull_u, (-1, shape_prod))), [-1, shape_prod]+shape_w), -1)
 
     # shape issue !!!!
-
-    return merge_with_previous(hull_max_upper+hull_max_lower,\
-                               [w_conv_pool, b_conv_pool]*2)
+    # flatten w_conv_pool
+    dim_conv = w_conv_pool.get_shape().as_list()[1:]
+    dim_input_conv = int(np.prod(dim_conv)/np.prod(dim_conv[-2:]))
+    dim_output_conv = np.prod(dim_conv[-2:])
+    w_conv_flat = K.reshape(w_conv_pool, (-1, dim_input_conv, dim_output_conv))
+    b_conv_flat = K.reshape(b_conv_pool, (-1, dim_output_conv))
+    
+    return merge_with_previous([w_conv_flat, b_conv_flat]*2+[w_hull_u, b_hull_u]+[w_hull_l, b_hull_l])
 
