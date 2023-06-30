@@ -32,10 +32,8 @@ jobs:
         run: |
           binder_env_full_ref=${{ inputs.binder-env-fullref }}
           echo Triggering binder environment build for ${binder_env_full_ref}
-          bash scripts/trigger_binder.sh https://gke.mybinder.org/build/gh/${binder_env_full_ref}
           bash scripts/trigger_binder.sh https://ovh.mybinder.org/build/gh/${binder_env_full_ref}
           bash scripts/trigger_binder.sh https://ovh2.mybinder.org/build/gh/${binder_env_full_ref}
-          bash scripts/trigger_binder.sh https://turing.mybinder.org/build/gh/${binder_env_full_ref}
           bash scripts/trigger_binder.sh https://gesis.mybinder.org/build/gh/${binder_env_full_ref}
 
   deploy-doc:
