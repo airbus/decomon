@@ -348,13 +348,6 @@ def add(
     b_u = b_u_0 + b_u_1
     b_l = b_l_0 + b_l_1
 
-    if mode == ForwardMode.HYBRID:
-        upper = get_upper(x_0, w_u, b_u, perturbation_domain=perturbation_domain)
-        u_c = K.minimum(upper, u_c)
-
-        lower = get_lower(x_0, w_l, b_l, perturbation_domain=perturbation_domain)
-        l_c = K.maximum(lower, l_c)
-
     fulloutputs = [x, u_c, w_u, b_u, l_c, w_l, b_l, h, g]
     outputs = inputs_outputs_spec.extract_outputsformode_from_fulloutputs(fulloutputs)
 
