@@ -259,12 +259,6 @@ class DecomonConv2D(DecomonLayer, Conv2D):
                 u_c_out = K.bias_add(u_c_out, self.bias, data_format=self.data_format)
                 l_c_out = K.bias_add(l_c_out, self.bias, data_format=self.data_format)
 
-        if self.mode == ForwardMode.HYBRID:
-            upper = get_upper(x, w_u_out, b_u_out, self.perturbation_domain)
-            u_c_out = K.minimum(upper, u_c_out)
-            lower = get_lower(x, w_l_out, b_l_out, self.perturbation_domain)
-            l_c_out = K.maximum(lower, l_c_out)
-
         return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
             [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
         )
@@ -571,12 +565,6 @@ class DecomonDense(DecomonLayer, Dense):
                     raise NotImplementedError()
                 h_out = K.bias_add(h_out, K.maximum(z_value, self.bias), data_format="channels_last")
                 g_out = K.bias_add(g_out, K.minimum(z_value, self.bias), data_format="channels_last")
-
-        if self.mode == ForwardMode.HYBRID:
-            upper = get_upper(x, w_u_out, b_u_out, self.perturbation_domain)
-            lower = get_lower(x, w_l_out, b_l_out, self.perturbation_domain)
-            l_c_out = K.maximum(lower, l_c_out)
-            u_c_out = K.minimum(upper, u_c_out)
 
         return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
             [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
