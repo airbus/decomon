@@ -17,7 +17,7 @@ from decomon.core import (
 from decomon.layers.activations import softmax as softmax_
 from decomon.layers.core import DecomonLayer
 from decomon.models.models import DecomonModel
-from decomon.utils import set_mode
+from decomon.models.utils import Convert2Mode
 
 
 def get_model(model: DecomonModel) -> DecomonModel:
@@ -400,7 +400,11 @@ class DecomonLossFusion(DecomonLayer):
             fast=fast,
             **kwargs,
         )
-        self.final_mode = ForwardMode.IBP
+        self.convert2mode_layer = Convert2Mode(
+            mode_from=mode,
+            mode_to=ForwardMode.IBP,
+            perturbation_domain=self.perturbation_domain,
+        )
         self.asymptotic = asymptotic
         self.backward = backward
 
@@ -418,14 +422,12 @@ class DecomonLossFusion(DecomonLayer):
 
         if not self.asymptotic:
 
-            u_c, l_c = set_mode(inputs, self.final_mode, self.mode, self.perturbation_domain)
+            u_c, l_c = self.convert2mode_layer(inputs)
 
             return -l_c + K.log(K.sum(K.exp(u_c - K.max(u_c, -1)[:, None]), -1))[:, None] + K.max(u_c, -1)[:, None]
 
         else:
-            u_c, l_c = set_mode(
-                inputs, self.final_mode, self.mode, self.perturbation_domain
-            )  # (None, n_out), (None, n_out)
+            u_c, l_c = self.convert2mode_layer(inputs)
             shape = u_c.shape[-1]
 
             def adv_ibp(u_c: tf.Tensor, l_c: tf.Tensor, y_tensor: tf.Tensor) -> tf.Tensor:
@@ -449,8 +451,7 @@ class DecomonLossFusion(DecomonLayer):
     def call_backward(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
 
         if not self.asymptotic:
-
-            u_c, l_c = set_mode(inputs, self.final_mode, self.mode, self.perturbation_domain)
+            u_c, l_c = self.convert2mode_layer(inputs)
             return K.softmax(u_c)
 
         else:

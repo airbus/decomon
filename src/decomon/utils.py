@@ -738,28 +738,3 @@ def get_t_lower(
     b_l = -w_l * u_c_flat + s_u  # func(u_c_flat)
 
     return [w_l, b_l]
-
-
-def set_mode(
-    inputs: List[tf.Tensor],
-    final_mode: Union[str, ForwardMode],
-    mode: Union[str, ForwardMode],
-    perturbation_domain: Optional[PerturbationDomain] = None,
-    dc_decomp: bool = False,
-) -> List[tf.Tensor]:
-    if perturbation_domain is None:
-        perturbation_domain = BoxDomain()
-
-    final_mode = ForwardMode(final_mode)
-    mode = ForwardMode(mode)
-    if mode == final_mode:
-        return inputs
-    else:
-        if mode == ForwardMode.IBP:
-            raise NotImplementedError(f"If mode is {ForwardMode.IBP}, final_mode must be also {ForwardMode.IBP}.")
-        else:
-            inputs_outputs_spec = InputsOutputsSpec(
-                dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain
-            )
-            x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
-            return inputs_outputs_spec.extract_outputsformode_from_fulloutputs([x, u_c, w_u, b_u, l_c, w_l, b_l, h, g])
