@@ -12,6 +12,8 @@ from decomon.core import (
     InputsOutputsSpec,
     PerturbationDomain,
     Slope,
+    get_lower,
+    get_upper,
 )
 from decomon.utils import (
     get_linear_hull_relu,
@@ -19,8 +21,6 @@ from decomon.utils import (
     get_linear_hull_sigmoid,
     get_linear_hull_tanh,
     get_linear_softplus_hull,
-    get_lower,
-    get_upper,
     sigmoid_prime,
     softsign_prime,
     tanh_prime,

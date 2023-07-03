@@ -1,2 +1,2 @@
-from ..core import ForwardMode, InputsOutputsSpec
-from .utils import get_lower, get_upper, maximum, minimum
+from ..core import ForwardMode, InputsOutputsSpec, get_lower, get_upper
+from .utils import maximum, minimum

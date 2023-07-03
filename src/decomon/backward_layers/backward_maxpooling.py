@@ -7,8 +7,7 @@ from tensorflow.keras.layers import Flatten, Layer
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import backward_max_, get_identity_lirpa
-from decomon.core import ForwardMode, PerturbationDomain
-from decomon.utils import get_lower, get_upper
+from decomon.core import ForwardMode, PerturbationDomain, get_lower, get_upper
 
 
 class BackwardMaxPooling2D(BackwardLayer):

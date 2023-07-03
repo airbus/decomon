@@ -8,9 +8,8 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Input, Layer
 from tensorflow.keras.models import Model
 
-from decomon.core import BoxDomain, PerturbationDomain
+from decomon.core import BoxDomain, PerturbationDomain, get_upper
 from decomon.models.models import DecomonModel
-from decomon.utils import get_upper
 
 
 class MetricMode(Enum):

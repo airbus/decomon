@@ -20,7 +20,7 @@ from tensorflow.keras.layers import (
 from tensorflow.python.keras.utils import conv_utils
 from tensorflow.python.keras.utils.generic_utils import to_list
 
-from decomon.core import ForwardMode, PerturbationDomain, Slope
+from decomon.core import ForwardMode, PerturbationDomain, Slope, get_lower, get_upper
 from decomon.keras_utils import get_weight_index
 from decomon.layers import activations
 from decomon.layers.core import DecomonLayer
@@ -30,7 +30,6 @@ from decomon.layers.utils import (
     NonPos,
     Project_initializer_pos,
 )
-from decomon.utils import get_lower, get_upper
 
 
 class DecomonConv2D(DecomonLayer, Conv2D):

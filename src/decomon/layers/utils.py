@@ -17,17 +17,10 @@ from decomon.core import (
     Slope,
     get_affine,
     get_ibp,
-)
-from decomon.utils import (
-    add,
-    get_linear_softplus_hull,
     get_lower,
     get_upper,
-    maximum,
-    minimum,
-    minus,
-    relu_,
 )
+from decomon.utils import add, get_linear_softplus_hull, maximum, minimum, minus, relu_
 
 
 def is_a_merge_layer(layer: Layer) -> bool:

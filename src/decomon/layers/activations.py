@@ -14,13 +14,13 @@ from decomon.core import (
     Slope,
     get_affine,
     get_ibp,
+    get_lower,
+    get_upper,
 )
 from decomon.layers.core import DecomonLayer
 from decomon.layers.utils import exp, expand_dims, frac_pos, multiply, softplus_, sum
 from decomon.utils import (
     get_linear_hull_s_shape,
-    get_lower,
-    get_upper,
     minus,
     relu_,
     sigmoid_prime,

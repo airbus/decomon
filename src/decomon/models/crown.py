@@ -5,8 +5,7 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import InputSpec, Layer
 
-from decomon.core import ForwardMode, PerturbationDomain
-from decomon.utils import get_lower, get_upper
+from decomon.core import ForwardMode, PerturbationDomain, get_lower, get_upper
 
 
 class Fuse(Layer):

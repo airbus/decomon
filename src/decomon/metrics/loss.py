@@ -10,12 +10,14 @@ from decomon.core import (
     BoxDomain,
     ForwardMode,
     PerturbationDomain,
+    get_lower,
     get_mode,
+    get_upper,
 )
 from decomon.layers.activations import softmax as softmax_
 from decomon.layers.core import DecomonLayer
 from decomon.models.models import DecomonModel
-from decomon.utils import get_lower, get_upper, set_mode
+from decomon.utils import set_mode
 
 
 def get_model(model: DecomonModel) -> DecomonModel:
