@@ -42,6 +42,7 @@ class Convert2BackwardMode(Layer):
         inputs_wo_backward_bounds = inputs[:-4]
         backward_bounds = inputs[-4:]
         w_u_out, b_u_out, w_l_out, b_l_out = backward_bounds
+        empty_tensor = tf.constant([])
 
         if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             x_0 = inputs_wo_backward_bounds[0]
@@ -49,17 +50,17 @@ class Convert2BackwardMode(Layer):
             u_c, l_c = inputs_wo_backward_bounds
             x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
 
+        if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
+            u_c_out = get_upper(x_0, w_u_out, b_u_out, perturbation_domain=self.perturbation_domain)
+            l_c_out = get_lower(x_0, w_l_out, b_l_out, perturbation_domain=self.perturbation_domain)
+        else:
+            u_c_out, l_c_out = empty_tensor, empty_tensor
+
         if self.mode == ForwardMode.AFFINE:
             return [x_0] + backward_bounds
-
         elif self.mode == ForwardMode.IBP:
-            u_c_out = get_upper(x_0, w_u_out, b_u_out, perturbation_domain=self.perturbation_domain)
-            l_c_out = get_lower(x_0, w_l_out, b_l_out, perturbation_domain=self.perturbation_domain)
             return [u_c_out, l_c_out]
-
         elif self.mode == ForwardMode.HYBRID:
-            u_c_out = get_upper(x_0, w_u_out, b_u_out, perturbation_domain=self.perturbation_domain)
-            l_c_out = get_lower(x_0, w_l_out, b_l_out, perturbation_domain=self.perturbation_domain)
             return [x_0, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out]
 
         else:
