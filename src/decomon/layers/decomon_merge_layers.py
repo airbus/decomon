@@ -261,7 +261,10 @@ class DecomonMinimum(DecomonMerge, Minimum):
         # splits the inputs
         inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
         # look at minus the input to apply maximum
-        inputs_list = [minus(single_inputs, mode=self.mode, dc_decomp=self.dc_decomp) for single_inputs in inputs_list]
+        inputs_list = [
+            minus(single_inputs, mode=self.mode, dc_decomp=self.dc_decomp, perturbation_domain=self.perturbation_domain)
+            for single_inputs in inputs_list
+        ]
 
         #  check number of inputs
         if len(inputs_list) == 1:  # nothing to merge
@@ -283,7 +286,7 @@ class DecomonMinimum(DecomonMerge, Minimum):
                     mode=self.mode,
                 )
 
-            return minus(output, mode=self.mode, dc_decomp=self.dc_decomp)
+            return minus(output, mode=self.mode, dc_decomp=self.dc_decomp, perturbation_domain=self.perturbation_domain)
 
 
 class DecomonMaximum(DecomonMerge, Maximum):
@@ -542,14 +545,18 @@ class DecomonDot(DecomonMerge, Dot):
 
         inputs_0 = permute_dimensions(inputs_0, self.axes[0], mode=self.mode, dc_decomp=self.dc_decomp)
         inputs_1 = permute_dimensions(inputs_1, self.axes[1], mode=self.mode, dc_decomp=self.dc_decomp)
-        inputs_0 = broadcast(inputs_0, n_1, -1, mode=self.mode, dc_decomp=self.dc_decomp)
-        inputs_1 = broadcast(inputs_1, n_0, 2, mode=self.mode, dc_decomp=self.dc_decomp)
+        inputs_0 = broadcast(
+            inputs_0, n_1, -1, mode=self.mode, dc_decomp=self.dc_decomp, perturbation_domain=self.perturbation_domain
+        )
+        inputs_1 = broadcast(
+            inputs_1, n_0, 2, mode=self.mode, dc_decomp=self.dc_decomp, perturbation_domain=self.perturbation_domain
+        )
         outputs_multiply = multiply(
             inputs_0, inputs_1, dc_decomp=self.dc_decomp, perturbation_domain=self.perturbation_domain, mode=self.mode
         )
 
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(
-            outputs_multiply
+            outputs_multiply, compute_ibp_from_affine=False
         )
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)

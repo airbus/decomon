@@ -65,7 +65,9 @@ class BackwardMerge(ABC, Wrapper):
             else:
                 self.perturbation_domain = perturbation_domain
             self.dc_decomp = dc_decomp
-        self.inputs_outputs_spec = InputsOutputsSpec(dc_decomp=self.dc_decomp, mode=self.mode)
+        self.inputs_outputs_spec = InputsOutputsSpec(
+            dc_decomp=self.dc_decomp, mode=self.mode, perturbation_domain=self.perturbation_domain
+        )
 
     @property
     def ibp(self) -> bool:

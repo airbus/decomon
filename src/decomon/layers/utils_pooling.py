@@ -5,6 +5,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 
 from decomon.core import (
+    BoxDomain,
     ForwardMode,
     InputsOutputsSpec,
     PerturbationDomain,
@@ -40,9 +41,11 @@ def get_upper_linear_hull_max(
     Returns:
         list of output tensors. The upper linear relaxation of max(., axis) in the mode format
     """
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
     affine = get_affine(mode)
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
 
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
     dtype = x.dtype
@@ -56,16 +59,6 @@ def get_upper_linear_hull_max(
         axis = -1
     if axis != -1 and axis < 0:
         raise NotImplementedError()  # to do
-
-    if affine:
-        u_c_affine = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
-        l_c_affine = get_lower(x, w_u, b_u, perturbation_domain=perturbation_domain)
-        if mode == ForwardMode.AFFINE:
-            u_c = u_c_affine
-            l_c = l_c_affine
-        else:  # hybrid
-            u_c = K.minimum(u_c_affine, u_c)
-            l_c = K.maximum(l_c, l_c_affine)
 
     # get the shape of the dimension
     n_dim = input_shape[axis]
@@ -165,9 +158,11 @@ def get_lower_linear_hull_max(
     Returns:
         list of output tensors. The lower linear relaxation of max(., axis) in the mode format
     """
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
     affine = get_affine(mode)
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
 
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
     dtype = x.dtype
@@ -179,16 +174,6 @@ def get_lower_linear_hull_max(
         axis = -1
     if axis != -1 and axis < 0:
         raise NotImplementedError()  # to do
-
-    if affine:
-        u_c_affine = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
-        l_c_affine = get_lower(x, w_u, b_u, perturbation_domain=perturbation_domain)
-        if mode == ForwardMode.AFFINE:
-            u_c = u_c_affine
-            l_c = l_c_affine
-        else:  # hybrid
-            u_c = K.minimum(u_c_affine, u_c)
-            l_c = K.maximum(l_c, l_c_affine)
 
     V = u_c + l_c
     M = -u_c + K.expand_dims(K.max(l_c, axis), axis)

@@ -162,10 +162,6 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
-        if self.mode == ForwardMode.AFFINE:
-            u_c = get_upper(x, w_u, b_u)
-            l_c = get_lower(x, w_l, b_l)
-
         l_c_out = K.pool2d(l_c, self.pool_size, self.strides, self.padding, self.data_format, pool_mode="max")
         u_c_out = K.pool2d(u_c, self.pool_size, self.strides, self.padding, self.data_format, pool_mode="max")
 
@@ -191,7 +187,9 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
         self,
         inputs: List[tf.Tensor],
     ) -> List[tf.Tensor]:
-        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(
+            inputs, compute_ibp_from_affine=False
+        )
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
         input_shape = self.inputs_outputs_spec.get_input_shape(inputs)

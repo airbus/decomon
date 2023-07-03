@@ -73,7 +73,9 @@ class DecomonReshape(DecomonLayer, Reshape):
         def op(x: tf.Tensor) -> tf.Tensor:
             return Reshape.call(self, x)
 
-        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(
+            inputs, compute_ibp_from_affine=False
+        )
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
@@ -179,7 +181,9 @@ class DecomonPermute(DecomonLayer, Permute):
         def op(x: tf.Tensor) -> tf.Tensor:
             return Permute.call(self, x)
 
-        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(
+            inputs, compute_ibp_from_affine=False
+        )
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 

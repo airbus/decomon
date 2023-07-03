@@ -115,9 +115,10 @@ def linear_hull_s_shape(
     mode = ForwardMode(mode)
     affine = get_affine(mode)
     ibp = get_ibp(mode)
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
-
-    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(
+        inputs, compute_ibp_from_affine=False
+    )
     dtype = x.dtype
     empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
@@ -469,10 +470,14 @@ def softmax(
         raise NotImplementedError()
     mode = ForwardMode(mode)
     ibp = get_ibp(mode)
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
 
     outputs_exp = exponential(
-        minus(inputs, mode=mode), dc_decomp=dc_decomp, perturbation_domain=perturbation_domain, mode=mode, slope=slope
+        minus(inputs, mode=mode, perturbation_domain=perturbation_domain),
+        dc_decomp=dc_decomp,
+        perturbation_domain=perturbation_domain,
+        mode=mode,
+        slope=slope,
     )
     outputs = expand_dims(
         frac_pos(
@@ -483,9 +488,12 @@ def softmax(
         ),
         mode=mode,
         axis=axis,
+        perturbation_domain=perturbation_domain,
     )
     outputs = multiply(outputs_exp, outputs, mode=mode, perturbation_domain=perturbation_domain)
-    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(outputs)
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(
+        outputs, compute_ibp_from_affine=False
+    )
     if ibp:
         u_c = K.minimum(u_c, 1.0)
         l_c = K.maximum(l_c, 0.0)

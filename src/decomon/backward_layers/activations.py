@@ -78,12 +78,9 @@ def backward_relu(
 
     if not alpha and max_value is None:
         # default values: return relu_(x) = max(x, 0)
-        inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+        inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
         input_shape = inputs_outputs_spec.get_input_shape(inputs)
-        if mode == ForwardMode.AFFINE:
-            u_c = get_upper(x, w_u, b_u)
-            l_c = get_lower(x, w_l, b_l)
         bounds = get_linear_hull_relu(upper=u_c, lower=l_c, slope=slope, **kwargs)
         dim = np.prod(input_shape[1:])
         return [K.reshape(elem, (-1, dim)) for elem in bounds]
@@ -117,11 +114,8 @@ def backward_sigmoid(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
-    if mode == ForwardMode.AFFINE:
-        u_c = get_upper(x, w_u, b_u)
-        l_c = get_lower(x, w_l, b_l)
     return get_linear_hull_sigmoid(u_c, l_c, slope=slope, **kwargs)
 
 
@@ -151,11 +145,8 @@ def backward_tanh(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
-    if mode == ForwardMode.AFFINE:
-        u_c = get_upper(x, w_u, b_u)
-        l_c = get_lower(x, w_l, b_l)
     return get_linear_hull_tanh(u_c, l_c, slope=slope, **kwargs)
 
 
@@ -330,11 +321,8 @@ def backward_softplus(
     if dc_decomp:
         raise NotImplementedError()
     mode = ForwardMode(mode)
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
-    if mode == ForwardMode.AFFINE:
-        u_c = get_upper(x, w_u, b_u)
-        l_c = get_lower(x, w_l, b_l)
     return get_linear_softplus_hull(u_c, l_c, slope=slope, **kwargs)
 
 
