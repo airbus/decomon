@@ -10,8 +10,9 @@ from decomon.core import (
     PerturbationDomain,
     get_affine,
     get_ibp,
+    get_lower,
+    get_upper,
 )
-from decomon.utils import get_lower, get_upper
 
 # step 1: compute (x_i, y_i) such that x_i[j]=l_j if j==i else u_j
 # dataset of size n+1 on which we can compute an affine bound

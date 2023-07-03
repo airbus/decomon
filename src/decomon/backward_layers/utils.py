@@ -14,19 +14,13 @@ from decomon.core import (
     Slope,
     get_affine,
     get_ibp,
-)
-from decomon.layers.utils import sort
-from decomon.utils import (
-    get_linear_hull_relu,
     get_lower,
     get_lower_box,
     get_upper,
     get_upper_box,
-    maximum,
-    minus,
-    relu_,
-    subtract,
 )
+from decomon.layers.utils import sort
+from decomon.utils import get_linear_hull_relu, maximum, minus, relu_, subtract
 
 
 def backward_add(
