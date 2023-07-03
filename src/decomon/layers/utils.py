@@ -17,8 +17,6 @@ from decomon.core import (
     Slope,
     get_affine,
     get_ibp,
-    get_lower,
-    get_upper,
 )
 from decomon.utils import add, get_linear_softplus_hull, maximum, minimum, minus, relu_
 

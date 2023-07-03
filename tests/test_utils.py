@@ -6,7 +6,7 @@ import pytest
 import tensorflow.keras.backend as K
 from numpy.testing import assert_allclose, assert_almost_equal
 
-from decomon.core import ForwardMode, get_lower, get_upper
+from decomon.core import BoxDomain, ForwardMode
 from decomon.layers.utils import add, max_, maximum, minus, relu_
 from decomon.utils import subtract
 
@@ -24,7 +24,7 @@ def test_get_upper_multi_box(odd, floatx, decimal, helpers):
     x_max_ = x_0_[:, 1][:, :, None]
     upper_pred = np.sum(np.minimum(W_u_, 0) * x_min_ + np.maximum(W_u_, 0) * x_max_, 1) + b_u_
 
-    upper = get_upper(x_0, W_u, b_u)
+    upper = BoxDomain().get_upper(x_0, W_u, b_u)
 
     f_upper = K.function([x_0, W_u, b_u], upper)
 
@@ -48,7 +48,7 @@ def test_get_upper_box_numpy(n, floatx, decimal, helpers):
     upper_pred = np.sum(W_u_ * x_expand, 1) + b_u_
     upper_pred = upper_pred.max(0)
 
-    upper = get_upper(x_0, W_u, b_u)
+    upper = BoxDomain().get_upper(x_0, W_u, b_u)
 
     f_upper = K.function([x_0, W_u, b_u], upper)
     upper_ = f_upper([x_0_, W_u_, b_u_]).max()
@@ -63,7 +63,7 @@ def test_get_upper_box(n, floatx, decimal, helpers):
     x, y, x_0, u_c, W_u, b_u, _, _, _, _, _ = inputs
     _, _, x_0_, u_c_, W_u_, b_u_, _, _, _, _, _ = inputs_
 
-    upper = get_upper(x_0, W_u, b_u)
+    upper = BoxDomain().get_upper(x_0, W_u, b_u)
 
     f_upper = K.function([x_0, W_u, b_u], upper)
 
@@ -94,7 +94,7 @@ def test_get_lower_box(n, floatx, decimal, helpers):
     inputs_ = helpers.get_standard_values_1d_box(n)
     x, y, x_0, _, _, _, l_c, W_l, b_l, _, _ = inputs
 
-    lower = get_lower(x_0, W_l, b_l)
+    lower = BoxDomain().get_lower(x_0, W_l, b_l)
 
     f_lower = K.function(inputs, lower)
     f_l = K.function(inputs, l_c)
@@ -123,8 +123,8 @@ def test_get_lower_upper_box(n, floatx, decimal, helpers):
     inputs_ = helpers.get_standard_values_1d_box(n)
     x, y, x_0, _, W_u, b_u, _, W_l, b_l, _, _ = inputs
 
-    lower = get_lower(x_0, W_l, b_l)
-    upper = get_upper(x_0, W_u, b_u)
+    lower = BoxDomain().get_lower(x_0, W_l, b_l)
+    upper = BoxDomain().get_upper(x_0, W_u, b_u)
 
     f_lower = K.function(inputs, lower)
     f_upper = K.function(inputs, upper)
@@ -217,8 +217,8 @@ def test_relu_1D_box(n, mode, floatx, decimal, helpers):
     ) = inputs_  # numpy values
 
     # lower and upper bounds from affine coefficients
-    lower = get_lower(z_tensor, W_l_tensor, b_l_tensor)
-    upper = get_upper(z_tensor, W_u_tensor, b_u_tensor)
+    lower = BoxDomain().get_lower(z_tensor, W_l_tensor, b_l_tensor)
+    upper = BoxDomain().get_upper(z_tensor, W_u_tensor, b_u_tensor)
     f_lower = K.function(inputs, lower)
     f_upper = K.function(inputs, upper)
     lower_ = np.min(f_lower(inputs_))
@@ -493,8 +493,8 @@ def test_relu_1D_box_nodc(n, helpers):
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
 
     output = relu_(inputs_for_mode, dc_decomp=dc_decomp, mode=mode)
-    lower = get_lower(z, W_l, b_l)
-    upper = get_upper(z, W_u, b_u)
+    lower = BoxDomain().get_lower(z, W_l, b_l)
+    upper = BoxDomain().get_upper(z, W_u, b_u)
 
     f_lower = K.function(inputs, lower)
     f_upper = K.function(inputs, upper)

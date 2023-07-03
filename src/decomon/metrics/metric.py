@@ -8,7 +8,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Input, Layer
 from tensorflow.keras.models import Model
 
-from decomon.core import BoxDomain, PerturbationDomain, get_upper
+from decomon.core import BoxDomain, PerturbationDomain
 from decomon.models.models import DecomonModel
 
 
@@ -103,7 +103,7 @@ class AdversarialCheck(MetricLayer):
         w_upper = w_u * (1 - y_tensor[:, None]) - K.expand_dims(K.sum(w_l * y_tensor[:, None], -1), -1)
         b_upper = b_u * (1 - y_tensor) - b_l * y_tensor
 
-        adv_score = get_upper(z_tensor, w_upper, b_upper) - 1e6 * y_tensor
+        adv_score = self.perturbation_domain.get_upper(z_tensor, w_upper, b_upper) - 1e6 * y_tensor
 
         return K.max(adv_score, -1)
 
@@ -131,7 +131,9 @@ class AdversarialCheck(MetricLayer):
         if self.ibp:
             adv_ibp = _get_ibp_score(u_c, l_c, y_tensor)
         if self.affine:
-            adv_f = _get_affine_score(z, w_u_f, b_u_f, w_l_f, b_l_f, y_tensor)
+            adv_f = _get_affine_score(
+                z, w_u_f, b_u_f, w_l_f, b_l_f, y_tensor, perturbation_domain=self.perturbation_domain
+            )
 
         if self.ibp and not self.affine:
             adv_score = adv_ibp
@@ -144,7 +146,9 @@ class AdversarialCheck(MetricLayer):
 
         if self.mode == MetricMode.BACKWARD:
             w_u_b, b_u_b, w_l_b, b_l_b, _ = inputs[-5:]
-            adv_b = _get_backward_score(z, w_u_b, b_u_b, w_l_b, b_l_b, y_tensor)
+            adv_b = _get_backward_score(
+                z, w_u_b, b_u_b, w_l_b, b_l_b, y_tensor, perturbation_domain=self.perturbation_domain
+            )
             adv_score = K.minimum(adv_score, adv_b)
 
         return adv_score
@@ -199,7 +203,15 @@ class AdversarialScore(AdversarialCheck):
         if self.ibp:
             adv_ibp = _get_ibp_score(u_c=l_c, l_c=u_c, source_tensor=y_tensor)
         if self.affine:
-            adv_f = _get_affine_score(z, w_u=w_l_f, b_u=b_l_f, w_l=w_u_f, b_l=b_u_f, source_tensor=y_tensor)
+            adv_f = _get_affine_score(
+                z,
+                w_u=w_l_f,
+                b_u=b_l_f,
+                w_l=w_u_f,
+                b_l=b_u_f,
+                source_tensor=y_tensor,
+                perturbation_domain=self.perturbation_domain,
+            )
 
         if self.ibp and not self.affine:
             adv_score = adv_ibp
@@ -212,7 +224,9 @@ class AdversarialScore(AdversarialCheck):
 
         if self.mode == MetricMode.BACKWARD:
             w_u_b, b_u_b, w_l_b, b_l_b, _ = inputs[-5:]
-            adv_b = _get_backward_score(z, w_u_b, b_u_b, w_l_b, b_l_b, y_tensor)
+            adv_b = _get_backward_score(
+                z, w_u_b, b_u_b, w_l_b, b_l_b, y_tensor, perturbation_domain=self.perturbation_domain
+            )
             adv_score = K.minimum(adv_score, adv_b)
 
         return adv_score
@@ -293,7 +307,7 @@ class UpperScore(MetricLayer):
         w_upper = w_u * y_tensor[:, None]
         b_upper = b_u * y_tensor
 
-        upper_score = get_upper(z_tensor, w_upper, b_upper)
+        upper_score = self.perturbation_domain.get_upper(z_tensor, w_upper, b_upper)
 
         return K.sum(upper_score, -1)
 
@@ -382,6 +396,7 @@ def _get_affine_score(
     w_l: tf.Tensor,
     b_l: tf.Tensor,
     source_tensor: tf.Tensor,
+    perturbation_domain: PerturbationDomain,
     target_tensor: Optional[tf.Tensor] = None,
 ) -> tf.Tensor:
     if target_tensor is None:
@@ -401,7 +416,7 @@ def _get_affine_score(
     b_u_f = b_u_f - 1e6 * (1 - target_tensor)[:, None, :]
     b_u_f = b_u_f - 1e6 * (1 - source_tensor)[:, :, None]
 
-    upper = get_upper(z_tensor, w_u_f, b_u_f)
+    upper = perturbation_domain.get_upper(z_tensor, w_u_f, b_u_f)
     return K.max(upper, (-1, -2))
 
 
@@ -412,6 +427,16 @@ def _get_backward_score(
     w_l: tf.Tensor,
     b_l: tf.Tensor,
     source_tensor: tf.Tensor,
+    perturbation_domain: PerturbationDomain,
     target_tensor: Optional[tf.Tensor] = None,
 ) -> tf.Tensor:
-    return _get_affine_score(z_tensor, w_u[:, 0], b_u[:, 0], w_l[:, 0], b_l[:, 0], source_tensor, target_tensor)
+    return _get_affine_score(
+        z_tensor,
+        w_u[:, 0],
+        b_u[:, 0],
+        w_l[:, 0],
+        b_l[:, 0],
+        source_tensor,
+        perturbation_domain=perturbation_domain,
+        target_tensor=target_tensor,
+    )

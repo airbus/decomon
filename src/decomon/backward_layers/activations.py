@@ -12,8 +12,6 @@ from decomon.core import (
     InputsOutputsSpec,
     PerturbationDomain,
     Slope,
-    get_lower,
-    get_upper,
 )
 from decomon.utils import (
     get_linear_hull_relu,

@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, List, Optional, Union
 
@@ -19,15 +20,31 @@ class Slope(Enum):
     O_SLOPE = "one-lb"
 
 
-class PerturbationDomain:
+class PerturbationDomain(ABC):
     opt_option: Option
 
     def __init__(self, opt_option: Union[str, Option] = Option.milp):
         self.opt_option = Option(opt_option)
 
+    @abstractmethod
+    def get_upper(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any):
+        ...
+
+    @abstractmethod
+    def get_lower(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any):
+        ...
+
 
 class BoxDomain(PerturbationDomain):
-    pass
+    def get_upper(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any):
+        x_min = x[:, 0]
+        x_max = x[:, 1]
+        return get_upper_box(x_min=x_min, x_max=x_max, w=w, b=b, **kwargs)
+
+    def get_lower(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any):
+        x_min = x[:, 0]
+        x_max = x[:, 1]
+        return get_lower_box(x_min=x_min, x_max=x_max, w=w, b=b, **kwargs)
 
 
 class GridDomain(PerturbationDomain):
@@ -50,6 +67,12 @@ class BallDomain(PerturbationDomain):
         except:
             raise ValueError(p_error_msg)
         self.p = p
+
+    def get_lower(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any):
+        return get_lower_ball(x=x, eps=self.eps, p=self.p, w=w, b=b, **kwargs)
+
+    def get_upper(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any):
+        return get_upper_ball(x=x, eps=self.eps, p=self.p, w=w, b=b, **kwargs)
 
 
 class ForwardMode(Enum):
@@ -203,8 +226,8 @@ class InputsOutputsSpec:
         )
 
         if compute_ibp_from_affine:
-            u_c_affine = get_upper(x, w_u, b_u, perturbation_domain=self.perturbation_domain)
-            l_c_affine = get_lower(x, w_l, b_l, perturbation_domain=self.perturbation_domain)
+            u_c_affine = self.perturbation_domain.get_upper(x, w_u, b_u)
+            l_c_affine = self.perturbation_domain.get_lower(x, w_l, b_l)
             if self.mode == ForwardMode.AFFINE:
                 u_c = u_c_affine
                 l_c = l_c_affine
@@ -276,12 +299,8 @@ class InputsOutputsSpec:
 
         if compute_ibp_from_affine:
             for i in range(len(inputs_x)):
-                u_c_affine = get_upper(
-                    inputs_x[i], inputs_w_u[i], inputs_b_u[i], perturbation_domain=self.perturbation_domain
-                )
-                l_c_affine = get_lower(
-                    inputs_x[i], inputs_w_l[i], inputs_b_l[i], perturbation_domain=self.perturbation_domain
-                )
+                u_c_affine = self.perturbation_domain.get_upper(inputs_x[i], inputs_w_u[i], inputs_b_u[i])
+                l_c_affine = self.perturbation_domain.get_lower(inputs_x[i], inputs_w_l[i], inputs_b_l[i])
                 if self.mode == ForwardMode.AFFINE:
                     inputs_u_c[i] = u_c_affine
                     inputs_l_c[i] = l_c_affine
@@ -584,64 +603,3 @@ def get_upper_ball_finetune(
             return score_box + score_ball
 
     return get_upper_ball(x_0, eps, p, w, b)
-
-
-def get_upper(
-    x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, perturbation_domain: Optional[PerturbationDomain] = None, **kwargs: Any
-) -> tf.Tensor:
-    """Meta function that aggregates all the way
-    to compute a constant upper bounds depending on the perturbation domain
-
-    Args:
-        x: the tensors that represent the domain
-        w: the weights of the affine function
-        b: the bias
-        perturbation_domain: the type of perturbation domain (see ???)
-
-    Returns:
-        a constant upper bound of the affine function
-    """
-
-    if perturbation_domain is None:
-        perturbation_domain = BoxDomain()
-
-    if isinstance(perturbation_domain, (BoxDomain, GridDomain)):
-        x_min = x[:, 0]
-        x_max = x[:, 1]
-        return get_upper_box(x_min, x_max, w, b, **kwargs)
-
-    elif isinstance(perturbation_domain, BallDomain):
-        eps = perturbation_domain.eps
-        p = perturbation_domain.p
-        return get_upper_ball(x, eps, p, w, b, **kwargs)
-
-    else:
-        raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
-
-
-def get_lower(
-    x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, perturbation_domain: Optional[PerturbationDomain] = None, **kwargs: Any
-) -> tf.Tensor:
-    """Meta function that aggregates all the way
-    to compute a constant lower bound depending on the perturbation domain
-        :param x: the tensors that represent the domain
-        :param w: the weights of the affine function
-        :param b: the bias
-        :param perturbation_domain: the type of perturbation domain (see ???)
-        :return: a constant upper bound of the affine function
-    """
-    if perturbation_domain is None:
-        perturbation_domain = BoxDomain()
-
-    if isinstance(perturbation_domain, (BoxDomain, GridDomain)):
-        x_min = x[:, 0]
-        x_max = x[:, 1]
-        return get_lower_box(x_min, x_max, w, b, **kwargs)
-
-    elif isinstance(perturbation_domain, BallDomain):
-        eps = perturbation_domain.eps
-        p = perturbation_domain.p
-        return get_lower_ball(x, eps, p, w, b, **kwargs)
-
-    else:
-        raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")

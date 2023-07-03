@@ -10,9 +10,6 @@ from decomon.core import (
     InputsOutputsSpec,
     PerturbationDomain,
     get_affine,
-    get_ibp,
-    get_lower,
-    get_upper,
 )
 
 # step 1: compute (x_i, y_i) such that x_i[j]=l_j if j==i else u_j

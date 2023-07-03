@@ -14,10 +14,6 @@ from decomon.core import (
     Slope,
     get_affine,
     get_ibp,
-    get_lower,
-    get_lower_box,
-    get_upper,
-    get_upper_box,
 )
 from decomon.layers.utils import sort
 from decomon.utils import get_linear_hull_relu, maximum, minus, relu_, subtract
@@ -100,6 +96,8 @@ def backward_linear_prod(
     Returns:
 
     """
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
 
     z_value = K.cast(0.0, x_0.dtype)
     o_value = K.cast(1.0, x_0.dtype)
@@ -114,7 +112,7 @@ def backward_linear_prod(
         b_u_i = K.reshape(b_u_i, (-1, n_dim))
         b_l_i = K.reshape(b_l_i, (-1, n_dim))
 
-    x_max = get_upper(x_0, w_u_i - w_l_i, b_u_i - b_l_i, perturbation_domain=perturbation_domain)
+    x_max = perturbation_domain.get_upper(x_0, w_u_i - w_l_i, b_u_i - b_l_i)
     mask_b = o_value - K.sign(x_max)
     mask_a = o_value - mask_b
 
