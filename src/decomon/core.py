@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
@@ -27,24 +27,41 @@ class PerturbationDomain(ABC):
         self.opt_option = Option(opt_option)
 
     @abstractmethod
-    def get_upper(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any):
+    def get_upper(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
         ...
 
     @abstractmethod
-    def get_lower(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any):
+    def get_lower(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
         ...
+
+    @abstractmethod
+    def get_nb_x_components(self) -> int:
+        ...
+
+    def get_x_input_shape(self, original_input_dim: int) -> Tuple[int, ...]:
+        n_comp_x = self.get_nb_x_components()
+        if n_comp_x == 1:
+            return (original_input_dim,)
+        else:
+            return (
+                n_comp_x,
+                original_input_dim,
+            )
 
 
 class BoxDomain(PerturbationDomain):
-    def get_upper(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any):
+    def get_upper(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
         x_min = x[:, 0]
         x_max = x[:, 1]
         return get_upper_box(x_min=x_min, x_max=x_max, w=w, b=b, **kwargs)
 
-    def get_lower(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any):
+    def get_lower(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
         x_min = x[:, 0]
         x_max = x[:, 1]
         return get_lower_box(x_min=x_min, x_max=x_max, w=w, b=b, **kwargs)
+
+    def get_nb_x_components(self) -> int:
+        return 2
 
 
 class GridDomain(PerturbationDomain):
@@ -68,11 +85,14 @@ class BallDomain(PerturbationDomain):
             raise ValueError(p_error_msg)
         self.p = p
 
-    def get_lower(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any):
+    def get_lower(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
         return get_lower_ball(x=x, eps=self.eps, p=self.p, w=w, b=b, **kwargs)
 
-    def get_upper(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any):
+    def get_upper(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
         return get_upper_ball(x=x, eps=self.eps, p=self.p, w=w, b=b, **kwargs)
+
+    def get_nb_x_components(self) -> int:
+        return 1
 
 
 class ForwardMode(Enum):

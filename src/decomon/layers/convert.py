@@ -133,14 +133,8 @@ def _prepare_input_tensors(
     original_input_shapes = get_layer_input_shape(layer)
     decomon_input_shapes: List[List[Optional[int]]] = [list(input_shape[1:]) for input_shape in original_input_shapes]
     n_input = len(decomon_input_shapes)
-
-    if isinstance(perturbation_domain, BoxDomain):
-        x_input = Input((2, input_dim), dtype=layer.dtype)
-    elif isinstance(perturbation_domain, BallDomain):
-        x_input = Input((input_dim,), dtype=layer.dtype)
-    else:
-        raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
-
+    x_input_shape = perturbation_domain.get_x_input_shape(input_dim)
+    x_input = Input(x_input_shape, dtype=layer.dtype)
     w_input = [Input(tuple([input_dim] + decomon_input_shapes[i])) for i in range(n_input)]
     y_input = [Input(tuple(decomon_input_shapes[i])) for i in range(n_input)]
 

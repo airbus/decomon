@@ -102,14 +102,7 @@ def get_input_tensors(
     inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
     empty_tensor = inputs_outputs_spec.get_empty_tensor()
 
-    input_shape_x: Tuple[int, ...]
-    if isinstance(perturbation_domain, BoxDomain):
-        input_shape_x = (2, input_dim)
-    elif isinstance(perturbation_domain, BallDomain):
-        input_shape_x = (input_dim,)
-    else:
-        raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
-
+    input_shape_x = perturbation_domain.get_x_input_shape(input_dim)
     z_tensor = Input(shape=input_shape_x, dtype=model.layers[0].dtype)
     u_c_tensor, l_c_tensor, W, b, h, g = (
         empty_tensor,
