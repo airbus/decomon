@@ -445,7 +445,6 @@ def convert_backward(
         mode_from=mode_from,
         mode_to=mode_to,
         perturbation_domain=perturbation_domain,
-        dtype=model.layers[0].dtype,
     )(output)
     if mode_to != mode_from and mode_from == ForwardMode.IBP:
 
