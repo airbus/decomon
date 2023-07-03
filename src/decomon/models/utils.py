@@ -29,7 +29,6 @@ from decomon.core import (
     get_upper,
 )
 from decomon.layers.utils import is_a_merge_layer
-from decomon.utils import get_lower_layer, get_upper_layer
 
 try:
     from deel.lip.layers import LipschitzLayer
