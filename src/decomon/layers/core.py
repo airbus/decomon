@@ -51,7 +51,9 @@ class DecomonLayer(ABC, Layer):
 
         if perturbation_domain is None:
             perturbation_domain = BoxDomain()
-        self.inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+        self.inputs_outputs_spec = InputsOutputsSpec(
+            dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain
+        )
         self.nb_tensors = self.inputs_outputs_spec.nb_tensors
         self.dc_decomp = dc_decomp
         self.perturbation_domain = perturbation_domain

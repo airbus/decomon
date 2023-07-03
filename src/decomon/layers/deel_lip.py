@@ -96,6 +96,7 @@ else:
                     dc_decomp=self.dc_decomp,
                     mode=self.mode,
                     axis=-1,
+                    perturbation_domain=self.perturbation_domain,
                 )
                 output_min = expand_dims(
                     min_(
@@ -108,6 +109,7 @@ else:
                     dc_decomp=self.dc_decomp,
                     mode=self.mode,
                     axis=-1,
+                    perturbation_domain=self.perturbation_domain,
                 )
                 outputs = self.concat(output_min + output_max)
 
@@ -193,6 +195,7 @@ else:
                 ),
                 mode=self.mode,
                 axis=self.axis,
+                perturbation_domain=self.perturbation_domain,
             )
             inputs_min = expand_dims(
                 min_(
@@ -205,6 +208,7 @@ else:
                 ),
                 mode=self.mode,
                 axis=self.axis,
+                perturbation_domain=self.perturbation_domain,
             )
             output = self.op_concat(inputs_min + inputs_max)
             return self.op_reshape_out(output)

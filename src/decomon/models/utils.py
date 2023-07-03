@@ -101,7 +101,7 @@ def get_input_tensors(
 
     mode = get_mode(ibp=ibp, affine=affine)
     dc_decomp = False
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
     empty_tensor = inputs_outputs_spec.get_empty_tensor()
 
     input_shape_x: Tuple[int, ...]
@@ -397,13 +397,17 @@ class Convert2Mode(Layer):
 
         else:
             dc_decomp = False
-            inputs_outputs_spec_from = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode_from)
-            inputs_outputs_spec_to = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode_to)
+            inputs_outputs_spec_from = InputsOutputsSpec(
+                dc_decomp=dc_decomp, mode=mode_from, perturbation_domain=perturbation_domain
+            )
+            inputs_outputs_spec_to = InputsOutputsSpec(
+                dc_decomp=dc_decomp, mode=mode_to, perturbation_domain=perturbation_domain
+            )
 
             x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec_from.get_fullinputs_from_inputsformode(inputs)
             dtype = x.dtype
 
-            if mode_from == ForwardMode.IBP and mode_to in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
+            if mode_from == ForwardMode.IBP:
                 x = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
                 z_value = K.cast(0.0, dtype=dtype)
                 w = tf.linalg.diag(z_value * l_c)
@@ -411,10 +415,6 @@ class Convert2Mode(Layer):
                 b_u = u_c
                 w_l = w
                 b_l = l_c
-
-            if mode_from == ForwardMode.AFFINE and mode_to in [ForwardMode.IBP, ForwardMode.HYBRID]:
-                u_c = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
-                l_c = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
 
             return inputs_outputs_spec_to.extract_outputsformode_from_fulloutputs(
                 [x, u_c, w_u, b_u, l_c, w_l, b_l, h, g]

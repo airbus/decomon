@@ -157,7 +157,9 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         if not isinstance(inputs, list):
             raise ValueError("A merge layer should be called on a list of inputs.")
 
-        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(
+            inputs, compute_ibp_from_affine=False
+        )
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
@@ -504,7 +506,9 @@ class DecomonDense(DecomonLayer, Dense):
         kernel_pos = K.maximum(z_value, self.kernel)
         kernel_neg = K.minimum(z_value, self.kernel)
 
-        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(
+            inputs, compute_ibp_from_affine=False
+        )
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
@@ -814,7 +818,9 @@ class DecomonFlatten(DecomonLayer, Flatten):
         def op(x: tf.Tensor) -> tf.Tensor:
             return Flatten.call(self, x)
 
-        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(
+            inputs, compute_ibp_from_affine=False
+        )
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
@@ -938,7 +944,9 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
         def call_op(x: tf.Tensor, training: bool) -> tf.Tensor:
             return BatchNormalization.call(self, x, training=training)
 
-        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(
+            inputs, compute_ibp_from_affine=False
+        )
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 

@@ -35,17 +35,13 @@ def get_disconnected_input(
 ) -> Layer:
     mode = ForwardMode(mode)
     dc_decomp = False
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
     affine = get_affine(mode)
 
     def disco_priv(inputs: List[tf.Tensor]) -> List[tf.Tensor]:
         x, u_c, w_f_u, b_f_u, l_c, w_f_l, b_f_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
         dtype = x.dtype
         empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
-
-        if mode == ForwardMode.AFFINE:
-            u_c = get_upper(x, w_f_u, b_f_u, perturbation_domain=perturbation_domain)
-            l_c = get_lower(x, w_f_l, b_f_l, perturbation_domain=perturbation_domain)
 
         if affine:
             x = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)

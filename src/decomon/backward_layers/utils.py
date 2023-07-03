@@ -54,28 +54,13 @@ def backward_add(
     mode = ForwardMode(mode)
     affine = get_affine(mode)
     op_flat = Flatten(dtype=K.floatx())  # pas terrible  a revoir
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
     x_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0, h_0, g_0 = inputs_outputs_spec.get_fullinputs_from_inputsformode(
         inputs_0
     )
     x_1, u_c_1, w_u_1, b_u_1, l_c_1, w_l_1, b_l_1, h_1, g_1 = inputs_outputs_spec.get_fullinputs_from_inputsformode(
         inputs_1
     )
-    if affine:
-        u_c_0_tmp = get_upper(x_0, w_u_0, b_u_0, perturbation_domain=perturbation_domain)
-        u_c_1_tmp = get_upper(x_1, w_u_1, b_u_1, perturbation_domain=perturbation_domain)
-        l_c_0_tmp = get_lower(x_0, w_l_0, b_l_0, perturbation_domain=perturbation_domain)
-        l_c_1_tmp = get_lower(x_1, w_l_1, b_l_1, perturbation_domain=perturbation_domain)
-        if mode == ForwardMode.HYBRID:
-            u_c_0 = K.minimum(u_c_0, u_c_0_tmp)
-            u_c_1 = K.minimum(u_c_1, u_c_1_tmp)
-            l_c_0 = K.maximum(l_c_0, l_c_0_tmp)
-            l_c_1 = K.maximum(l_c_1, l_c_1_tmp)
-        else:
-            u_c_0 = u_c_0_tmp
-            u_c_1 = u_c_1_tmp
-            l_c_0 = l_c_0_tmp
-            l_c_1 = l_c_1_tmp
 
     u_c_0 = op_flat(u_c_0)
     u_c_1 = op_flat(u_c_1)
@@ -274,8 +259,10 @@ def backward_max_(
     mode = ForwardMode(mode)
     affine = get_affine(mode)
     ibp = get_ibp(mode)
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
-    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(
+        inputs, tight=False, compute_ibp_from_affine=False
+    )
     dtype = x.dtype
     input_shape = inputs_outputs_spec.get_input_shape(inputs)
     max_dim = input_shape[axis]
@@ -493,7 +480,7 @@ def backward_subtract(
 
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    inputs_1 = minus(inputs_1, mode=mode, dc_decomp=dc_decomp)
+    inputs_1 = minus(inputs_1, mode=mode, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain)
     bounds_0, bounds_1 = backward_add(
         inputs_0,
         inputs_1,
@@ -540,19 +527,13 @@ def backward_multiply(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
     x_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0, h_0, g_0 = inputs_outputs_spec.get_fullinputs_from_inputsformode(
         inputs_0
     )
     x_1, u_c_1, w_u_1, b_u_1, l_c_1, w_l_1, b_l_1, h_1, g_1 = inputs_outputs_spec.get_fullinputs_from_inputsformode(
         inputs_1
     )
-
-    if mode == ForwardMode.AFFINE:
-        u_c_0 = get_upper(x_0, w_u_0, b_u_0, perturbation_domain=perturbation_domain)
-        l_c_0 = get_lower(x_0, w_l_0, b_l_0, perturbation_domain=perturbation_domain)
-        u_c_1 = get_upper(x_1, w_u_1, b_u_1, perturbation_domain=perturbation_domain)
-        l_c_1 = get_lower(x_1, w_l_1, b_l_1, perturbation_domain=perturbation_domain)
 
     z_value = K.cast(0.0, u_c_0.dtype)
 
@@ -630,17 +611,8 @@ def backward_sort(
     mode = ForwardMode(mode)
     affine = get_affine(mode)
     z_value = K.cast(0.0, w_u_out.dtype)
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
-    if affine:
-        u_c_tmp = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
-        l_c_tmp = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
-        if mode == ForwardMode.HYBRID:
-            u_c = K.minimum(u_c, u_c_tmp)
-            l_c = K.maximum(l_c, l_c_tmp)
-        else:
-            u_c = u_c_tmp
-            l_c = l_c_tmp
 
     # build fake inputs with no linearity
     n_dim = np.prod(u_c.shape[1:])

@@ -300,7 +300,7 @@ def subtract(
     """
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    inputs_1 = minus(inputs_1, mode=mode, dc_decomp=dc_decomp)
+    inputs_1 = minus(inputs_1, mode=mode, dc_decomp=dc_decomp, perturbation_domain=perturbation_domain)
     output = add(inputs_0, inputs_1, dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
 
     return output
@@ -329,7 +329,7 @@ def add(
         perturbation_domain = BoxDomain()
 
     mode = ForwardMode(mode)
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
 
     x_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0, h_0, g_0 = inputs_outputs_spec.get_fullinputs_from_inputsformode(
         inputs_0
@@ -376,7 +376,7 @@ def relu_(
     mode = ForwardMode(mode)
     affine = get_affine(mode)
     ibp = get_ibp(mode)
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
 
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
     dtype = x.dtype
@@ -384,10 +384,6 @@ def relu_(
     z_value = K.cast(0.0, dtype=dtype)
     o_value = K.cast(1.0, dtype=dtype)
     empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
-
-    if mode == ForwardMode.AFFINE:
-        u_c = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
-        l_c = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
 
     if dc_decomp:
         h_out = K.maximum(h, -g)
@@ -428,7 +424,11 @@ def relu_(
 
 
 def minus(
-    inputs: List[tf.Tensor], mode: Union[str, ForwardMode] = ForwardMode.HYBRID, dc_decomp: bool = False, **kwargs: Any
+    inputs: List[tf.Tensor],
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    dc_decomp: bool = False,
+    perturbation_domain: Optional[PerturbationDomain] = None,
+    **kwargs: Any,
 ) -> List[tf.Tensor]:
     """LiRPA implementation of minus(x)=-x.
 
@@ -439,10 +439,14 @@ def minus(
     Returns:
 
     """
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
 
-    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
+    x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(
+        inputs, tight=False, compute_ibp_from_affine=False
+    )
 
     u_c_out = -l_c
     l_c_out = -u_c
@@ -525,8 +529,8 @@ def minimum(
         perturbation_domain = BoxDomain()
     return minus(
         maximum(
-            minus(inputs_0, dc_decomp=dc_decomp, mode=mode),
-            minus(inputs_1, dc_decomp=dc_decomp, mode=mode),
+            minus(inputs_0, dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain),
+            minus(inputs_1, dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain),
             dc_decomp=dc_decomp,
             perturbation_domain=perturbation_domain,
             mode=mode,
@@ -535,6 +539,7 @@ def minimum(
         ),
         dc_decomp=dc_decomp,
         mode=mode,
+        perturbation_domain=perturbation_domain,
     )
 
 
@@ -564,7 +569,7 @@ def get_linear_hull_s_shape(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
 
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
     dtype = x.dtype
@@ -572,10 +577,6 @@ def get_linear_hull_s_shape(
     z_value = K.cast(0.0, dtype=dtype)
     o_value = K.cast(1.0, dtype=dtype)
     t_value = K.cast(2.0, dtype=dtype)
-
-    if mode == ForwardMode.AFFINE:
-        u_c = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
-        l_c = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
 
     # flatten
     shape = list(u_c.shape[1:])
@@ -757,12 +758,8 @@ def set_mode(
         if mode == ForwardMode.IBP:
             raise NotImplementedError(f"If mode is {ForwardMode.IBP}, final_mode must be also {ForwardMode.IBP}.")
         else:
-            inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode)
+            inputs_outputs_spec = InputsOutputsSpec(
+                dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain
+            )
             x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
-
-            if mode == ForwardMode.AFFINE and final_mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-                # compute constant bounds
-                u_c = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
-                l_c = get_lower(x, w_u, b_u, perturbation_domain=perturbation_domain)
-
             return inputs_outputs_spec.extract_outputsformode_from_fulloutputs([x, u_c, w_u, b_u, l_c, w_l, b_l, h, g])
