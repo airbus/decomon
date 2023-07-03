@@ -157,9 +157,9 @@ def get_input_tensors(
 
             def get_bounds(z: tf.Tensor) -> List[tf.Tensor]:
                 outputs = []
+                W = tf.linalg.diag(z_value * z + o_value)
+                b = z_value * z
                 if affine:
-                    W = tf.linalg.diag(z_value * z + o_value)
-                    b = z_value * z
                     outputs += [W, b]
                 if ibp:
                     u_c_out = get_upper(z, W, b, perturbation_domain)
