@@ -154,9 +154,7 @@ def convert(
         # check final_ibp and final_affine
         mode_from = get_mode(ibp, affine)
         mode_to = get_mode(final_ibp, final_affine)
-        output = Convert2Mode(
-            mode_from=mode_from, mode_to=mode_to, perturbation_domain=perturbation_domain, dtype=model.layers[0].dtype
-        )(output)
+        output = Convert2Mode(mode_from=mode_from, mode_to=mode_to, perturbation_domain=perturbation_domain)(output)
 
     # build decomon model
     return input_tensors, output, layer_map, forward_map
