@@ -10,9 +10,7 @@ from decomon.core import (
     BoxDomain,
     ForwardMode,
     PerturbationDomain,
-    get_lower,
     get_mode,
-    get_upper,
 )
 from decomon.layers.activations import softmax as softmax_
 from decomon.layers.core import DecomonLayer
@@ -120,7 +118,7 @@ def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
 
     def upper_affine(x: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, u_ref: tf.Tensor) -> tf.Tensor:
 
-        upper = get_upper(x, w_u, b_u, perturbation_domain=perturbation_domain)
+        upper = perturbation_domain.get_upper(x, w_u, b_u)
 
         return K.max(upper - u_ref, -1)
 
@@ -193,7 +191,7 @@ def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
 
     def lower_affine(x: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor, l_ref: tf.Tensor) -> tf.Tensor:
 
-        lower = get_lower(x, w_l, b_l, perturbation_domain=perturbation_domain)
+        lower = perturbation_domain.get_lower(x, w_l, b_l)
 
         return K.max(l_ref - lower, -1)
 
@@ -285,7 +283,7 @@ def get_adv_loss(
         w_adv = w_u_reshaped - w_l_reshaped
         b_adv = K.expand_dims(b_u, -1) - K.expand_dims(b_l, 1)
 
-        upper = get_upper(x, w_adv, b_adv, perturbation_domain=perturbation_domain)
+        upper = perturbation_domain.get_upper(x, w_adv, b_adv)
 
         t_tensor = 1 - y_tensor
         s_tensor = y_tensor

@@ -3,7 +3,6 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
-from tensorflow.keras.layers import Lambda, Layer
 from tensorflow.math import greater_equal
 from tensorflow.types.experimental import TensorLike
 
@@ -16,10 +15,6 @@ from decomon.core import (
     Slope,
     get_affine,
     get_ibp,
-    get_lower,
-    get_lower_box,
-    get_upper,
-    get_upper_box,
 )
 
 TensorFunction = Callable[[TensorLike], tf.Tensor]
@@ -112,7 +107,7 @@ def convert_lower_search_2_subset_sum(x: tf.Tensor, W: tf.Tensor, b: tf.Tensor, 
         W = K.reshape(W, (-1, W.shape[1], np.prod(W.shape[2:])))
         b = K.reshape(b, (-1, np.prod(b.shape[1:])))
 
-    const = get_lower(x, W, b)
+    const = BoxDomain().get_lower(x, W, b)
 
     weights = K.abs(W) * K.expand_dims((x_max - x_min) / n, -1)
     return weights, const

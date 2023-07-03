@@ -14,8 +14,6 @@ from decomon.core import (
     Slope,
     get_affine,
     get_ibp,
-    get_lower,
-    get_upper,
 )
 from decomon.layers.core import DecomonLayer
 from decomon.layers.utils import exp, expand_dims, frac_pos, multiply, softplus_, sum

@@ -18,9 +18,7 @@ from decomon.core import (
     PerturbationDomain,
     Slope,
     get_affine,
-    get_lower,
     get_mode,
-    get_upper,
 )
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.crown import Convert2BackwardMode, Fuse, MergeWithPrevious

@@ -18,10 +18,8 @@ from tensorflow.keras.layers import (
     Layer,
 )
 from tensorflow.python.keras.utils import conv_utils
-from tensorflow.python.keras.utils.generic_utils import to_list
 
-from decomon.core import ForwardMode, PerturbationDomain, Slope, get_lower, get_upper
-from decomon.keras_utils import get_weight_index
+from decomon.core import ForwardMode, PerturbationDomain, Slope
 from decomon.layers import activations
 from decomon.layers.core import DecomonLayer
 from decomon.layers.utils import (
@@ -225,7 +223,7 @@ class DecomonConv2D(DecomonLayer, Conv2D):
 
             else:
                 # check for linearity
-                x_max = get_upper(x, w_u - w_l, b_u - b_l, self.perturbation_domain)
+                x_max = self.perturbation_domain.get_upper(x, w_u - w_l, b_u - b_l)
                 mask_b = o_value - K.sign(x_max)
 
                 def step_pos(x: tf.Tensor, _: List[tf.Tensor]) -> Tuple[tf.Tensor, List[tf.Tensor]]:

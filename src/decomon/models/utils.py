@@ -24,9 +24,7 @@ from decomon.core import (
     ForwardMode,
     InputsOutputsSpec,
     PerturbationDomain,
-    get_lower,
     get_mode,
-    get_upper,
 )
 from decomon.layers.utils import is_a_merge_layer
 
@@ -163,8 +161,8 @@ def get_input_tensors(
                 if affine:
                     outputs += [W, b]
                 if ibp:
-                    u_c_out = get_upper(z, W, b, perturbation_domain)
-                    l_c_out = get_lower(z, W, b, perturbation_domain)
+                    u_c_out = perturbation_domain.get_upper(z, W, b)
+                    l_c_out = perturbation_domain.get_lower(z, W, b)
                     outputs += [u_c_out, l_c_out]
                 return outputs
 

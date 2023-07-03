@@ -5,7 +5,7 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import InputSpec, Layer
 
-from decomon.core import ForwardMode, PerturbationDomain, get_lower, get_upper
+from decomon.core import ForwardMode, PerturbationDomain
 
 
 class Fuse(Layer):
@@ -51,8 +51,8 @@ class Convert2BackwardMode(Layer):
             x_0 = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
 
         if self.mode in [ForwardMode.IBP, ForwardMode.HYBRID]:
-            u_c_out = get_upper(x_0, w_u_out, b_u_out, perturbation_domain=self.perturbation_domain)
-            l_c_out = get_lower(x_0, w_l_out, b_l_out, perturbation_domain=self.perturbation_domain)
+            u_c_out = self.perturbation_domain.get_upper(x_0, w_u_out, b_u_out)
+            l_c_out = self.perturbation_domain.get_lower(x_0, w_l_out, b_l_out)
         else:
             u_c_out, l_c_out = empty_tensor, empty_tensor
 
