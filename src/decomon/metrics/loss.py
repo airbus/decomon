@@ -102,14 +102,7 @@ def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
     mode = get_mode(ibp, affine)
     perturbation_domain = model.perturbation_domain
 
-    if affine:
-        if isinstance(perturbation_domain, BoxDomain):
-            n_comp = 2
-        elif isinstance(perturbation_domain, BallDomain):
-            n_comp = 1
-        else:
-            raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
-
+    n_comp = perturbation_domain.get_nb_x_components()
     n_out = np.prod(model.output[-1].shape[1:])
 
     def upper_ibp(u_c: tf.Tensor, u_ref: tf.Tensor) -> tf.Tensor:
@@ -175,14 +168,7 @@ def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
     mode = get_mode(ibp, affine)
     perturbation_domain = model.perturbation_domain
 
-    if affine:
-        if isinstance(perturbation_domain, BoxDomain):
-            n_comp = 2
-        elif isinstance(perturbation_domain, BallDomain):
-            n_comp = 1
-        else:
-            raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
-
+    n_comp = perturbation_domain.get_nb_x_components()
     n_out = np.prod(model.output[-1].shape[1:])
 
     def lower_ibp(l_c: tf.Tensor, l_ref: tf.Tensor) -> tf.Tensor:
@@ -250,14 +236,7 @@ def get_adv_loss(
     mode = get_mode(ibp, affine)
     perturbation_domain = model.perturbation_domain
 
-    if affine:
-        if isinstance(perturbation_domain, BoxDomain):
-            n_comp = 2
-        elif isinstance(perturbation_domain, BallDomain):
-            n_comp = 1
-        else:
-            raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
-
+    n_comp = perturbation_domain.get_nb_x_components()
     n_out = np.prod(model.output[-1].shape[1:])
 
     def adv_ibp(u_c: tf.Tensor, l_c: tf.Tensor, y_tensor: tf.Tensor) -> tf.Tensor:
