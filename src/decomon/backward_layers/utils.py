@@ -63,10 +63,12 @@ def backward_add(
     l_c_0 = op_flat(l_c_0)
     l_c_1 = op_flat(l_c_1)
 
-    upper_0 = get_upper_box(l_c_0, u_c_0, w_u_out, b_u_out)
-    upper_1 = get_upper_box(l_c_1, u_c_1, w_u_out, b_u_out)
-    lower_0 = get_lower_box(l_c_0, u_c_0, w_l_out, b_l_out)
-    lower_1 = get_lower_box(l_c_1, u_c_1, w_l_out, b_l_out)
+    x_0 = K.concatenate([K.expand_dims(l_c_0, 1), K.expand_dims(u_c_0, 1)], 1)
+    x_1 = K.concatenate([K.expand_dims(l_c_1, 1), K.expand_dims(u_c_1, 1)], 1)
+    upper_0 = BoxDomain().get_upper(x_0, w_u_out, b_u_out)
+    upper_1 = BoxDomain().get_upper(x_1, w_u_out, b_u_out)
+    lower_0 = BoxDomain().get_lower(x_0, w_l_out, b_l_out)
+    lower_1 = BoxDomain().get_lower(x_1, w_l_out, b_l_out)
 
     w_u_out_0 = w_u_out
     b_u_out_0 = upper_1
