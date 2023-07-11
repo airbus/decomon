@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Union, Tuple
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from decomon.backward_layers.utils_conv import get_affine_components
+from decomon.backward_layers.utils_conv import get_affine_components, get_toeplitz
 from tensorflow.keras.layers import MaxPooling2D, Conv2D
 from decomon.layers.maxpooling import DecomonMaxPooling2D
 from decomon.layers.core import ForwardMode
@@ -13,14 +13,48 @@ from decomon.core import PerturbationDomain
 from decomon.layers.utils_pooling import get_lower_linear_hull_max, get_upper_linear_hull_max
 from decomon.backward_layers.utils import merge_with_previous
 
-#(pool_size, pool_size, channels, channels*2**pool_size)
-def get_conv_pooling(pool_layer: MaxPooling2D)-> Tuple[tf.Tensor, tf.Tensor]:
+
+def get_pool_info(pool_layer):
 
     pool_size_x, pool_size_y  = pool_layer.pool_size
-    pooling = pool_size_x*pool_size_y
     padding = pool_layer.padding
     strides = pool_layer.strides
     data_format = pool_layer.data_format
+
+    if data_format== "channels_last":
+        channel_pool = pool_layer.get_input_shape_at(0)
+        channel_pool= channel_pool[-1]
+        axis_split = -1
+    else:
+        channel_pool = pool_layer.get_input_shape_at(0)[1]
+        channel_pool= channel_pool[1]
+        axis_split = 1
+
+    config={'data_format':data_format,
+    'pool_size_x':pool_size_x,
+    'pool_size_y': pool_size_y,
+    'padding':padding,
+    'strides':strides,
+    'channel_pool':channel_pool,
+    'axis':axis_split}
+
+    return config
+
+#(pool_size, pool_size, channels, channels*2**pool_size)
+def get_conv_op_pooling(pool_layer: MaxPooling2D)-> Tuple[tf.Tensor, Conv2D]:
+
+    config = get_pool_info(pool_layer)
+    pool_size_x = config['pool_size_x']
+    pool_size_y = config['pool_size_y']
+    pooling = pool_size_x*pool_size_y
+    padding = config['padding']
+    strides = config['strides']
+    data_format = config['data_format']
+    channel_pool = config['channel_pool']
+    axis_split = config['axis']
+
+    if padding=='same':
+        raise NotImplementedError()
     # create the convolution layer to extract the Toeplitz matrix
     kernel_pool = np.repeat(
                     np.transpose(
@@ -31,42 +65,59 @@ def get_conv_pooling(pool_layer: MaxPooling2D)-> Tuple[tf.Tensor, tf.Tensor]:
                         padding=padding, 
                         strides=strides, use_bias=False, data_format=data_format)
 
-    if data_format== "channels_last":
-        # should also work with a Decomon layer
-        channel_pool = pool_layer.get_input_shape_at(0)
-        if isinstance(channel_pool, list):
-            channel_pool= channel_pool[-1]
-        channel_pool= channel_pool[-1]
-        axis_split = -1
-    else:
-        channel_pool = pool_layer.get_input_shape_at(0)[1]
-        if isinstance(channel_pool, list):
-            channel_pool= channel_pool[-1]
-        channel_pool= channel_pool[1]
-        axis_split = 1
 
     pool_input = pool_layer.get_input_at(0)
-    if isinstance(pool_input, list):
-        pool_input = pool_input[-1]
     conv_input = tf.split(pool_input, channel_pool, axis=axis_split)[0]
     op_conv(conv_input)
     op_conv.set_weights([kernel_pool])
     op_conv.trainable=False
     op_conv._trainable_weights=[]
 
-    w_conv_u, b_conv_u = get_affine_components(op_conv, [pool_input])
+    return pool_input, op_conv
+
+def get_conv_pooling(pool_layer: MaxPooling2D)-> Tuple[tf.Tensor, tf.Tensor]:
+
+    config = get_pool_info(pool_layer)
+    pool_size_x = config['pool_size_x']
+    pool_size_y = config['pool_size_y']
+    pooling = pool_size_x*pool_size_y
+    #padding = config['padding']
+    #strides = config['strides']
+    #data_format = config['data_format']
+    channel_pool = config['channel_pool']
+    #axis_split = config['axis']
+
+    pool_input, op_conv = get_conv_op_pooling(pool_layer)
+
+    #w_conv_u, _ = get_affine_components(op_conv, [pool_input])
+    w_conv_u = get_toeplitz(op_conv)[None]
     # reshape it given the input
 
     pooling_shape = pool_input.get_shape().as_list()[1:]
     w_shape = w_conv_u.get_shape().as_list()
 
+    #check
     dim = int(np.prod(w_shape[1:])*channel_pool/(pooling*np.prod(pooling_shape)))
-    w_conv_u = tf.repeat(w_conv_u, channel_pool, 2)
-    w_conv_u = tf.repeat(K.reshape(w_conv_u, [-1]+pooling_shape+[dim, pooling]), channel_pool, -2)
-    b_conv_u = tf.repeat(K.reshape(b_conv_u, (-1, dim, pooling)), channel_pool, -2)
+    
+    #pooling_shape[-1]= channel_pool
+    # DATA FORMAT !!!!
 
+    w_conv_u = tf.linalg.diag(tf.repeat(K.expand_dims(w_conv_u, -1), channel_pool, -1))
+    w_conv_u = K.permute_dimensions(w_conv_u, (0,1, 3, 2, 4))
+    w_conv_u = K.reshape(w_conv_u, [-1]+pooling_shape+[dim, pooling, channel_pool])
+    w_conv_u = K.reshape(K.permute_dimensions(w_conv_u, (0, 1, 2, 3, 4, 6, 5)),\
+                         [-1]+pooling_shape+[dim*channel_pool, pooling])
+    #w_conv_u = K.reshape(tf.repeat(w_conv_u[:,:,None], channel_pool, 2), [-1]+pooling_shape+[dim, pooling])
+    #w_conv_u = tf.linalg.diag(w_conv_u, 3)
+
+    #w_conv_u = tf.repeat(w_conv_u, channel_pool, -2)
+
+    
+    #w_conv_u = K.reshape(w_conv_u, [-1]+pooling_shape+[dim*channel_pool, pooling])
+
+    #w_conv_u = tf.repeat(K.reshape(w_conv_u, [-1]+pooling_shape+[dim, pooling]), channel_pool, -2)
     # to check
-    return w_conv_u, b_conv_u
+    return w_conv_u
 
 
 def apply_linear_bounds(kernel:tf.Tensor, bias:tf.Tensor, 

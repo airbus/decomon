@@ -1055,6 +1055,7 @@ class Helpers:
         x_, y_, z_, u_c_, W_u_, B_u_, l_c_, W_l_, B_l_ = full_inputs
 
         # backward recomposition
+
         w_u_b = np.sum(np.maximum(w_u_, 0) * W_u_ + np.minimum(w_u_, 0) * W_l_, 1)[:, :, None]
         b_u_b = (
             b_u_ + np.sum(np.maximum(w_u_, 0) * B_u_[:, :, None], 1) + np.sum(np.minimum(w_u_, 0) * B_l_[:, :, None], 1)
