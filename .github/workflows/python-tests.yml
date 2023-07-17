@@ -64,6 +64,7 @@ jobs:
         python-version: ["3.8", "3.9"]
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         nodeellip: [ false, true ]
+        tf212: [ false, true ]
         exclude:
           - os: "windows-latest"
             nodeellip: true
@@ -72,6 +73,17 @@ jobs:
           - os: "ubuntu-latest"
             nodeellip: true
             python-version: 3.9
+          - os: "windows-latest"
+            tf212: true
+          - os: "macos-latest"
+            tf212: true
+          - os: "ubuntu-latest"
+            tf212: true
+            python-version: 3.9
+          - os: "ubuntu-latest"
+            tf212: true
+            nodeellip: false
+            python-version: 3.8
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -93,8 +105,9 @@ jobs:
         with:
           path: .tox
           key:
-            tox-${{ matrix.python-version }}-${{ matrix.os }}-${{ hashFiles('pyproject.toml') }}
+            tox-${{ matrix.python-version }}-${{ matrix.os }}-${{ matrix.tf212 }}-${{ hashFiles('pyproject.toml') }}
           restore-keys:
+            tox-${{ matrix.python-version }}-${{ matrix.os }}-${{ matrix.tf212 }}
             tox-${{ matrix.python-version }}-${{ matrix.os }}
       - name: Pick proper tox env
         shell: python
@@ -110,6 +123,8 @@ jobs:
           toxenv = f"{pythonversion}-{platformversion}"
           if "${{ matrix.nodeellip }}" == "true":
               toxenv += "-nodeellip"
+          if "${{ matrix.tf212 }}" == "true":
+              toxenv += "-tf212"
           set_toxenv_cmd = f"TOXENV={toxenv}"
           print(f"Picked: {toxenv}")
           with Path(os.environ["GITHUB_ENV"]).open("ta") as file_handler:
