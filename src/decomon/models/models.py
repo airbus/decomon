@@ -2,7 +2,6 @@ import copy
 from typing import Any, Dict, List, Optional, Union
 
 import tensorflow as tf
-from keras.engine.functional import get_network_config
 
 from decomon.core import (
     BoxDomain,
@@ -12,6 +11,13 @@ from decomon.core import (
     PerturbationDomain,
 )
 from decomon.models.utils import ConvertMethod
+
+try:
+    from keras.src.engine.functional import (
+        get_network_config,  # new path starting from keras 2.13
+    )
+except ImportError:
+    from keras.engine.functional import get_network_config  # old path until keras 2.12
 
 
 class DecomonModel(tf.keras.Model):

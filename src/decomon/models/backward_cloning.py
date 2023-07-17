@@ -3,7 +3,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from keras.engine.node import Node
 from tensorflow.keras.layers import Concatenate, Lambda, Layer
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.utils.generic_utils import to_list
@@ -26,6 +25,11 @@ from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.crown import Convert2BackwardMode, Fuse, MergeWithPrevious
 from decomon.models.forward_cloning import OutputMapDict
 from decomon.models.utils import Convert2Mode, get_depth_dict
+
+try:
+    from keras.src.engine.node import Node  # new path starting from keras 2.13
+except ImportError:
+    from keras.engine.node import Node  # old path until keras 2.12
 
 
 def get_disconnected_input(
