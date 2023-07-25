@@ -44,7 +44,7 @@ except ImportError:
     LipschitzLayer = type(None)
 
 
-class ConvertMethod(Enum):
+class ConvertMethod(str, Enum):
     CROWN = "crown"
     CROWN_FORWARD_IBP = "crown-forward-ibp"
     CROWN_FORWARD_AFFINE = "crown-forward-affine"
@@ -67,7 +67,7 @@ def get_ibp_affine_from_method(method: Union[str, ConvertMethod]) -> Tuple[bool,
     return True, True
 
 
-class FeedDirection(Enum):
+class FeedDirection(str, Enum):
     FORWARD = "feed_forward"
     BACKWARD = "feed_backward"
 

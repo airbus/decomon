@@ -1,18 +1,18 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
 
-class Option(Enum):
+class Option(str, Enum):
     lagrangian = "lagrangian"
     milp = "milp"
 
 
-class Slope(Enum):
+class Slope(str, Enum):
     V_SLOPE = "volume-slope"
     A_SLOPE = "adaptative-slope"
     S_SLOPE = "same-slope"
@@ -37,6 +37,11 @@ class PerturbationDomain(ABC):
     @abstractmethod
     def get_nb_x_components(self) -> int:
         ...
+
+    def get_config(self) -> Dict[str, Any]:
+        return {
+            "opt_option": self.opt_option,
+        }
 
     def get_x_input_shape(self, original_input_dim: int) -> Tuple[int, ...]:
         n_comp_x = self.get_nb_x_components()
@@ -85,6 +90,16 @@ class BallDomain(PerturbationDomain):
             raise ValueError(p_error_msg)
         self.p = p
 
+    def get_config(self) -> Dict[str, Any]:
+        config = super().get_config()
+        config.update(
+            {
+                "eps": self.eps,
+                "p": self.p,
+            }
+        )
+        return config
+
     def get_lower(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
         return get_lower_ball(x_0=x, eps=self.eps, p=self.p, w=w, b=b, **kwargs)
 
@@ -95,7 +110,7 @@ class BallDomain(PerturbationDomain):
         return 1
 
 
-class ForwardMode(Enum):
+class ForwardMode(str, Enum):
     """The different forward (from input to output) linear based relaxation perturbation analysis."""
 
     IBP = "ibp"

@@ -12,7 +12,7 @@ from decomon.core import BoxDomain, PerturbationDomain
 from decomon.models.models import DecomonModel
 
 
-class MetricMode(Enum):
+class MetricMode(str, Enum):
     FORWARD = "forward"
     BACKWARD = "backward"
 
