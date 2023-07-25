@@ -137,10 +137,10 @@ def get_input_tensors(
     elif isinstance(perturbation_domain, BallDomain):
         if perturbation_domain.p == np.inf:
             radius = perturbation_domain.eps
+            u_c_tensor = Lambda(
+                lambda var: var + K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
+            )(z_tensor)
             if ibp:
-                u_c_tensor = Lambda(
-                    lambda var: var + K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
-                )(z_tensor)
                 l_c_tensor = Lambda(
                     lambda var: var - K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
                 )(z_tensor)

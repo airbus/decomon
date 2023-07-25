@@ -86,10 +86,10 @@ class BallDomain(PerturbationDomain):
         self.p = p
 
     def get_lower(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
-        return get_lower_ball(x=x, eps=self.eps, p=self.p, w=w, b=b, **kwargs)
+        return get_lower_ball(x_0=x, eps=self.eps, p=self.p, w=w, b=b, **kwargs)
 
     def get_upper(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
-        return get_upper_ball(x=x, eps=self.eps, p=self.p, w=w, b=b, **kwargs)
+        return get_upper_ball(x_0=x, eps=self.eps, p=self.p, w=w, b=b, **kwargs)
 
     def get_nb_x_components(self) -> int:
         return 1
