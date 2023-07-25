@@ -1,0 +1,4 @@
+# tensorboard launches at startup
+mv binder/tensorboardserverextension.py ${NB_PYTHON_PREFIX}/lib/python*/site-packages/
+# enable tensorboard extension
+# jupyter serverextension enable --sys-prefix tensorboardserverextension

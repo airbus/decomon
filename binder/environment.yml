@@ -7,4 +7,6 @@ dependencies:
   - pip:
       - kaggle
       - pandas
+      - tensorboard>=2.13
+      - jupyter-server-proxy
       - ..  # decomon
