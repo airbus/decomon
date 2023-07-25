@@ -66,7 +66,6 @@ class BackwardDense(BackwardLayer):
         self.frozen_weights = False
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
         if len(inputs) == 0:
             inputs = self.layer.input
 
@@ -259,7 +258,6 @@ class BackwardActivation(BackwardLayer):
         input_dim = np.prod(input_shape[-1][1:])
 
         if self.finetune and self.activation_name != "linear":
-
             if isinstance(self.perturbation_domain, GridDomain):
                 if self.activation_name[:4] == "relu":
                     self.alpha_b_l = self.add_weight(
@@ -310,7 +308,6 @@ class BackwardActivation(BackwardLayer):
                 and self.perturbation_domain.opt_option == Option.lagrangian
                 and self.mode != ForwardMode.IBP
             ):
-
                 finetune_grid_pos = self.add_weight(
                     shape=(input_dim,),
                     initializer="zeros",
@@ -334,7 +331,6 @@ class BackwardActivation(BackwardLayer):
             and self.perturbation_domain.opt_option == Option.milp
             and self.mode != ForwardMode.IBP
         ):
-
             finetune_grid_A = self.add_weight(
                 shape=(input_dim,),
                 initializer="zeros",
@@ -355,7 +351,6 @@ class BackwardActivation(BackwardLayer):
         self.built = True
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
         # infer the output dimension
         if self.activation_name != "linear":
             if self.finetune:
@@ -560,7 +555,6 @@ class BackwardBatchNormalization(BackwardLayer):
         self.op_flat = Flatten()
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
         y = inputs[-1]
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
@@ -617,5 +611,4 @@ class BackwardInputLayer(BackwardLayer):
         )
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
         return get_identity_lirpa(inputs)

@@ -37,7 +37,6 @@ from decomon.layers.utils import broadcast, multiply, permute_dimensions, split
 
 
 class BackwardMerge(ABC, Wrapper):
-
     layer: Layer
     _trainable_weights: List[tf.Variable]
 
@@ -199,7 +198,6 @@ class BackwardAverage(BackwardMerge):
         self.op = DecomonAdd(mode=self.mode, perturbation_domain=self.perturbation_domain, dc_decomp=False).call
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
-
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
         inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)

@@ -114,7 +114,6 @@ def softplus_(
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
-
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
@@ -128,7 +127,6 @@ def softplus_(
     l_c_out = K.softplus(l_c)
 
     if mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-
         w_u_out, b_u_out, w_l_out, b_l_out = get_linear_softplus_hull(upper=u_c, lower=l_c, slope=slope, **kwargs)
         b_u_out = w_u_out * b_u + b_u_out
         b_l_out = w_l_out * b_l + b_l_out
@@ -203,7 +201,6 @@ def frac_pos(
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
-
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
 
@@ -425,7 +422,6 @@ def softmax_to_linear(model: keras.Model) -> Tuple[keras.Model, bool]:
 
 
 def linear_to_softmax(model: keras.Model) -> Tuple[keras.Model, bool]:
-
     model.layers[-1].activation = keras.activations.get("softmax")
     return model
 
@@ -788,7 +784,6 @@ def sort(
     # use selection sort
     for i in range(n - 1):
         for j in range(i + 1, n):
-
             input_i = inputs_outputs_spec.extract_inputsformode_from_fullinputs(
                 [x, u_c_list[i], w_u_list[i], b_u_list[i], l_c_list[i], w_l_list[i], b_l_list[i], h_list[i], g_list[i]]
             )

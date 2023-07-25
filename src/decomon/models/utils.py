@@ -124,7 +124,6 @@ def get_input_tensors(
     )
 
     if isinstance(perturbation_domain, BoxDomain):
-
         if ibp:
             u_c_tensor = Lambda(lambda z: z[:, 1], dtype=z_tensor.dtype)(z_tensor)
             l_c_tensor = Lambda(lambda z: z[:, 0], dtype=z_tensor.dtype)(z_tensor)
@@ -136,7 +135,6 @@ def get_input_tensors(
             b = Lambda(lambda z: z_value * z[:, 1], dtype=z_tensor.dtype)(z_tensor)
 
     elif isinstance(perturbation_domain, BallDomain):
-
         if perturbation_domain.p == np.inf:
             radius = perturbation_domain.eps
             if ibp:
@@ -317,7 +315,6 @@ def preprocess_layer(layer: Layer) -> List[Layer]:
 
 
 def get_depth_dict(model: Model) -> Dict[int, List[Node]]:
-
     depth_keys = list(model._nodes_by_depth.keys())
     depth_keys.sort(reverse=True)
 
@@ -364,7 +361,6 @@ def get_depth_dict(model: Model) -> Dict[int, List[Node]]:
 
 
 def get_inner_layers(model: Model) -> int:
-
     count = 0
     for layer in model.layers:
         if isinstance(layer, Model):
@@ -388,7 +384,6 @@ class Convert2Mode(Layer):
         self.perturbation_domain = perturbation_domain
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
         mode_from = self.mode_from
         mode_to = self.mode_to
         perturbation_domain = self.perturbation_domain

@@ -50,7 +50,6 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         fast: bool = True,
         **kwargs: Any,
     ):
-
         kwargs.pop("activation", None)
         super().__init__(
             filters=filters,
@@ -536,7 +535,6 @@ class DecomonDense(DecomonLayer, Dense):
                     w_u_out = K.dot(w_u, kernel_pos) + K.dot(w_l, kernel_neg)
                     w_l_out = K.dot(w_l, kernel_pos) + K.dot(w_u, kernel_neg)
                 else:
-
                     raise NotImplementedError()  # bug somewhere
         else:
             w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
@@ -632,7 +630,6 @@ class DecomonActivation(DecomonLayer, Activation):
         fast: bool = True,
         **kwargs: Any,
     ):
-
         super().__init__(
             activation=activation,
             perturbation_domain=perturbation_domain,
@@ -650,12 +647,10 @@ class DecomonActivation(DecomonLayer, Activation):
         self.activation_name = activation
 
     def build(self, input_shape: List[tf.TensorShape]) -> None:
-
         if self.finetune and self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
             shape = input_shape[-1][1:]
 
             if self.activation_name != "linear" and self.mode != ForwardMode.IBP:
-
                 if self.activation_name[:4] != "relu":
                     self.beta_u_f = self.add_weight(
                         shape=shape,
@@ -673,7 +668,6 @@ class DecomonActivation(DecomonLayer, Activation):
                 )
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
         if self.finetune and self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID] and self.activation_name != "linear":
             if self.activation_name[:4] == "relu":
                 return self.activation(
@@ -895,7 +889,6 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
         self.input_spec = [InputSpec(min_ndim=len(elem)) for elem in input_shape]
 
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
-
         output_shape: tf.TensorShape = BatchNormalization.compute_output_shape(self, input_shape[-1])
 
         if self.mode == ForwardMode.IBP:
@@ -918,7 +911,6 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
         return output
 
     def call(self, inputs: List[tf.Tensor], training: Optional[bool] = None, **kwargs: Any) -> List[tf.Tensor]:
-
         if training is None:
             training = K.learning_phase()
 
@@ -1048,7 +1040,6 @@ class DecomonDropout(DecomonLayer, Dropout):
             training = K.learning_phase()
 
         if training:
-
             raise NotImplementedError("not working during training")
 
         return inputs
@@ -1079,7 +1070,6 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
         fast: bool = True,
         **kwargs: Any,
     ):
-
         if type_spec is not None:
             super().__init__(
                 input_shape=input_shape,

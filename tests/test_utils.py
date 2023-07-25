@@ -12,7 +12,6 @@ from decomon.utils import subtract
 
 
 def test_get_upper_multi_box(odd, floatx, decimal, helpers):
-
     inputs = helpers.get_tensor_decomposition_multid_box(odd)
     inputs_ = helpers.get_standard_values_multid_box(odd)
 

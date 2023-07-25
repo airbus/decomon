@@ -14,7 +14,6 @@ from decomon.models.utils import split_activation
 
 
 def test_DecomonDense_1D_box(n, mode, shared, floatx, decimal, helpers):
-
     dc_decomp = True
     kwargs_layer = dict(units=1, use_bias=True, dtype=K.floatx())
 
@@ -114,7 +113,6 @@ def test_DecomonDense_1D_box_nodc(n, helpers):
 
 
 def test_DecomonDense_multiD_box(odd, mode, dc_decomp, helpers):
-
     shared = False
     kwargs_layer = dict(units=1, use_bias=True, dtype=K.floatx())
     decimal = 5
@@ -174,7 +172,6 @@ def test_DecomonDense_multiD_box(odd, mode, dc_decomp, helpers):
 
 
 def test_DecomonDense_1D_to_decomon_box(n, activation, mode, shared, helpers):
-
     dc_decomp = True
     kwargs_layer = dict(units=1, use_bias=True, dtype=K.floatx())
     decimal = 5
@@ -225,7 +222,6 @@ def test_DecomonDense_1D_to_decomon_box(n, activation, mode, shared, helpers):
 
 
 def test_DecomonDense_multiD_to_decomon_box(odd, activation, mode, dc_decomp, helpers):
-
     shared = False
     kwargs_layer = dict(units=1, use_bias=True, dtype=K.floatx())
     decimal = 5
@@ -250,7 +246,6 @@ def test_DecomonDense_multiD_to_decomon_box(odd, activation, mode, dc_decomp, he
 
         keras_layer.set_weights([W_0, b_0])
     if odd == 1:
-
         W_0[0] = -0.1657672
         W_0[1] = -0.2613032
         W_0[2] = 0.08437371

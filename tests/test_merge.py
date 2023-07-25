@@ -151,7 +151,6 @@ def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, od
     ],
 )
 def test_Decomon_1D_box_to_decomon(layer_class, tensor_op, layer_kwargs, n, helpers):
-
     dc_decomp = False
     mode = ForwardMode.HYBRID
     ibp = get_ibp(mode=mode)

@@ -150,13 +150,11 @@ def crown_(
     parents = node.parent_nodes
 
     if len(parents):
-
         if len(parents) > 1:
             if isinstance(backward_layer, BackwardMerge):
                 raise NotImplementedError()
                 crown_bound_list = []
-                for (backward_bound, parent) in zip(backward_bounds, parents):
-
+                for backward_bound, parent in zip(backward_bounds, parents):
                     crown_bound_i, _ = crown_(
                         node=parent,
                         ibp=ibp,
@@ -223,7 +221,6 @@ def get_input_nodes(
     perturbation_domain: Optional[PerturbationDomain] = None,
     **kwargs: Any,
 ) -> Tuple[Dict[int, List[tf.Tensor]], Dict[int, BackwardLayer], Dict[int, List[tf.Tensor]]]:
-
     keys = [e for e in dico_nodes.keys()]
     keys.sort(reverse=True)
     fuse_layer = None
@@ -449,7 +446,6 @@ def convert_backward(
         perturbation_domain=perturbation_domain,
     )(output)
     if mode_to != mode_from and mode_from == ForwardMode.IBP:
-
         f_input = Lambda(lambda z: Concatenate(1)([z[0][:, None], z[1][:, None]]))
         output[0] = f_input([input_tensors[1], input_tensors[0]])
     return input_tensors, output, backward_map, toto

@@ -46,7 +46,6 @@ class BackwardMaxPooling2D(BackwardLayer):
         w_l_out: tf.Tensor,
         b_l_out: tf.Tensor,
     ) -> List[tf.Tensor]:
-
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
 
         op_flat = Flatten()

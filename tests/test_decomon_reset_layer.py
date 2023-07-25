@@ -168,7 +168,6 @@ def test_decomonconv2d_reset_layer(helpers, use_bias):
     ],
 )
 def test_decomonbacthnormalization_reset_layer(helpers, center, scale):
-
     dc_decomp = False
     odd = 0
     mode = ForwardMode.HYBRID

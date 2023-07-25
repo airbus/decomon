@@ -95,7 +95,6 @@ def get_model(model: DecomonModel) -> DecomonModel:
 
 
 def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.Tensor]:
-
     ibp = model.ibp
     affine = model.affine
 
@@ -110,13 +109,11 @@ def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
         return K.max(u_c - u_ref, -1)
 
     def upper_affine(x: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, u_ref: tf.Tensor) -> tf.Tensor:
-
         upper = perturbation_domain.get_upper(x, w_u, b_u)
 
         return K.max(upper - u_ref, -1)
 
     def loss_upper(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
-
         if mode == ForwardMode.IBP:
             u_c = y_pred[:, :, 0]
 
@@ -130,7 +127,6 @@ def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
             b_u = y_pred[:, -1, n_comp : n_comp + n_out]
 
         elif mode == ForwardMode.HYBRID:
-
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-2, :n_comp], (0, 2, 1))
             else:
@@ -161,7 +157,6 @@ def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
 
 
 def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.Tensor]:
-
     ibp = model.ibp
     affine = model.affine
 
@@ -176,13 +171,11 @@ def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
         return K.max(l_ref - l_c, -1)
 
     def lower_affine(x: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor, l_ref: tf.Tensor) -> tf.Tensor:
-
         lower = perturbation_domain.get_lower(x, w_l, b_l)
 
         return K.max(l_ref - lower, -1)
 
     def loss_lower(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
-
         if mode == ForwardMode.IBP:
             l_c = y_pred[:, :, 1]
 
@@ -196,7 +189,6 @@ def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
             b_l = y_pred[:, -1, n_comp + n_out :]
 
         elif mode == ForwardMode.HYBRID:
-
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-2, :n_comp], (0, 2, 1))
             else:
@@ -229,7 +221,6 @@ def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
 def get_adv_loss(
     model: DecomonModel, sigmoid: bool = False, clip_value: Optional[float] = None, softmax: bool = False
 ) -> Callable[[tf.Tensor, tf.Tensor], tf.Tensor]:
-
     ibp = model.ibp
     affine = model.affine
 
@@ -240,7 +231,6 @@ def get_adv_loss(
     n_out = np.prod(model.output[-1].shape[1:])
 
     def adv_ibp(u_c: tf.Tensor, l_c: tf.Tensor, y_tensor: tf.Tensor) -> tf.Tensor:
-
         t_tensor = 1 - y_tensor
         s_tensor = y_tensor
 
@@ -255,7 +245,6 @@ def get_adv_loss(
     def adv_affine(
         x: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor, y_tensor: tf.Tensor
     ) -> tf.Tensor:
-
         w_u_reshaped = K.expand_dims(w_u, -1)
         w_l_reshaped = K.expand_dims(w_l, -2)
 
@@ -276,7 +265,6 @@ def get_adv_loss(
         return K.max(upper, (-1, -2))
 
     def loss_adv(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
-
         if mode == ForwardMode.IBP:
             u_c = y_pred[:, :, 0]
             l_c = y_pred[:, :, 1]
@@ -301,7 +289,6 @@ def get_adv_loss(
                 )
 
         elif mode == ForwardMode.HYBRID:
-
             if len(y_pred.shape) == 3:
                 x_0 = K.permute_dimensions(y_pred[:, :-2, :n_comp], (0, 2, 1))
             else:
@@ -353,7 +340,6 @@ def get_adv_loss(
 
 # create a layer
 class DecomonLossFusion(DecomonLayer):
-
     original_keras_layer_class = Layer
 
     def __init__(
@@ -396,9 +382,7 @@ class DecomonLossFusion(DecomonLayer):
         return config
 
     def call_no_backward(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
-
         if not self.asymptotic:
-
             u_c, l_c = self.convert2mode_layer(inputs)
 
             return -l_c + K.log(K.sum(K.exp(u_c - K.max(u_c, -1)[:, None]), -1))[:, None] + K.max(u_c, -1)[:, None]
@@ -408,7 +392,6 @@ class DecomonLossFusion(DecomonLayer):
             shape = u_c.shape[-1]
 
             def adv_ibp(u_c: tf.Tensor, l_c: tf.Tensor, y_tensor: tf.Tensor) -> tf.Tensor:
-
                 t_tensor = 1 - y_tensor
                 s_tensor = y_tensor
 
@@ -426,13 +409,11 @@ class DecomonLossFusion(DecomonLayer):
             return K.maximum(score, -1)  # + 1e-3*K.maximum(K.max(K.abs(u_c), -1)[:,None], K.abs(l_c))
 
     def call_backward(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
-
         if not self.asymptotic:
             u_c, l_c = self.convert2mode_layer(inputs)
             return K.softmax(u_c)
 
         else:
-
             raise NotImplementedError()
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
@@ -450,7 +431,6 @@ class DecomonLossFusion(DecomonLayer):
 
 # new layer for new loss functions
 class DecomonRadiusRobust(DecomonLayer):
-
     original_keras_layer_class = Layer
 
     def __init__(
@@ -492,7 +472,6 @@ class DecomonRadiusRobust(DecomonLayer):
         return config
 
     def call_no_backward(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
-
         if self.mode == ForwardMode.HYBRID:
             x, _, w_u, b_u, _, w_l, b_l = inputs
         else:
@@ -506,7 +485,6 @@ class DecomonRadiusRobust(DecomonLayer):
         shape = b_l.shape[-1]
 
         def radius_label(y_tensor: tf.Tensor, backward: bool = False) -> tf.Tensor:
-
             t_tensor = 1 - y_tensor
             s_tensor = y_tensor
 
@@ -528,7 +506,6 @@ class DecomonRadiusRobust(DecomonLayer):
         return K.concatenate([radius_label(source_tensor[:, i]) for i in range(shape)], -1)
 
     def call_backward(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
-
         if self.mode == ForwardMode.HYBRID:
             x, _, w_u, b_u, _, w_l, b_l = inputs
         else:

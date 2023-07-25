@@ -109,7 +109,6 @@ class ForwardMode(Enum):
 
 
 def get_mode(ibp: bool = True, affine: bool = True) -> ForwardMode:
-
     if ibp:
         if affine:
             return ForwardMode.HYBRID
@@ -516,9 +515,7 @@ def get_lower_ball(x_0: tf.Tensor, eps: float, p: float, w: tf.Tensor, b: tf.Ten
 def get_lower_ball_finetune(
     x_0: tf.Tensor, eps: float, p: float, w: tf.Tensor, b: tf.Tensor, **kwargs: Any
 ) -> tf.Tensor:
-
     if "finetune_lower" in kwargs and "upper" in kwargs or "lower" in kwargs:
-
         alpha = kwargs["finetune_lower"]
         # assume alpha is the same shape as w, minus the batch dimension
         n_shape = len(w.shape) - 2
@@ -541,7 +538,6 @@ def get_lower_ball_finetune(
             return score_box + score_ball
 
         if "upper" in kwargs:
-
             upper = kwargs["upper"]  # flatten vector
             upper_reshaped = np.reshape(upper, [1, -1] + [1] * n_shape)
 
@@ -554,7 +550,6 @@ def get_lower_ball_finetune(
             return score_box + score_ball
 
         if "lower" in kwargs:
-
             lower = kwargs["lower"]  # flatten vector
             lower_reshaped = np.reshape(lower, [1, -1] + [1] * n_shape)
 
@@ -572,9 +567,7 @@ def get_lower_ball_finetune(
 def get_upper_ball_finetune(
     x_0: tf.Tensor, eps: float, p: float, w: tf.Tensor, b: tf.Tensor, **kwargs: Any
 ) -> tf.Tensor:
-
     if "finetune_upper" in kwargs and "upper" in kwargs or "lower" in kwargs:
-
         alpha = kwargs["finetune_upper"]
         # assume alpha is the same shape as w, minus the batch dimension
         n_shape = len(w.shape) - 2
@@ -597,7 +590,6 @@ def get_upper_ball_finetune(
             return score_box + score_ball
 
         if "upper" in kwargs:
-
             upper = kwargs["upper"]  # flatten vector
             upper_reshaped = np.reshape(upper, [1, -1] + [1] * n_shape)
 
@@ -610,7 +602,6 @@ def get_upper_ball_finetune(
             return score_box + score_ball
 
         if "lower" in kwargs:
-
             lower = kwargs["lower"]  # flatten vector
             lower_reshaped = np.reshape(lower, [1, -1] + [1] * n_shape)
 

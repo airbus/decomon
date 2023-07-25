@@ -14,7 +14,6 @@ from decomon.layers.convert import to_decomon
 
 
 def test_toeplitz_from_Keras(channels, filter_size, strides, flatten, data_format, padding, floatx, helpers):
-
     # filter_size, strides, flatten,
     decimal = 5
     if floatx == 16:
@@ -69,7 +68,6 @@ def test_toeplitz_from_Keras(channels, filter_size, strides, flatten, data_forma
 
 
 def test_toeplitz_from_Decomon(floatx, mode, channels, filter_size, strides, flatten, data_format, padding, helpers):
-
     if data_format == "channels_first" and not len(K._get_available_gpus()):
         pytest.skip("data format 'channels first' is possible only in GPU mode")
 

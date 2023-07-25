@@ -202,7 +202,6 @@ class Helpers:
             g_ = -np.linspace(-1, 1, nb)
 
         elif n == 6:
-
             assert nb == 100, "expected nb=100 samples"
             # cosine function
             x_ = np.linspace(-np.pi, np.pi, 100)
@@ -249,7 +248,6 @@ class Helpers:
         l_c_ = np.min(y_) * np.ones((nb,))
 
         if dc_decomp:
-
             output = [
                 x_[:, None],
                 y_[:, None],
@@ -433,7 +431,6 @@ class Helpers:
 
     @staticmethod
     def get_tensor_decomposition_1d_box(dc_decomp=True):
-
         if dc_decomp:
             return [
                 Input((1,), dtype=K.floatx()),
@@ -525,7 +522,6 @@ class Helpers:
 
     @staticmethod
     def get_tensor_decomposition_multid_box(odd=1, dc_decomp=True):
-
         n = Helpers.get_input_dim_multid_box(odd)
 
         if dc_decomp:
@@ -557,7 +553,6 @@ class Helpers:
 
     @staticmethod
     def get_standard_values_multid_box(odd=1, dc_decomp=True):
-
         if dc_decomp:
             (
                 x_0,
@@ -610,7 +605,6 @@ class Helpers:
             ) = Helpers.get_standard_values_1d_box(1, dc_decomp)
 
         if not odd:
-
             # output (x_0+x_1, x_0+2*x_0)
             x_ = np.concatenate([x_0, x_1], -1)
             z_min_ = np.concatenate([z_0[:, 0], z_1[:, 0]], -1)
@@ -639,7 +633,6 @@ class Helpers:
             w_l_[:, 1, 1] = 2 * w_l_1[:, 0, 0]
 
         else:
-
             (
                 x_2,
                 y_2,
@@ -689,7 +682,6 @@ class Helpers:
 
     @staticmethod
     def build_image_from_1D_box(odd=0, m=0, dc_decomp=True):
-
         n = Helpers.get_input_dim_images_box(odd)
 
         if dc_decomp:
@@ -746,7 +738,6 @@ class Helpers:
 
     @staticmethod
     def build_image_from_2D_box(odd=0, m0=0, m1=1, dc_decomp=True):
-
         if dc_decomp:
             (
                 x_0,
@@ -821,7 +812,6 @@ class Helpers:
 
     @staticmethod
     def get_standard_values_images_box(data_format="channels_last", odd=0, m0=0, m1=1, dc_decomp=True):
-
         output = Helpers.build_image_from_2D_box(odd, m0, m1, dc_decomp)
         if dc_decomp:
             x_0, y_0, z_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0, h_0, g_0 = output
@@ -834,7 +824,6 @@ class Helpers:
         z_max_ = z_0[:, 1]
 
         if data_format == "channels_last":
-
             y_0 = y_0[:, :, :, None]
             b_u_0 = b_u_0[:, :, :, None]
             b_l_0 = b_l_0[:, :, :, None]
@@ -881,7 +870,6 @@ class Helpers:
 
     @staticmethod
     def get_tensor_decomposition_images_box(data_format, odd, dc_decomp=True):
-
         n = Helpers.get_input_dim_images_box(odd)
 
         if data_format == "channels_last":
@@ -902,7 +890,6 @@ class Helpers:
             if dc_decomp:
                 output += [Input((n, n, 2), dtype=K.floatx()), Input((n, n, 2), dtype=K.floatx())]
         else:
-
             output = [
                 Input((2,), dtype=K.floatx()),
                 Input((2, n, n), dtype=K.floatx()),
@@ -915,18 +902,15 @@ class Helpers:
                 Input((2, n, n), dtype=K.floatx()),
             ]
             if dc_decomp:
-
                 output += [Input((n, n, 2), dtype=K.floatx()), Input((n, n, 2), dtype=K.floatx())]
 
         return output
 
     @staticmethod
     def assert_output_properties_box(x_, y_, h_, g_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=4):
-
         if y_ is None:
             y_ = h_ + g_
         if h_ is not None:
-
             assert_almost_equal(h_ + g_, y_, decimal=decimal, err_msg="decomposition error")
 
         assert np.min(x_min_ <= x_max_), "x_min >x_max"
@@ -1164,7 +1148,6 @@ class Helpers:
     # multi decomposition for convert
     @staticmethod
     def get_standard_values_multid_box_convert(odd=1, dc_decomp=True):
-
         if dc_decomp:
             (
                 x_0,
@@ -1217,7 +1200,6 @@ class Helpers:
             ) = Helpers.get_standard_values_1d_box(1, dc_decomp)
 
         if not odd:
-
             # output (x_0+x_1, x_0+2*x_0) (x_0, x_1)
             x_ = np.concatenate([x_0, x_1], -1)
             z_min_ = np.concatenate([z_0[:, 0], z_1[:, 0]], -1)
@@ -1290,7 +1272,6 @@ class Helpers:
 
     @staticmethod
     def assert_output_properties_box_nodc(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=4):
-
         assert np.min(x_min_ <= x_max_), "x_min >x_max"
 
         assert_almost_equal(np.clip(x_min_ - x_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_min >x_")
@@ -1398,7 +1379,6 @@ class Helpers:
 
     @staticmethod
     def dense_NN_1D(input_dim, archi, sequential, activation, use_bias, dtype="float32"):
-
         layers = [Dense(archi[0], use_bias=use_bias, activation=activation, input_dim=input_dim, dtype=dtype)]
         layers += [Dense(n_i, use_bias=use_bias, activation=activation, dtype=dtype) for n_i in archi[1:]]
 
@@ -1413,7 +1393,6 @@ class Helpers:
 
     @staticmethod
     def toy_struct_v0_1D(input_dim, archi, activation, use_bias, merge_op=Add, dtype="float32"):
-
         nnet_0 = Helpers.dense_NN_1D(
             input_dim=input_dim, archi=archi, sequential=False, activation=activation, use_bias=use_bias, dtype=dtype
         )
@@ -1429,7 +1408,6 @@ class Helpers:
 
     @staticmethod
     def toy_struct_v1_1D(input_dim, archi, sequential, activation, use_bias, merge_op=Add, dtype="float32"):
-
         nnet_0 = Helpers.dense_NN_1D(
             input_dim=input_dim,
             archi=archi,
@@ -1448,7 +1426,6 @@ class Helpers:
 
     @staticmethod
     def toy_struct_v2_1D(input_dim, archi, sequential, activation, use_bias, merge_op=Add, dtype="float32"):
-
         nnet_0 = Helpers.dense_NN_1D(
             input_dim=input_dim,
             archi=archi,

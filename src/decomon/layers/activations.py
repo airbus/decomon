@@ -508,7 +508,6 @@ def group_sort_2(
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
-
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
