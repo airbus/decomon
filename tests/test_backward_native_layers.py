@@ -97,7 +97,6 @@ def test_Backward_NativeFlatten_multiD_box(odd, floatx, decimal, mode, data_form
 
 
 def test_Backward_NativeReshape_multiD_box(odd, floatx, decimal, mode, helpers):
-
     dc_decomp = False
 
     #  tensor inputs

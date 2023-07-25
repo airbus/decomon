@@ -79,7 +79,6 @@ def get_upper_box_tuning(
         return np.concatenate(results)
 
     else:
-
         # freeze_weights
         model.freeze_weights()
 
@@ -167,7 +166,6 @@ def get_lower_box_tuning(
 
         return np.concatenate(results)
     else:
-
         # freeze_weights
         model.freeze_weights()
 

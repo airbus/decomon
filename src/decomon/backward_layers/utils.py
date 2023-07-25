@@ -325,7 +325,7 @@ def backward_max_(
     outputs = outputs[::-1]
     bounds = []
     if len(outputs) > 0:
-        for (input_0, input_1) in outputs:
+        for input_0, input_1 in outputs:
             bounds_0, bounds_1 = backward_maximum(
                 input_0, input_1, w_u_out, b_u_out, w_l_out, b_l_out, mode=mode, dc_decomp=dc_decomp, **kwargs
             )

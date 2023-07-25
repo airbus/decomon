@@ -16,7 +16,6 @@ from decomon.layers.core import DecomonLayer
 
 
 class BackwardLayer(ABC, Wrapper):
-
     layer: Layer
     _trainable_weights: List[tf.Variable]
 

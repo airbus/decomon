@@ -13,7 +13,6 @@ from decomon.layers.decomon_layers import DecomonConv2D
 
 
 def test_Decomon_conv_box(data_format, mode, dc_decomp, floatx, decimal, helpers):
-
     if data_format == "channels_first" and not len(_get_available_gpus()):
         pytest.skip("data format 'channels first' is possible only in GPU mode")
 

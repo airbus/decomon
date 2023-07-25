@@ -104,7 +104,6 @@ def convert_forward(
     joint: bool = True,
     **kwargs: Any,
 ) -> Tuple[List[tf.Tensor], List[tf.Tensor], LayerMapDict, OutputMapDict]:
-
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
 
@@ -146,7 +145,6 @@ def convert_forward_functional_model(
     output_map: Optional[OutputMapDict] = None,
     layer_map: Optional[LayerMapDict] = None,
 ) -> Tuple[List[tf.Tensor], List[tf.Tensor], LayerMapDict, OutputMapDict]:
-
     if softmax_to_linear:
         model, has_softmax = softmax_2_linear(model)
 
@@ -165,7 +163,6 @@ def convert_forward_functional_model(
     for depth in keys:
         nodes = dico_nodes[depth]
         for node in nodes:
-
             layer = node.outbound_layer
             parents = node.parent_nodes
             if id(node) in output_map.keys() and joint:
@@ -187,7 +184,6 @@ def convert_forward_functional_model(
                 layer_map[id(node)] = layer_map_submodel
                 output_map[id(node)] = output_map_submodel
             else:
-
                 converted_layers = layer_fn(layer)
                 for converted_layer in converted_layers:
                     converted_layer._name = f"{converted_layer.name}_{count}"

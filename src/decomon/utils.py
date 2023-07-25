@@ -77,20 +77,17 @@ def softsign_prime(x: TensorLike) -> tf.Tensor:
 
 ##### corners ######
 def get_lower_bound_grid(x: tf.Tensor, W: tf.Tensor, b: tf.Tensor, n: int) -> tf.Tensor:
-
     A, B = convert_lower_search_2_subset_sum(x, W, b, n)
     return subset_sum_lower(A, B, repeat=n)
 
 
 def get_upper_bound_grid(x: tf.Tensor, W: tf.Tensor, b: tf.Tensor, n: int) -> tf.Tensor:
-
     return -get_lower_bound_grid(x, -W, -b, n)
 
 
 def get_bound_grid(
     x: tf.Tensor, W_u: tf.Tensor, b_u: tf.Tensor, W_l: tf.Tensor, b_l: tf.Tensor, n: int
 ) -> Tuple[tf.Tensor, tf.Tensor]:
-
     upper = get_upper_bound_grid(x, W_u, b_u, n)
     lower = get_lower_bound_grid(x, W_l, b_l, n)
 
@@ -99,7 +96,6 @@ def get_bound_grid(
 
 # convert max Wx +b s.t Wx+b<=0 into a subset-sum problem with positive values
 def convert_lower_search_2_subset_sum(x: tf.Tensor, W: tf.Tensor, b: tf.Tensor, n: int) -> Tuple[tf.Tensor, tf.Tensor]:
-
     x_min = x[:, 0]
     x_max = x[:, 1]
 
@@ -114,7 +110,6 @@ def convert_lower_search_2_subset_sum(x: tf.Tensor, W: tf.Tensor, b: tf.Tensor, 
 
 
 def subset_sum_lower(W: tf.Tensor, b: tf.Tensor, repeat: int = 1) -> tf.Tensor:
-
     B = tf.sort(W, 1)
     C = K.repeat_elements(B, rep=repeat, axis=1)
     C_reduced = K.cumsum(C, axis=1)
@@ -175,7 +170,6 @@ def get_linear_hull_relu(
         raise NotImplementedError(f"Not implemented for slope {slope}")
 
     if "upper_grid" in kwargs:
-
         raise NotImplementedError()
 
     gamma = o_value
@@ -205,7 +199,6 @@ def get_linear_hull_relu(
 def get_linear_hull_sigmoid(
     upper: tf.Tensor, lower: tf.Tensor, slope: Union[str, Slope], **kwargs: Any
 ) -> List[tf.Tensor]:
-
     x = [upper, lower]
     return get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, mode=ForwardMode.IBP, **kwargs)
 
@@ -213,7 +206,6 @@ def get_linear_hull_sigmoid(
 def get_linear_hull_tanh(
     upper: tf.Tensor, lower: tf.Tensor, slope: Union[str, Slope], **kwargs: Any
 ) -> List[tf.Tensor]:
-
     x = [upper, lower]
     return get_linear_hull_s_shape(x, func=K.tanh, f_prime=tanh_prime, mode=ForwardMode.IBP, **kwargs)
 
@@ -357,7 +349,6 @@ def relu_(
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
-
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
 

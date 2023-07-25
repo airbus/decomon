@@ -99,7 +99,6 @@ def convert(
     final_affine: bool = False,
     **kwargs: Any,
 ) -> Tuple[List[tf.Tensor], List[tf.Tensor], Union[LayerMapDict, Dict[int, BackwardLayer]], Optional[OutputMapDict],]:
-
     if back_bounds is None:
         back_bounds = []
     if perturbation_domain is None:
@@ -117,7 +116,6 @@ def convert(
     layer_map: Union[LayerMapDict, Dict[int, BackwardLayer]]
 
     if method != ConvertMethod.CROWN:
-
         input_tensors, output, layer_map, forward_map = convert_forward(
             model=model,
             input_tensors=input_tensors,
@@ -150,7 +148,6 @@ def convert(
             **kwargs,
         )
     else:
-
         # check final_ibp and final_affine
         mode_from = get_mode(ibp, affine)
         mode_to = get_mode(final_ibp, final_affine)
@@ -177,7 +174,6 @@ def clone(
     final_affine: Optional[bool] = None,
     **kwargs: Any,
 ) -> DecomonModel:
-
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     if back_bounds is None:

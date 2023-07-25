@@ -20,7 +20,6 @@ from decomon.layers.utils_pooling import (
 def test_get_lower_upper_linear_hull_max(
     func, minmax, clipmin, clipmax, mode, floatx, decimal, axis, finetune_odd, helpers
 ):
-
     if finetune_odd is not None and func is not get_lower_linear_hull_max:
         # skip test with finetune if not get_lower
         pytest.skip("finetune_odd is only intended for get_lower_linear_hull_max()")

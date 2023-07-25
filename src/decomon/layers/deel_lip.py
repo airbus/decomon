@@ -22,7 +22,6 @@ except ImportError:
 else:
 
     class DecomonGroupSort(DecomonLayer):
-
         original_keras_layer_class = GroupSort
 
         def __init__(
@@ -80,11 +79,9 @@ else:
             ).call
 
         def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
             shape_in = tuple(inputs[-1].shape[1:])
             inputs_reshaped = self.reshape(inputs)
             if self.n == 2:
-
                 output_max = expand_dims(
                     max_(
                         inputs_reshaped,
@@ -114,7 +111,6 @@ else:
                 outputs = self.concat(output_min + output_max)
 
             else:
-
                 outputs = sort(
                     inputs_reshaped,
                     axis=-1,
@@ -131,7 +127,6 @@ else:
             return input_shape
 
     class DecomonGroupSort2(DecomonLayer):
-
         original_keras_layer_class = GroupSort2
 
         def __init__(
@@ -182,7 +177,6 @@ else:
             return input_shape
 
         def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
             inputs_reshaped = self.op_reshape_in(inputs)
             inputs_max = expand_dims(
                 max_(

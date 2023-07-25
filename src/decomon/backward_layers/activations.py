@@ -369,7 +369,6 @@ def backward_softsign_(
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
 ) -> List[tf.Tensor]:
-
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(

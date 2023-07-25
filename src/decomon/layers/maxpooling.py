@@ -39,7 +39,6 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
         fast: bool = True,
         **kwargs: Any,
     ):
-
         super().__init__(
             pool_size=pool_size,
             strides=strides,
@@ -90,7 +89,6 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
                 self.filters[i, j, 0, i * self.pool_size[0] + j] = 1
 
         def conv_(x: tf.Tensor) -> tf.Tensor:
-
             if self.data_format in [None, "channels_last"]:
                 return K.cast(
                     K.expand_dims(
@@ -157,7 +155,6 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
         self,
         inputs: List[tf.Tensor],
     ) -> List[tf.Tensor]:
-
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)

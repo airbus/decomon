@@ -204,7 +204,6 @@ class DecomonSubtract(DecomonMerge, Subtract):
         )
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
         if self.dc_decomp:
             raise NotImplementedError()
 
@@ -254,7 +253,6 @@ class DecomonMinimum(DecomonMerge, Minimum):
         )
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
         if self.dc_decomp:
             raise NotImplementedError()
 
@@ -318,7 +316,6 @@ class DecomonMaximum(DecomonMerge, Maximum):
         )
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
         if self.dc_decomp:
             raise NotImplementedError()
 
@@ -458,7 +455,6 @@ class DecomonMultiply(DecomonMerge, Multiply):
         )
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
         if self.dc_decomp:
             raise NotImplementedError()
 
@@ -523,7 +519,6 @@ class DecomonDot(DecomonMerge, Dot):
             self.axes = axes
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-
         if self.dc_decomp:
             raise NotImplementedError()
 

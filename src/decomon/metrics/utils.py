@@ -15,7 +15,6 @@ def categorical_cross_entropy(
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     perturbation_domain: Optional[PerturbationDomain] = None,
 ) -> List[tf.Tensor]:
-
     # step 1: exponential
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()

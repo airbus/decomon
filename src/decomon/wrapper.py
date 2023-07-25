@@ -141,7 +141,6 @@ def get_adv_box(
             )
 
     else:
-
         ibp = decomon_model.ibp
         affine = decomon_model.affine
         n_label = source_labels.shape[-1]
@@ -161,7 +160,6 @@ def get_adv_box(
             target_tensor: Optional[npt.NDArray[np.int_]] = None,
             backward: bool = False,
         ) -> npt.NDArray[np.float_]:
-
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
 
@@ -192,7 +190,6 @@ def get_adv_box(
             target_tensor: Optional[npt.NDArray[np.int_]] = None,
             backward: bool = False,
         ) -> npt.NDArray[np.float_]:
-
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
 
@@ -210,7 +207,6 @@ def get_adv_box(
                 w_u_f = w_u_reshaped - w_l_reshaped
                 b_u_f = b_u_reshaped - b_l_reshaped
             else:
-
                 upper = (
                     (np.maximum(w_u, 0.0) * z_tensor[:, 1][:, :, None]).sum(1)
                     + (np.minimum(w_u, 0.0) * z_tensor[:, 0][:, :, None]).sum(1)
@@ -365,7 +361,6 @@ def check_adv_box(
         )
 
     else:
-
         output = decomon_model.predict(z, verbose=0)
 
         if not affine:
@@ -385,7 +380,6 @@ def check_adv_box(
             source_tensor: npt.NDArray[np.int_],
             target_tensor: Optional[npt.NDArray[np.int_]] = None,
         ) -> npt.NDArray[np.float_]:
-
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
 
@@ -763,7 +757,6 @@ def get_range_noise(
 def refine_boxes(
     x_min: npt.NDArray[np.float_], x_max: npt.NDArray[np.float_], n_sub_boxes: int = 10
 ) -> Tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
-
     # flatten x_min and x_max
     shape = list(x_min.shape[1:])
     output_dim = np.prod(shape)
@@ -821,7 +814,6 @@ def refine_box(
     batch_size: int = -1,
     random: bool = True,
 ) -> npt.NDArray[np.float_]:
-
     if func.__name__ not in [
         elem.__name__ for elem in [get_upper_box, get_lower_box, get_adv_box, check_adv_box, get_range_box]
     ]:
@@ -859,7 +851,6 @@ def refine_box(
 
     def priv_func(x_min_split: npt.NDArray[np.float_], x_max_split: npt.NDArray[np.float_]) -> npt.NDArray[np.float_]:
         if func.__name__ in [elem.__name__ for elem in [get_upper_box, get_lower_box, get_range_box]]:
-
             results = func(decomon_model, x_min=x_min_split, x_max=x_max_split, batch_size=batch_size)
 
             if func.__name__ == get_upper_box.__name__:
@@ -868,7 +859,6 @@ def refine_box(
                 return results.reshape((n_x, n_split, -1))
 
         if func.__name__ in [elem.__name__ for elem in [get_adv_box, check_adv_box]]:
-
             results = func(
                 decomon_model,
                 x_min=x_min_split,
@@ -886,7 +876,6 @@ def refine_box(
         count = 1
 
         while count < n_split:
-
             if not random:
                 i = int(np.argmax(np.max(index_max[n_i, :count], -1)))
                 j = int(np.argmax(index_max[n_i, i]))
@@ -1015,7 +1004,6 @@ def get_adv_noise(
 
         return np.concatenate(results)
     else:
-
         ibp = decomon_model.ibp
         affine = decomon_model.affine
         output = decomon_model.predict(x_reshaped, verbose=0)
@@ -1026,7 +1014,6 @@ def get_adv_noise(
             source_tensor: npt.NDArray[np.int_],
             target_tensor: Optional[npt.NDArray[np.int_]] = None,
         ) -> npt.NDArray[np.float_]:
-
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
 
@@ -1053,7 +1040,6 @@ def get_adv_noise(
             source_tensor: npt.NDArray[np.int_],
             target_tensor: Optional[npt.NDArray[np.int_]] = None,
         ) -> npt.NDArray[np.float_]:
-
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
 
