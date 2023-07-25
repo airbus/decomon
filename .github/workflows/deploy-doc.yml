@@ -34,7 +34,7 @@ jobs:
           echo Triggering binder environment build for ${binder_env_full_ref}
           bash scripts/trigger_binder.sh https://ovh.mybinder.org/build/gh/${binder_env_full_ref}
           bash scripts/trigger_binder.sh https://ovh2.mybinder.org/build/gh/${binder_env_full_ref}
-          bash scripts/trigger_binder.sh https://gesis.mybinder.org/build/gh/${binder_env_full_ref}
+          bash scripts/trigger_binder.sh https://notebooks.gesis.org/binder/build/gh/${binder_env_full_ref}
 
   deploy-doc:
     runs-on: ubuntu-latest
