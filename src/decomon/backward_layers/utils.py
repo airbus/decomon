@@ -8,15 +8,15 @@ from tensorflow.keras.layers import Flatten
 from decomon.core import (
     BoxDomain,
     ForwardMode,
-    GridDomain,
     InputsOutputsSpec,
     PerturbationDomain,
-    Slope,
     get_affine,
     get_ibp,
+    get_lower_box,
+    get_upper_box,
 )
 from decomon.layers.utils import sort
-from decomon.utils import get_linear_hull_relu, maximum, minus, relu_, subtract
+from decomon.utils import maximum, minus, relu_, subtract
 
 
 def backward_add(
@@ -48,7 +48,6 @@ def backward_add(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
-    affine = get_affine(mode)
     op_flat = Flatten(dtype=K.floatx())  # pas terrible  a revoir
     inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
     x_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0, h_0, g_0 = inputs_outputs_spec.get_fullinputs_from_inputsformode(
@@ -63,12 +62,10 @@ def backward_add(
     l_c_0 = op_flat(l_c_0)
     l_c_1 = op_flat(l_c_1)
 
-    x_0 = K.concatenate([K.expand_dims(l_c_0, 1), K.expand_dims(u_c_0, 1)], 1)
-    x_1 = K.concatenate([K.expand_dims(l_c_1, 1), K.expand_dims(u_c_1, 1)], 1)
-    upper_0 = BoxDomain().get_upper(x_0, w_u_out, b_u_out)
-    upper_1 = BoxDomain().get_upper(x_1, w_u_out, b_u_out)
-    lower_0 = BoxDomain().get_lower(x_0, w_l_out, b_l_out)
-    lower_1 = BoxDomain().get_lower(x_1, w_l_out, b_l_out)
+    upper_0 = get_upper_box(l_c_0, u_c_0, w_u_out, b_u_out)
+    upper_1 = get_upper_box(l_c_1, u_c_1, w_u_out, b_u_out)
+    lower_0 = get_lower_box(l_c_0, u_c_0, w_l_out, b_l_out)
+    lower_1 = get_lower_box(l_c_1, u_c_1, w_l_out, b_l_out)
 
     w_u_out_0 = w_u_out
     b_u_out_0 = upper_1
