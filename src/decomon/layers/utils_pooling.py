@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -195,3 +195,20 @@ def get_lower_linear_hull_max(
         w_l = (o_value - alpha) * w_l + alpha * w_l_alpha
 
     return [w_l, b_l]
+
+def get_conv_op_config(config)-> tf.constant:
+
+    pool_size_x, pool_size_y  = config['pool_size']
+    padding = config['padding']
+    pooling = pool_size_x*pool_size_y
+ 
+    if padding=='same':
+        raise NotImplementedError()
+    # create the convolution layer to extract the Toeplitz matrix
+    kernel_pool = np.repeat(
+                    np.transpose(
+                        np.eye(pooling).reshape( 
+                            (pooling, pool_size_x, pool_size_y)),
+                             (1,2, 0))[:,:,None, :], 1, -2)
+
+    return K.constant(kernel_pool)

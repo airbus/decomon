@@ -6,15 +6,41 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from decomon.backward_layers.utils_conv import get_affine_components, get_toeplitz
-from tensorflow.keras.layers import MaxPooling2D, Conv2D
+from tensorflow.keras.layers import MaxPooling2D, Conv2D, Input
 from decomon.layers.maxpooling import DecomonMaxPooling2D
 from decomon.layers.core import ForwardMode
 from decomon.core import PerturbationDomain
 from decomon.layers.utils_pooling import get_lower_linear_hull_max, get_upper_linear_hull_max
 from decomon.backward_layers.utils import merge_with_previous
 
+def get_pool_info_at_build(config_pool, input_shape):
+
+    pool_size_x, pool_size_y = config_pool['pool_size']
+    padding = config_pool['padding']
+    strides = config_pool['strides']
+    data_format = config_pool['data_format']
+
+    if data_format== "channels_last":
+        channel_pool= input_shape[-1]
+        axis_split = -1
+    else:
+        channel_pool = input_shape[1]
+        channel_pool= channel_pool[1]
+        axis_split = 1
+
+    config={'data_format':data_format,
+    'pool_size_x':pool_size_x,
+    'pool_size_y': pool_size_y,
+    'padding':padding,
+    'strides':strides,
+    'channel_pool':channel_pool,
+    'axis':axis_split}
+
+    return config
 
 def get_pool_info(pool_layer):
+
+    return get_pool_info_at_build(pool_layer.get_config(), pool_layer.get_input_shape_at(0))
 
     pool_size_x, pool_size_y  = pool_layer.pool_size
     padding = pool_layer.padding
@@ -41,9 +67,9 @@ def get_pool_info(pool_layer):
     return config
 
 #(pool_size, pool_size, channels, channels*2**pool_size)
-def get_conv_op_pooling(pool_layer: MaxPooling2D)-> Tuple[tf.Tensor, Conv2D]:
+def get_conv_op_pooling(pool_config, input_shape)-> Tuple[tf.Tensor, Conv2D]:
 
-    config = get_pool_info(pool_layer)
+    config = get_pool_info_at_build(pool_config, input_shape)
     pool_size_x = config['pool_size_x']
     pool_size_y = config['pool_size_y']
     pooling = pool_size_x*pool_size_y
@@ -66,7 +92,9 @@ def get_conv_op_pooling(pool_layer: MaxPooling2D)-> Tuple[tf.Tensor, Conv2D]:
                         strides=strides, use_bias=False, data_format=data_format)
 
 
-    pool_input = pool_layer.get_input_at(0)
+    #pool_input = pool_layer.get_input_at(0)
+    #pool_input = K.expand_dims(K.zeros(input_shape[1:]), 0)
+    pool_input = Input(input_shape[1:])
     conv_input = tf.split(pool_input, channel_pool, axis=axis_split)[0]
     op_conv(conv_input)
     op_conv.set_weights([kernel_pool])
@@ -75,9 +103,10 @@ def get_conv_op_pooling(pool_layer: MaxPooling2D)-> Tuple[tf.Tensor, Conv2D]:
 
     return pool_input, op_conv
 
-def get_conv_pooling(pool_layer: MaxPooling2D)-> Tuple[tf.Tensor, tf.Tensor]:
+def get_conv_pooling(pool_config, input_shape)-> Tuple[tf.Tensor, tf.Tensor]:
 
-    config = get_pool_info(pool_layer)
+    #config = get_pool_info(pool_layer)
+    config = get_pool_info_at_build(pool_config, input_shape)
     pool_size_x = config['pool_size_x']
     pool_size_y = config['pool_size_y']
     pooling = pool_size_x*pool_size_y
@@ -87,7 +116,7 @@ def get_conv_pooling(pool_layer: MaxPooling2D)-> Tuple[tf.Tensor, tf.Tensor]:
     channel_pool = config['channel_pool']
     #axis_split = config['axis']
 
-    pool_input, op_conv = get_conv_op_pooling(pool_layer)
+    pool_input, op_conv = get_conv_op_pooling(pool_config, input_shape)
 
     #w_conv_u, _ = get_affine_components(op_conv, [pool_input])
     w_conv_u = get_toeplitz(op_conv)[None]
@@ -117,10 +146,11 @@ def get_conv_pooling(pool_layer: MaxPooling2D)-> Tuple[tf.Tensor, tf.Tensor]:
 
     #w_conv_u = tf.repeat(K.reshape(w_conv_u, [-1]+pooling_shape+[dim, pooling]), channel_pool, -2)
     # to check
-    return w_conv_u
+    # make a function
+    return tf.constant(w_conv_u.numpy(), dtype=w_conv_u.dtype)
 
 
-def apply_linear_bounds(kernel:tf.Tensor, bias:tf.Tensor, 
+def apply_linear_bounds(kernel:tf.Tensor, bias:Union[None,tf.Tensor], 
                         inputs: List[tf.Tensor], 
                         mode: Union[str, ForwardMode], 
                         perturbation_domain: Optional[PerturbationDomain])-> List[tf.Tensor]:
@@ -148,9 +178,9 @@ def apply_linear_bounds(kernel:tf.Tensor, bias:tf.Tensor,
         l_c = K.expand_dims(K.expand_dims(l_c, -1), -1)
         u_c_out = K.sum(u_c*kernel_pos + l_c*kernel_neg, np.arange(1, axis_sum))
         l_c_out = K.sum(l_c*kernel_pos + u_c*kernel_neg, np.arange(1, axis_sum))
-        
-        u_c_out += bias
-        l_c_out += bias
+        if not(bias is None): 
+            u_c_out += bias
+            l_c_out += bias
         #u_c_out = K.bias_add(u_c_out, bias, data_format="channels_last")
         #l_c_out = K.bias_add(l_c_out, bias, data_format="channels_last")
 
@@ -161,9 +191,9 @@ def apply_linear_bounds(kernel:tf.Tensor, bias:tf.Tensor,
         
         b_u_out = K.sum(b_u*kernel_pos + b_l*kernel_neg, np.arange(1, axis_sum))
         b_l_out = K.sum(b_l*kernel_pos + b_u*kernel_neg, np.arange(1, axis_sum))
-        
-        b_u_out += bias
-        b_l_out += bias
+        if not(bias is None):
+            b_u_out += bias
+            b_l_out += bias
         
         w_u = K.expand_dims(K.expand_dims(w_u, -1), -1)
         w_l = K.expand_dims(K.expand_dims(w_l, -1), -1)
@@ -192,15 +222,14 @@ def apply_linear_bounds(kernel:tf.Tensor, bias:tf.Tensor,
 
     return output
 
-def get_maxpooling_linear_hull(w_conv_pool: tf.Tensor, b_conv_pool: tf.Tensor, 
-                                pool_layer: MaxPooling2D, 
+def get_maxpooling_linear_hull(w_conv_pool: tf.Tensor, 
                                 inputs: List[tf.Tensor], 
                                 mode:Union[str, ForwardMode],
                                 perturbation_domain: Optional[PerturbationDomain]) -> Tuple[tf.Tensor, tf.Tensor]:
 
     # forward propagation to bound the second  step of maxpooling, aka maximum
     # we need a routine for applying a linear function
-    inputs_max =  apply_linear_bounds(w_conv_pool, b_conv_pool, 
+    inputs_max =  apply_linear_bounds(w_conv_pool, None,
                         inputs, 
                         mode, 
                         perturbation_domain)
@@ -225,7 +254,7 @@ def get_maxpooling_linear_hull(w_conv_pool: tf.Tensor, b_conv_pool: tf.Tensor,
     dim_input_conv = int(np.prod(dim_conv)/np.prod(dim_conv[-2:]))
     dim_output_conv = np.prod(dim_conv[-2:])
     w_conv_flat = K.reshape(w_conv_pool, (-1, dim_input_conv, dim_output_conv))
-    b_conv_flat = K.reshape(b_conv_pool, (-1, dim_output_conv))
+    #b_conv_flat = K.reshape(b_conv_pool, (-1, dim_output_conv))
     
-    return merge_with_previous([w_conv_flat, b_conv_flat]*2+[w_hull_u, b_hull_u]+[w_hull_l, b_hull_l])
+    return merge_with_previous([w_conv_flat, None]*2+[w_hull_u, b_hull_u]+[w_hull_l, b_hull_l])
 

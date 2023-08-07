@@ -80,6 +80,185 @@ def backward_add(
     return [[w_u_out_0, b_u_out_0, w_l_out_0, b_l_out_0], [w_u_out_1, b_u_out_1, w_l_out_1, b_l_out_1]]
 
 
+def merge_with_previous(inputs: List[tf.Tensor]) -> List[tf.Tensor]:
+    w_u_out, b_u_out, w_l_out, b_l_out, w_b_u, b_b_u, w_b_l, b_b_l = inputs
+
+    # w_u_out (None, n_h_in, n_h_out)
+    # w_b_u (None, n_h_out, n_out)
+
+    # w_u_out_ (None, n_h_in, n_h_out, 1)
+    # w_b_u_ (None, 1, n_h_out, n_out)
+    # w_u_out_*w_b_u_ (None, n_h_in, n_h_out, n_out)
+
+    # result (None, n_h_in, n_out)
+    z_value = K.cast(0.0, dtype=w_u_out.dtype)
+
+    if len(w_u_out.shape) == 2:
+        w_u_out = tf.linalg.diag(w_u_out)
+
+    if len(w_l_out.shape) == 2:
+        w_l_out = tf.linalg.diag(w_l_out)
+
+    if len(w_b_u.shape) == 2:
+        w_b_u = tf.linalg.diag(w_b_u)
+
+    if len(w_b_l.shape) == 2:
+        w_b_l = tf.linalg.diag(w_b_l)
+
+    if b_b_u is None:
+        b_b_u = z_value*w_b_u[:,0]
+    if b_b_l is None:
+        b_b_l = z_value*w_b_l[:,0]
+    if b_u_out is None:
+        b_u_out = z_value*w_u_out[:,0]
+    if b_l_out is None:
+        b_l_out = z_value*w_l_out[:,0]
+
+
+    # import pdb; pdb.set_trace()
+
+    w_b_u_pos = K.maximum(w_b_u, z_value)
+    w_b_u_neg = K.minimum(w_b_u, z_value)
+    w_b_l_pos = K.maximum(w_b_l, z_value)
+    w_b_l_neg = K.minimum(w_b_l, z_value)
+
+    w_u = K.batch_dot(w_u_out, w_b_u_pos, (-1, -2)) + K.batch_dot(w_l_out, w_b_u_neg, (-1, -2))
+    w_l = K.batch_dot(w_l_out, w_b_l_pos, (-1, -2)) + K.batch_dot(w_u_out, w_b_l_neg, (-1, -2))
+    b_u = K.batch_dot(b_u_out, w_b_u_pos, (-1, -2)) + K.batch_dot(b_l_out, w_b_u_neg, (-1, -2)) 
+    b_u+= b_b_u
+
+    b_l = K.batch_dot(b_l_out, w_b_l_pos, (-1, -2)) + K.batch_dot(b_u_out, w_b_l_neg, (-1, -2)) 
+    b_l+= b_b_l
+
+    return [w_u, b_u, w_l, b_l]
+
+
+def backward_relu_(
+    inputs: List[tf.Tensor],
+    w_u_out: tf.Tensor,
+    b_u_out: tf.Tensor,
+    w_l_out: tf.Tensor,
+    b_l_out: tf.Tensor,
+    perturbation_domain: Optional[PerturbationDomain] = None,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
+    """Backward  LiRPA of relu
+
+    Args:
+        inputs
+        w_u_out
+        b_u_out
+        w_l_out
+        b_l_out
+        perturbation_domain
+        slope
+        mode
+        fast
+
+    Returns:
+
+    """
+
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
+    mode = ForwardMode(mode)
+    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    if mode == ForwardMode.HYBRID:
+        # y, x_0, u_c, w_u, b_u, l_c, w_l, b_l = x[:8]
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
+        upper = u_c
+        lower = l_c
+    elif mode == ForwardMode.IBP:
+        # y, x_0, u_c, l_c = x[:4]
+        u_c, l_c = inputs[:nb_tensors]
+        upper = u_c
+        lower = l_c
+    elif mode == ForwardMode.AFFINE:
+        # y, x_0, w_u, b_u, w_l, b_l = x[:6]
+        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
+        upper = get_upper(x_0, w_u, b_u, perturbation_domain)
+        lower = get_lower(x_0, w_l, b_l, perturbation_domain)
+    else:
+        raise ValueError(f"Unknown mode {mode}")
+
+    if isinstance(perturbation_domain, GridDomain) and mode != ForwardMode.IBP:
+
+        raise NotImplementedError()
+
+    shape = np.prod(upper.shape[1:])
+    upper = K.reshape(upper, [-1, shape])
+    lower = K.reshape(lower, [-1, shape])
+
+    z_value = K.cast(0.0, upper.dtype)
+
+    #############
+    w_u_tmp, b_u_tmp, w_l_tmp, b_l_tmp = get_linear_hull_relu(upper, lower, slope=slope, **kwargs)
+
+    w_u_tmp = K.expand_dims(w_u_tmp, -1)
+    w_l_tmp = K.expand_dims(w_l_tmp, -1)
+    b_u_tmp = K.expand_dims(b_u_tmp, -1)
+    b_l_tmp = K.expand_dims(b_l_tmp, -1)
+
+    b_u_out = K.sum(K.maximum(w_u_tmp, z_value) * b_u_tmp + K.minimum(w_u_tmp, z_value) * b_l_tmp, 1) + b_u_tmp
+    b_l_out = K.sum(K.maximum(w_l_tmp, z_value) * b_l_tmp + K.minimum(w_l_tmp, z_value) * b_u_tmp, 1) + b_l_tmp
+    w_u_out = K.maximum(w_u_tmp, z_value) * w_u_tmp + K.minimum(w_u_tmp, z_value) * w_l_tmp
+    w_l_out = K.maximum(w_l_tmp, z_value) * w_l_tmp + K.minimum(w_l_tmp, z_value) * w_u_tmp
+
+    return [w_u_out, b_u_out, w_l_out, b_l_out]
+
+
+def backward_softplus_(
+    inputs: List[tf.Tensor],
+    w_u_out: tf.Tensor,
+    b_u_out: tf.Tensor,
+    w_l_out: tf.Tensor,
+    b_l_out: tf.Tensor,
+    perturbation_domain: Optional[PerturbationDomain] = None,
+    mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+    **kwargs: Any,
+) -> List[tf.Tensor]:
+    """Backward  LiRPA of relu
+
+    Args:
+        inputs
+        w_u_out
+        b_u_out
+        w_l_out
+        b_l_out
+        perturbation_domain
+        mode
+        fast
+
+    Returns:
+
+    """
+
+    if perturbation_domain is None:
+        perturbation_domain = BoxDomain()
+    mode = ForwardMode(mode)
+    nb_tensors = StaticVariables(dc_decomp=False, mode=mode).nb_tensors
+    if mode == ForwardMode.HYBRID:
+        x_0, u_c, w_u, b_u, l_c, w_l, b_l = inputs[:nb_tensors]
+        upper = u_c
+        lower = l_c
+    elif mode == ForwardMode.IBP:
+        u_c, l_c = inputs[:nb_tensors]
+        upper = u_c
+        lower = l_c
+    elif mode == ForwardMode.AFFINE:
+        x_0, w_u, b_u, w_l, b_l = inputs[:nb_tensors]
+        upper = get_upper(x_0, w_u, b_u, perturbation_domain)
+        lower = get_lower(x_0, w_l, b_l, perturbation_domain)
+    else:
+        raise ValueError(f"Unknown mode {mode}")
+
+    shape = np.prod(upper.shape[1:])
+    upper = K.reshape(upper, [-1, shape])
+    raise NotImplementedError()
+
+
 def backward_linear_prod(
     x_0: tf.Tensor,
     bounds_x: List[tf.Tensor],

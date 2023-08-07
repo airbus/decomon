@@ -78,4 +78,5 @@ def test_Decomon_conv_box(data_format, padding, use_bias, mode, floatx, decimal,
     )
 
     # check bounds consistency
+    import pdb; pdb.set_trace()
     helpers.assert_output_properties_box_linear(x, None, z[:, 0], z[:, 1], None, w_r_u, b_r_u, None, w_r_l, b_r_l)
