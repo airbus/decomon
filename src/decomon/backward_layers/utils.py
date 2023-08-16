@@ -17,6 +17,7 @@ from decomon.core import (
 )
 from decomon.layers.utils import sort
 from decomon.utils import maximum, minus, relu_, subtract
+from decomon.core import Slope
 
 
 def backward_add(

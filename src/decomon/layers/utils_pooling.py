@@ -130,7 +130,11 @@ def get_upper_linear_hull_max(
 
     #due to numerical error in tf.linalg.solve we need to assess that w_u, b_u 
     # is correct on the set of corners, else we will add the error inside the bias
-    error = K.maximum(z_value, K.cast(corners_pred,dtype=dtype)  - (K.sum(K.expand_dims(w_u,-1)*corners, -2) + K.expand_dims(b_u, -1)))
+
+    axis_=axis
+    if axis ==-1:
+        axis_=-2
+    error = K.maximum(z_value, K.cast(corners_pred,dtype=dtype)  - (K.sum(K.expand_dims(w_u,-1)*corners, axis_) + K.expand_dims(b_u, -1)))
     b_u += K.max(error, -1)
 
     return [w_u, b_u]
