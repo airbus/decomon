@@ -1,21 +1,26 @@
 # Test unit for decomon with Dense layers
-
-
 import numpy as np
 import pytest
 import tensorflow.keras.backend as K
+from tensorflow.keras.layers import MaxPooling2D
 from tensorflow.python.keras.backend import _get_available_gpus
 
 from decomon.backward_layers.convert import to_backward
-from decomon.layers.decomon_layers import DecomonConv2D
+from decomon.layers.maxpooling_opt import DecomonMaxPooling2D
+from decomon.layers.convert import to_decomon
+from decomon.core import ForwardMode, get_affine, get_ibp
 
 
-def test_Decomon_conv_box(data_format, padding, use_bias, mode, floatx, decimal, helpers):
+def test_Decomon_pool_box(data_format, padding, use_bias, mode, floatx, decimal, helpers):
     if data_format == "channels_first" and not len(_get_available_gpus()):
         pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     odd, m_0, m_1 = 0, 0, 1
     dc_decomp = False
+    ibp = get_ibp(mode=mode)
+    affine = get_affine(mode=mode)
+
+    kwargs_layer = dict(pool_size=(2, 2), strides=(2, 2), padding="valid", data_format=data_format, dtype=K.floatx())
 
     # tensor inputs
     inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=dc_decomp)
@@ -27,20 +32,14 @@ def test_Decomon_conv_box(data_format, padding, use_bias, mode, floatx, decimal,
     x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
 
     # decomon layer
-    decomon_layer = DecomonConv2D(
-        10,
-        kernel_size=(3, 3),
-        dc_decomp=dc_decomp,
-        padding=padding,
-        use_bias=use_bias,
-        mode=mode,
-        dtype=K.floatx(),
-    )
-    decomon_layer(inputs_for_mode)  # init weights
+    keras_layer = MaxPooling2D(**kwargs_layer)
+    output_ref = keras_layer(input_ref)
+    input_dim = helpers.get_input_dim_from_full_inputs(inputs)
+    decomon_layer = to_decomon(keras_layer, input_dim, dc_decomp=dc_decomp, shared=True, ibp=ibp, affine=affine)
+    _ = decomon_layer(inputs_for_mode)
 
     # get backward layer
     backward_layer = to_backward(decomon_layer)
-
     # backward outputs
     outputs = backward_layer(inputs_for_mode)
     f_decomon = K.function(inputs, outputs)
