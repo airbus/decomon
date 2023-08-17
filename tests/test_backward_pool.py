@@ -44,14 +44,15 @@ def test_Decomon_pool_box(data_format, padding, use_bias, mode, floatx, decimal,
     outputs = backward_layer(inputs_for_mode)
     f_decomon = K.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
+    output_ref_ = K.function(inputs, output_ref)(inputs_)
+    # flatten output_ref_
+    output_ref_ = np.reshape(output_ref_, (len(output_ref_), -1))
 
     w_u_, b_u_, w_l_, b_l_ = outputs_
 
     # reshape the matrices
     w_u_ = w_u_[:, None]
     w_l_ = w_l_[:, None]
-    b_u_ = b_u_[:, None]
-    b_l_ = b_l_[:, None]
 
     b_l = b_l.reshape((len(b_l), -1))
     b_u = b_u.reshape((len(b_u), -1))
@@ -66,15 +67,16 @@ def test_Decomon_pool_box(data_format, padding, use_bias, mode, floatx, decimal,
         np.minimum(0.0, w_l_) * np.expand_dims(W_u, -1), 2
     )
     b_r_u = (
-        np.sum(np.maximum(0, w_u_[:, 0]) * np.expand_dims(b_u, -1), 1)[:, None]
-        + np.sum(np.minimum(0, w_u_[:, 0]) * np.expand_dims(b_l, -1), 1)[:, None]
+        np.sum(np.maximum(0, w_u_[:, 0]) * np.expand_dims(b_u, -1), 1)
+        + np.sum(np.minimum(0, w_u_[:, 0]) * np.expand_dims(b_l, -1), 1)
         + b_u_
     )
     b_r_l = (
-        np.sum(np.maximum(0, w_l_[:, 0]) * np.expand_dims(b_l, -1), 1)[:, None]
-        + np.sum(np.minimum(0, w_l_[:, 0]) * np.expand_dims(b_u, -1), 1)[:, None]
+        np.sum(np.maximum(0, w_l_[:, 0]) * np.expand_dims(b_l, -1), 1)
+        + np.sum(np.minimum(0, w_l_[:, 0]) * np.expand_dims(b_u, -1), 1)
         + b_l_
     )
-
+    if floatx==16:
+        output_ref_= None
     # check bounds consistency
-    helpers.assert_output_properties_box_linear(x, None, z[:, 0], z[:, 1], None, w_r_u, b_r_u, None, w_r_l, b_r_l)
+    helpers.assert_output_properties_box_linear(x, output_ref_, z[:, 0], z[:, 1], None, w_r_u, b_r_u, None, w_r_l, b_r_l)
