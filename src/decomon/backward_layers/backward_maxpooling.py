@@ -6,18 +6,16 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Flatten, Layer
 
 from decomon.backward_layers.core import BackwardLayer
-from decomon.backward_layers.utils import backward_max_, get_identity_lirpa
-from decomon.core import ForwardMode, PerturbationDomain
+from decomon.backward_layers.utils import backward_max_
+from decomon.backward_layers.utils_pooling import get_conv_pooling, get_maxpooling_linear_hull
+
+from decomon.core import PerturbationDomain
+from decomon.layers.core import ForwardMode
+#from decomon.utils import get_lower, get_upper
 
 
 class BackwardMaxPooling2D(BackwardLayer):
     """Backward  LiRPA of MaxPooling2D"""
-
-    pool_size: Tuple[int, int]
-    strides: Tuple[int, int]
-    padding: str
-    data_format: str
-    fast: bool
 
     def __init__(
         self,
@@ -36,163 +34,17 @@ class BackwardMaxPooling2D(BackwardLayer):
             dc_decomp=dc_decomp,
             **kwargs,
         )
-        raise NotImplementedError()
+        pool_config = self.layer.get_config()
+        input_shape = self.layer.get_input_shape_at(0)
+        if isinstance(input_shape, list):
+            input_shape=input_shape[-1]
+        w_conv = get_conv_pooling(pool_config, input_shape)
+        self.w_conv = w_conv # add non trainable
 
-    def _pooling_function_fast(
-        self,
-        inputs: List[tf.Tensor],
-        w_u_out: tf.Tensor,
-        b_u_out: tf.Tensor,
-        w_l_out: tf.Tensor,
-        b_l_out: tf.Tensor,
-    ) -> List[tf.Tensor]:
-        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
-
-        op_flat = Flatten()
-
-        b_u_pooled = K.pool2d(u_c, self.pool_size, self.strides, self.padding, self.data_format, pool_mode="max")
-        b_l_pooled = K.pool2d(l_c, self.pool_size, self.strides, self.padding, self.data_format, pool_mode="max")
-
-        b_u_pooled = K.expand_dims(K.expand_dims(op_flat(b_u_pooled), 1), -1)
-        b_l_pooled = K.expand_dims(K.expand_dims(op_flat(b_l_pooled), 1), -1)
-
-        y = inputs[-1]
-        n_out = w_u_out.shape[-1]
-
-        w_u_out_new = K.concatenate([K.expand_dims(K.expand_dims(0 * (op_flat(y)), 1), -1)] * n_out, -1)
-        w_l_out_new = w_u_out_new
-
-        b_u_out_new = (
-            K.sum(K.maximum(w_u_out, 0) * b_u_pooled, 2) + K.sum(K.minimum(w_u_out, 0) * b_l_pooled, 2) + b_u_out
-        )
-        b_l_out_new = (
-            K.sum(K.maximum(w_l_out, 0) * b_l_pooled, 2) + K.sum(K.minimum(w_l_out, 0) * b_u_pooled, 2) + b_l_out
-        )
-
-        return [w_u_out_new, b_u_out_new, w_l_out_new, b_l_out_new]
-
-    def _pooling_function_not_fast(
-        self,
-        inputs: List[tf.Tensor],
-        w_u_out: tf.Tensor,
-        b_u_out: tf.Tensor,
-        w_l_out: tf.Tensor,
-        b_l_out: tf.Tensor,
-    ) -> List[tf.Tensor]:
-        """
-        Args:
-            inputs
-            pool_size
-            strides
-            padding
-            data_format
-
-        Returns:
-
-        """
-        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
-        dtype = x.dtype
-        empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
-        y = inputs[-1]
-        input_shape = K.int_shape(y)
-
-        if self.data_format in [None, "channels_last"]:
-            axis = -1
-        else:
-            axis = 1
-
-        # initialize vars
-        u_c_tmp, w_u_tmp, b_u_tmp, l_c_tmp, w_l_tmp, b_l_tmp = (
-            empty_tensor,
-            empty_tensor,
-            empty_tensor,
-            empty_tensor,
-            empty_tensor,
-            empty_tensor,
-        )
-
-        if self.ibp:
-            u_c_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(u_c, input_shape[-1], -1)], -2)
-            l_c_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(l_c, input_shape[-1], -1)], -2)
-
-        if self.affine:
-            b_u_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(b_u, input_shape[-1], -1)], -2)
-            b_l_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(b_l, input_shape[-1], -1)], -2)
-            w_u_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(w_u, input_shape[-1], -1)], -2)
-            w_l_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(w_l, input_shape[-1], -1)], -2)
-
-        if self.dc_decomp:
-            raise NotImplementedError()
-        else:
-            h_tmp, g_tmp = empty_tensor, empty_tensor
-
-        outputs_tmp = self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
-            [x, u_c_tmp, w_u_tmp, b_u_tmp, l_c_tmp, w_l_tmp, b_l_tmp, h_tmp, g_tmp]
-        )
-
-        w_u_out, b_u_out, w_l_out, b_l_out = backward_max_(
-            outputs_tmp,
-            w_u_out,
-            b_u_out,
-            w_l_out,
-            b_l_out,
-            perturbation_domain=self.perturbation_domain,
-            mode=self.mode,
-            dc_decomp=self.dc_decomp,
-            axis=-1,
-        )
-
-        # invert the convolution
-        op_flat = Flatten()
-
-        # do not do the activation so far
-        # get input shape
-        input_shape_channelreduced = list(inputs[0].shape[1:])
-        n_axis = input_shape_channelreduced[axis]
-        input_shape_channelreduced[axis] = 1
-        n_dim = np.prod(input_shape_channelreduced)
-
-        # create diagonal matrix
-        id_list = [tf.linalg.diag(K.ones_like(op_flat(elem[0][None]))) for elem in tf.split(y, input_shape[axis], axis)]
-
-        id_list = [K.reshape(identity_mat, [-1] + input_shape_channelreduced) for identity_mat in id_list]
-        w_list = [self.internal_op(identity_mat) for identity_mat in id_list]
-
-        # flatten
-        weights = [K.reshape(op_flat(weights), (n_dim, -1, np.prod(self.pool_size))) for weights in w_list]
-
-        n_0 = weights[0].shape[1]
-        n_1 = weights[0].shape[2]
-
-        w_u_out = K.reshape(w_u_out, (-1, 1, n_0, input_shape[axis], w_u_out.shape[-2], n_1))
-        w_l_out = K.reshape(w_l_out, (-1, 1, n_0, input_shape[axis], w_l_out.shape[-2], n_1))
-
-        weights = K.expand_dims(K.concatenate([K.expand_dims(K.expand_dims(w, -2), -2) for w in weights], 2), 0)
-
-        w_u_out = K.reshape(
-            K.sum(K.expand_dims(w_u_out, 1) * weights, (3, -1)), (-1, 1, n_dim * n_axis, w_u_out.shape[-2])
-        )
-        w_l_out = K.reshape(
-            K.sum(K.expand_dims(w_l_out, 1) * weights, (3, -1)), (-1, 1, n_dim * n_axis, w_l_out.shape[-2])
-        )
-
-        return [w_u_out, b_u_out, w_l_out, b_l_out]
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
-        if self.fast:
-            return self._pooling_function_fast(
-                inputs=inputs,
-                w_u_out=w_u_out,
-                b_u_out=b_u_out,
-                w_l_out=w_l_out,
-                b_l_out=b_l_out,
-            )
-        else:
-            return self._pooling_function_not_fast(
-                inputs=inputs,
-                w_u_out=w_u_out,
-                b_u_out=b_u_out,
-                w_l_out=w_l_out,
-                b_l_out=b_l_out,
-            )
+
+        return get_maxpooling_linear_hull(w_conv_pool=self.w_conv, 
+                                inputs=inputs, 
+                                mode=self.mode,
+                                perturbation_domain=self.perturbation_domain)

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -76,13 +76,13 @@ def get_upper_linear_hull_max(
     # detect collapsed dimensions: lower[i]==upper[i]
     index_collapse = o_value - K.sign(l_c_reshaped - u_c_reshaped)
 
-    corners = mask * l_c_reshaped + (o_value - mask) * (u_c_reshaped)  # (1, shape, n_dim, n_dim)
+    corners_ = mask * l_c_reshaped + (o_value - mask) * (u_c_reshaped)  # (1, shape, n_dim, n_dim)
     corners_collapse = mask * l_c_reshaped + (o_value - mask) * (u_c_reshaped + index_collapse)
     # add the corners containing all the upper bounds
     corners_collapse = K.concatenate(
         [corners_collapse, u_c_reshaped + index_collapse], axis=-1
     )  # (None, shape, n_dim, n_dim+1)
-    corners = K.concatenate([corners, u_c_reshaped], axis=-1)
+    corners = K.concatenate([corners_, u_c_reshaped], axis=-1)
 
     if axis != -1:
         corners_pred = K.max(corners, axis=axis)  # (None, shape_, n_dim+1)
@@ -127,6 +127,15 @@ def get_upper_linear_hull_max(
     # reshape w_u
     shape_max = K.max(inputs[-1], axis).shape[1:]
     b_u = K.reshape(w_hull_flat[:, :, -1], [-1] + list(shape_max))  # (-1, shape_)
+
+    #due to numerical error in tf.linalg.solve we need to assess that w_u, b_u 
+    # is correct on the set of corners, else we will add the error inside the bias
+
+    axis_=axis
+    if axis ==-1:
+        axis_=-2
+    error = K.maximum(z_value, K.cast(corners_pred,dtype=dtype)  - (K.sum(K.expand_dims(w_u,-1)*corners, axis_) + K.expand_dims(b_u, -1)))
+    b_u += K.max(error, -1)
 
     return [w_u, b_u]
 
@@ -190,3 +199,20 @@ def get_lower_linear_hull_max(
         w_l = (o_value - alpha) * w_l + alpha * w_l_alpha
 
     return [w_l, b_l]
+
+def get_conv_op_config(config)-> tf.constant:
+
+    pool_size_x, pool_size_y  = config['pool_size']
+    padding = config['padding']
+    pooling = pool_size_x*pool_size_y
+ 
+    if padding=='same':
+        raise NotImplementedError()
+    # create the convolution layer to extract the Toeplitz matrix
+    kernel_pool = np.repeat(
+                    np.transpose(
+                        np.eye(pooling).reshape( 
+                            (pooling, pool_size_x, pool_size_y)),
+                             (1,2, 0))[:,:,None, :], 1, -2)
+
+    return K.constant(kernel_pool)

@@ -120,6 +120,11 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
 
         self.internal_op = conv_
 
+    def build(self, input_shape):
+        input_shape_pool = input_shape[-1]
+
+        #import pdb; pdb.set_trace()
+
     def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
         """
         Args:
