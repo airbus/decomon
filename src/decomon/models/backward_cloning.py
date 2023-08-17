@@ -19,6 +19,7 @@ from decomon.core import (
     get_affine,
     get_mode,
 )
+from decomon.layers.decomon_reshape import DecomonReshape
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.crown import Convert2BackwardMode, Fuse, MergeWithPrevious
 from decomon.models.forward_cloning import OutputMapDict
@@ -241,10 +242,12 @@ def get_input_nodes(
                 input_map[id(node)] = input_tensors
             else:
                 output: List[tf.Tensor] = []
+                output_: List[tf.Tensor] = []
+                node_shape = node.layer.input_shape[1:]
                 for parent in parents:
                     # do something
                     if id(parent) in output_map.keys():
-                        output += output_map[id(parent)]
+                        output_ = output_map[id(parent)]
                     else:
                         output_crown, fuse_layer_tmp = crown_(
                             node=parent,
@@ -268,9 +271,13 @@ def get_input_nodes(
                         if set_mode_layer is None:
                             set_mode_layer = Convert2BackwardMode(get_mode(ibp, affine), perturbation_domain)
                         output_crown = set_mode_layer(input_tensors + output_crown)
-                        output += to_list(output_crown)
+                        output_ = to_list(output_crown)
                         # crown_map[id(parent)]=output_crown_
-
+                if node_shape != output_[-1].shape[1:]:
+                    # layer receive tensors of 3 dimensions or more, need to resize
+                    resize_layer = DecomonReshape(target_shape = node_shape, mode= get_mode(ibp, affine))
+                    output_ = resize_layer(output_)
+                output += output_
                 input_map[id(node)] = output
     return input_map, backward_map, crown_map
 
