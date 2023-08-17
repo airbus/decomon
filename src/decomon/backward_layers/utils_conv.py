@@ -156,6 +156,39 @@ def get_toeplitz_channels_first(conv_layer: Conv2D, flatten: bool = True) -> tf.
     else:
         return w
 
+def get_affine_components_build(conv_layer: Conv2D) -> Tuple[tf.Tensor, tf.Tensor]:
+    """Express the implicit affine matrix of the convolution layer.
+
+    Conv is a linear operator but its affine component is implicit
+    we use im2col and extract_patches to express the affine matrix
+    Note that this matrix is Toeplitz
+
+    Args:
+        conv_layer: Keras Conv2D layer or Decomon Conv2D layer
+    Returns:
+        the affine operators W, b : conv(inputs)= W.inputs + b
+    """
+
+    w_out_u_ = get_toeplitz(conv_layer, True)
+    output_shape = conv_layer.get_output_shape_at(0)
+    if isinstance(output_shape, list):
+        output_shape = output_shape[-1]
+    output_shape = output_shape[1:]
+    if conv_layer.data_format == "channels_last":
+        b_out_u_ = K.reshape(K.zeros(output_shape, dtype=conv_layer.dtype), (-1, output_shape[-1]))
+    else:
+        b_out_u_ = K.permute_dimensions(
+            K.reshape(K.zeros(output_shape, dtype=conv_layer.dtype), (-1, output_shape[0])), (1, 0)
+        )
+
+    if conv_layer.use_bias:
+        bias_ = K.cast(conv_layer.bias, conv_layer.dtype)
+        b_out_u_ = b_out_u_ + bias_[None]
+    b_out_u_ = K.flatten(b_out_u_)
+
+    w_out_ = w_out_u_
+    b_out_ = b_out_u_
+    return w_out_[None], b_out_[None]
 
 def get_affine_components(conv_layer: Conv2D, inputs: List[tf.Tensor]) -> Tuple[tf.Tensor, tf.Tensor]:
     """Express the implicit affine matrix of the convolution layer.

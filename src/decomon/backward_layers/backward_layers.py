@@ -20,7 +20,7 @@ from decomon.core import (
     get_affine,
     get_ibp,
 )
-from decomon.backward_layers.utils_conv import get_affine_components
+from decomon.backward_layers.utils_conv import get_affine_components_build
 from decomon.layers.convert import to_decomon
 from decomon.layers.core import DecomonLayer
 from decomon.layers.decomon_layers import DecomonBatchNormalization
@@ -151,8 +151,9 @@ class BackwardConv2D(BackwardLayer):
                 fast=False,
             )
         self.frozen_weights = False
+        self.backward_kernel, self.backward_bias = self.get_affine_components()
 
-    def get_affine_components(self, inputs: List[tf.Tensor]) -> Tuple[tf.Tensor, tf.Tensor]:
+    def get_affine_components(self) -> Tuple[tf.Tensor, tf.Tensor]:
         """Express the implicit affine matrix of the convolution layer.
 
         Conv is a linear operator but its affine component is implicit
@@ -160,15 +161,14 @@ class BackwardConv2D(BackwardLayer):
         Note that this matrix is Toeplitz
 
         Args:
-            inputs: list of input tensors
         Returns:
             the affine operators W, b : conv(inputs)= W.inputs + b
         """
-        return get_affine_components(self.layer, inputs)
+        return get_affine_components_build(self.layer)
 
     def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
-        weight_, bias_ = self.get_affine_components(inputs)
-        return [weight_, bias_] * 2
+        
+        return [self.backward_kernel, self.backward_bias] * 2
 
     def freeze_weights(self) -> None:
         if not self.frozen_weights:
