@@ -1,7 +1,6 @@
 # Test unit for decomon with Dense layers
 
 
-import keras_core.ops as K
 import numpy as np
 import pytest
 from tensorflow.python.keras.backend import _get_available_gpus
@@ -43,7 +42,7 @@ def test_Decomon_conv_box(data_format, padding, use_bias, mode, floatx, decimal,
 
     # backward outputs
     outputs = backward_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     w_u_, b_u_, w_l_, b_l_ = outputs_

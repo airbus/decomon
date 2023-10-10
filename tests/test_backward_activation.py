@@ -1,4 +1,3 @@
-import keras_core.ops as K
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
@@ -26,7 +25,7 @@ def test_activation_backward_1D_box(n, mode, floatx, decimal, activation_func, h
 
     # backward outputs
     outputs = activation_func(inputs_for_mode, mode=mode)
-    f_func = K.function(inputs, outputs)
+    f_func = helpers.function(inputs, outputs)
     outputs_ = f_func(inputs_)
 
     # check bounds consistency
@@ -60,7 +59,7 @@ def test_activation_backward_1D_box_slope(n, slope, helpers):
 
     # backward outputs
     outputs = activation_func(inputs_for_mode, mode=mode)
-    f_func = K.function(inputs, outputs)
+    f_func = helpers.function(inputs, outputs)
     outputs_ = f_func(inputs_)
 
     # backward recomposition

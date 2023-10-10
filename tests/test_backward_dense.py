@@ -1,4 +1,3 @@
-import keras_core.ops as K
 from keras_core.layers import Dense, Input
 
 from decomon.backward_layers.convert import to_backward
@@ -27,7 +26,7 @@ def test_Backward_Dense_1D_box(n, use_bias, mode, floatx, decimal, helpers):
 
     # backward outputs
     outputs = backward_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency
@@ -60,7 +59,7 @@ def test_Backward_Dense_multiD_box(odd, floatx, decimal, mode, helpers):
 
     # backward outputs
     outputs = backward_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency
@@ -95,7 +94,7 @@ def test_Backward_DecomonDense_1D_box(n, helpers):
 
     # backward outputs
     outputs = backward_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency

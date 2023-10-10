@@ -31,18 +31,17 @@ def test_activation_1D_box(n, mode, floatx, decimal, helpers, activation_func, t
     #  tensor inputs
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
     inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
-    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
 
     # numpy inputs
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs=inputs_)
 
     # reference output
-    f_ref = K.function(inputs, tensor_func(input_ref))
-    output_ref_ = f_ref(inputs_)
+    output_ref_ = tensor_func(input_ref_).numpy()
 
     # decomon output
     output = activation_func(inputs_for_mode, dc_decomp=dc_decomp, mode=mode)
-    f_decomon = K.function(inputs, output)
+    f_decomon = helpers.function(inputs, output)
     outputs_ = f_decomon(inputs_)
 
     #  check bounds consistency
@@ -79,7 +78,7 @@ def test_activation_1D_box_slope(n, slope, helpers):
 
     # decomon output
     outputs = activation_func(inputs_for_mode, dc_decomp=dc_decomp, mode=mode, slope=slope)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # full outputs & inputs

@@ -1,13 +1,7 @@
 # creating toy network and assess that the decomposition is correct
 
 
-import keras_core.ops as K
-import numpy as np
-import pytest
-from keras_core.layers import Activation, Add, Average, Conv2D, Dense, Flatten, Input
-from keras_core.models import Model, Sequential
-
-from decomon.core import ForwardMode, get_affine, get_ibp
+from decomon.core import get_affine, get_ibp
 from decomon.models.forward_cloning import convert_forward
 
 
@@ -35,7 +29,7 @@ def test_convert_forward_1D(n, mode, floatx, decimal, helpers):
     _, outputs, _, _ = convert_forward(ref_nn, ibp=ibp, affine=affine, shared=True, input_tensors=input_tensors)
 
     #  decomon outputs
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency

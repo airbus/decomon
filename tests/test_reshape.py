@@ -1,4 +1,3 @@
-import keras_core.ops as K
 import numpy as np
 import pytest
 from keras_core.layers import Permute, Reshape
@@ -67,7 +66,7 @@ def test_Decomon_reshape_n_permute_box(
 
     # decomon output
     output = decomon_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, output)
+    f_decomon = helpers.function(inputs, output)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency
@@ -114,7 +113,7 @@ def test_Decomon_reshape_n_permute_to_decomon_box(
 
     # original output
     output_ref = keras_layer(input_ref)
-    f_ref = K.function(inputs, output_ref)
+    f_ref = helpers.function(inputs, output_ref)
     output_ref_ = f_ref(inputs_)
 
     # conversion with to_decomon
@@ -123,7 +122,7 @@ def test_Decomon_reshape_n_permute_to_decomon_box(
 
     # decomon outputs
     outputs = decomon_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency

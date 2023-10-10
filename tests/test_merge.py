@@ -1,7 +1,6 @@
 # Test unit for decomon with Dense layers
 
 
-import keras_core.ops as K
 import numpy as np
 import pytest
 from keras_core.layers import (
@@ -13,7 +12,6 @@ from keras_core.layers import (
     Multiply,
     Subtract,
 )
-from keras_core.models import Model
 
 from decomon.core import ForwardMode, get_affine, get_ibp
 from decomon.layers.convert import to_decomon
@@ -79,7 +77,7 @@ def test_DecomonOp_1D_box(decomon_op_class, tensor_op, decomon_op_kwargs, n, mod
     # decomon output
     decomon_op = decomon_op_class(dc_decomp=dc_decomp, mode=mode, dtype=K.floatx(), **decomon_op_kwargs)
     output = decomon_op(inputs_for_mode_0 + inputs_for_mode_1)
-    f_decomon = K.function(inputs_0 + inputs_1, output)
+    f_decomon = helpers.function(inputs_0 + inputs_1, output)
     outputs_ = f_decomon(inputs_ + inputs_)
 
     #  check bounds consistency
@@ -124,7 +122,7 @@ def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, od
     # decomon output
     decomon_op = decomon_op_class(dc_decomp=dc_decomp, mode=mode, dtype=K.floatx(), **decomon_op_kwargs)
     output = decomon_op(inputs_for_mode_0 + inputs_for_mode_1)
-    f_decomon = K.function(inputs_0 + inputs_1, output)
+    f_decomon = helpers.function(inputs_0 + inputs_1, output)
     outputs_ = f_decomon(inputs_ + inputs_)
 
     #  check bounds consistency
@@ -181,7 +179,7 @@ def test_Decomon_1D_box_to_decomon(layer_class, tensor_op, layer_kwargs, n, help
 
     # decomon output
     output = decomon_op(inputs_for_mode_0 + inputs_for_mode_1)
-    f_decomon = K.function(inputs_0 + inputs_1, output)
+    f_decomon = helpers.function(inputs_0 + inputs_1, output)
     outputs_ = f_decomon(inputs_ + inputs_)
 
     #  check bounds consistency
@@ -241,7 +239,7 @@ def test_Decomon_multiD_box_to_decomon(layer_class, tensor_op, layer_kwargs, odd
 
     # decomon output
     output = decomon_op(inputs_for_mode_0 + inputs_for_mode_1)
-    f_decomon = K.function(inputs_0 + inputs_1, output)
+    f_decomon = helpers.function(inputs_0 + inputs_1, output)
     outputs_ = f_decomon(inputs_ + inputs_)
 
     #  check bounds consistency

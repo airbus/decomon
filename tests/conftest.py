@@ -5,7 +5,7 @@ import keras_core.ops as K
 import numpy as np
 import numpy.typing as npt
 import pytest
-from keras_core import Input
+from keras_core import KerasTensor
 from keras_core.layers import (
     Activation,
     Add,
@@ -147,6 +147,20 @@ def method(request):
     return request.param
 
 
+class ModelNumpyFromKerasTensors:
+    def __init__(self, inputs: List[KerasTensor], outputs: List[KerasTensor]):
+        self.inputs = inputs
+        self.outputs = outputs
+        self._model = Model(inputs, outputs)
+
+    def __call__(self, inputs_: List[np.ndarray]):
+        output_tensors = self._model(inputs_)
+        if isinstance(output_tensors, list):
+            return [output.numpy() for output in output_tensors]
+        else:
+            return output_tensors.numpy()
+
+
 class Helpers:
     @staticmethod
     def is_method_mode_compatible(method, mode):
@@ -154,6 +168,8 @@ class Helpers:
             ConvertMethod(method) in {ConvertMethod.CROWN_FORWARD_IBP, ConvertMethod.FORWARD_IBP}
             and ForwardMode(mode) != ForwardMode.IBP
         )
+
+    function = ModelNumpyFromKerasTensors
 
     @staticmethod
     def get_standard_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):

@@ -1,9 +1,7 @@
 # Test unit for decomon with Dense layers
 
 
-import keras_core.ops as K
 import numpy as np
-import pytest
 from keras_core.layers import Dense
 from numpy.testing import assert_almost_equal
 
@@ -28,13 +26,13 @@ def test_DecomonDense_1D_box(n, mode, shared, floatx, decimal, helpers):
     # keras layer & function
     keras_layer = Dense(**kwargs_layer)
     output_ref = keras_layer(input_ref)
-    f_ref = K.function(inputs, output_ref)
+    f_ref = helpers.function(inputs, output_ref)
 
     # decomon layer & function
     decomon_layer = DecomonDense(dc_decomp=dc_decomp, shared=shared, mode=mode, **kwargs_layer)
     decomon_layer.share_weights(keras_layer)
     outputs = decomon_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
 
     # test with several kernel values
     kernel_coeffs = [2, -3]
@@ -79,13 +77,13 @@ def test_DecomonDense_1D_box_nodc(n, helpers):
     # keras layer & function
     keras_layer = Dense(**kwargs_layer)
     output_ref = keras_layer(input_ref)
-    f_ref = K.function(inputs, output_ref)
+    f_ref = helpers.function(inputs, output_ref)
 
     #  decomon layer & function
     decomon_layer = DecomonDense(dc_decomp=dc_decomp, shared=shared, mode=mode, **kwargs_layer)
     decomon_layer.share_weights(keras_layer)
     outputs = decomon_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
 
     #  test with several kernel values
     kernel_coeffs = [2, -3]
@@ -128,13 +126,13 @@ def test_DecomonDense_multiD_box(odd, mode, dc_decomp, helpers):
     # keras layer & function
     keras_layer = Dense(**kwargs_layer)
     output_ref = keras_layer(input_ref)
-    f_ref = K.function(inputs, output_ref)
+    f_ref = helpers.function(inputs, output_ref)
 
     # decomon layer & function
     decomon_layer = DecomonDense(dc_decomp=dc_decomp, shared=shared, mode=mode, **kwargs_layer)
     decomon_layer.share_weights(keras_layer)
     outputs = decomon_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
 
     # test with several kernel values
     kernel_coeffs = [2, -3]
@@ -189,7 +187,7 @@ def test_DecomonDense_1D_to_decomon_box(n, activation, mode, shared, helpers):
     # keras layer & function & output
     keras_layer = Dense(**kwargs_layer)
     output_ref = keras_layer(input_ref)
-    f_ref = K.function(inputs, output_ref)
+    f_ref = helpers.function(inputs, output_ref)
     output_ref_ = f_ref(inputs_)
 
     # decomon layer & function & output via to_decomon
@@ -201,7 +199,7 @@ def test_DecomonDense_1D_to_decomon_box(n, activation, mode, shared, helpers):
     outputs = decomon_layers[0](inputs_for_mode)
     if len(decomon_layers) > 1:
         outputs = decomon_layers[1](outputs)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency
@@ -250,7 +248,7 @@ def test_DecomonDense_multiD_to_decomon_box(odd, activation, mode, dc_decomp, he
         W_0[1] = -0.2613032
         W_0[2] = 0.08437371
         keras_layer.set_weights([W_0, b_0])
-    f_ref = K.function(inputs, output_ref)
+    f_ref = helpers.function(inputs, output_ref)
     output_ref_ = f_ref(inputs_)
 
     #  decomon layer & function via to_decomon
@@ -262,7 +260,7 @@ def test_DecomonDense_multiD_to_decomon_box(odd, activation, mode, dc_decomp, he
     outputs = decomon_layers[0](inputs_for_mode)
     if len(decomon_layers) > 1:
         outputs = decomon_layers[1](outputs)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency
