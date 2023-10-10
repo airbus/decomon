@@ -1,8 +1,8 @@
 # extra layers necessary for backward LiRPA
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import keras_core as keras
 import keras_core.backend as K
-import tensorflow as tf
 from keras_core.layers import InputSpec, Layer
 
 from decomon.core import ForwardMode, PerturbationDomain
@@ -13,7 +13,7 @@ class Fuse(Layer):
         super().__init__(**kwargs)
         self.mode = ForwardMode(mode)
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
         inputs_wo_backward_bounds = inputs[:-4]
         backward_bounds = inputs[-4:]
 
@@ -38,7 +38,7 @@ class Convert2BackwardMode(Layer):
         self.mode = ForwardMode(mode)
         self.perturbation_domain = perturbation_domain
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
         inputs_wo_backward_bounds = inputs[:-4]
         backward_bounds = inputs[-4:]
         w_u_out, b_u_out, w_l_out, b_l_out = backward_bounds
@@ -92,7 +92,7 @@ class MergeWithPrevious(Layer):
             b_b_spec = InputSpec(ndim=2, axes={-1: n_out})
             self.input_spec = [w_out_spec, b_out_spec] * 2 + [w_b_spec, b_b_spec] * 2  #
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
         return merge_with_previous(inputs)
 
     def get_config(self) -> Dict[str, Any]:
@@ -106,7 +106,7 @@ class MergeWithPrevious(Layer):
         return config
 
 
-def merge_with_previous(inputs: List[tf.Tensor]) -> List[tf.Tensor]:
+def merge_with_previous(inputs: List[keras.KerasTensor]) -> List[keras.KerasTensor]:
     w_u_out, b_u_out, w_l_out, b_l_out, w_b_u, b_b_u, w_b_l, b_b_l = inputs
 
     # w_u_out (None, n_h_in, n_h_out)

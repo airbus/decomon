@@ -1,4 +1,4 @@
-import tensorflow as tf
+import keras_core as keras
 from keras_core.layers import InputLayer, Lambda
 
 

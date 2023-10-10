@@ -1,10 +1,10 @@
 from typing import List, Optional, Union
 
+import keras_core as keras
 import keras_core.backend as K
 import numpy as np
 import numpy.typing as npt
 import pytest
-import tensorflow as tf
 from keras_core import Input
 from keras_core.layers import (
     Activation,
@@ -279,10 +279,10 @@ class Helpers:
 
     @staticmethod
     def get_inputs_for_mode_from_full_inputs(
-        inputs: Union[List[tf.Tensor], List[npt.NDArray[np.float_]]],
+        inputs: Union[List[keras.KerasTensor], List[npt.NDArray[np.float_]]],
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         dc_decomp: bool = True,
-    ) -> Union[List[tf.Tensor], List[npt.NDArray[np.float_]]]:
+    ) -> Union[List[keras.KerasTensor], List[npt.NDArray[np.float_]]]:
         """Extract from full inputs the ones corresponding to the selected mode.
 
         Args:
@@ -332,8 +332,8 @@ class Helpers:
 
     @staticmethod
     def get_input_ref_bounds_from_full_inputs(
-        inputs: Union[List[tf.Tensor], List[npt.NDArray[np.float_]]],
-    ) -> Union[List[tf.Tensor], List[npt.NDArray[np.float_]]]:
+        inputs: Union[List[keras.KerasTensor], List[npt.NDArray[np.float_]]],
+    ) -> Union[List[keras.KerasTensor], List[npt.NDArray[np.float_]]]:
         """Extract lower and upper bound for input ref from full inputs
 
         Args:
@@ -377,10 +377,10 @@ class Helpers:
 
     @staticmethod
     def get_input_tensors_for_decomon_convert_from_full_inputs(
-        inputs: List[tf.Tensor],
+        inputs: List[keras.KerasTensor],
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         dc_decomp: bool = True,
-    ) -> List[tf.Tensor]:
+    ) -> List[keras.KerasTensor]:
         """Extract from full tensor inputs the ones for a conversion to decomon model.
 
         Args:
@@ -417,8 +417,8 @@ class Helpers:
 
     @staticmethod
     def get_input_ref_from_full_inputs(
-        inputs: Union[List[tf.Tensor], List[npt.NDArray[np.float_]]]
-    ) -> Union[tf.Tensor, npt.NDArray[np.float_]]:
+        inputs: Union[List[keras.KerasTensor], List[npt.NDArray[np.float_]]]
+    ) -> Union[keras.KerasTensor, npt.NDArray[np.float_]]:
         """Extract from full inputs the input of reference for the original Keras layer.
 
         Args:
@@ -459,11 +459,11 @@ class Helpers:
 
     @staticmethod
     def get_full_outputs_from_outputs_for_mode(
-        outputs_for_mode: Union[List[tf.Tensor], List[npt.NDArray[np.float_]]],
+        outputs_for_mode: Union[List[keras.KerasTensor], List[npt.NDArray[np.float_]]],
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         dc_decomp: bool = True,
-        full_inputs: Optional[Union[List[tf.Tensor], List[npt.NDArray[np.float_]]]] = None,
-    ) -> Union[List[tf.Tensor], List[npt.NDArray[np.float_]]]:
+        full_inputs: Optional[Union[List[keras.KerasTensor], List[npt.NDArray[np.float_]]]] = None,
+    ) -> Union[List[keras.KerasTensor], List[npt.NDArray[np.float_]]]:
         mode = ForwardMode(mode)
         if dc_decomp:
             if mode == ForwardMode.HYBRID:
@@ -509,7 +509,7 @@ class Helpers:
             return 6
 
     @staticmethod
-    def get_input_dim_from_full_inputs(inputs: Union[List[tf.Tensor], List[npt.NDArray[np.float_]]]) -> int:
+    def get_input_dim_from_full_inputs(inputs: Union[List[keras.KerasTensor], List[npt.NDArray[np.float_]]]) -> int:
         """Get input_dim for to_decomon or to_backward from full inputs
 
         Args:

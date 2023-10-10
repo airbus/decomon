@@ -1,7 +1,7 @@
 import copy
 from typing import Any, Dict, List, Optional, Union
 
-import tensorflow as tf
+import keras_core as keras
 
 from decomon.core import (
     BoxDomain,
@@ -25,8 +25,8 @@ except ImportError:
 class DecomonModel(keras.Model):
     def __init__(
         self,
-        inputs: Union[tf.Tensor, List[tf.Tensor]],
-        outputs: Union[tf.Tensor, List[tf.Tensor]],
+        inputs: Union[keras.KerasTensor, List[keras.KerasTensor]],
+        outputs: Union[keras.KerasTensor, List[keras.KerasTensor]],
         perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         method: Union[str, ConvertMethod] = ConvertMethod.FORWARD_AFFINE,
@@ -96,8 +96,8 @@ def _check_domain(
     return perturbation_domain
 
 
-def get_AB(model: DecomonModel) -> Dict[str, List[tf.Variable]]:
-    dico_AB: Dict[str, List[tf.Variable]] = {}
+def get_AB(model: DecomonModel) -> Dict[str, List[keras.Variable]]:
+    dico_AB: Dict[str, List[keras.Variable]] = {}
     perturbation_domain = model.perturbation_domain
     if not (isinstance(perturbation_domain, GridDomain) and perturbation_domain.opt_option == Option.milp):
         return dico_AB
@@ -112,8 +112,8 @@ def get_AB(model: DecomonModel) -> Dict[str, List[tf.Variable]]:
     return dico_AB
 
 
-def get_AB_finetune(model: DecomonModel) -> Dict[str, tf.Variable]:
-    dico_AB: Dict[str, tf.Variable] = {}
+def get_AB_finetune(model: DecomonModel) -> Dict[str, keras.Variable]:
+    dico_AB: Dict[str, keras.Variable] = {}
     perturbation_domain = model.perturbation_domain
     if not (isinstance(perturbation_domain, GridDomain) and perturbation_domain.opt_option == Option.milp):
         return dico_AB

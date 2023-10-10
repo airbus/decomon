@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import tensorflow as tf
+import keras_core as keras
 from keras_core.layers import Activation, Input, Layer
 
 import decomon.layers.decomon_layers
@@ -121,7 +121,7 @@ def _to_decomon_wo_input_init(
 
 def _prepare_input_tensors(
     layer: Layer, input_dim: int, dc_decomp: bool, perturbation_domain: PerturbationDomain, mode: ForwardMode
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     original_input_shapes = get_layer_input_shape(layer)
     decomon_input_shapes: List[List[Optional[int]]] = [list(input_shape[1:]) for input_shape in original_input_shapes]
     n_input = len(decomon_input_shapes)

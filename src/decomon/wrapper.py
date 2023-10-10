@@ -1,8 +1,8 @@
 from typing import Callable, List, Optional, Sequence, Tuple, Union
 
+import keras_core as keras
 import numpy as np
 import numpy.typing as npt
-import tensorflow as tf
 
 from decomon.core import BallDomain, BoxDomain, GridDomain
 from decomon.models.convert import clone

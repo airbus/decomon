@@ -1,7 +1,7 @@
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-import tensorflow as tf
+import keras_core as keras
 from keras_core.layers import Layer
 
 from decomon.core import ForwardMode, PerturbationDomain
@@ -69,7 +69,7 @@ else:
             )
             return config
 
-        def build(self, input_shape: List[tf.TensorShape]) -> None:
+        def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
             if (self.n is None) or (self.n > input_shape[-1][self.channel_axis]):
                 self.n = input_shape[-1][self.channel_axis]
                 if self.n is None:  # for mypy
@@ -78,7 +78,7 @@ else:
                 (-1, self.n), mode=self.mode, perturbation_domain=self.perturbation_domain, dc_decomp=self.dc_decomp
             ).call
 
-        def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+        def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
             shape_in = tuple(inputs[-1].shape[1:])
             inputs_reshaped = self.reshape(inputs)
             if self.n == 2:
@@ -123,7 +123,7 @@ else:
                 shape_in, mode=self.mode, perturbation_domain=self.perturbation_domain, dc_decomp=self.dc_decomp
             ).call(outputs)
 
-        def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
+        def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
             return input_shape
 
     class DecomonGroupSort2(DecomonLayer):
@@ -173,10 +173,10 @@ else:
             )
             return config
 
-        def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
+        def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
             return input_shape
 
-        def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+        def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
             inputs_reshaped = self.op_reshape_in(inputs)
             inputs_max = expand_dims(
                 max_(
@@ -207,7 +207,7 @@ else:
             output = self.op_concat(inputs_min + inputs_max)
             return self.op_reshape_out(output)
 
-        def build(self, input_shape: List[tf.TensorShape]) -> None:
+        def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
             input_shape = input_shape[-1]
 
             if self.data_format == "channels_last":
