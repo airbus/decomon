@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Union
 
-import tensorflow as tf
+import keras_core as keras
 
 from decomon.core import BoxDomain, ForwardMode, PerturbationDomain
 from decomon.layers.utils import exp, expand_dims, log, sum
@@ -10,11 +10,11 @@ from decomon.utils import add, minus
 
 
 def categorical_cross_entropy(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     perturbation_domain: Optional[PerturbationDomain] = None,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     # step 1: exponential
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()

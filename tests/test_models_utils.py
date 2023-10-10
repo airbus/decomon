@@ -1,6 +1,6 @@
+import keras_core as keras
 import numpy as np
 import pytest
-import tensorflow as tf
 from keras_core import Input
 from keras_core.layers import Activation, Conv2D, Dense, Layer, Permute, PReLU
 from numpy.testing import assert_almost_equal

@@ -1,7 +1,7 @@
 from typing import Any, List, Optional, Union
 
+import keras_core as keras
 import numpy as np
-import tensorflow as tf
 from keras_core import backend as K
 from keras_core.layers import Flatten
 
@@ -20,16 +20,16 @@ from decomon.utils import maximum, minus, relu_, subtract
 
 
 def backward_add(
-    inputs_0: List[tf.Tensor],
-    inputs_1: List[tf.Tensor],
-    w_u_out: tf.Tensor,
-    b_u_out: tf.Tensor,
-    w_l_out: tf.Tensor,
-    b_l_out: tf.Tensor,
+    inputs_0: List[keras.KerasTensor],
+    inputs_1: List[keras.KerasTensor],
+    w_u_out: keras.KerasTensor,
+    b_u_out: keras.KerasTensor,
+    w_l_out: keras.KerasTensor,
+    b_l_out: keras.KerasTensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
-) -> List[List[tf.Tensor]]:
+) -> List[List[keras.KerasTensor]]:
     """Backward  LiRPA of inputs_0+inputs_1
 
     Args:
@@ -81,11 +81,11 @@ def backward_add(
 
 
 def backward_linear_prod(
-    x_0: tf.Tensor,
-    bounds_x: List[tf.Tensor],
-    back_bounds: List[tf.Tensor],
+    x_0: keras.KerasTensor,
+    bounds_x: List[keras.KerasTensor],
+    back_bounds: List[keras.KerasTensor],
     perturbation_domain: Optional[PerturbationDomain] = None,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Backward  LiRPA of a subroutine prod
 
     Args:
@@ -156,17 +156,17 @@ def backward_linear_prod(
 
 
 def backward_maximum(
-    inputs_0: List[tf.Tensor],
-    inputs_1: List[tf.Tensor],
-    w_u_out: tf.Tensor,
-    b_u_out: tf.Tensor,
-    w_l_out: tf.Tensor,
-    b_l_out: tf.Tensor,
+    inputs_0: List[keras.KerasTensor],
+    inputs_1: List[keras.KerasTensor],
+    w_u_out: keras.KerasTensor,
+    b_u_out: keras.KerasTensor,
+    w_l_out: keras.KerasTensor,
+    b_l_out: keras.KerasTensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
     **kwargs: Any,
-) -> List[List[tf.Tensor]]:
+) -> List[List[keras.KerasTensor]]:
     """Backward  LiRPA of maximum(inputs_0, inputs_1)
 
     Args:
@@ -226,17 +226,17 @@ def backward_maximum(
 
 # convex hull of the maximum between two functions
 def backward_max_(
-    inputs: List[tf.Tensor],
-    w_u_out: tf.Tensor,
-    b_u_out: tf.Tensor,
-    w_l_out: tf.Tensor,
-    b_l_out: tf.Tensor,
+    inputs: List[keras.KerasTensor],
+    w_u_out: keras.KerasTensor,
+    b_u_out: keras.KerasTensor,
+    w_l_out: keras.KerasTensor,
+    b_l_out: keras.KerasTensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis: int = -1,
     dc_decomp: bool = False,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Backward  LiRPA of max
 
     Args:
@@ -346,17 +346,17 @@ def backward_max_(
 
 
 def backward_minimum(
-    inputs_0: List[tf.Tensor],
-    inputs_1: List[tf.Tensor],
-    w_u_out: tf.Tensor,
-    b_u_out: tf.Tensor,
-    w_l_out: tf.Tensor,
-    b_l_out: tf.Tensor,
+    inputs_0: List[keras.KerasTensor],
+    inputs_1: List[keras.KerasTensor],
+    w_u_out: keras.KerasTensor,
+    b_u_out: keras.KerasTensor,
+    w_l_out: keras.KerasTensor,
+    b_l_out: keras.KerasTensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
     **kwargs: Any,
-) -> List[List[tf.Tensor]]:
+) -> List[List[keras.KerasTensor]]:
     """Backward  LiRPA of minimum(inputs_0, inputs_1)
 
     Args:
@@ -399,11 +399,11 @@ def backward_minimum(
 
 
 def backward_minus(
-    w_u_out: tf.Tensor,
-    b_u_out: tf.Tensor,
-    w_l_out: tf.Tensor,
-    b_l_out: tf.Tensor,
-) -> List[tf.Tensor]:
+    w_u_out: keras.KerasTensor,
+    b_u_out: keras.KerasTensor,
+    w_l_out: keras.KerasTensor,
+    b_l_out: keras.KerasTensor,
+) -> List[keras.KerasTensor]:
     """Backward  LiRPA of -x
 
     Args:
@@ -422,11 +422,11 @@ def backward_minus(
 
 def backward_scale(
     scale_factor: float,
-    w_u_out: tf.Tensor,
-    b_u_out: tf.Tensor,
-    w_l_out: tf.Tensor,
-    b_l_out: tf.Tensor,
-) -> List[tf.Tensor]:
+    w_u_out: keras.KerasTensor,
+    b_u_out: keras.KerasTensor,
+    w_l_out: keras.KerasTensor,
+    b_l_out: keras.KerasTensor,
+) -> List[keras.KerasTensor]:
     """Backward  LiRPA of scale_factor*x
 
     Args:
@@ -449,16 +449,16 @@ def backward_scale(
 
 
 def backward_subtract(
-    inputs_0: List[tf.Tensor],
-    inputs_1: List[tf.Tensor],
-    w_u_out: tf.Tensor,
-    b_u_out: tf.Tensor,
-    w_l_out: tf.Tensor,
-    b_l_out: tf.Tensor,
+    inputs_0: List[keras.KerasTensor],
+    inputs_1: List[keras.KerasTensor],
+    w_u_out: keras.KerasTensor,
+    b_u_out: keras.KerasTensor,
+    w_l_out: keras.KerasTensor,
+    b_l_out: keras.KerasTensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
-) -> List[List[tf.Tensor]]:
+) -> List[List[keras.KerasTensor]]:
     """Backward  LiRPA of inputs_0 - inputs_1
 
     Args:
@@ -495,16 +495,16 @@ def backward_subtract(
 
 
 def backward_multiply(
-    inputs_0: List[tf.Tensor],
-    inputs_1: List[tf.Tensor],
-    w_u_out: tf.Tensor,
-    b_u_out: tf.Tensor,
-    w_l_out: tf.Tensor,
-    b_l_out: tf.Tensor,
+    inputs_0: List[keras.KerasTensor],
+    inputs_1: List[keras.KerasTensor],
+    w_u_out: keras.KerasTensor,
+    b_u_out: keras.KerasTensor,
+    w_l_out: keras.KerasTensor,
+    b_l_out: keras.KerasTensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
-) -> List[List[tf.Tensor]]:
+) -> List[List[keras.KerasTensor]]:
     """Backward  LiRPA of element-wise multiply inputs_0*inputs_1
 
     Args:
@@ -578,16 +578,16 @@ def backward_multiply(
 
 
 def backward_sort(
-    inputs: List[tf.Tensor],
-    w_u_out: tf.Tensor,
-    b_u_out: tf.Tensor,
-    w_l_out: tf.Tensor,
-    b_l_out: tf.Tensor,
+    inputs: List[keras.KerasTensor],
+    w_u_out: keras.KerasTensor,
+    b_u_out: keras.KerasTensor,
+    w_l_out: keras.KerasTensor,
+    b_l_out: keras.KerasTensor,
     axis: int = -1,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Backward  LiRPA of sort
 
     Args:
@@ -642,7 +642,7 @@ def backward_sort(
     return [w_u_out, b_u_out, w_l_out, b_l_out]
 
 
-def get_identity_lirpa(inputs: List[tf.Tensor]) -> List[tf.Tensor]:
+def get_identity_lirpa(inputs: List[keras.KerasTensor]) -> List[keras.KerasTensor]:
     y = inputs[-1]
     shape = np.prod(y.shape[1:])
 

@@ -7,7 +7,7 @@ import inspect
 from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-import tensorflow as tf
+import keras_core as keras
 from keras_core.layers import Layer
 from keras_core.models import Model
 from keras_core.src.utils.python_utils import to_list
@@ -25,7 +25,7 @@ from decomon.models.utils import (
 )
 
 OutputMapKey = Union[str, int]
-OutputMapVal = Union[List[tf.Tensor], "OutputMapDict"]
+OutputMapVal = Union[List[keras.KerasTensor], "OutputMapDict"]
 OutputMapDict = Dict[OutputMapKey, OutputMapVal]
 
 LayerMapVal = Union[List[DecomonLayer], "LayerMapDict"]
@@ -90,7 +90,7 @@ def include_dim_layer_fn(
 
 def convert_forward(
     model: Model,
-    input_tensors: List[tf.Tensor],
+    input_tensors: List[keras.KerasTensor],
     layer_fn: Callable[..., Layer] = to_decomon,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
@@ -103,7 +103,7 @@ def convert_forward(
     softmax_to_linear: bool = True,
     joint: bool = True,
     **kwargs: Any,
-) -> Tuple[List[tf.Tensor], List[tf.Tensor], LayerMapDict, OutputMapDict]:
+) -> Tuple[List[keras.KerasTensor], List[keras.KerasTensor], LayerMapDict, OutputMapDict]:
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
 
@@ -138,13 +138,13 @@ def convert_forward(
 def convert_forward_functional_model(
     model: Model,
     layer_fn: Callable[[Layer], List[Layer]],
-    input_tensors: List[tf.Tensor],
+    input_tensors: List[keras.KerasTensor],
     softmax_to_linear: bool = True,
     count: int = 0,
     joint: bool = True,
     output_map: Optional[OutputMapDict] = None,
     layer_map: Optional[LayerMapDict] = None,
-) -> Tuple[List[tf.Tensor], List[tf.Tensor], LayerMapDict, OutputMapDict]:
+) -> Tuple[List[keras.KerasTensor], List[keras.KerasTensor], LayerMapDict, OutputMapDict]:
     if softmax_to_linear:
         model, has_softmax = softmax_2_linear(model)
 
@@ -159,7 +159,7 @@ def convert_forward_functional_model(
         output_map = {}
     if layer_map is None:
         layer_map = {}
-    output: List[tf.Tensor] = input_tensors
+    output: List[keras.KerasTensor] = input_tensors
     for depth in keys:
         nodes = dico_nodes[depth]
         for node in nodes:

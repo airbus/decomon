@@ -1,8 +1,8 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import keras_core as keras
 import keras_core.backend as K
 import numpy as np
-import tensorflow as tf
 from keras_core.backend import conv2d
 from keras_core.layers import InputSpec, MaxPooling2D
 
@@ -88,7 +88,7 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
             for j in range(self.pool_size[1]):
                 self.filters[i, j, 0, i * self.pool_size[0] + j] = 1
 
-        def conv_(x: tf.Tensor) -> tf.Tensor:
+        def conv_(x: keras.KerasTensor) -> keras.KerasTensor:
             if self.data_format in [None, "channels_last"]:
                 return K.cast(
                     K.expand_dims(
@@ -120,7 +120,7 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
 
         self.internal_op = conv_
 
-    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
+    def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
         """
         Args:
             input_shape
@@ -153,8 +153,8 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
 
     def _pooling_function_fast(
         self,
-        inputs: List[tf.Tensor],
-    ) -> List[tf.Tensor]:
+        inputs: List[keras.KerasTensor],
+    ) -> List[keras.KerasTensor]:
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
@@ -182,8 +182,8 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
 
     def _pooling_function_not_fast(
         self,
-        inputs: List[tf.Tensor],
-    ) -> List[tf.Tensor]:
+        inputs: List[keras.KerasTensor],
+    ) -> List[keras.KerasTensor]:
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(
             inputs, compute_ibp_from_affine=False
         )
@@ -226,7 +226,7 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
             outputs, axis=-1, dc_decomp=self.dc_decomp, mode=self.mode, perturbation_domain=self.perturbation_domain
         )
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
         if self.fast:
             return self._pooling_function_fast(inputs)
         else:

@@ -1,9 +1,9 @@
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import keras_core as keras
 import keras_core.backend as K
 import numpy as np
-import tensorflow as tf
 from keras_core.layers import (
     Activation,
     Concatenate,
@@ -84,7 +84,7 @@ def get_input_tensors(
     perturbation_domain: PerturbationDomain,
     ibp: bool = True,
     affine: bool = True,
-) -> Tuple[tf.Tensor, List[tf.Tensor]]:
+) -> Tuple[keras.KerasTensor, List[keras.KerasTensor]]:
     input_dim = get_input_dim(model)
     input_shape = None
     input_shape_vec = None
@@ -151,7 +151,7 @@ def get_input_tensors(
             z_value = K.cast(0.0, model.layers[0].dtype)
             o_value = K.cast(1.0, model.layers[0].dtype)
 
-            def get_bounds(z: tf.Tensor) -> List[tf.Tensor]:
+            def get_bounds(z: keras.KerasTensor) -> List[keras.KerasTensor]:
                 outputs = []
                 W = tf.linalg.diag(z_value * z + o_value)
                 b = z_value * z
@@ -181,7 +181,7 @@ def get_input_tensors(
 def get_input_tensors_keras_only(
     model: Model,
     input_shape: Tuple[int, ...],
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     input_tensors = []
     for i in range(len(model._input_layers)):
         input_tensors.append(Input(input_shape[1:], dtype=model.layers[0].dtype))
@@ -196,8 +196,8 @@ def get_input_dim(layer: Layer) -> int:
 
 
 def prepare_inputs_for_layer(
-    inputs: Union[Tuple[tf.Tensor, ...], List[tf.Tensor], tf.Tensor]
-) -> Union[Tuple[tf.Tensor, ...], List[tf.Tensor], tf.Tensor]:
+    inputs: Union[Tuple[keras.KerasTensor, ...], List[keras.KerasTensor], keras.KerasTensor]
+) -> Union[Tuple[keras.KerasTensor, ...], List[keras.KerasTensor], keras.KerasTensor]:
     """Prepare inputs for keras/decomon layers.
 
     Some Keras layers do not like list of tensors even with one single tensor.
@@ -211,8 +211,8 @@ def prepare_inputs_for_layer(
 
 
 def wrap_outputs_from_layer_in_list(
-    outputs: Union[Tuple[tf.Tensor, ...], List[tf.Tensor], tf.Tensor]
-) -> List[tf.Tensor]:
+    outputs: Union[Tuple[keras.KerasTensor, ...], List[keras.KerasTensor], keras.KerasTensor]
+) -> List[keras.KerasTensor]:
     if not isinstance(outputs, list):
         if isinstance(outputs, tuple):
             return list(outputs)
@@ -379,7 +379,7 @@ class Convert2Mode(Layer):
         self.mode_to = ForwardMode(mode_to)
         self.perturbation_domain = perturbation_domain
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
         mode_from = self.mode_from
         mode_to = self.mode_to
         perturbation_domain = self.perturbation_domain

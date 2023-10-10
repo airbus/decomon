@@ -1,8 +1,8 @@
 from typing import Union
 
+import keras_core as keras
 import numpy as np
 import numpy.typing as npt
-import tensorflow as tf
 from keras_core.optimizers import Adam
 
 from decomon.metrics.loss import get_upper_loss

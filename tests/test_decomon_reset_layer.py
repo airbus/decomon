@@ -1,6 +1,6 @@
+import keras_core as keras
 import numpy as np
 import pytest
-import tensorflow as tf
 from keras_core.layers import BatchNormalization, Conv2D, Dense, Flatten
 from numpy.testing import assert_almost_equal
 

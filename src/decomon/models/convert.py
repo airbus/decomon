@@ -1,9 +1,9 @@
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import keras_core as keras
 import keras_core.backend as K
 import numpy as np
-import tensorflow as tf
 from keras_core.layers import Input, InputLayer, Lambda, Layer
 from keras_core.models import Model
 
@@ -80,11 +80,11 @@ def preprocess_keras_model(
 # create status
 def convert(
     model: Model,
-    input_tensors: List[tf.Tensor],
+    input_tensors: List[keras.KerasTensor],
     method: Union[str, ConvertMethod] = ConvertMethod.CROWN,
     ibp: bool = False,
     affine: bool = False,
-    back_bounds: Optional[List[tf.Tensor]] = None,
+    back_bounds: Optional[List[keras.KerasTensor]] = None,
     layer_fn: Callable[..., Layer] = to_decomon,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
@@ -98,7 +98,12 @@ def convert(
     final_ibp: bool = False,
     final_affine: bool = False,
     **kwargs: Any,
-) -> Tuple[List[tf.Tensor], List[tf.Tensor], Union[LayerMapDict, Dict[int, BackwardLayer]], Optional[OutputMapDict],]:
+) -> Tuple[
+    List[keras.KerasTensor],
+    List[keras.KerasTensor],
+    Union[LayerMapDict, Dict[int, BackwardLayer]],
+    Optional[OutputMapDict],
+]:
     if back_bounds is None:
         back_bounds = []
     if perturbation_domain is None:
@@ -163,12 +168,12 @@ def clone(
     slope: Union[str, Slope] = Slope.V_SLOPE,
     perturbation_domain: Optional[PerturbationDomain] = None,
     method: Union[str, ConvertMethod] = ConvertMethod.CROWN,
-    back_bounds: Optional[List[tf.Tensor]] = None,
+    back_bounds: Optional[List[keras.KerasTensor]] = None,
     finetune: bool = False,
     shared: bool = True,
     finetune_forward: bool = False,
     finetune_backward: bool = False,
-    extra_inputs: Optional[List[tf.Tensor]] = None,
+    extra_inputs: Optional[List[keras.KerasTensor]] = None,
     to_keras: bool = True,
     final_ibp: Optional[bool] = None,
     final_affine: Optional[bool] = None,

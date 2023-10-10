@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from itertools import chain
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+import keras_core as keras
 import keras_core.backend as K
 import numpy as np
-import tensorflow as tf
 from keras_core.layers import Layer, Wrapper
 
 from decomon.backward_layers.utils import (
@@ -38,7 +38,7 @@ from decomon.layers.utils import broadcast, multiply, permute_dimensions, split
 
 class BackwardMerge(ABC, Wrapper):
     layer: Layer
-    _trainable_weights: List[tf.Variable]
+    _trainable_weights: List[keras.Variable]
 
     def __init__(
         self,
@@ -89,7 +89,7 @@ class BackwardMerge(ABC, Wrapper):
         return config
 
     @abstractmethod
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[List[keras.KerasTensor]]:
         """
         Args:
             inputs
@@ -99,7 +99,7 @@ class BackwardMerge(ABC, Wrapper):
         """
         pass
 
-    def build(self, input_shape: List[tf.TensorShape]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
         """
         Args:
             input_shape
@@ -150,7 +150,7 @@ class BackwardAdd(BackwardMerge):
             mode=self.mode, perturbation_domain=self.perturbation_domain, dc_decomp=self.dc_decomp
         ).call
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[List[keras.KerasTensor]]:
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
         inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
@@ -197,7 +197,7 @@ class BackwardAverage(BackwardMerge):
         )
         self.op = DecomonAdd(mode=self.mode, perturbation_domain=self.perturbation_domain, dc_decomp=False).call
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[List[keras.KerasTensor]]:
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
         inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
@@ -206,8 +206,8 @@ class BackwardAverage(BackwardMerge):
         if n_elem == 1:  # nothing to merge
             return [[w_u_out, b_u_out, w_l_out, b_l_out]]
         else:
-            bounds: List[List[tf.Tensor]] = []
-            input_bounds: List[List[tf.Tensor]] = []
+            bounds: List[List[keras.KerasTensor]] = []
+            input_bounds: List[List[keras.KerasTensor]] = []
 
             for j in range(n_elem - 1, 0, -1):
                 inputs_1 = inputs_list[j]
@@ -260,7 +260,7 @@ class BackwardSubtract(BackwardMerge):
         if not isinstance(layer, DecomonSubtract):
             raise KeyError()
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[List[keras.KerasTensor]]:
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
         inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
@@ -305,7 +305,7 @@ class BackwardMaximum(BackwardMerge):
         if not isinstance(layer, DecomonMaximum):
             raise KeyError()
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[List[keras.KerasTensor]]:
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
         inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
@@ -350,7 +350,7 @@ class BackwardMinimum(BackwardMerge):
         if not isinstance(layer, DecomonMinimum):
             raise KeyError()
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[List[keras.KerasTensor]]:
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
         inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
@@ -397,7 +397,7 @@ class BackwardConcatenate(BackwardMerge):
 
         self.axis = self.layer.axis
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[List[keras.KerasTensor]]:
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
         inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
@@ -439,7 +439,7 @@ class BackwardMultiply(BackwardMerge):
         if not isinstance(layer, DecomonMultiply):
             raise KeyError()
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[List[keras.KerasTensor]]:
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
         inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
@@ -489,7 +489,7 @@ class BackwardDot(BackwardMerge):
 
         raise NotImplementedError()
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[List[tf.Tensor]]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[List[keras.KerasTensor]]:
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
         inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)

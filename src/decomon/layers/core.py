@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
-import tensorflow as tf
+import keras_core as keras
 from keras_core.layers import Layer
 
 from decomon.core import (
@@ -18,7 +18,7 @@ from decomon.keras_utils import get_weight_index_from_name
 class DecomonLayer(ABC, Layer):
     """Abstract class that contains the common information of every implemented layers for Forward LiRPA"""
 
-    _trainable_weights: List[tf.Variable]
+    _trainable_weights: List[keras.Variable]
 
     @property
     @abstractmethod
@@ -85,7 +85,7 @@ class DecomonLayer(ABC, Layer):
         )
         return config
 
-    def build(self, input_shape: List[tf.TensorShape]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
         """
         Args:
             input_shape
@@ -98,7 +98,7 @@ class DecomonLayer(ABC, Layer):
         self.original_keras_layer_class.build(self, y_input_shape)
 
     @abstractmethod
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
         """
         Args:
             inputs
@@ -107,7 +107,7 @@ class DecomonLayer(ABC, Layer):
 
         """
 
-    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> List[tf.TensorShape]:
+    def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
         """
         Args:
             input_shape
@@ -141,7 +141,7 @@ class DecomonLayer(ABC, Layer):
         """
         return []
 
-    def join(self, bounds: List[tf.Tensor]) -> List[tf.Tensor]:
+    def join(self, bounds: List[keras.KerasTensor]) -> List[keras.KerasTensor]:
         """
         Args:
             bounds

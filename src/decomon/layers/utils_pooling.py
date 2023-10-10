@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Union
 
+import keras_core as keras
 import numpy as np
-import tensorflow as tf
 from keras_core import backend as K
 
 from decomon.core import (
@@ -17,13 +17,13 @@ from decomon.core import (
 
 
 def get_upper_linear_hull_max(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     perturbation_domain: Optional[PerturbationDomain] = None,
     axis: int = -1,
     dc_decomp: bool = False,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Compute the linear hull that overapproximates max along the axis dimension
 
     Args:
@@ -132,14 +132,14 @@ def get_upper_linear_hull_max(
 
 
 def get_lower_linear_hull_max(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     perturbation_domain: Optional[PerturbationDomain] = None,
     axis: int = -1,
-    finetune_lower: Optional[tf.Tensor] = None,
+    finetune_lower: Optional[keras.KerasTensor] = None,
     dc_decomp: bool = False,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Compute the linear hull that overapproximates max along the axis dimension
 
     Args:

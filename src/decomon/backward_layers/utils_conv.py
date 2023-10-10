@@ -1,12 +1,12 @@
 import warnings
 
+import keras_core as keras
 import keras_core.backend as K
 import numpy as np
-import tensorflow as tf
 from keras_core.layers import Conv2D, Input
 
 
-def get_toeplitz(conv_layer: Conv2D, flatten: bool = True) -> tf.Tensor:
+def get_toeplitz(conv_layer: Conv2D, flatten: bool = True) -> keras.KerasTensor:
     """Express formally the affine component of the convolution
     Conv is a linear operator but its affine component is implicit
     we use im2col and extract_patches to express the affine matrix
@@ -27,7 +27,7 @@ def get_toeplitz(conv_layer: Conv2D, flatten: bool = True) -> tf.Tensor:
         return get_toeplitz_channels_first(conv_layer, flatten)
 
 
-def get_toeplitz_channels_last(conv_layer: Conv2D, flatten: bool = True) -> tf.Tensor:
+def get_toeplitz_channels_last(conv_layer: Conv2D, flatten: bool = True) -> keras.KerasTensor:
     """Express formally the affine component of the convolution for data_format=channels_last
     Conv is a linear operator but its affine component is implicit
     we use im2col and extract_patches to express the affine matrix
@@ -97,7 +97,7 @@ def get_toeplitz_channels_last(conv_layer: Conv2D, flatten: bool = True) -> tf.T
         return w
 
 
-def get_toeplitz_channels_first(conv_layer: Conv2D, flatten: bool = True) -> tf.Tensor:
+def get_toeplitz_channels_first(conv_layer: Conv2D, flatten: bool = True) -> keras.KerasTensor:
     """Express formally the affine component of the convolution for data_format=channels_first
     Conv is a linear operator but its affine component is implicit
     we use im2col and extract_patches to express the affine matrix
