@@ -1,7 +1,7 @@
 # creating toy network and assess that the decomposition is correct
 
 
-import keras_core.backend as K
+import keras_core.ops as K
 import numpy as np
 import pytest
 from keras_core.layers import Activation, Dense, Flatten, Input, Reshape

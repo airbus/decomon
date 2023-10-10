@@ -1,8 +1,8 @@
 from typing import Any, Callable, List, Optional, Tuple, Union
 
 import keras_core as keras
+import keras_core.ops as K
 import numpy as np
-from keras_core import backend as K
 from tensorflow.math import greater_equal
 from tensorflow.types.experimental import TensorLike
 

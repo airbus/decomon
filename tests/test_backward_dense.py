@@ -1,4 +1,4 @@
-import keras_core.backend as K
+import keras_core.ops as K
 from keras_core.layers import Dense, Input
 
 from decomon.backward_layers.convert import to_backward

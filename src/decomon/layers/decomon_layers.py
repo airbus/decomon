@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import keras_core as keras
-import keras_core.backend as K
+import keras_core.ops as K
 import numpy as np
 from keras_core.constraints import NonNeg
 from keras_core.layers import (
