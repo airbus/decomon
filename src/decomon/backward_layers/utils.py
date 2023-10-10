@@ -2,8 +2,8 @@ from typing import Any, List, Optional, Union
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
-from tensorflow.keras.layers import Flatten
+from keras_core import backend as K
+from keras_core.layers import Flatten
 
 from decomon.core import (
     BoxDomain,

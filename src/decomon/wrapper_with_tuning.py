@@ -3,7 +3,7 @@ from typing import Union
 import numpy as np
 import numpy.typing as npt
 import tensorflow as tf
-from tensorflow.keras.optimizers import Adam
+from keras_core.optimizers import Adam
 
 from decomon.metrics.loss import get_upper_loss
 from decomon.models.models import DecomonModel
@@ -12,8 +12,8 @@ from decomon.wrapper import get_lower_box, get_upper_box, refine_boxes
 
 #### FORMAL BOUNDS ######
 def get_upper_box_tuning(
-    model: Union[tf.keras.Model, DecomonModel],
-    decomon_model_concat: tf.keras.Model,
+    model: Union[keras.Model, DecomonModel],
+    decomon_model_concat: keras.Model,
     x_min: npt.NDArray[np.float_],
     x_max: npt.NDArray[np.float_],
     batch_size: int = 1,
@@ -98,8 +98,8 @@ def get_upper_box_tuning(
 
 #### FORMAL BOUNDS ######
 def get_lower_box_tuning(
-    model: Union[tf.keras.Model, DecomonModel],
-    decomon_model_concat: tf.keras.Model,
+    model: Union[keras.Model, DecomonModel],
+    decomon_model_concat: keras.Model,
     x_min: npt.NDArray[np.float_],
     x_max: npt.NDArray[np.float_],
     batch_size: int = 1,

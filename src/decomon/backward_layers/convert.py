@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional, Union
 
-from tensorflow.keras.layers import Layer
+from keras_core.layers import Layer
 
 import decomon.backward_layers.backward_layers
 import decomon.backward_layers.backward_maxpooling

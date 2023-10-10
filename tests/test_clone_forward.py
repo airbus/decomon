@@ -1,19 +1,11 @@
 # creating toy network and assess that the decomposition is correct
 
 
+import keras_core.backend as K
 import numpy as np
 import pytest
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import (
-    Activation,
-    Add,
-    Average,
-    Conv2D,
-    Dense,
-    Flatten,
-    Input,
-)
-from tensorflow.keras.models import Model, Sequential
+from keras_core.layers import Activation, Add, Average, Conv2D, Dense, Flatten, Input
+from keras_core.models import Model, Sequential
 
 from decomon.core import ForwardMode, get_affine, get_ibp
 from decomon.models.forward_cloning import convert_forward

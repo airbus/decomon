@@ -1,7 +1,7 @@
+import keras_core.backend as K
 import numpy as np
 import pytest
 import tensorflow as tf
-import tensorflow.keras.backend as K
 from numpy.testing import assert_almost_equal
 
 from decomon.layers.utils_pooling import (

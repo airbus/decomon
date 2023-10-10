@@ -1,5 +1,5 @@
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Dense, Input
+import keras_core.backend as K
+from keras_core.layers import Dense, Input
 
 from decomon.backward_layers.convert import to_backward
 from decomon.core import ForwardMode

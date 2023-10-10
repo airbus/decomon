@@ -13,14 +13,16 @@ from decomon.core import (
 from decomon.models.utils import ConvertMethod
 
 try:
-    from keras.src.engine.functional import (
+    from keras_core.src.engine.functional import (
         get_network_config,  # new path starting from keras 2.13
     )
 except ImportError:
-    from keras.engine.functional import get_network_config  # old path until keras 2.12
+    from keras_core.engine.functional import (
+        get_network_config,  # old path until keras 2.12
+    )
 
 
-class DecomonModel(tf.keras.Model):
+class DecomonModel(keras.Model):
     def __init__(
         self,
         inputs: Union[tf.Tensor, List[tf.Tensor]],

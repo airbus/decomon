@@ -1,10 +1,10 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import keras_core.backend as K
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.keras.backend import conv2d
-from tensorflow.keras.layers import InputSpec, MaxPooling2D
+from keras_core.backend import conv2d
+from keras_core.layers import InputSpec, MaxPooling2D
 
 from decomon.core import ForwardMode, PerturbationDomain
 from decomon.layers.core import DecomonLayer

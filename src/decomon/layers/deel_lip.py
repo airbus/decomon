@@ -2,7 +2,7 @@ import logging
 from typing import Any, Dict, List, Optional, Union
 
 import tensorflow as tf
-from tensorflow.keras.layers import Layer
+from keras_core.layers import Layer
 
 from decomon.core import ForwardMode, PerturbationDomain
 from decomon.layers.core import DecomonLayer

@@ -1,11 +1,11 @@
 # Test unit for decomon with Dense layers
 
 
+import keras_core.backend as K
 import numpy as np
 import pytest
-import tensorflow.keras.backend as K
+from keras_core.layers import Dense
 from numpy.testing import assert_almost_equal
-from tensorflow.keras.layers import Dense
 
 from decomon.core import ForwardMode, get_affine, get_ibp
 from decomon.layers.convert import to_decomon

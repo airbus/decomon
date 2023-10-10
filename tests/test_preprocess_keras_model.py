@@ -1,8 +1,7 @@
+import keras_core.backend as K
 import numpy as np
 import pytest
-import tensorflow.keras.backend as K
-from numpy.testing import assert_almost_equal
-from tensorflow.keras.layers import (
+from keras_core.layers import (
     Activation,
     Conv2D,
     Dense,
@@ -11,7 +10,8 @@ from tensorflow.keras.layers import (
     InputLayer,
     PReLU,
 )
-from tensorflow.keras.models import Model, Sequential
+from keras_core.models import Model, Sequential
+from numpy.testing import assert_almost_equal
 
 from decomon.models.convert import (
     convert_deellip_layers_in_keras_model,

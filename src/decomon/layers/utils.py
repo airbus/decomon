@@ -1,12 +1,12 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import keras_core as keras
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras as keras
-from tensorflow.keras import backend as K
-from tensorflow.keras.constraints import Constraint
-from tensorflow.keras.initializers import Initializer
-from tensorflow.keras.layers import Layer
+from keras_core import backend as K
+from keras_core.constraints import Constraint
+from keras_core.initializers import Initializer
+from keras_core.layers import Layer
 
 from decomon.core import (
     BallDomain,

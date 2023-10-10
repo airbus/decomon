@@ -1,10 +1,10 @@
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import keras_core.backend as K
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import (
+from keras_core.layers import (
     Activation,
     Concatenate,
     Flatten,
@@ -14,7 +14,8 @@ from tensorflow.keras.layers import (
     Maximum,
     Minimum,
 )
-from tensorflow.keras.models import Model
+from keras_core.models import Model
+from keras_core.src.ops.node import Node
 
 from decomon.core import (
     BallDomain,
@@ -27,16 +28,11 @@ from decomon.core import (
 from decomon.layers.utils import is_a_merge_layer
 
 try:
-    from keras.src.engine.node import Node  # new path starting from keras 2.13
-except ImportError:
-    from keras.engine.node import Node  # old path until keras 2.12
-
-try:
     from keras.src.backend import (
         observe_object_name,  # new path starting from keras 2.13
     )
 except ImportError:
-    from keras.backend import observe_object_name  # old path until keras 2.12
+    from keras_core.backend import observe_object_name  # old path until keras 2.12
 
 try:
     from deel.lip.layers import LipschitzLayer

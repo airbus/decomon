@@ -1,13 +1,12 @@
 from typing import List, Optional, Union
 
+import keras_core.backend as K
 import numpy as np
 import numpy.typing as npt
 import pytest
 import tensorflow as tf
-import tensorflow.keras.backend as K
-from numpy.testing import assert_almost_equal
-from tensorflow.keras import Input
-from tensorflow.keras.layers import (
+from keras_core import Input
+from keras_core.layers import (
     Activation,
     Add,
     Average,
@@ -17,7 +16,8 @@ from tensorflow.keras.layers import (
     Input,
     Reshape,
 )
-from tensorflow.keras.models import Model, Sequential
+from keras_core.models import Model, Sequential
+from numpy.testing import assert_almost_equal
 
 from decomon.core import ForwardMode, Slope
 from decomon.models.utils import ConvertMethod

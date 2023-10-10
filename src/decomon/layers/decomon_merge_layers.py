@@ -1,8 +1,8 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import keras_core.backend as K
 import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import (
+from keras_core.layers import (
     Add,
     Average,
     Concatenate,

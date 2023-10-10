@@ -8,9 +8,9 @@ from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import tensorflow as tf
-from tensorflow.keras.layers import Layer
-from tensorflow.keras.models import Model
-from tensorflow.python.keras.utils.generic_utils import to_list
+from keras_core.layers import Layer
+from keras_core.models import Model
+from keras_core.src.utils.python_utils import to_list
 
 from decomon.core import BoxDomain, PerturbationDomain, Slope
 from decomon.layers.convert import to_decomon
