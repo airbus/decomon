@@ -1,4 +1,3 @@
-import keras_core.ops as K
 import pytest
 from keras_core.layers import Layer, Reshape
 from tensorflow.python.keras.backend import _get_available_gpus
@@ -27,7 +26,7 @@ def test_Backward_Activation_1D_box_model(n, activation, mode, floatx, decimal, 
 
     # backward outputs
     outputs = backward_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency
@@ -60,7 +59,7 @@ def test_Backward_Activation_1D_box_model_slope(helpers):
         layer_backward = to_backward(decomon_layer, slope=slope, mode=mode)
         assert layer_backward.slope == slope
         outputs = layer_backward(inputs_for_mode)
-        f_decomon = K.function(inputs, outputs)
+        f_decomon = helpers.function(inputs, outputs)
         outputs_by_slope[slope] = f_decomon(inputs_)
 
     # check results
@@ -93,7 +92,7 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, decimal, mode, 
 
     # backward outputs
     outputs = backward_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency
@@ -125,7 +124,7 @@ def test_Backward_Flatten_multiD_box(odd, floatx, decimal, mode, data_format, he
 
     # backward outputs
     outputs = backward_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency
@@ -154,7 +153,7 @@ def test_Backward_Reshape_multiD_box(odd, floatx, decimal, mode, helpers):
 
     # backward outputs
     outputs = backward_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency

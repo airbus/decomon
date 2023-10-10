@@ -1,7 +1,6 @@
 # Test unit for decomon with Dense layers
 
 
-import keras_core.ops as K
 import numpy as np
 import pytest
 from keras_core.layers import Conv2D
@@ -35,7 +34,7 @@ def test_Decomon_conv_box(data_format, mode, dc_decomp, floatx, decimal, helpers
 
     # decomon function
     outputs = decomon_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
 
     # test with several kernel (negative or positive part)
     W_, bias = decomon_layer.get_weights()
@@ -88,14 +87,14 @@ def test_Decomon_conv_to_decomon_box(shared, floatx, dc_decomp, helpers):
     # keras layer & function & output
     keras_layer = Conv2D(**kwargs_layer)
     output_ref = keras_layer(input_ref)
-    f_ref = K.function(inputs, output_ref)
+    f_ref = helpers.function(inputs, output_ref)
     output_ref_ = f_ref(inputs_)
 
     #  decomon layer & function & output via to_decomon
     input_dim = helpers.get_input_dim_from_full_inputs(inputs)
     decomon_layer = to_decomon(keras_layer, input_dim, dc_decomp=dc_decomp, shared=shared, ibp=ibp, affine=affine)
     outputs = decomon_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency

@@ -1,4 +1,3 @@
-import keras_core.ops as K
 from keras_core.layers import MaxPooling2D
 
 from decomon.layers.maxpooling import DecomonMaxPooling2D
@@ -25,12 +24,12 @@ def test_MaxPooling2D_box(mode, floatx, decimal, helpers):
 
     # original output
     output_ref = keras_layer(input_ref)
-    f_ref = K.function(inputs, output_ref)
+    f_ref = helpers.function(inputs, output_ref)
     output_ref_ = f_ref(inputs_)
 
     # decomon outputs
     outputs = decomon_layer(inputs_for_mode)
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency

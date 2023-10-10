@@ -1,4 +1,3 @@
-import keras_core as keras
 import keras_core.ops as K
 import numpy as np
 import pytest
@@ -39,7 +38,7 @@ def test_get_lower_upper_linear_hull_max(
 
     # decomon output
     output = func(inputs_for_mode, mode=mode, axis=axis, finetune_lower=finetune_odd)
-    f_pooling = K.function(inputs, output)
+    f_pooling = helpers.function(inputs, output)
     w_, b_ = f_pooling(inputs_)
 
     # reference output
