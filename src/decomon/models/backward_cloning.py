@@ -2,7 +2,7 @@ from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import keras_core as keras
-import keras_core.backend as K
+import keras_core.ops as K
 from keras_core.layers import Concatenate, Lambda, Layer
 from keras_core.models import Model
 from keras_core.src.ops.node import Node

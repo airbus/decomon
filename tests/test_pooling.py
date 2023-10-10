@@ -1,4 +1,4 @@
-import keras_core.backend as K
+import keras_core.ops as K
 from keras_core.layers import MaxPooling2D
 
 from decomon.layers.maxpooling import DecomonMaxPooling2D

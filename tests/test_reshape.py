@@ -1,4 +1,4 @@
-import keras_core.backend as K
+import keras_core.ops as K
 import numpy as np
 import pytest
 from keras_core.layers import Permute, Reshape

@@ -1,9 +1,9 @@
 # Test unit for decomon with Dense layers
 
 
+import keras_core.ops as K
 import numpy as np
 import pytest
-import tensorflow.python.keras.backend as K
 from keras_core.layers import Conv2D, Input
 from keras_core.models import Model
 from numpy.testing import assert_almost_equal
