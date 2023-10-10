@@ -1,10 +1,10 @@
 # Test unit for decomon with Dense layers
 
 
+import keras_core.backend as K
 import numpy as np
 import pytest
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import (
+from keras_core.layers import (
     Add,
     Average,
     Concatenate,
@@ -13,7 +13,7 @@ from tensorflow.keras.layers import (
     Multiply,
     Subtract,
 )
-from tensorflow.keras.models import Model
+from keras_core.models import Model
 
 from decomon.core import ForwardMode, get_affine, get_ibp
 from decomon.layers.convert import to_decomon

@@ -4,9 +4,9 @@
 import numpy as np
 import pytest
 import tensorflow.python.keras.backend as K
+from keras_core.layers import Conv2D, Input
+from keras_core.models import Model
 from numpy.testing import assert_almost_equal
-from tensorflow.keras.layers import Conv2D, Input
-from tensorflow.keras.models import Model
 
 from decomon.backward_layers.utils_conv import get_toeplitz
 from decomon.core import get_affine, get_ibp

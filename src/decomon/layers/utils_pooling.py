@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from keras_core import backend as K
 
 from decomon.core import (
     BoxDomain,

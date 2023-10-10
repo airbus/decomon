@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type, Union
 
 import tensorflow as tf
-from tensorflow.keras.layers import Layer
+from keras_core.layers import Layer
 
 from decomon.core import (
     BoxDomain,

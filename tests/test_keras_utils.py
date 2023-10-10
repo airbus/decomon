@@ -1,6 +1,6 @@
 import pytest
 import tensorflow as tf
-from tensorflow.keras.layers import Dense
+from keras_core.layers import Dense
 
 from decomon.keras_utils import get_weight_index_from_name
 

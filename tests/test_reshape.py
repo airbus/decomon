@@ -1,7 +1,7 @@
+import keras_core.backend as K
 import numpy as np
 import pytest
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Permute, Reshape
+from keras_core.layers import Permute, Reshape
 
 from decomon.core import ForwardMode, get_affine, get_ibp
 from decomon.layers.convert import to_decomon

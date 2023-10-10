@@ -2,7 +2,7 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from keras_core import backend as K
 from tensorflow.math import greater_equal
 from tensorflow.types.experimental import TensorLike
 

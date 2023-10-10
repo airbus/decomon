@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 import tensorflow as tf
+from keras_core.layers import BatchNormalization, Conv2D, Dense, Flatten
 from numpy.testing import assert_almost_equal
-from tensorflow.keras.layers import BatchNormalization, Conv2D, Dense, Flatten
 
 from decomon.core import ForwardMode
 from decomon.layers.decomon_layers import (

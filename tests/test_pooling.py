@@ -1,5 +1,5 @@
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import MaxPooling2D
+import keras_core.backend as K
+from keras_core.layers import MaxPooling2D
 
 from decomon.layers.maxpooling import DecomonMaxPooling2D
 

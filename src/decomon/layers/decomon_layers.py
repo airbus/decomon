@@ -1,10 +1,10 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import keras_core.backend as K
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.keras.constraints import NonNeg
-from tensorflow.keras.layers import (
+from keras_core.constraints import NonNeg
+from keras_core.layers import (
     Activation,
     BatchNormalization,
     Conv2D,

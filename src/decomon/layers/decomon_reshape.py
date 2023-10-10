@@ -1,8 +1,8 @@
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
+import keras_core.backend as K
 import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import InputSpec, Layer, Permute, Reshape
+from keras_core.layers import InputSpec, Layer, Permute, Reshape
 
 from decomon.core import ForwardMode, PerturbationDomain, get_affine, get_ibp
 from decomon.layers.core import DecomonLayer

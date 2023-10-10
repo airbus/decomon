@@ -1,9 +1,9 @@
 import warnings
 
+import keras_core.backend as K
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Conv2D, Input
+from keras_core.layers import Conv2D, Input
 
 
 def get_toeplitz(conv_layer: Conv2D, flatten: bool = True) -> tf.Tensor:

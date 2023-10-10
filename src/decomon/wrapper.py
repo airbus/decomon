@@ -38,7 +38,7 @@ def prepare_labels(labels: LabelType, n_batch: int) -> np.typing.NDArray[np.int_
 
 ##### ADVERSARIAL ROBUSTTNESS #####
 def get_adv_box(
-    model: Union[tf.keras.Model, DecomonModel],
+    model: Union[keras.Model, DecomonModel],
     x_min: npt.NDArray[np.float_],
     x_max: npt.NDArray[np.float_],
     source_labels: LabelType,
@@ -260,7 +260,7 @@ def get_adv_box(
 
 
 def check_adv_box(
-    model: Union[tf.keras.Model, DecomonModel],
+    model: Union[keras.Model, DecomonModel],
     x_min: npt.NDArray[np.float_],
     x_max: npt.NDArray[np.float_],
     source_labels: npt.NDArray[np.int_],
@@ -419,7 +419,7 @@ def check_adv_box(
 
 #### FORMAL BOUNDS ######
 def get_upper_box(
-    model: Union[tf.keras.Model, DecomonModel],
+    model: Union[keras.Model, DecomonModel],
     x_min: npt.NDArray[np.float_],
     x_max: npt.NDArray[np.float_],
     batch_size: int = -1,
@@ -442,7 +442,7 @@ def get_upper_box(
 
 
 def get_lower_box(
-    model: Union[tf.keras.Model, DecomonModel],
+    model: Union[keras.Model, DecomonModel],
     x_min: npt.NDArray[np.float_],
     x_max: npt.NDArray[np.float_],
     batch_size: int = -1,
@@ -465,7 +465,7 @@ def get_lower_box(
 
 
 def get_range_box(
-    model: Union[tf.keras.Model, DecomonModel],
+    model: Union[keras.Model, DecomonModel],
     x_min: npt.NDArray[np.float_],
     x_max: npt.NDArray[np.float_],
     batch_size: int = -1,
@@ -595,7 +595,7 @@ def get_range_box(
 
 # get upper bound of a sample with bounded noise
 def get_upper_noise(
-    model: Union[tf.keras.Model, DecomonModel],
+    model: Union[keras.Model, DecomonModel],
     x: npt.NDArray[np.float_],
     eps: float,
     p: float = np.inf,
@@ -621,7 +621,7 @@ def get_upper_noise(
 
 # get upper bound of a sample with bounded noise
 def get_lower_noise(
-    model: Union[tf.keras.Model, DecomonModel],
+    model: Union[keras.Model, DecomonModel],
     x: npt.NDArray[np.float_],
     eps: float,
     p: float = np.inf,
@@ -647,7 +647,7 @@ def get_lower_noise(
 
 # get upper bound of a sample with bounded noise
 def get_range_noise(
-    model: Union[tf.keras.Model, DecomonModel],
+    model: Union[keras.Model, DecomonModel],
     x: npt.NDArray[np.float_],
     eps: float,
     p: float = np.inf,
@@ -805,7 +805,7 @@ def refine_boxes(
 
 def refine_box(
     func: Callable[..., npt.NDArray[np.float_]],
-    model: Union[tf.keras.Model, DecomonModel],
+    model: Union[keras.Model, DecomonModel],
     x_min: npt.NDArray[np.float_],
     x_max: npt.NDArray[np.float_],
     n_split: int,
@@ -909,7 +909,7 @@ def refine_box(
 
 ### adversarial robustness Lp norm
 def get_adv_noise(
-    model: Union[tf.keras.Model, DecomonModel],
+    model: Union[keras.Model, DecomonModel],
     x: npt.NDArray[np.float_],
     source_labels: LabelType,
     eps: float = 0.0,

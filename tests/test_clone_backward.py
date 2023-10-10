@@ -1,7 +1,7 @@
 # creating toy network and assess that the decomposition is correct
 
 
-import tensorflow.keras.backend as K
+import keras_core.backend as K
 
 from decomon.core import get_affine, get_ibp
 from decomon.models.backward_cloning import convert_backward

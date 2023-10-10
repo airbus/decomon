@@ -1,6 +1,6 @@
+import keras_core.backend as K
 import numpy as np
 import pytest
-import tensorflow.keras.backend as K
 from numpy.testing import assert_almost_equal
 
 from decomon.backward_layers.activations import backward_relu, backward_softsign

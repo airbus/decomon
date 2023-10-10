@@ -1,5 +1,5 @@
+from keras_core.layers import Layer
 from tensorflow import Variable
-from tensorflow.keras.layers import Layer
 
 
 def get_weight_index(layer: Layer, weight: Variable) -> int:

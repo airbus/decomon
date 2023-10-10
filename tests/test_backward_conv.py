@@ -1,9 +1,9 @@
 # Test unit for decomon with Dense layers
 
 
+import keras_core.backend as K
 import numpy as np
 import pytest
-import tensorflow.keras.backend as K
 from tensorflow.python.keras.backend import _get_available_gpus
 
 from decomon.backward_layers.convert import to_backward

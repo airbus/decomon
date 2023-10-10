@@ -1,5 +1,5 @@
 import pytest
-from tensorflow.keras.layers import Layer
+from keras_core.layers import Layer
 
 from decomon.backward_layers.backward_layers import (
     BackwardActivation,
