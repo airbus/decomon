@@ -1,9 +1,9 @@
 import warnings
 from typing import Any, Callable, Dict, List, Optional, Union
 
+import keras_core as keras
 import keras_core.backend as K
 import numpy as np
-import tensorflow as tf
 from keras_core.layers import Layer
 
 from decomon.core import (
@@ -39,7 +39,7 @@ LINEAR = "linear"
 
 
 def backward_relu(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     alpha: float = 0.0,
@@ -48,7 +48,7 @@ def backward_relu(
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Backward  LiRPA of relu
 
     Args:
@@ -87,13 +87,13 @@ def backward_relu(
 
 
 def backward_sigmoid(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Backward  LiRPA of sigmoid
 
     Args:
@@ -118,13 +118,13 @@ def backward_sigmoid(
 
 
 def backward_tanh(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Backward  LiRPA of tanh
 
     Args:
@@ -149,13 +149,13 @@ def backward_tanh(
 
 
 def backward_hard_sigmoid(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Backward  LiRPA of hard sigmoid
 
     Args:
@@ -178,13 +178,13 @@ def backward_hard_sigmoid(
 
 
 def backward_elu(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Backward  LiRPA of Exponential Linear Unit
 
     Args:
@@ -208,13 +208,13 @@ def backward_elu(
 
 
 def backward_selu(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Backward LiRPA of Scaled Exponential Linear Unit (SELU)
 
     Args:
@@ -238,13 +238,13 @@ def backward_selu(
 
 
 def backward_linear(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Backward LiRPA of linear
 
     Args:
@@ -265,13 +265,13 @@ def backward_linear(
 
 
 def backward_exponential(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Backward LiRPAof exponential
 
     Args:
@@ -294,13 +294,13 @@ def backward_exponential(
 
 
 def backward_softplus(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Backward LiRPA of softplus
 
     Args:
@@ -325,13 +325,13 @@ def backward_softplus(
 
 
 def backward_softsign(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Backward LiRPA of softsign
 
     Args:
@@ -359,16 +359,16 @@ def backward_softsign(
 
 
 def backward_softsign_(
-    inputs: List[tf.Tensor],
-    w_u_out: tf.Tensor,
-    b_u_out: tf.Tensor,
-    w_l_out: tf.Tensor,
-    b_l_out: tf.Tensor,
+    inputs: List[keras.KerasTensor],
+    w_u_out: keras.KerasTensor,
+    b_u_out: keras.KerasTensor,
+    w_l_out: keras.KerasTensor,
+    b_l_out: keras.KerasTensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     w_u_0, b_u_0, w_l_0, b_l_0 = get_linear_hull_s_shape(
@@ -391,14 +391,14 @@ def backward_softsign_(
 
 
 def backward_softmax(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis: int = -1,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Backward LiRPA of softmax
 
     Args:
@@ -422,7 +422,7 @@ def backward_softmax(
     raise NotImplementedError()
 
 
-def deserialize(name: str) -> Callable[..., List[tf.Tensor]]:
+def deserialize(name: str) -> Callable[..., List[keras.KerasTensor]]:
     """Get the activation from name.
 
     Args:
@@ -457,7 +457,7 @@ def deserialize(name: str) -> Callable[..., List[tf.Tensor]]:
     raise ValueError("Could not interpret " "activation function identifier:", name)
 
 
-def get(identifier: Any) -> Callable[..., List[tf.Tensor]]:
+def get(identifier: Any) -> Callable[..., List[keras.KerasTensor]]:
     """Get the `identifier` activation function.
 
     Args:

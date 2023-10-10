@@ -1,8 +1,8 @@
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import keras_core as keras
 import keras_core.backend as K
 import numpy as np
-import tensorflow as tf
 from keras_core.layers import Lambda, Layer
 
 from decomon.core import (
@@ -27,11 +27,11 @@ def get_model(model: DecomonModel) -> DecomonModel:
 
     inputs = model.inputs
     outputs = model.outputs
-    new_output: tf.Tensor
+    new_output: keras.KerasTensor
 
     if mode == ForwardMode.IBP:
 
-        def func(outputs: List[tf.Tensor]) -> tf.Tensor:
+        def func(outputs: List[keras.KerasTensor]) -> keras.KerasTensor:
             u_c, l_c = outputs
             return K.concatenate([K.expand_dims(u_c, -1), K.expand_dims(l_c, -1)], -1)
 
@@ -39,7 +39,7 @@ def get_model(model: DecomonModel) -> DecomonModel:
 
     elif mode == ForwardMode.AFFINE:
 
-        def func(outputs: List[tf.Tensor]) -> tf.Tensor:
+        def func(outputs: List[keras.KerasTensor]) -> keras.KerasTensor:
             x_0, w_u, b_u, w_l, b_l = outputs
             if len(x_0.shape) == 2:
                 x_0_reshaped = x_0[:, :, None]
@@ -58,7 +58,7 @@ def get_model(model: DecomonModel) -> DecomonModel:
 
     elif mode == ForwardMode.HYBRID:
 
-        def func(outputs: List[tf.Tensor]) -> tf.Tensor:
+        def func(outputs: List[keras.KerasTensor]) -> keras.KerasTensor:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = outputs
 
             if len(x_0.shape) == 2:
@@ -94,7 +94,7 @@ def get_model(model: DecomonModel) -> DecomonModel:
     )
 
 
-def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.Tensor]:
+def get_upper_loss(model: DecomonModel) -> Callable[[keras.KerasTensor, keras.KerasTensor], keras.KerasTensor]:
     ibp = model.ibp
     affine = model.affine
 
@@ -104,16 +104,18 @@ def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
     n_comp = perturbation_domain.get_nb_x_components()
     n_out = np.prod(model.output[-1].shape[1:])
 
-    def upper_ibp(u_c: tf.Tensor, u_ref: tf.Tensor) -> tf.Tensor:
+    def upper_ibp(u_c: keras.KerasTensor, u_ref: keras.KerasTensor) -> keras.KerasTensor:
         # minimize the upper bound compared to the reference
         return K.max(u_c - u_ref, -1)
 
-    def upper_affine(x: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, u_ref: tf.Tensor) -> tf.Tensor:
+    def upper_affine(
+        x: keras.KerasTensor, w_u: keras.KerasTensor, b_u: keras.KerasTensor, u_ref: keras.KerasTensor
+    ) -> keras.KerasTensor:
         upper = perturbation_domain.get_upper(x, w_u, b_u)
 
         return K.max(upper - u_ref, -1)
 
-    def loss_upper(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
+    def loss_upper(y_true: keras.KerasTensor, y_pred: keras.KerasTensor) -> keras.KerasTensor:
         if mode == ForwardMode.IBP:
             u_c = y_pred[:, :, 0]
 
@@ -156,7 +158,7 @@ def get_upper_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
     return loss_upper
 
 
-def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.Tensor]:
+def get_lower_loss(model: DecomonModel) -> Callable[[keras.KerasTensor, keras.KerasTensor], keras.KerasTensor]:
     ibp = model.ibp
     affine = model.affine
 
@@ -166,16 +168,18 @@ def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
     n_comp = perturbation_domain.get_nb_x_components()
     n_out = np.prod(model.output[-1].shape[1:])
 
-    def lower_ibp(l_c: tf.Tensor, l_ref: tf.Tensor) -> tf.Tensor:
+    def lower_ibp(l_c: keras.KerasTensor, l_ref: keras.KerasTensor) -> keras.KerasTensor:
         # minimize the upper bound compared to the reference
         return K.max(l_ref - l_c, -1)
 
-    def lower_affine(x: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor, l_ref: tf.Tensor) -> tf.Tensor:
+    def lower_affine(
+        x: keras.KerasTensor, w_l: keras.KerasTensor, b_l: keras.KerasTensor, l_ref: keras.KerasTensor
+    ) -> keras.KerasTensor:
         lower = perturbation_domain.get_lower(x, w_l, b_l)
 
         return K.max(l_ref - lower, -1)
 
-    def loss_lower(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
+    def loss_lower(y_true: keras.KerasTensor, y_pred: keras.KerasTensor) -> keras.KerasTensor:
         if mode == ForwardMode.IBP:
             l_c = y_pred[:, :, 1]
 
@@ -220,7 +224,7 @@ def get_lower_loss(model: DecomonModel) -> Callable[[tf.Tensor, tf.Tensor], tf.T
 
 def get_adv_loss(
     model: DecomonModel, sigmoid: bool = False, clip_value: Optional[float] = None, softmax: bool = False
-) -> Callable[[tf.Tensor, tf.Tensor], tf.Tensor]:
+) -> Callable[[keras.KerasTensor, keras.KerasTensor], keras.KerasTensor]:
     ibp = model.ibp
     affine = model.affine
 
@@ -230,7 +234,7 @@ def get_adv_loss(
     n_comp = perturbation_domain.get_nb_x_components()
     n_out = np.prod(model.output[-1].shape[1:])
 
-    def adv_ibp(u_c: tf.Tensor, l_c: tf.Tensor, y_tensor: tf.Tensor) -> tf.Tensor:
+    def adv_ibp(u_c: keras.KerasTensor, l_c: keras.KerasTensor, y_tensor: keras.KerasTensor) -> keras.KerasTensor:
         t_tensor = 1 - y_tensor
         s_tensor = y_tensor
 
@@ -243,8 +247,13 @@ def get_adv_loss(
         return K.max(upper, (-1, -2))
 
     def adv_affine(
-        x: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor, y_tensor: tf.Tensor
-    ) -> tf.Tensor:
+        x: keras.KerasTensor,
+        w_u: keras.KerasTensor,
+        b_u: keras.KerasTensor,
+        w_l: keras.KerasTensor,
+        b_l: keras.KerasTensor,
+        y_tensor: keras.KerasTensor,
+    ) -> keras.KerasTensor:
         w_u_reshaped = K.expand_dims(w_u, -1)
         w_l_reshaped = K.expand_dims(w_l, -2)
 
@@ -264,7 +273,7 @@ def get_adv_loss(
         upper = upper - (const + K.cast(1, const.dtype)) * (1 - M)
         return K.max(upper, (-1, -2))
 
-    def loss_adv(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
+    def loss_adv(y_true: keras.KerasTensor, y_pred: keras.KerasTensor) -> keras.KerasTensor:
         if mode == ForwardMode.IBP:
             u_c = y_pred[:, :, 0]
             l_c = y_pred[:, :, 1]
@@ -381,7 +390,7 @@ class DecomonLossFusion(DecomonLayer):
         )
         return config
 
-    def call_no_backward(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
+    def call_no_backward(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
         if not self.asymptotic:
             u_c, l_c = self.convert2mode_layer(inputs)
 
@@ -391,7 +400,9 @@ class DecomonLossFusion(DecomonLayer):
             u_c, l_c = self.convert2mode_layer(inputs)
             shape = u_c.shape[-1]
 
-            def adv_ibp(u_c: tf.Tensor, l_c: tf.Tensor, y_tensor: tf.Tensor) -> tf.Tensor:
+            def adv_ibp(
+                u_c: keras.KerasTensor, l_c: keras.KerasTensor, y_tensor: keras.KerasTensor
+            ) -> keras.KerasTensor:
                 t_tensor = 1 - y_tensor
                 s_tensor = y_tensor
 
@@ -408,7 +419,7 @@ class DecomonLossFusion(DecomonLayer):
             score = K.concatenate([adv_ibp(u_c, l_c, source_tensor[:, i])[:, None] for i in range(shape)], -1)
             return K.maximum(score, -1)  # + 1e-3*K.maximum(K.max(K.abs(u_c), -1)[:,None], K.abs(l_c))
 
-    def call_backward(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
+    def call_backward(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
         if not self.asymptotic:
             u_c, l_c = self.convert2mode_layer(inputs)
             return K.softmax(u_c)
@@ -416,16 +427,16 @@ class DecomonLossFusion(DecomonLayer):
         else:
             raise NotImplementedError()
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
         if self.backward:
             return self.call_backward(inputs, **kwargs)
         else:
             return self.call_no_backward(inputs, **kwargs)
 
-    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> tf.TensorShape:
+    def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> Tuple[Optional[int]]:
         return input_shape[-1]
 
-    def build(self, input_shape: List[tf.TensorShape]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
         return None
 
 
@@ -471,7 +482,7 @@ class DecomonRadiusRobust(DecomonLayer):
         )
         return config
 
-    def call_no_backward(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
+    def call_no_backward(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
         if self.mode == ForwardMode.HYBRID:
             x, _, w_u, b_u, _, w_l, b_l = inputs
         else:
@@ -484,7 +495,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
         shape = b_l.shape[-1]
 
-        def radius_label(y_tensor: tf.Tensor, backward: bool = False) -> tf.Tensor:
+        def radius_label(y_tensor: keras.KerasTensor, backward: bool = False) -> keras.KerasTensor:
             t_tensor = 1 - y_tensor
             s_tensor = y_tensor
 
@@ -505,7 +516,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
         return K.concatenate([radius_label(source_tensor[:, i]) for i in range(shape)], -1)
 
-    def call_backward(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
+    def call_backward(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
         if self.mode == ForwardMode.HYBRID:
             x, _, w_u, b_u, _, w_l, b_l = inputs
         else:
@@ -518,7 +529,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
         shape = b_l.shape[-1]
 
-        def radius_label(y_tensor: tf.Tensor) -> tf.Tensor:
+        def radius_label(y_tensor: keras.KerasTensor) -> keras.KerasTensor:
             W_adv = w_u
             b_adv = b_u - 1e6 * y_tensor
 
@@ -533,16 +544,16 @@ class DecomonRadiusRobust(DecomonLayer):
 
         return K.concatenate([radius_label(source_tensor[:, i]) for i in range(shape)], -1)
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
         if self.backward:
             return self.call_backward(inputs, **kwargs)
         else:
             return self.call_no_backward(inputs, **kwargs)
 
-    def compute_output_shape(self, input_shape: List[tf.TensorShape]) -> tf.TensorShape:
+    def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> Tuple[Optional[int]]:
         return input_shape[-1]
 
-    def build(self, input_shape: List[tf.TensorShape]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
         return None
 
 

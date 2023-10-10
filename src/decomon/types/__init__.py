@@ -3,7 +3,7 @@
 
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-import tensorflow as tf
+import keras_core as keras
 
 # create extra types for readability
-DecomonInputs = List[tf.Tensor]
+DecomonInputs = List[keras.KerasTensor]

@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import keras_core as keras
 import numpy as np
-import tensorflow as tf
 from keras_core import backend as K
 
 
@@ -27,11 +27,15 @@ class PerturbationDomain(ABC):
         self.opt_option = Option(opt_option)
 
     @abstractmethod
-    def get_upper(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
+    def get_upper(
+        self, x: keras.KerasTensor, w: keras.KerasTensor, b: keras.KerasTensor, **kwargs: Any
+    ) -> keras.KerasTensor:
         ...
 
     @abstractmethod
-    def get_lower(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
+    def get_lower(
+        self, x: keras.KerasTensor, w: keras.KerasTensor, b: keras.KerasTensor, **kwargs: Any
+    ) -> keras.KerasTensor:
         ...
 
     @abstractmethod
@@ -55,12 +59,16 @@ class PerturbationDomain(ABC):
 
 
 class BoxDomain(PerturbationDomain):
-    def get_upper(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
+    def get_upper(
+        self, x: keras.KerasTensor, w: keras.KerasTensor, b: keras.KerasTensor, **kwargs: Any
+    ) -> keras.KerasTensor:
         x_min = x[:, 0]
         x_max = x[:, 1]
         return get_upper_box(x_min=x_min, x_max=x_max, w=w, b=b, **kwargs)
 
-    def get_lower(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
+    def get_lower(
+        self, x: keras.KerasTensor, w: keras.KerasTensor, b: keras.KerasTensor, **kwargs: Any
+    ) -> keras.KerasTensor:
         x_min = x[:, 0]
         x_max = x[:, 1]
         return get_lower_box(x_min=x_min, x_max=x_max, w=w, b=b, **kwargs)
@@ -100,10 +108,14 @@ class BallDomain(PerturbationDomain):
         )
         return config
 
-    def get_lower(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
+    def get_lower(
+        self, x: keras.KerasTensor, w: keras.KerasTensor, b: keras.KerasTensor, **kwargs: Any
+    ) -> keras.KerasTensor:
         return get_lower_ball(x_0=x, eps=self.eps, p=self.p, w=w, b=b, **kwargs)
 
-    def get_upper(self, x: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
+    def get_upper(
+        self, x: keras.KerasTensor, w: keras.KerasTensor, b: keras.KerasTensor, **kwargs: Any
+    ) -> keras.KerasTensor:
         return get_upper_ball(x_0=x, eps=self.eps, p=self.p, w=w, b=b, **kwargs)
 
     def get_nb_x_components(self) -> int:
@@ -197,12 +209,12 @@ class InputsOutputsSpec:
     def affine(self) -> bool:
         return get_affine(self.mode)
 
-    def get_input_shape(self, inputsformode: List[tf.Tensor]) -> tf.TensorShape:
+    def get_input_shape(self, inputsformode: List[keras.KerasTensor]) -> Tuple[Optional[int]]:
         return inputsformode[-1].shape
 
     def get_fullinputs_from_inputsformode(
-        self, inputsformode: List[tf.Tensor], compute_ibp_from_affine: bool = True, tight: bool = True
-    ) -> List[tf.Tensor]:
+        self, inputsformode: List[keras.KerasTensor], compute_ibp_from_affine: bool = True, tight: bool = True
+    ) -> List[keras.KerasTensor]:
         """
 
         Args:
@@ -272,8 +284,8 @@ class InputsOutputsSpec:
         return [x, u_c, w_u, b_u, l_c, w_l, b_l, h, g]
 
     def get_fullinputs_by_type_from_inputsformode_to_merge(
-        self, inputsformode: List[tf.Tensor], compute_ibp_from_affine: bool = False, tight: bool = True
-    ) -> List[List[tf.Tensor]]:
+        self, inputsformode: List[keras.KerasTensor], compute_ibp_from_affine: bool = False, tight: bool = True
+    ) -> List[List[keras.KerasTensor]]:
         """
 
         Args:
@@ -344,11 +356,11 @@ class InputsOutputsSpec:
 
         return [inputs_x, inputs_u_c, inputs_w_u, inputs_b_u, inputs_l_c, inputs_w_l, inputs_b_l, inputs_h, inputs_g]
 
-    def split_inputsformode_to_merge(self, inputsformode: List[tf.Tensor]) -> List[List[tf.Tensor]]:
+    def split_inputsformode_to_merge(self, inputsformode: List[keras.KerasTensor]) -> List[List[keras.KerasTensor]]:
         n_comp = self.nb_tensors
         return [inputsformode[n_comp * i : n_comp * (i + 1)] for i in range(len(inputsformode) // n_comp)]
 
-    def extract_inputsformode_from_fullinputs(self, inputs: List[tf.Tensor]) -> List[tf.Tensor]:
+    def extract_inputsformode_from_fullinputs(self, inputs: List[keras.KerasTensor]) -> List[keras.KerasTensor]:
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs
         if self.mode == ForwardMode.HYBRID:
             inputsformode = [x, u_c, w_u, b_u, l_c, w_l, b_l]
@@ -362,15 +374,17 @@ class InputsOutputsSpec:
             inputsformode += [h, g]
         return inputsformode
 
-    def extract_outputsformode_from_fulloutputs(self, outputs: List[tf.Tensor]) -> List[tf.Tensor]:
+    def extract_outputsformode_from_fulloutputs(self, outputs: List[keras.KerasTensor]) -> List[keras.KerasTensor]:
         return self.extract_inputsformode_from_fullinputs(outputs)
 
     @staticmethod
-    def get_empty_tensor(dtype: Union[str, tf.DType] = K.floatx()) -> tf.Tensor:
+    def get_empty_tensor(dtype: Union[str, tf.DType] = K.floatx()) -> keras.KerasTensor:
         return tf.constant([], dtype=dtype)
 
 
-def get_upper_box(x_min: tf.Tensor, x_max: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
+def get_upper_box(
+    x_min: keras.KerasTensor, x_max: keras.KerasTensor, w: keras.KerasTensor, b: keras.KerasTensor, **kwargs: Any
+) -> keras.KerasTensor:
     """#compute the max of an affine function
     within a box (hypercube) defined by its extremal corners
 
@@ -402,7 +416,9 @@ def get_upper_box(x_min: tf.Tensor, x_max: tf.Tensor, w: tf.Tensor, b: tf.Tensor
     return K.sum(w_pos * x_max_out + w_neg * x_min_out, 1) + b
 
 
-def get_lower_box(x_min: tf.Tensor, x_max: tf.Tensor, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
+def get_lower_box(
+    x_min: keras.KerasTensor, x_max: keras.KerasTensor, w: keras.KerasTensor, b: keras.KerasTensor, **kwargs: Any
+) -> keras.KerasTensor:
     """
     Args:
         x_min: lower bound of the box domain
@@ -432,7 +448,7 @@ def get_lower_box(x_min: tf.Tensor, x_max: tf.Tensor, w: tf.Tensor, b: tf.Tensor
     return K.sum(w_pos * x_min_out + w_neg * x_max_out, 1) + b
 
 
-def get_lq_norm(x: tf.Tensor, p: float, axis: int = -1) -> tf.Tensor:
+def get_lq_norm(x: keras.KerasTensor, p: float, axis: int = -1) -> keras.KerasTensor:
     """compute Lp norm (p=1 or 2)
 
     Args:
@@ -453,7 +469,9 @@ def get_lq_norm(x: tf.Tensor, p: float, axis: int = -1) -> tf.Tensor:
     return x_q
 
 
-def get_upper_ball(x_0: tf.Tensor, eps: float, p: float, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
+def get_upper_ball(
+    x_0: keras.KerasTensor, eps: float, p: float, w: keras.KerasTensor, b: keras.KerasTensor, **kwargs: Any
+) -> keras.KerasTensor:
     """max of an affine function over an Lp ball
 
     Args:
@@ -490,7 +508,9 @@ def get_upper_ball(x_0: tf.Tensor, eps: float, p: float, w: tf.Tensor, b: tf.Ten
         return K.sum(w * x_0, 1) + upper
 
 
-def get_lower_ball(x_0: tf.Tensor, eps: float, p: float, w: tf.Tensor, b: tf.Tensor, **kwargs: Any) -> tf.Tensor:
+def get_lower_ball(
+    x_0: keras.KerasTensor, eps: float, p: float, w: keras.KerasTensor, b: keras.KerasTensor, **kwargs: Any
+) -> keras.KerasTensor:
     """min of an affine fucntion over an Lp ball
 
     Args:
@@ -528,8 +548,8 @@ def get_lower_ball(x_0: tf.Tensor, eps: float, p: float, w: tf.Tensor, b: tf.Ten
 
 
 def get_lower_ball_finetune(
-    x_0: tf.Tensor, eps: float, p: float, w: tf.Tensor, b: tf.Tensor, **kwargs: Any
-) -> tf.Tensor:
+    x_0: keras.KerasTensor, eps: float, p: float, w: keras.KerasTensor, b: keras.KerasTensor, **kwargs: Any
+) -> keras.KerasTensor:
     if "finetune_lower" in kwargs and "upper" in kwargs or "lower" in kwargs:
         alpha = kwargs["finetune_lower"]
         # assume alpha is the same shape as w, minus the batch dimension
@@ -580,8 +600,8 @@ def get_lower_ball_finetune(
 
 
 def get_upper_ball_finetune(
-    x_0: tf.Tensor, eps: float, p: float, w: tf.Tensor, b: tf.Tensor, **kwargs: Any
-) -> tf.Tensor:
+    x_0: keras.KerasTensor, eps: float, p: float, w: keras.KerasTensor, b: keras.KerasTensor, **kwargs: Any
+) -> keras.KerasTensor:
     if "finetune_upper" in kwargs and "upper" in kwargs or "lower" in kwargs:
         alpha = kwargs["finetune_upper"]
         # assume alpha is the same shape as w, minus the batch dimension

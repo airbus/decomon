@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
+import keras_core as keras
 import keras_core.backend as K
 import numpy as np
-import tensorflow as tf
 from keras_core.layers import Input, Layer
 from keras_core.models import Model
 
@@ -61,7 +61,7 @@ class MetricLayer(ABC, Layer):
         return config
 
     @abstractmethod
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
         """
         Args:
             inputs
@@ -98,8 +98,14 @@ class AdversarialCheck(MetricLayer):
         super().__init__(ibp=ibp, affine=affine, mode=mode, perturbation_domain=perturbation_domain, **kwargs)
 
     def linear_adv(
-        self, z_tensor: tf.Tensor, y_tensor: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor, w_l: tf.Tensor, b_l: tf.Tensor
-    ) -> tf.Tensor:
+        self,
+        z_tensor: keras.KerasTensor,
+        y_tensor: keras.KerasTensor,
+        w_u: keras.KerasTensor,
+        b_u: keras.KerasTensor,
+        w_l: keras.KerasTensor,
+        b_l: keras.KerasTensor,
+    ) -> keras.KerasTensor:
         w_upper = w_u * (1 - y_tensor[:, None]) - K.expand_dims(K.sum(w_l * y_tensor[:, None], -1), -1)
         b_upper = b_u * (1 - y_tensor) - b_l * y_tensor
 
@@ -107,7 +113,7 @@ class AdversarialCheck(MetricLayer):
 
         return K.max(adv_score, -1)
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
         """
         Args:
             inputs
@@ -179,7 +185,7 @@ class AdversarialScore(AdversarialCheck):
         """
         super().__init__(ibp=ibp, affine=affine, mode=mode, perturbation_domain=perturbation_domain, **kwargs)
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
         """
         Args:
             inputs
@@ -303,7 +309,9 @@ class UpperScore(MetricLayer):
         """
         super().__init__(ibp=ibp, affine=affine, mode=mode, perturbation_domain=perturbation_domain, **kwargs)
 
-    def linear_upper(self, z_tensor: tf.Tensor, y_tensor: tf.Tensor, w_u: tf.Tensor, b_u: tf.Tensor) -> tf.Tensor:
+    def linear_upper(
+        self, z_tensor: keras.KerasTensor, y_tensor: keras.KerasTensor, w_u: keras.KerasTensor, b_u: keras.KerasTensor
+    ) -> keras.KerasTensor:
         w_upper = w_u * y_tensor[:, None]
         b_upper = b_u * y_tensor
 
@@ -311,7 +319,7 @@ class UpperScore(MetricLayer):
 
         return K.sum(upper_score, -1)
 
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> tf.Tensor:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
         """
         Args:
             inputs
@@ -371,8 +379,11 @@ def build_formal_upper_model(decomon_model: DecomonModel) -> keras.Model:
 
 
 def _get_ibp_score(
-    u_c: tf.Tensor, l_c: tf.Tensor, source_tensor: tf.Tensor, target_tensor: Optional[tf.Tensor] = None
-) -> tf.Tensor:
+    u_c: keras.KerasTensor,
+    l_c: keras.KerasTensor,
+    source_tensor: keras.KerasTensor,
+    target_tensor: Optional[keras.KerasTensor] = None,
+) -> keras.KerasTensor:
     if target_tensor is None:
         target_tensor = 1.0 - source_tensor
 
@@ -390,15 +401,15 @@ def _get_ibp_score(
 
 
 def _get_affine_score(
-    z_tensor: tf.Tensor,
-    w_u: tf.Tensor,
-    b_u: tf.Tensor,
-    w_l: tf.Tensor,
-    b_l: tf.Tensor,
-    source_tensor: tf.Tensor,
+    z_tensor: keras.KerasTensor,
+    w_u: keras.KerasTensor,
+    b_u: keras.KerasTensor,
+    w_l: keras.KerasTensor,
+    b_l: keras.KerasTensor,
+    source_tensor: keras.KerasTensor,
     perturbation_domain: PerturbationDomain,
-    target_tensor: Optional[tf.Tensor] = None,
-) -> tf.Tensor:
+    target_tensor: Optional[keras.KerasTensor] = None,
+) -> keras.KerasTensor:
     if target_tensor is None:
         target_tensor = 1.0 - source_tensor
 
@@ -421,15 +432,15 @@ def _get_affine_score(
 
 
 def _get_backward_score(
-    z_tensor: tf.Tensor,
-    w_u: tf.Tensor,
-    b_u: tf.Tensor,
-    w_l: tf.Tensor,
-    b_l: tf.Tensor,
-    source_tensor: tf.Tensor,
+    z_tensor: keras.KerasTensor,
+    w_u: keras.KerasTensor,
+    b_u: keras.KerasTensor,
+    w_l: keras.KerasTensor,
+    b_l: keras.KerasTensor,
+    source_tensor: keras.KerasTensor,
     perturbation_domain: PerturbationDomain,
-    target_tensor: Optional[tf.Tensor] = None,
-) -> tf.Tensor:
+    target_tensor: Optional[keras.KerasTensor] = None,
+) -> keras.KerasTensor:
     return _get_affine_score(
         z_tensor,
         w_u[:, 0],

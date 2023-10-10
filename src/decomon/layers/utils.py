@@ -2,7 +2,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import keras_core as keras
 import numpy as np
-import tensorflow as tf
 from keras_core import backend as K
 from keras_core.constraints import Constraint
 from keras_core.initializers import Initializer
@@ -28,28 +27,28 @@ def is_a_merge_layer(layer: Layer) -> bool:
 class NonPos(Constraint):
     """Constrains the weights to be non-negative."""
 
-    def __call__(self, w: tf.Tensor) -> tf.Tensor:
+    def __call__(self, w: keras.KerasTensor) -> keras.KerasTensor:
         return K.minimum(w, 0.0)
 
 
 class NonNeg(Constraint):
     """Constrains the weights to be non-negative."""
 
-    def __call__(self, w: tf.Tensor) -> tf.Tensor:
+    def __call__(self, w: keras.KerasTensor) -> keras.KerasTensor:
         return K.maximum(w, 0.0)
 
 
 class ClipAlpha(Constraint):
     """Cosntraints the weights to be between 0 and 1."""
 
-    def __call__(self, w: tf.Tensor) -> tf.Tensor:
+    def __call__(self, w: keras.KerasTensor) -> keras.KerasTensor:
         return K.clip(w, 0.0, 1.0)
 
 
 class ClipAlphaGrid(Constraint):
     """Cosntraints the weights to be between 0 and 1."""
 
-    def __call__(self, w: tf.Tensor) -> tf.Tensor:
+    def __call__(self, w: keras.KerasTensor) -> keras.KerasTensor:
         w = K.clip(w, 0.0, 1.0)
         w /= K.maximum(K.sum(w, 0), 1.0)[None]
         return w
@@ -58,7 +57,7 @@ class ClipAlphaGrid(Constraint):
 class ClipAlphaAndSumtoOne(Constraint):
     """Cosntraints the weights to be between 0 and 1."""
 
-    def __call__(self, w: tf.Tensor) -> tf.Tensor:
+    def __call__(self, w: keras.KerasTensor) -> keras.KerasTensor:
         w = K.clip(w, 0.0, 1.0)
         # normalize the first colum to 1
         w_scale = K.maximum(K.sum(w, 0), K.epsilon())
@@ -75,7 +74,7 @@ class MultipleConstraint(Constraint):
         else:
             self.constraints = [constraint_1]
 
-    def __call__(self, w: tf.Tensor) -> tf.Tensor:
+    def __call__(self, w: keras.KerasTensor) -> keras.KerasTensor:
         for c in self.constraints:
             w = c.__call__(w)
 
@@ -89,7 +88,9 @@ class Project_initializer_pos(Initializer):
         super().__init__(**kwargs)
         self.initializer = initializer
 
-    def __call__(self, shape: tf.TensorShape, dtype: Optional[tf.DType] = None, **kwargs: Any) -> tf.Tensor:
+    def __call__(
+        self, shape: Tuple[Optional[int]], dtype: Optional[tf.DType] = None, **kwargs: Any
+    ) -> keras.KerasTensor:
         w = self.initializer.__call__(shape, dtype)
         return K.maximum(0.0, w)
 
@@ -101,19 +102,21 @@ class Project_initializer_neg(Initializer):
         super().__init__(**kwargs)
         self.initializer = initializer
 
-    def __call__(self, shape: tf.TensorShape, dtype: Optional[tf.DType] = None, **kwargs: Any) -> tf.Tensor:
+    def __call__(
+        self, shape: Tuple[Optional[int]], dtype: Optional[tf.DType] = None, **kwargs: Any
+    ) -> keras.KerasTensor:
         w = self.initializer.__call__(shape, dtype)
         return K.minimum(0.0, w)
 
 
 def softplus_(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
@@ -146,13 +149,13 @@ def softplus_(
 
 
 def sum(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     axis: int = -1,
     dc_decomp: bool = False,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     perturbation_domain: Optional[PerturbationDomain] = None,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
@@ -195,12 +198,12 @@ def sum(
 
 
 def frac_pos(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
 
@@ -243,14 +246,14 @@ def frac_pos(
 
 # convex hull of the maximum between two functions
 def max_(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis: int = -1,
     finetune: bool = False,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """LiRPA implementation of max(x, axis)
 
     Args:
@@ -427,12 +430,12 @@ def linear_to_softmax(model: keras.Model) -> Tuple[keras.Model, bool]:
 
 
 def multiply(
-    inputs_0: List[tf.Tensor],
-    inputs_1: List[tf.Tensor],
+    inputs_0: List[keras.KerasTensor],
+    inputs_1: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """LiRPA implementation of (element-wise) multiply(x,y)=-x*y.
 
     Args:
@@ -520,13 +523,13 @@ def multiply(
 
 
 def permute_dimensions(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     axis: int,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis_perm: int = 1,
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """LiRPA implementation of (element-wise) permute(x,axis)
 
     Args:
@@ -586,13 +589,13 @@ def permute_dimensions(
 
 
 def broadcast(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     n: int,
     axis: int,
     mode: Union[str, ForwardMode],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """LiRPA implementation of broadcasting
 
     Args:
@@ -641,12 +644,12 @@ def broadcast(
 
 
 def split(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     axis: int = -1,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
-) -> List[List[tf.Tensor]]:
+) -> List[List[keras.KerasTensor]]:
     """LiRPA implementation of split
 
     Args:
@@ -713,12 +716,12 @@ def split(
 
 
 def sort(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     axis: int = -1,
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """LiRPA implementation of sort by selection
 
     Args:
@@ -849,11 +852,11 @@ def sort(
 
 
 def pow(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """LiRPA implementation of pow(x )=x**2
 
     Args:
@@ -872,11 +875,11 @@ def pow(
 
 
 def abs(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """LiRPA implementation of |x|
 
     Args:
@@ -907,11 +910,11 @@ def abs(
 
 
 def frac_pos_hull(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """LiRPA implementation of 1/x for x>0
 
     Args:
@@ -946,14 +949,14 @@ def frac_pos_hull(
 
 # convex hull for min
 def min_(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis: int = -1,
     finetune: bool = False,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """LiRPA implementation of min(x, axis=axis)
 
     Args:
@@ -985,13 +988,13 @@ def min_(
 
 
 def expand_dims(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     axis: int = -1,
     perturbation_domain: Optional[PerturbationDomain] = None,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
@@ -1037,12 +1040,12 @@ def expand_dims(
 
 
 def log(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Exponential activation function.
 
     Args:
@@ -1101,13 +1104,13 @@ def log(
 
 
 def exp(
-    inputs: List[tf.Tensor],
+    inputs: List[keras.KerasTensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[tf.Tensor]:
+) -> List[keras.KerasTensor]:
     """Exponential activation function.
 
     Args:

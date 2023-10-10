@@ -1,8 +1,8 @@
+import keras_core as keras
 from keras_core.layers import Layer
-from tensorflow import Variable
 
 
-def get_weight_index(layer: Layer, weight: Variable) -> int:
+def get_weight_index(layer: Layer, weight: keras.Variable) -> int:
     """Get weight index among layer tracked weights
 
     Args:

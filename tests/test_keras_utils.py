@@ -1,5 +1,5 @@
+import keras_core as keras
 import pytest
-import tensorflow as tf
 from keras_core.layers import Dense
 
 from decomon.keras_utils import get_weight_index_from_name

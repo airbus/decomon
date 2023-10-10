@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-import tensorflow as tf
+import keras_core as keras
 from keras_core.layers import Layer, Wrapper
 
 from decomon.core import (
@@ -17,7 +17,7 @@ from decomon.layers.core import DecomonLayer
 
 class BackwardLayer(ABC, Wrapper):
     layer: Layer
-    _trainable_weights: List[tf.Variable]
+    _trainable_weights: List[keras.Variable]
 
     def __init__(
         self,
@@ -68,7 +68,7 @@ class BackwardLayer(ABC, Wrapper):
         return config
 
     @abstractmethod
-    def call(self, inputs: List[tf.Tensor], **kwargs: Any) -> List[tf.Tensor]:
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
         """
         Args:
             inputs
@@ -78,7 +78,7 @@ class BackwardLayer(ABC, Wrapper):
         """
         pass
 
-    def build(self, input_shape: List[tf.TensorShape]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
         """
         Args:
             input_shape
