@@ -1,8 +1,6 @@
 # creating toy network and assess that the decomposition is correct
 
 
-import keras_core.ops as K
-
 from decomon.core import get_affine, get_ibp
 from decomon.models.backward_cloning import convert_backward
 from decomon.models.forward_cloning import convert_forward
@@ -50,7 +48,7 @@ def test_convert_backward_1D(n, mode, floatx, decimal, helpers):
     )
 
     # decomon outputs
-    f_decomon = K.function(inputs, outputs)
+    f_decomon = helpers.function(inputs, outputs)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency

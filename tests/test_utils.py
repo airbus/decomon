@@ -25,8 +25,7 @@ def test_get_upper_multi_box(odd, floatx, decimal, helpers):
 
     upper = BoxDomain().get_upper(x_0, W_u, b_u)
 
-    f_upper = K.function([x_0, W_u, b_u], upper)
-
+    f_upper = helpers.function([x_0, W_u, b_u], upper)
     upper_ = f_upper([x_0_, W_u_, b_u_])
 
     assert_allclose(upper_pred, upper_)
@@ -49,7 +48,7 @@ def test_get_upper_box_numpy(n, floatx, decimal, helpers):
 
     upper = BoxDomain().get_upper(x_0, W_u, b_u)
 
-    f_upper = K.function([x_0, W_u, b_u], upper)
+    f_upper = helpers.function([x_0, W_u, b_u], upper)
     upper_ = f_upper([x_0_, W_u_, b_u_]).max()
 
     assert_allclose(upper_pred, upper_)
@@ -64,9 +63,8 @@ def test_get_upper_box(n, floatx, decimal, helpers):
 
     upper = BoxDomain().get_upper(x_0, W_u, b_u)
 
-    f_upper = K.function([x_0, W_u, b_u], upper)
-
-    f_u = K.function(inputs, u_c)
+    f_upper = helpers.function([x_0, W_u, b_u], upper)
+    f_u = helpers.function(inputs, u_c)
 
     output = inputs_[1]
 
@@ -95,8 +93,8 @@ def test_get_lower_box(n, floatx, decimal, helpers):
 
     lower = BoxDomain().get_lower(x_0, W_l, b_l)
 
-    f_lower = K.function(inputs, lower)
-    f_l = K.function(inputs, l_c)
+    f_lower = helpers.function(inputs, lower)
+    f_l = helpers.function(inputs, l_c)
 
     input_ref = helpers.get_input_ref_from_full_inputs(inputs_)
 
@@ -125,8 +123,8 @@ def test_get_lower_upper_box(n, floatx, decimal, helpers):
     lower = BoxDomain().get_lower(x_0, W_l, b_l)
     upper = BoxDomain().get_upper(x_0, W_u, b_u)
 
-    f_lower = K.function(inputs, lower)
-    f_upper = K.function(inputs, upper)
+    f_lower = helpers.function(inputs, lower)
+    f_upper = helpers.function(inputs, upper)
 
     lower_ = f_lower(inputs_)
     upper_ = f_upper(inputs_)
@@ -151,12 +149,12 @@ def test_relu_1D_box(n, mode, floatx, decimal, helpers):
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
 
     # original output
-    f_ref = K.function(inputs, K.relu(input_ref))
+    f_ref = helpers.function(inputs, K.relu(input_ref))
     output_ref_ = f_ref(inputs_)
 
     # decomon output
     output = relu_(inputs_for_mode, dc_decomp=dc_decomp, mode=mode)
-    f_decomon = K.function(inputs, output)
+    f_decomon = helpers.function(inputs, output)
     outputs_ = f_decomon(inputs_)
 
     # full outputs
@@ -218,8 +216,8 @@ def test_relu_1D_box(n, mode, floatx, decimal, helpers):
     # lower and upper bounds from affine coefficients
     lower = BoxDomain().get_lower(z_tensor, W_l_tensor, b_l_tensor)
     upper = BoxDomain().get_upper(z_tensor, W_u_tensor, b_u_tensor)
-    f_lower = K.function(inputs, lower)
-    f_upper = K.function(inputs, upper)
+    f_lower = helpers.function(inputs, lower)
+    f_upper = helpers.function(inputs, upper)
     lower_ = np.min(f_lower(inputs_))
     upper_ = np.max(f_upper(inputs_))
 
@@ -350,12 +348,12 @@ def test_func_with_2_inputs(decomon_func, tensor_func, odd, mode, floatx, decima
     inputs_ = helpers.get_standard_values_multid_box(odd)
 
     # original output
-    f_ref = K.function(inputs_0 + inputs_1, tensor_func(input_ref_0, input_ref_1))
+    f_ref = helpers.function(inputs_0 + inputs_1, tensor_func(input_ref_0, input_ref_1))
     output_ref_ = f_ref(inputs_ + inputs_)
 
     # decomon output
     output = decomon_func(inputs_for_mode_0, inputs_for_mode_1, dc_decomp=dc_decomp, mode=mode)
-    f_decomon = K.function(inputs_0 + inputs_1, output)
+    f_decomon = helpers.function(inputs_0 + inputs_1, output)
     outputs_ = f_decomon(inputs_ + inputs_)
 
     #  check bounds consistency
@@ -390,12 +388,12 @@ def test_func_with_1_input(decomon_func, tensor_func, tensor_func_kwargs, odd, m
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
 
     # original output
-    f_ref = K.function(inputs, tensor_func(input_ref, **tensor_func_kwargs))
+    f_ref = helpers.function(inputs, tensor_func(input_ref, **tensor_func_kwargs))
     output_ref_ = f_ref(inputs_)
 
     # decomon output
     output = decomon_func(inputs_for_mode, dc_decomp=dc_decomp, mode=mode)
-    f_decomon = K.function(inputs, output)
+    f_decomon = helpers.function(inputs, output)
     outputs_ = f_decomon(inputs_)
 
     # check bounds consistency
@@ -419,7 +417,7 @@ def test_max_nodc(odd, helpers):
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
 
     output = max_(inputs_for_mode, dc_decomp=dc_decomp, mode=mode)
-    f_max = K.function(inputs, output)
+    f_max = helpers.function(inputs, output)
     assert len(f_max(inputs_)) == 7
 
 
@@ -437,8 +435,8 @@ def test_maximum_nodc(odd, helpers):
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
     output = maximum(inputs_for_mode_0, inputs_for_mode_1, dc_decomp=dc_decomp, mode=mode)
 
-    f_ref = K.function(inputs_0 + inputs_1, K.maximum(input_ref_0, input_ref_1))
-    f_maximum = K.function(inputs_0 + inputs_1, output)
+    f_ref = helpers.function(inputs_0 + inputs_1, K.maximum(input_ref_0, input_ref_1))
+    f_maximum = helpers.function(inputs_0 + inputs_1, output)
 
     assert len(f_maximum(inputs_ + inputs_)) == 7
     f_ref(inputs_ + inputs_)
@@ -454,8 +452,8 @@ def test_minus_nodc(odd, helpers):
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
     output = minus(inputs_for_mode, dc_decomp=dc_decomp, mode=mode)
 
-    f_ref = K.function(inputs, -inputs[1])
-    f_minus = K.function(inputs, output)
+    f_ref = helpers.function(inputs, -inputs[1])
+    f_minus = helpers.function(inputs, output)
 
     assert len(f_minus(inputs_)) == 7
     f_ref(inputs_)
@@ -475,8 +473,8 @@ def test_add_nodc(odd, helpers):
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
 
     output = add(inputs_for_mode_0, inputs_for_mode_1, dc_decomp=dc_decomp, mode=mode)
-    f_ref = K.function(inputs_0 + inputs_1, input_ref_0 + input_ref_1)
-    f_add = K.function(inputs_0 + inputs_1, output)
+    f_ref = helpers.function(inputs_0 + inputs_1, input_ref_0 + input_ref_1)
+    f_add = helpers.function(inputs_0 + inputs_1, output)
     assert len(f_add(inputs_ + inputs_)) == 7
     f_ref(inputs_ + inputs_)
 
@@ -495,11 +493,11 @@ def test_relu_1D_box_nodc(n, helpers):
     lower = BoxDomain().get_lower(z, W_l, b_l)
     upper = BoxDomain().get_upper(z, W_u, b_u)
 
-    f_lower = K.function(inputs, lower)
-    f_upper = K.function(inputs, upper)
+    f_lower = helpers.function(inputs, lower)
+    f_upper = helpers.function(inputs, upper)
 
     np.min(f_lower(inputs_))
     np.max(f_upper(inputs_))
 
-    f_relu_ = K.function(inputs, output)
+    f_relu_ = helpers.function(inputs, output)
     assert len(f_relu_(inputs_)) == 7

@@ -4,8 +4,7 @@
 import keras_core.ops as K
 import numpy as np
 import pytest
-from keras_core.layers import Conv2D, Input
-from keras_core.models import Model
+from keras_core.layers import Conv2D
 from numpy.testing import assert_almost_equal
 
 from decomon.backward_layers.utils_conv import get_toeplitz
@@ -56,7 +55,7 @@ def test_toeplitz_from_Keras(channels, filter_size, strides, flatten, data_forma
     result_flat = K.reshape(result_ref, (-1, n_out))
     result_toeplitz = K.sum(W[None] * y_flat, 1)
     output_test = K.sum((result_toeplitz - result_flat) ** 2)
-    f_test = K.function(inputs, output_test)
+    f_test = helpers.function(inputs, output_test)
     output_test_ = f_test(inputs_)
 
     assert_almost_equal(
@@ -118,8 +117,7 @@ def test_toeplitz_from_Decomon(floatx, mode, channels, filter_size, strides, fla
 
     output_test = K.sum((result_toeplitz - result_flat) ** 2)
 
-    f_test = K.function(inputs, output_test)
-
+    f_test = helpers.function(inputs, output_test)
     output_test_ = f_test(inputs_)
 
     assert_almost_equal(

@@ -15,12 +15,12 @@ def test_categorical_cross_entropy(odd, mode, floatx, decimal, helpers):
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
 
     # original output
-    f_ref = K.function(inputs, -input_ref + K.log(K.sum(K.exp(input_ref), -1))[:, None])
+    f_ref = helpers.function(inputs, -input_ref + K.log(K.sum(K.exp(input_ref), -1))[:, None])
     output_ref_ = f_ref(inputs_)
 
     # decomon output
     output = categorical_cross_entropy(inputs_for_mode, dc_decomp=dc_decomp, mode=mode)
-    f_entropy = K.function(inputs, output)
+    f_entropy = helpers.function(inputs, output)
     outputs_ = f_entropy(inputs_)
 
     # check bounds consistency

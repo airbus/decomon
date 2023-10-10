@@ -1,5 +1,3 @@
-import keras_core.ops as K
-
 from decomon.core import ForwardMode, Slope
 from decomon.layers.decomon_layers import DecomonActivation
 
@@ -30,7 +28,7 @@ def test_decomon_activation_slope(helpers):
         x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs  # tensors
         inputs_for_mode = [z, W_u, b_u, W_l, b_l]
         output = layer(inputs_for_mode)
-        f_func = K.function(inputs, output)
+        f_func = helpers.function(inputs, output)
         outputs_by_slope[slope] = f_func(inputs_)
 
     # check results
