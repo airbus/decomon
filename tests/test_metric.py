@@ -1,4 +1,4 @@
-import tensorflow.keras.backend as K
+import keras_core.backend as K
 
 from decomon.metrics.utils import categorical_cross_entropy
 

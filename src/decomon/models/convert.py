@@ -1,11 +1,11 @@
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import keras_core.backend as K
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Input, InputLayer, Lambda, Layer
-from tensorflow.keras.models import Model
+from keras_core.layers import Input, InputLayer, Lambda, Layer
+from keras_core.models import Model
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.core import BoxDomain, PerturbationDomain, Slope, get_mode

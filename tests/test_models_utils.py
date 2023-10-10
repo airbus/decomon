@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 import tensorflow as tf
+from keras_core import Input
+from keras_core.layers import Activation, Conv2D, Dense, Layer, Permute, PReLU
 from numpy.testing import assert_almost_equal
-from tensorflow.keras import Input
-from tensorflow.keras.layers import Activation, Conv2D, Dense, Layer, Permute, PReLU
 
 from decomon.models.utils import (
     convert_deellip_to_keras,

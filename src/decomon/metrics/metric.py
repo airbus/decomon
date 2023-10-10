@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
+import keras_core.backend as K
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Input, Layer
-from tensorflow.keras.models import Model
+from keras_core.layers import Input, Layer
+from keras_core.models import Model
 
 from decomon.core import BoxDomain, PerturbationDomain
 from decomon.models.models import DecomonModel
@@ -232,7 +232,7 @@ class AdversarialScore(AdversarialCheck):
         return adv_score
 
 
-def build_formal_adv_check_model(decomon_model: DecomonModel) -> tf.keras.Model:
+def build_formal_adv_check_model(decomon_model: DecomonModel) -> keras.Model:
     """automatic design on a Keras  model which predicts a certificate of adversarial robustness
 
     Args:
@@ -255,7 +255,7 @@ def build_formal_adv_check_model(decomon_model: DecomonModel) -> tf.keras.Model:
     return adv_model
 
 
-def build_formal_adv_model(decomon_model: DecomonModel) -> tf.keras.Model:
+def build_formal_adv_model(decomon_model: DecomonModel) -> keras.Model:
     """automatic design on a Keras  model which predicts a certificate of adversarial robustness
 
     Args:
@@ -347,7 +347,7 @@ class UpperScore(MetricLayer):
         return upper_score
 
 
-def build_formal_upper_model(decomon_model: DecomonModel) -> tf.keras.Model:
+def build_formal_upper_model(decomon_model: DecomonModel) -> keras.Model:
     """automatic design on a Keras  model which predicts a certificate on the local upper bound
 
     Args:

@@ -1,10 +1,10 @@
 import warnings
 from typing import Any, Callable, Dict, List, Optional, Union
 
+import keras_core.backend as K
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Layer
+from keras_core.layers import Layer
 
 from decomon.core import (
     BoxDomain,

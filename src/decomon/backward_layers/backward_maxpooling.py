@@ -1,9 +1,9 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import keras_core.backend as K
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Flatten, Layer
+from keras_core.layers import Flatten, Layer
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import backward_max_, get_identity_lirpa
