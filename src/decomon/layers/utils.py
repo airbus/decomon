@@ -1,8 +1,8 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import keras_core as keras
+import keras_core.ops as K
 import numpy as np
-from keras_core import backend as K
 from keras_core.constraints import Constraint
 from keras_core.initializers import Initializer
 from keras_core.layers import Layer

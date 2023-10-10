@@ -1,7 +1,7 @@
 from typing import List, Optional, Union
 
 import keras_core as keras
-import keras_core.backend as K
+import keras_core.ops as K
 import numpy as np
 import numpy.typing as npt
 import pytest

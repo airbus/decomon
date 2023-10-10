@@ -1,4 +1,4 @@
-import tensorflow.python.keras.backend as K
+import keras_core.ops as K
 
 from decomon.core import ForwardMode, Slope
 from decomon.layers.decomon_layers import DecomonActivation

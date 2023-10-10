@@ -1,4 +1,4 @@
-import keras_core.backend as K
+import keras_core.ops as K
 import pytest
 from keras_core.layers import Layer, Reshape
 from tensorflow.python.keras.backend import _get_available_gpus

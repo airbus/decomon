@@ -1,5 +1,5 @@
 import keras_core as keras
-import keras_core.backend as K
+import keras_core.ops as K
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal

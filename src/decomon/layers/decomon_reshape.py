@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import keras_core as keras
-import keras_core.backend as K
+import keras_core.ops as K
 from keras_core.layers import InputSpec, Layer, Permute, Reshape
 
 from decomon.core import ForwardMode, PerturbationDomain, get_affine, get_ibp
