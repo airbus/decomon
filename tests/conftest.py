@@ -1,6 +1,7 @@
 from typing import List, Optional, Union
 
 import keras_core as keras
+import keras_core.config as keras_config
 import keras_core.ops as K
 import numpy as np
 import numpy.typing as npt
@@ -41,17 +42,17 @@ def n(request):
 @pytest.fixture(params=[32, 64, 16])
 def floatx(request):
     # setup
-    eps_bak = K.epsilon()  # store current epsilon
-    floatx_bak = K.floatx()  # store current floatx
+    eps_bak = keras_config.epsilon()  # store current epsilon
+    floatx_bak = keras_config.floatx()  # store current floatx
     precision = request.param
-    K.set_floatx("float{}".format(precision))
+    keras_config.set_floatx("float{}".format(precision))
     if precision == 16:
-        K.set_epsilon(1e-2)
+        keras_config.set_epsilon(1e-2)
     # actual value
     yield precision
     # tear down
-    K.set_epsilon(eps_bak)
-    K.set_floatx(floatx_bak)
+    keras_config.set_epsilon(eps_bak)
+    keras_config.set_floatx(floatx_bak)
 
 
 @pytest.fixture
@@ -174,10 +175,10 @@ class Helpers:
     @staticmethod
     def get_standard_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
         """A set of functions with their monotonic decomposition for testing the activations"""
-        w_u_ = np.ones(nb, dtype=K.floatx())
-        b_u_ = np.zeros(nb, dtype=K.floatx())
-        w_l_ = np.ones(nb, dtype=K.floatx())
-        b_l_ = np.zeros(nb, dtype=K.floatx())
+        w_u_ = np.ones(nb, dtype=keras_config.floatx())
+        b_u_ = np.zeros(nb, dtype=keras_config.floatx())
+        w_l_ = np.ones(nb, dtype=keras_config.floatx())
+        b_l_ = np.zeros(nb, dtype=keras_config.floatx())
 
         if n == 0:
             # identity
@@ -291,7 +292,7 @@ class Helpers:
             ]
 
         # cast element
-        return [e.astype(K.floatx()) for e in output]
+        return [e.astype(keras_config.floatx()) for e in output]
 
     @staticmethod
     def get_inputs_for_mode_from_full_inputs(
@@ -449,28 +450,28 @@ class Helpers:
     def get_tensor_decomposition_1d_box(dc_decomp=True):
         if dc_decomp:
             return [
-                Input((1,), dtype=K.floatx()),
-                Input((1,), dtype=K.floatx()),
-                Input((2, 1), dtype=K.floatx()),
-                Input((1,), dtype=K.floatx()),
-                Input((1, 1), dtype=K.floatx()),
-                Input((1,), dtype=K.floatx()),
-                Input((1,), dtype=K.floatx()),
-                Input((1, 1), dtype=K.floatx()),
-                Input((1,), dtype=K.floatx()),
-                Input((1,), dtype=K.floatx()),
-                Input((1,), dtype=K.floatx()),
+                Input((1,), dtype=keras_config.floatx()),
+                Input((1,), dtype=keras_config.floatx()),
+                Input((2, 1), dtype=keras_config.floatx()),
+                Input((1,), dtype=keras_config.floatx()),
+                Input((1, 1), dtype=keras_config.floatx()),
+                Input((1,), dtype=keras_config.floatx()),
+                Input((1,), dtype=keras_config.floatx()),
+                Input((1, 1), dtype=keras_config.floatx()),
+                Input((1,), dtype=keras_config.floatx()),
+                Input((1,), dtype=keras_config.floatx()),
+                Input((1,), dtype=keras_config.floatx()),
             ]
         return [
-            Input((1,), dtype=K.floatx()),
-            Input((1,), dtype=K.floatx()),
-            Input((2, 1), dtype=K.floatx()),
-            Input((1,), dtype=K.floatx()),
-            Input((1, 1), dtype=K.floatx()),
-            Input((1,), dtype=K.floatx()),
-            Input((1,), dtype=K.floatx()),
-            Input((1, 1), dtype=K.floatx()),
-            Input((1,), dtype=K.floatx()),
+            Input((1,), dtype=keras_config.floatx()),
+            Input((1,), dtype=keras_config.floatx()),
+            Input((2, 1), dtype=keras_config.floatx()),
+            Input((1,), dtype=keras_config.floatx()),
+            Input((1, 1), dtype=keras_config.floatx()),
+            Input((1,), dtype=keras_config.floatx()),
+            Input((1,), dtype=keras_config.floatx()),
+            Input((1, 1), dtype=keras_config.floatx()),
+            Input((1,), dtype=keras_config.floatx()),
         ]
 
     @staticmethod
@@ -543,28 +544,28 @@ class Helpers:
         if dc_decomp:
             # x, y, z, u, w_u, b_u, l, w_l, b_l, h, g
             return [
-                Input((n,), dtype=K.floatx()),
-                Input((n,), dtype=K.floatx()),
-                Input((2, n), dtype=K.floatx()),
-                Input((n,), dtype=K.floatx()),
-                Input((n, n), dtype=K.floatx()),
-                Input((n,), dtype=K.floatx()),
-                Input((n,), dtype=K.floatx()),
-                Input((n, n), dtype=K.floatx()),
-                Input((n,), dtype=K.floatx()),
-                Input((n,), dtype=K.floatx()),
-                Input((n,), dtype=K.floatx()),
+                Input((n,), dtype=keras_config.floatx()),
+                Input((n,), dtype=keras_config.floatx()),
+                Input((2, n), dtype=keras_config.floatx()),
+                Input((n,), dtype=keras_config.floatx()),
+                Input((n, n), dtype=keras_config.floatx()),
+                Input((n,), dtype=keras_config.floatx()),
+                Input((n,), dtype=keras_config.floatx()),
+                Input((n, n), dtype=keras_config.floatx()),
+                Input((n,), dtype=keras_config.floatx()),
+                Input((n,), dtype=keras_config.floatx()),
+                Input((n,), dtype=keras_config.floatx()),
             ]
         return [
-            Input((n,), dtype=K.floatx()),
-            Input((n,), dtype=K.floatx()),
-            Input((2, n), dtype=K.floatx()),
-            Input((n,), dtype=K.floatx()),
-            Input((n, n), dtype=K.floatx()),
-            Input((n,), dtype=K.floatx()),
-            Input((n,), dtype=K.floatx()),
-            Input((n, n), dtype=K.floatx()),
-            Input((n,), dtype=K.floatx()),
+            Input((n,), dtype=keras_config.floatx()),
+            Input((n,), dtype=keras_config.floatx()),
+            Input((2, n), dtype=keras_config.floatx()),
+            Input((n,), dtype=keras_config.floatx()),
+            Input((n, n), dtype=keras_config.floatx()),
+            Input((n,), dtype=keras_config.floatx()),
+            Input((n,), dtype=keras_config.floatx()),
+            Input((n, n), dtype=keras_config.floatx()),
+            Input((n,), dtype=keras_config.floatx()),
         ]
 
     @staticmethod
@@ -892,33 +893,33 @@ class Helpers:
             # x, y, z, u, w_u, b_u, l, w_l, b_l
 
             output = [
-                Input((2,), dtype=K.floatx()),
-                Input((n, n, 2), dtype=K.floatx()),
-                Input((2, 2), dtype=K.floatx()),
-                Input((n, n, 2), dtype=K.floatx()),
-                Input((2, n, n, 2), dtype=K.floatx()),
-                Input((n, n, 2), dtype=K.floatx()),
-                Input((n, n, 2), dtype=K.floatx()),
-                Input((2, n, n, 2), dtype=K.floatx()),
-                Input((n, n, 2), dtype=K.floatx()),
+                Input((2,), dtype=keras_config.floatx()),
+                Input((n, n, 2), dtype=keras_config.floatx()),
+                Input((2, 2), dtype=keras_config.floatx()),
+                Input((n, n, 2), dtype=keras_config.floatx()),
+                Input((2, n, n, 2), dtype=keras_config.floatx()),
+                Input((n, n, 2), dtype=keras_config.floatx()),
+                Input((n, n, 2), dtype=keras_config.floatx()),
+                Input((2, n, n, 2), dtype=keras_config.floatx()),
+                Input((n, n, 2), dtype=keras_config.floatx()),
             ]
 
             if dc_decomp:
-                output += [Input((n, n, 2), dtype=K.floatx()), Input((n, n, 2), dtype=K.floatx())]
+                output += [Input((n, n, 2), dtype=keras_config.floatx()), Input((n, n, 2), dtype=keras_config.floatx())]
         else:
             output = [
-                Input((2,), dtype=K.floatx()),
-                Input((2, n, n), dtype=K.floatx()),
-                Input((2, 2), dtype=K.floatx()),
-                Input((2, n, n), dtype=K.floatx()),
-                Input((2, 2, n, n), dtype=K.floatx()),
-                Input((2, n, n), dtype=K.floatx()),
-                Input((2, n, n), dtype=K.floatx()),
-                Input((2, 2, n, n), dtype=K.floatx()),
-                Input((2, n, n), dtype=K.floatx()),
+                Input((2,), dtype=keras_config.floatx()),
+                Input((2, n, n), dtype=keras_config.floatx()),
+                Input((2, 2), dtype=keras_config.floatx()),
+                Input((2, n, n), dtype=keras_config.floatx()),
+                Input((2, 2, n, n), dtype=keras_config.floatx()),
+                Input((2, n, n), dtype=keras_config.floatx()),
+                Input((2, n, n), dtype=keras_config.floatx()),
+                Input((2, 2, n, n), dtype=keras_config.floatx()),
+                Input((2, n, n), dtype=keras_config.floatx()),
             ]
             if dc_decomp:
-                output += [Input((n, n, 2), dtype=K.floatx()), Input((n, n, 2), dtype=K.floatx())]
+                output += [Input((n, n, 2), dtype=keras_config.floatx()), Input((n, n, 2), dtype=keras_config.floatx())]
 
         return output
 
@@ -961,7 +962,7 @@ class Helpers:
 
         #
         if w_u_ is not None:
-            if K.floatx() == "float32":
+            if keras_config.floatx() == "float32":
                 assert_almost_equal(
                     np.clip(y_ - upper_, 0.0, 1e6),
                     np.zeros_like(y_),
@@ -969,7 +970,7 @@ class Helpers:
                     err_msg="upper <y",
                 )
         if w_l_ is not None:
-            if K.floatx() == "float32":
+            if keras_config.floatx() == "float32":
                 assert_almost_equal(
                     np.clip(lower_ - y_, 0.0, np.inf),
                     np.zeros_like(y_),
@@ -1539,7 +1540,7 @@ def helpers():
 )
 def toy_model(request, helpers):
     model_name = request.param
-    return helpers.toy_model(model_name, dtype=K.floatx())
+    return helpers.toy_model(model_name, dtype=keras_config.floatx())
 
 
 @pytest.fixture(
@@ -1555,4 +1556,4 @@ def toy_model(request, helpers):
 )
 def toy_model_1d(request, helpers):
     model_name = request.param
-    return helpers.toy_model(model_name, dtype=K.floatx())
+    return helpers.toy_model(model_name, dtype=keras_config.floatx())

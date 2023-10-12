@@ -16,7 +16,7 @@ def test_toeplitz_from_Keras(channels, filter_size, strides, flatten, data_forma
     # filter_size, strides, flatten,
     decimal = 5
     if floatx == 16:
-        K.set_epsilon(1e-2)
+        config.set_epsilon(1e-2)
         decimal = 0
 
     if data_format == "channels_first" and not len(K._get_available_gpus()):
@@ -73,7 +73,7 @@ def test_toeplitz_from_Decomon(floatx, mode, channels, filter_size, strides, fla
     odd, m_0, m_1 = 0, 0, 1
     decimal = 4
     if floatx == 16:
-        K.set_epsilon(1e-2)
+        config.set_epsilon(1e-2)
         decimal = 0
 
     dc_decomp = False

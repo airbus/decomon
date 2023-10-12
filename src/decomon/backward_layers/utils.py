@@ -3,6 +3,7 @@ from typing import Any, List, Optional, Union
 import keras_core as keras
 import keras_core.ops as K
 import numpy as np
+from keras_core.config import floatx
 from keras_core.layers import Flatten
 
 from decomon.core import (
@@ -48,7 +49,7 @@ def backward_add(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
-    op_flat = Flatten(dtype=K.floatx())  # pas terrible  a revoir
+    op_flat = Flatten(dtype=floatx())  # pas terrible  a revoir
     inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
     x_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0, h_0, g_0 = inputs_outputs_spec.get_fullinputs_from_inputsformode(
         inputs_0

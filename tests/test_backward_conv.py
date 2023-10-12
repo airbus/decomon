@@ -1,6 +1,7 @@
 # Test unit for decomon with Dense layers
 
 
+import keras_core.config as keras_config
 import numpy as np
 import pytest
 from tensorflow.python.keras.backend import _get_available_gpus
@@ -33,7 +34,7 @@ def test_Decomon_conv_box(data_format, padding, use_bias, mode, floatx, decimal,
         padding=padding,
         use_bias=use_bias,
         mode=mode,
-        dtype=K.floatx(),
+        dtype=keras_config.floatx(),
     )
     decomon_layer(inputs_for_mode)  # init weights
 

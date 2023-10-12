@@ -1,3 +1,4 @@
+import keras_core.config as keras_config
 import numpy as np
 import pytest
 from keras_core.layers import Permute, Reshape
@@ -62,7 +63,7 @@ def test_Decomon_reshape_n_permute_box(
     output_ref_ = np_func(input_ref_, target_shape_)
 
     # decomon layer
-    decomon_layer = decomon_layer_class(target_shape, dc_decomp=dc_decomp, mode=mode, dtype=K.floatx())
+    decomon_layer = decomon_layer_class(target_shape, dc_decomp=dc_decomp, mode=mode, dtype=keras_config.floatx())
 
     # decomon output
     output = decomon_layer(inputs_for_mode)
@@ -109,7 +110,7 @@ def test_Decomon_reshape_n_permute_to_decomon_box(
     target_shape = keras_target_shape_func(input_ref)
 
     # keras layer
-    keras_layer = keras_layer_class(target_shape, dtype=K.floatx())
+    keras_layer = keras_layer_class(target_shape, dtype=keras_config.floatx())
 
     # original output
     output_ref = keras_layer(input_ref)
