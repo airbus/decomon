@@ -1,3 +1,4 @@
+import keras_core.config as keras_config
 from keras_core.layers import MaxPooling2D
 
 from decomon.layers.maxpooling import DecomonMaxPooling2D
@@ -8,7 +9,7 @@ def test_MaxPooling2D_box(mode, floatx, decimal, helpers):
     data_format = "channels_last"
     dc_decomp = True
     fast = False
-    kwargs_layer = dict(pool_size=(2, 2), strides=(2, 2), padding="valid", dtype=K.floatx())
+    kwargs_layer = dict(pool_size=(2, 2), strides=(2, 2), padding="valid", dtype=keras_config.floatx())
 
     # tensor inputs
     inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=dc_decomp)

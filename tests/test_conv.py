@@ -1,6 +1,7 @@
 # Test unit for decomon with Dense layers
 
 
+import keras_core.config as keras_config
 import numpy as np
 import pytest
 from keras_core.layers import Conv2D
@@ -16,7 +17,7 @@ def test_Decomon_conv_box(data_format, mode, dc_decomp, floatx, decimal, helpers
         pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     odd, m_0, m_1 = 0, 0, 1
-    kwargs_layer = dict(filters=10, kernel_size=(3, 3), dtype=K.floatx(), data_format=data_format)
+    kwargs_layer = dict(filters=10, kernel_size=(3, 3), dtype=keras_config.floatx(), data_format=data_format)
 
     # tensor inputs
     inputs = helpers.get_tensor_decomposition_images_box(data_format, odd, dc_decomp=dc_decomp)
@@ -69,7 +70,7 @@ def test_Decomon_conv_to_decomon_box(shared, floatx, dc_decomp, helpers):
     mode = ForwardMode.HYBRID
     ibp = get_ibp(mode=mode)
     affine = get_affine(mode=mode)
-    kwargs_layer = dict(filters=10, kernel_size=(3, 3), dtype=K.floatx(), data_format=data_format)
+    kwargs_layer = dict(filters=10, kernel_size=(3, 3), dtype=keras_config.floatx(), data_format=data_format)
 
     if floatx == 16:
         decimal = 1

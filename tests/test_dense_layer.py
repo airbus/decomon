@@ -1,6 +1,7 @@
 # Test unit for decomon with Dense layers
 
 
+import keras_core.config as keras_config
 import numpy as np
 from keras_core.layers import Dense
 from numpy.testing import assert_almost_equal
@@ -13,7 +14,7 @@ from decomon.models.utils import split_activation
 
 def test_DecomonDense_1D_box(n, mode, shared, floatx, decimal, helpers):
     dc_decomp = True
-    kwargs_layer = dict(units=1, use_bias=True, dtype=K.floatx())
+    kwargs_layer = dict(units=1, use_bias=True, dtype=keras_config.floatx())
 
     # tensor inputs
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
@@ -64,7 +65,7 @@ def test_DecomonDense_1D_box_nodc(n, helpers):
     shared = False
     mode = ForwardMode.HYBRID
     decimal = 5
-    kwargs_layer = dict(units=1, use_bias=True, dtype=K.floatx())
+    kwargs_layer = dict(units=1, use_bias=True, dtype=keras_config.floatx())
 
     # tensor inputs
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
@@ -112,7 +113,7 @@ def test_DecomonDense_1D_box_nodc(n, helpers):
 
 def test_DecomonDense_multiD_box(odd, mode, dc_decomp, helpers):
     shared = False
-    kwargs_layer = dict(units=1, use_bias=True, dtype=K.floatx())
+    kwargs_layer = dict(units=1, use_bias=True, dtype=keras_config.floatx())
     decimal = 5
 
     # tensor inputs
@@ -171,7 +172,7 @@ def test_DecomonDense_multiD_box(odd, mode, dc_decomp, helpers):
 
 def test_DecomonDense_1D_to_decomon_box(n, activation, mode, shared, helpers):
     dc_decomp = True
-    kwargs_layer = dict(units=1, use_bias=True, dtype=K.floatx())
+    kwargs_layer = dict(units=1, use_bias=True, dtype=keras_config.floatx())
     decimal = 5
     ibp = get_ibp(mode=mode)
     affine = get_affine(mode=mode)
@@ -221,7 +222,7 @@ def test_DecomonDense_1D_to_decomon_box(n, activation, mode, shared, helpers):
 
 def test_DecomonDense_multiD_to_decomon_box(odd, activation, mode, dc_decomp, helpers):
     shared = False
-    kwargs_layer = dict(units=1, use_bias=True, dtype=K.floatx())
+    kwargs_layer = dict(units=1, use_bias=True, dtype=keras_config.floatx())
     decimal = 5
     ibp = get_ibp(mode=mode)
     affine = get_affine(mode=mode)

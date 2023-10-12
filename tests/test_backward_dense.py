@@ -1,3 +1,4 @@
+import keras_core.config as keras_config
 from keras_core.layers import Dense, Input
 
 from decomon.backward_layers.convert import to_backward
@@ -18,7 +19,7 @@ def test_Backward_Dense_1D_box(n, use_bias, mode, floatx, decimal, helpers):
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
 
     # keras layer
-    keras_layer = Dense(1, use_bias=use_bias, dtype=K.floatx())
+    keras_layer = Dense(1, use_bias=use_bias, dtype=keras_config.floatx())
     keras_layer(input_ref)  # init weights
 
     # get backward layer
@@ -51,7 +52,7 @@ def test_Backward_Dense_multiD_box(odd, floatx, decimal, mode, helpers):
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
 
     # keras layer
-    keras_layer = Dense(1, use_bias=use_bias, dtype=K.floatx())
+    keras_layer = Dense(1, use_bias=use_bias, dtype=keras_config.floatx())
     keras_layer(input_ref)  # init weights
 
     # get backward layer
@@ -86,7 +87,7 @@ def test_Backward_DecomonDense_1D_box(n, helpers):
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
 
     # decomon layer
-    decomon_layer = DecomonDense(1, use_bias=use_bias, dc_decomp=dc_decomp, mode=mode, dtype=K.floatx())
+    decomon_layer = DecomonDense(1, use_bias=use_bias, dc_decomp=dc_decomp, mode=mode, dtype=keras_config.floatx())
     decomon_layer(inputs_for_mode)  # init weights
 
     # get backward layer

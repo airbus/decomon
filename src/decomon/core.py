@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import keras_core as keras
 import keras_core.ops as K
 import numpy as np
+from keras_core.config import floatx
 
 
 class Option(str, Enum):
@@ -378,7 +379,9 @@ class InputsOutputsSpec:
         return self.extract_inputsformode_from_fullinputs(outputs)
 
     @staticmethod
-    def get_empty_tensor(dtype: str = K.floatx()) -> keras.KerasTensor:
+    def get_empty_tensor(dtype: Optional[str] = None) -> keras.KerasTensor:
+        if dtype is None:
+            dtype = floatx()
         return tf.constant([], dtype=dtype)
 
 

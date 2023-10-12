@@ -1,6 +1,7 @@
 # Test unit for decomon with Dense layers
 
 
+import keras_core.config as keras_config
 import numpy as np
 import pytest
 from keras_core.layers import (
@@ -75,7 +76,7 @@ def test_DecomonOp_1D_box(decomon_op_class, tensor_op, decomon_op_kwargs, n, mod
     output_ref_ = tensor_op(input_ref_, input_ref_)
 
     # decomon output
-    decomon_op = decomon_op_class(dc_decomp=dc_decomp, mode=mode, dtype=K.floatx(), **decomon_op_kwargs)
+    decomon_op = decomon_op_class(dc_decomp=dc_decomp, mode=mode, dtype=keras_config.floatx(), **decomon_op_kwargs)
     output = decomon_op(inputs_for_mode_0 + inputs_for_mode_1)
     f_decomon = helpers.function(inputs_0 + inputs_1, output)
     outputs_ = f_decomon(inputs_ + inputs_)
@@ -120,7 +121,7 @@ def test_DecomonOp_multiD_box(decomon_op_class, tensor_op, decomon_op_kwargs, od
     output_ref_ = tensor_op(input_ref_, input_ref_)
 
     # decomon output
-    decomon_op = decomon_op_class(dc_decomp=dc_decomp, mode=mode, dtype=K.floatx(), **decomon_op_kwargs)
+    decomon_op = decomon_op_class(dc_decomp=dc_decomp, mode=mode, dtype=keras_config.floatx(), **decomon_op_kwargs)
     output = decomon_op(inputs_for_mode_0 + inputs_for_mode_1)
     f_decomon = helpers.function(inputs_0 + inputs_1, output)
     outputs_ = f_decomon(inputs_ + inputs_)
@@ -171,7 +172,7 @@ def test_Decomon_1D_box_to_decomon(layer_class, tensor_op, layer_kwargs, n, help
     output_ref_ = tensor_op(input_ref_, input_ref_)
 
     # to_decomon
-    ref_op = layer_class(dtype=K.floatx(), **layer_kwargs)
+    ref_op = layer_class(dtype=keras_config.floatx(), **layer_kwargs)
     ref_op([input_ref_0, input_ref_1])
     decomon_op = to_decomon(
         ref_op, input_dim=helpers.get_input_dim_from_full_inputs(inputs_0), dc_decomp=dc_decomp, affine=affine, ibp=ibp
@@ -231,7 +232,7 @@ def test_Decomon_multiD_box_to_decomon(layer_class, tensor_op, layer_kwargs, odd
     output_ref_ = tensor_op(input_ref_, input_ref_)
 
     #  to_decomon
-    ref_op = layer_class(dtype=K.floatx(), **layer_kwargs)
+    ref_op = layer_class(dtype=keras_config.floatx(), **layer_kwargs)
     ref_op([input_ref_0, input_ref_1])
     decomon_op = to_decomon(
         ref_op, input_dim=helpers.get_input_dim_from_full_inputs(inputs_0), dc_decomp=dc_decomp, affine=affine, ibp=ibp

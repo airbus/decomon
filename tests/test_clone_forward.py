@@ -1,6 +1,8 @@
 # creating toy network and assess that the decomposition is correct
 
 
+import keras_core.config as keras_config
+
 from decomon.core import get_affine, get_ibp
 from decomon.models.forward_cloning import convert_forward
 
@@ -22,7 +24,7 @@ def test_convert_forward_1D(n, mode, floatx, decimal, helpers):
     input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
 
     # keras model and output of reference
-    ref_nn = helpers.toy_network_tutorial(dtype=K.floatx())
+    ref_nn = helpers.toy_network_tutorial(dtype=keras_config.floatx())
     output_ref_ = ref_nn.predict(input_ref_)
 
     # decomon conversion

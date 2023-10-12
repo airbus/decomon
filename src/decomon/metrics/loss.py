@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import keras_core as keras
 import keras_core.ops as K
 import numpy as np
+from keras_core.config import epsilon
 from keras_core.layers import Lambda, Layer
 
 from decomon.core import (
@@ -490,7 +491,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
         # compute center
         x_0 = (x[:, 0] + x[:, 1]) / 2.0
-        radius = K.maximum((x[:, 1] - x[:, 0]) / 2.0, K.epsilon())
+        radius = K.maximum((x[:, 1] - x[:, 0]) / 2.0, epsilon())
         source_tensor = tf.linalg.diag(K.ones_like(b_l))
 
         shape = b_l.shape[-1]
@@ -506,7 +507,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
             score = K.sum(W_adv * x_0[:, :, None], 1) + b_adv  # (None, n_out)
 
-            denum = K.maximum(K.sum(K.abs(W_adv * radius[:, :, None]), 1), K.epsilon())  # (None, n_out)
+            denum = K.maximum(K.sum(K.abs(W_adv * radius[:, :, None]), 1), epsilon())  # (None, n_out)
 
             eps_adv = K.minimum(-score / denum + y_tensor, 2.0)
 
@@ -524,7 +525,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
         # compute center
         x_0 = (x[:, 0] + x[:, 1]) / 2.0
-        radius = K.maximum((x[:, 1] - x[:, 0]) / 2.0, K.epsilon())
+        radius = K.maximum((x[:, 1] - x[:, 0]) / 2.0, epsilon())
         source_tensor = tf.linalg.diag(K.ones_like(b_l))
 
         shape = b_l.shape[-1]
@@ -534,7 +535,7 @@ class DecomonRadiusRobust(DecomonLayer):
             b_adv = b_u - 1e6 * y_tensor
 
             score = K.sum(W_adv * x_0[:, :, None], 1) + b_adv  # (None, n_out)
-            denum = K.maximum(K.sum(K.abs(W_adv * radius[:, :, None]), 1), K.epsilon())  # (None, n_out)
+            denum = K.maximum(K.sum(K.abs(W_adv * radius[:, :, None]), 1), epsilon())  # (None, n_out)
 
             eps_adv = K.minimum(-score / denum + y_tensor, 2.0)
 
