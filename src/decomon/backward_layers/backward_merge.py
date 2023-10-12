@@ -403,13 +403,14 @@ class BackwardConcatenate(BackwardMerge):
         inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
         n_elem = len(inputs_list)
         n_list = [self.inputs_outputs_spec.get_input_shape(subinputs)[self.axis] for subinputs in inputs_list]
+        indices_split = np.cumsum(n_list[:-1])
         axis_w = self.axis
         if axis_w != -1:
             axis_w += 1
-        w_u_out_list = tf.split(w_u_out, n_list, axis_w)
-        w_l_out_list = tf.split(w_l_out, n_list, axis_w)
-        b_u_out_list = tf.split(b_u_out, n_list, self.axis)
-        b_l_out_list = tf.split(b_l_out, n_list, self.axis)
+        w_u_out_list = K.split(w_u_out, indices_split, axis_w)
+        w_l_out_list = K.split(w_l_out, indices_split, axis_w)
+        b_u_out_list = K.split(b_u_out, indices_split, self.axis)
+        b_l_out_list = K.split(b_l_out, indices_split, self.axis)
 
         bounds = [[w_u_out_list[i], b_u_out_list[i], w_l_out_list[i], b_l_out_list[i]] for i in range(n_elem)]
 

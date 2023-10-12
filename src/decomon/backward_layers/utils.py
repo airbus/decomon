@@ -270,8 +270,8 @@ def backward_max_(
 
     # do some transpose so that the last axis is also at the end
     if ibp:
-        u_c_list = tf.split(u_c, max_dim, axis)
-        l_c_list = tf.split(l_c, max_dim, axis)
+        u_c_list = K.split(u_c, max_dim, axis)
+        l_c_list = K.split(l_c, max_dim, axis)
         u_c_tmp = u_c_list[0] + z_value * (u_c_list[0])
         l_c_tmp = l_c_list[0] + z_value * (l_c_list[0])
     else:
@@ -279,17 +279,17 @@ def backward_max_(
         u_c_tmp, l_c_tmp = empty_tensor, empty_tensor
 
     if affine:
-        b_u_list = tf.split(b_u, max_dim, axis)
-        b_l_list = tf.split(b_l, max_dim, axis)
+        b_u_list = K.split(b_u, max_dim, axis)
+        b_l_list = K.split(b_l, max_dim, axis)
         b_u_tmp = b_u_list[0] + z_value * (b_u_list[0])
         b_l_tmp = b_l_list[0] + z_value * (b_l_list[0])
 
         if axis == -1:
-            w_u_list = tf.split(w_u, max_dim, axis)
-            w_l_list = tf.split(w_l, max_dim, axis)
+            w_u_list = K.split(w_u, max_dim, axis)
+            w_l_list = K.split(w_l, max_dim, axis)
         else:
-            w_u_list = tf.split(w_u, max_dim, axis + 1)
-            w_l_list = tf.split(w_l, max_dim, axis + 1)
+            w_u_list = K.split(w_u, max_dim, axis + 1)
+            w_l_list = K.split(w_l, max_dim, axis + 1)
         w_u_tmp = w_u_list[0] + z_value * (w_u_list[0])
         w_l_tmp = w_l_list[0] + z_value * (w_l_list[0])
     else:
