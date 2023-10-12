@@ -42,7 +42,7 @@ class Convert2BackwardMode(Layer):
         inputs_wo_backward_bounds = inputs[:-4]
         backward_bounds = inputs[-4:]
         w_u_out, b_u_out, w_l_out, b_l_out = backward_bounds
-        empty_tensor = tf.constant([])
+        empty_tensor = K.convert_to_tensor([])
 
         if self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
             x_0 = inputs_wo_backward_bounds[0]
