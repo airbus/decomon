@@ -382,7 +382,7 @@ class InputsOutputsSpec:
     def get_empty_tensor(dtype: Optional[str] = None) -> keras.KerasTensor:
         if dtype is None:
             dtype = floatx()
-        return tf.constant([], dtype=dtype)
+        return K.convert_to_tensor([], dtype=dtype)
 
 
 def get_upper_box(
