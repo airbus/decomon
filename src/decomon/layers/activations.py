@@ -4,7 +4,6 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import keras_core as keras
 import keras_core.ops as K
 import numpy as np
-from tensorflow.types.experimental import TensorLike
 
 from decomon.core import (
     BoxDomain,
@@ -84,8 +83,8 @@ def relu(
 
 def linear_hull_s_shape(
     inputs: List[keras.KerasTensor],
-    func: Callable[[TensorLike], keras.KerasTensor] = K.sigmoid,
-    f_prime: Callable[[TensorLike], keras.KerasTensor] = sigmoid_prime,
+    func: Callable[[keras.KerasTensor], keras.KerasTensor] = K.sigmoid,
+    f_prime: Callable[[keras.KerasTensor], keras.KerasTensor] = sigmoid_prime,
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
