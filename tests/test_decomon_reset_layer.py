@@ -19,7 +19,7 @@ def test_decomondense_reset_layer(helpers, use_bias):
     units = 3
     mode = ForwardMode.HYBRID
     layer = Dense(units=units, use_bias=use_bias)
-    layer(tf.zeros((2, input_dim)))
+    layer(K.zeros((2, input_dim)))
     decomon_layer = DecomonDense(units=units, use_bias=use_bias, mode=mode, dc_decomp=dc_decomp)
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
     inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
@@ -50,7 +50,7 @@ def test_decomondense_reset_layer_decomon_with_new_weights(helpers):
     units = 3
     mode = ForwardMode.HYBRID
     layer = Dense(units=units)
-    layer(tf.zeros((2, input_dim)))
+    layer(K.zeros((2, input_dim)))
     decomon_layer = DecomonDense(units=units, mode=mode, dc_decomp=dc_decomp)
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
     inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
@@ -79,7 +79,7 @@ def test_decomondense_reset_layer_keras_with_new_weights(helpers):
     units = 3
     mode = ForwardMode.HYBRID
     layer = Dense(units=units)
-    layer(tf.zeros((2, input_dim)))
+    layer(K.zeros((2, input_dim)))
     decomon_layer = DecomonDense(units=units, mode=mode, dc_decomp=dc_decomp)
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
     inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
@@ -119,7 +119,7 @@ def test_decomondense_reset_layer_ko_decomonlayer_not_nuilt():
     units = 3
     mode = ForwardMode.HYBRID
     layer = Dense(units=units)
-    layer(tf.zeros((2, input_dim)))
+    layer(K.zeros((2, input_dim)))
     decomon_layer = DecomonDense(units=units, mode=mode, dc_decomp=dc_decomp)
     with pytest.raises(ValueError):
         decomon_layer.reset_layer(layer)
@@ -208,7 +208,7 @@ def test_decomonflatten_reset_layer(helpers):
     input_dim = 1
     mode = ForwardMode.HYBRID
     layer = Flatten()
-    layer(tf.zeros((2, input_dim)))
+    layer(K.zeros((2, input_dim)))
     decomon_layer = DecomonFlatten(mode=mode, dc_decomp=dc_decomp)
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
     inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)

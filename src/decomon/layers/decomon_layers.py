@@ -942,11 +942,11 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
             shape[ax] = self.moving_mean.shape[i]
 
         if self.gamma is None:  # scale = False
-            gamma = tf.ones(shape)
+            gamma = K.ones(shape)
         else:  # scale = True
             gamma = K.reshape(self.gamma + z_value, shape)
         if self.beta is None:  # center = False
-            beta = tf.zeros(shape)
+            beta = K.zeros(shape)
         else:  # center = True
             beta = K.reshape(self.beta + z_value, shape)
         moving_mean = K.reshape(self.moving_mean + z_value, shape)

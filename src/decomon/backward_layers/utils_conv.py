@@ -56,8 +56,8 @@ def get_toeplitz_channels_last(conv_layer: Conv2D, flatten: bool = True) -> kera
     stride_rows, stride_cols = conv_layer.strides
     rates_rows, rates_cols = conv_layer.dilation_rate
 
-    diag = tf.linalg.diag(tf.ones((1, w_in * h_in * c_in)))
-    diag_ = tf.reshape(diag, (w_in * h_in * c_in, w_in, h_in, c_in))
+    diag = tf.linalg.diag(K.ones((1, w_in * h_in * c_in)))
+    diag_ = K.reshape(diag, (w_in * h_in * c_in, w_in, h_in, c_in))
 
     diag_patches = tf.image.extract_patches(
         diag_,
@@ -67,7 +67,7 @@ def get_toeplitz_channels_last(conv_layer: Conv2D, flatten: bool = True) -> kera
         padding=padding,
     )
 
-    diag_patches_ = tf.reshape(diag_patches, (w_in, h_in, c_in, w_out, h_out, filter_size**2, c_in))
+    diag_patches_ = K.reshape(diag_patches, (w_in, h_in, c_in, w_out, h_out, filter_size**2, c_in))
 
     shape = np.arange(len(diag_patches_.shape))
     shape[-1] -= 1
@@ -75,7 +75,7 @@ def get_toeplitz_channels_last(conv_layer: Conv2D, flatten: bool = True) -> kera
     diag_patches_ = K.permute_dimensions(diag_patches_, shape)
     kernel = conv_layer.kernel  # (filter_size, filter_size, c_in, c_out)
 
-    kernel = K.permute_dimensions(tf.reshape(kernel, (filter_size**2, c_in, c_out)), (1, 2, 0))[
+    kernel = K.permute_dimensions(K.reshape(kernel, (filter_size**2, c_in, c_out)), (1, 2, 0))[
         None, None, None, None, None
     ]  # (1,1,c_in, c_out, filter_size^2)
 
@@ -123,14 +123,14 @@ def get_toeplitz_channels_first(conv_layer: Conv2D, flatten: bool = True) -> ker
     kernel_filter = conv_layer.kernel
     filter_size = kernel_filter.shape[0]
 
-    diag = tf.linalg.diag(tf.ones((1, w_in * h_in * c_in)))
-    diag_ = tf.reshape(diag, (w_in * h_in * c_in, w_in, h_in, c_in))
+    diag = tf.linalg.diag(K.ones((1, w_in * h_in * c_in)))
+    diag_ = K.reshape(diag, (w_in * h_in * c_in, w_in, h_in, c_in))
 
     diag_patches = tf.image.extract_patches(
         diag_, [1, filter_size, filter_size, 1], [1, 1, 1, 1], [1, 1, 1, 1], padding=padding
     )
 
-    diag_patches_ = tf.reshape(diag_patches, (w_in, h_in, c_in, w_out, h_out, filter_size**2, c_in))
+    diag_patches_ = K.reshape(diag_patches, (w_in, h_in, c_in, w_out, h_out, filter_size**2, c_in))
 
     shape = np.arange(len(diag_patches_.shape))
     shape[-1] -= 1
@@ -138,7 +138,7 @@ def get_toeplitz_channels_first(conv_layer: Conv2D, flatten: bool = True) -> ker
     diag_patches_ = K.permute_dimensions(diag_patches_, shape)
     kernel = conv_layer.kernel  # (filter_size, filter_size, c_in, c_out)
 
-    kernel = K.permute_dimensions(tf.reshape(kernel, (filter_size**2, c_in, c_out)), (1, 2, 0))[
+    kernel = K.permute_dimensions(K.reshape(kernel, (filter_size**2, c_in, c_out)), (1, 2, 0))[
         None, None, None, None, None
     ]  # (1,1,c_in, c_out, filter_size^2)
 
