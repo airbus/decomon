@@ -17,7 +17,6 @@ from keras_core.layers import (
     Lambda,
     Layer,
 )
-from tensorflow.python.keras.utils import conv_utils
 
 from decomon.core import ForwardMode, PerturbationDomain, Slope
 from decomon.layers import activations
@@ -292,22 +291,7 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         else:
             raise ValueError(f"Unknown data_format {self.data_format}")
 
-        new_space = []
-        for i in range(len(space)):
-            new_dim = conv_utils.conv_output_length(
-                space[i],
-                self.kernel_size[i],
-                padding=self.padding,
-                stride=self.strides[i],
-                dilation=self.dilation_rate[i],
-            )
-            new_space.append(new_dim)
-        if self.data_format == "channels_last":
-            output_shape_keras = (y_shape[0],) + tuple(new_space) + (self.filters,)
-        elif self.data_format == "channels_first":
-            output_shape_keras = (y_shape[0], self.filters) + tuple(new_space)
-        else:
-            raise ValueError(f"Unknown data_format {self.data_format}")
+        output_shape_keras = self.original_keras_layer_class.compute_output_shape(self, y_shape)
 
         if self.mode == ForwardMode.IBP:
             output_shape = [output_shape_keras] * 2
