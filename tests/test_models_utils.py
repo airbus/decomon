@@ -1,4 +1,5 @@
 import keras_core as keras
+import keras_core.ops as K
 import numpy as np
 import pytest
 from keras_core import Input
@@ -224,7 +225,7 @@ def test_convert_deellip_to_keras_spectraldense():
     assert keras_layer.units == units
     assert keras_layer.name.startswith(layer.name)
     # same output?
-    input_tensor = tf.ones((4, 1))
+    input_tensor = K.ones((4, 1))
     output_ref = layer(input_tensor).numpy()
     new_output = keras_layer(input_tensor).numpy()
     assert_almost_equal(new_output, output_ref)
@@ -287,7 +288,7 @@ def test_preprocess_layer_no_nonlinear_activation(
         assert keras_layer.k_coef_lip == -1.0
         assert keras_layer is layer
     # try to call the resulting layers 3 times
-    input_tensor = tf.ones((5,) + input_shape_wo_batchsize)
+    input_tensor = K.ones((5,) + input_shape_wo_batchsize)
     for _ in range(3):
         keras_layer(input_tensor)
 
