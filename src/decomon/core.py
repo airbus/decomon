@@ -378,7 +378,7 @@ class InputsOutputsSpec:
         return self.extract_inputsformode_from_fullinputs(outputs)
 
     @staticmethod
-    def get_empty_tensor(dtype: Union[str, tf.DType] = K.floatx()) -> keras.KerasTensor:
+    def get_empty_tensor(dtype: str = K.floatx()) -> keras.KerasTensor:
         return tf.constant([], dtype=dtype)
 
 
