@@ -29,7 +29,7 @@ from decomon.models.utils import Convert2Mode, get_depth_dict
 def get_disconnected_input(
     mode: Union[str, ForwardMode],
     perturbation_domain: PerturbationDomain,
-    dtype: Union[str, tf.DType] = K.floatx(),
+    dtype: str = K.floatx(),
 ) -> Layer:
     mode = ForwardMode(mode)
     dc_decomp = False
