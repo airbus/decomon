@@ -4,7 +4,6 @@ import keras_core as keras
 import keras_core.ops as K
 import numpy as np
 from keras_core.config import epsilon
-from tensorflow.types.experimental import TensorLike
 
 from decomon.core import (
     BoxDomain,
@@ -17,11 +16,11 @@ from decomon.core import (
     get_ibp,
 )
 
-TensorFunction = Callable[[TensorLike], keras.KerasTensor]
+TensorFunction = Callable[[keras.KerasTensor], keras.KerasTensor]
 
 
 # linear hull for activation function
-def relu_prime(x: TensorLike) -> keras.KerasTensor:
+def relu_prime(x: keras.KerasTensor) -> keras.KerasTensor:
     """Derivative of relu
 
     Args:
@@ -34,7 +33,7 @@ def relu_prime(x: TensorLike) -> keras.KerasTensor:
     return K.clip(K.sign(x), K.cast(0, dtype=x.dtype), K.cast(1, dtype=x.dtype))
 
 
-def sigmoid_prime(x: TensorLike) -> keras.KerasTensor:
+def sigmoid_prime(x: keras.KerasTensor) -> keras.KerasTensor:
     """Derivative of sigmoid
 
     Args:
@@ -48,7 +47,7 @@ def sigmoid_prime(x: TensorLike) -> keras.KerasTensor:
     return s_x * (K.cast(1, dtype=x.dtype) - s_x)
 
 
-def tanh_prime(x: TensorLike) -> keras.KerasTensor:
+def tanh_prime(x: keras.KerasTensor) -> keras.KerasTensor:
     """Derivative of tanh
 
     Args:
@@ -62,7 +61,7 @@ def tanh_prime(x: TensorLike) -> keras.KerasTensor:
     return K.cast(1, dtype=x.dtype) - K.pow(s_x, K.cast(2, dtype=x.dtype))
 
 
-def softsign_prime(x: TensorLike) -> keras.KerasTensor:
+def softsign_prime(x: keras.KerasTensor) -> keras.KerasTensor:
     """Derivative of softsign
 
     Args:
