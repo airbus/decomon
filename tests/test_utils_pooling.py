@@ -34,7 +34,7 @@ def test_get_lower_upper_linear_hull_max(
     input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
 
     if finetune_odd is not None:
-        finetune_odd = tf.constant(finetune_odd, dtype="float{}".format(floatx))
+        finetune_odd = K.convert_to_tensor(finetune_odd, dtype="float{}".format(floatx))
 
     # decomon output
     output = func(inputs_for_mode, mode=mode, axis=axis, finetune_lower=finetune_odd)
