@@ -246,7 +246,10 @@ def split_activation(
         # build the layer
         if not hasattr(layer, "input_shape"):
             raise RuntimeError("The layer should properly initialized so that layer.input_shape is defined.")
-        inputs = Input(type_spec=layer.input.type_spec)
+        inputs = Input(
+            shape=layer.input.shape,
+            dtype=layer.input.dtype,
+        )
         outputs = layer_wo_activation(inputs)
         # use same weights
         actual_activation = layer.activation  # store activation
@@ -285,10 +288,12 @@ def convert_deellip_to_keras(layer: Layer) -> Layer:
     if hasattr(layer, "vanilla_export"):
         if not hasattr(layer, "input_shape"):
             raise RuntimeError("The layer should properly initialized so that layer.input_shape is defined.")
-        type_spec = layer.input.type_spec
         new_layer = layer.vanilla_export()
         # build layer
-        inputs = Input(type_spec=type_spec)
+        inputs = Input(
+            shape=layer.input.shape,
+            dtype=layer.input.dtype,
+        )
         new_layer(inputs)
         # share deel-lip attributes of original layer
         share_deellip_attributes(new_layer, layer)

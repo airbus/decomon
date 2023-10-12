@@ -1053,7 +1053,6 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
         sparse: Optional[bool] = None,
         name: Optional[str] = None,
         ragged: Optional[bool] = None,
-        type_spec: Optional[tf.TypeSpec] = None,
         perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -1062,36 +1061,22 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
         fast: bool = True,
         **kwargs: Any,
     ):
-        if type_spec is not None:
-            super().__init__(
-                input_shape=input_shape,
-                batch_size=batch_size,
-                dtype=dtype,
-                type_spec=type_spec,
-                input_tensor=input_tensor,
-                sparse=sparse,
-                name=name,
-                ragged=ragged,
-                perturbation_domain=perturbation_domain,
-                dc_decomp=dc_decomp,
-                mode=mode,
-                finetune=finetune,
-                shared=shared,
-                fast=fast,
-                **kwargs,
-            )
-        else:
-            super().__init__(
-                input_shape=input_shape,
-                batch_size=batch_size,
-                dtype=dtype,
-                input_tensor=input_tensor,
-                sparse=sparse,
-                name=name,
-                ragged=ragged,
-                mode=mode,
-                **kwargs,
-            )
+        super().__init__(
+            input_shape=input_shape,
+            batch_size=batch_size,
+            dtype=dtype,
+            input_tensor=input_tensor,
+            sparse=sparse,
+            name=name,
+            ragged=ragged,
+            perturbation_domain=perturbation_domain,
+            dc_decomp=dc_decomp,
+            mode=mode,
+            finetune=finetune,
+            shared=shared,
+            fast=fast,
+            **kwargs,
+        )
 
     def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
         return inputs
