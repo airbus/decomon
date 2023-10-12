@@ -179,14 +179,14 @@ def get_lower_linear_hull_max(
 
     V += K.expand_dims(K.max(K.abs(V), axis), axis) * (K.sign(M) + o_value)
 
-    w_l = K.cast(tf.one_hot(K.argmin(V, axis), depth=V.shape[axis], axis=axis), dtype)
+    w_l = K.one_hot(K.argmin(V, axis), num_classes=V.shape[axis], axis=axis, dtype=dtype)
     b_l = K.sum(z_value * w_l, axis)
     # without finetuning: consider a one hot vector with value one at index=argmin(V)
 
     if finetune_lower is not None:
         alpha = finetune_lower[None]
         y = alpha * u_c + (o_value - alpha) * l_c
-        w_l_alpha = K.cast(tf.one_hot(K.argmax(y, axis), depth=V.shape[axis], axis=axis), dtype)
+        w_l_alpha = K.one_hot(K.argmax(y, axis), num_classes=V.shape[axis], axis=axis, dtype=dtype)
         w_l = (o_value - alpha) * w_l + alpha * w_l_alpha
 
     return [w_l, b_l]
