@@ -1,5 +1,6 @@
 # Test unit for decomon with Dense layers
 
+import keras_core.config as keras_config
 import numpy as np
 import pytest
 from keras_core.layers import Input
@@ -54,8 +55,8 @@ def test_reduce_backward_1D_box(n_0, n_1, backward_func, tensor_op, mode, floatx
     x_1, y_1, z_1, u_c_1, W_u_1, b_u_1, l_c_1, W_l_1, b_l_1 = inputs_1_
 
     # backward outputs
-    w_out = Input((1, 1), dtype=K.floatx())
-    b_out = Input((1,), dtype=K.floatx())
+    w_out = Input((1, 1), dtype=keras_config.floatx())
+    b_out = Input((1,), dtype=keras_config.floatx())
     back_bounds_0, back_bounds_1 = backward_func(
         inputs_for_mode_0, inputs_for_mode_1, w_out, b_out, w_out, b_out, mode=mode
     )

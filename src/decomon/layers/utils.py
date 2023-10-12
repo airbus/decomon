@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import keras_core as keras
 import keras_core.ops as K
 import numpy as np
+from keras_core.config import epsilon
 from keras_core.constraints import Constraint
 from keras_core.initializers import Initializer
 from keras_core.layers import Layer
@@ -60,7 +61,7 @@ class ClipAlphaAndSumtoOne(Constraint):
     def __call__(self, w: keras.KerasTensor) -> keras.KerasTensor:
         w = K.clip(w, 0.0, 1.0)
         # normalize the first colum to 1
-        w_scale = K.maximum(K.sum(w, 0), K.epsilon())
+        w_scale = K.maximum(K.sum(w, 0), epsilon())
         return w / w_scale[:, None, None, None]
 
 
@@ -216,7 +217,7 @@ def frac_pos(
     l_c_out = 1.0 / u_c
 
     if affine:
-        w_u_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, K.epsilon())
+        w_u_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, epsilon())
         b_u_0 = l_c_out - w_u_0 * l_c
 
         y = (u_c + l_c) / 2.0
@@ -1068,7 +1069,7 @@ def log(
     empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
     if mode == ForwardMode.AFFINE:
-        l_c = K.maximum(K.cast(K.epsilon(), dtype=l_c.dtype), l_c)
+        l_c = K.maximum(K.cast(epsilon(), dtype=l_c.dtype), l_c)
 
     u_c_out = K.log(u_c)
     l_c_out = K.log(l_c)
@@ -1076,7 +1077,7 @@ def log(
     if affine:
         y = (u_c + l_c) / 2.0
 
-        w_l_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, K.epsilon())
+        w_l_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, epsilon())
         b_l_0 = l_c_out - w_l_0 * l_c
 
         w_u_0 = 1 / y
@@ -1139,7 +1140,7 @@ def exp(
     if affine:
         y = (u_c + l_c) / 2.0  # do finetuneting
 
-        w_u_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, K.epsilon())
+        w_u_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, epsilon())
         b_u_0 = l_c_out - w_u_0 * l_c
 
         w_l_0 = K.exp(y)

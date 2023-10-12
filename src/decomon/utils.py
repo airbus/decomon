@@ -3,6 +3,7 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 import keras_core as keras
 import keras_core.ops as K
 import numpy as np
+from keras_core.config import epsilon
 from tensorflow.math import greater_equal
 from tensorflow.types.experimental import TensorLike
 
@@ -138,7 +139,7 @@ def get_linear_hull_relu(
     slope = Slope(slope)
     # in case upper=lower, this cases are
     # considered with index_dead and index_linear
-    alpha = (K.relu(upper) - K.relu(lower)) / K.maximum(K.cast(K.epsilon(), dtype=upper.dtype), upper - lower)
+    alpha = (K.relu(upper) - K.relu(lower)) / K.maximum(K.cast(epsilon(), dtype=upper.dtype), upper - lower)
 
     # scaling factor for the upper bound on the relu
     # see README
@@ -225,7 +226,7 @@ def get_linear_softplus_hull(
     # considered with index_dead and index_linear
     u_c = K.softsign(upper)
     l_c = K.softsign(lower)
-    alpha = (u_c - l_c) / K.maximum(K.cast(K.epsilon(), dtype=upper.dtype), (upper - lower))
+    alpha = (u_c - l_c) / K.maximum(K.cast(epsilon(), dtype=upper.dtype), (upper - lower))
     w_u = alpha
     b_u = -alpha * lower + l_c
 
@@ -577,8 +578,9 @@ def get_linear_hull_s_shape(
     s_l = func(l_c_flat)  # (None, n)
 
     # case 0:
-    coeff = (s_u - s_l) / K.maximum(K.cast(K.epsilon(), dtype=dtype), u_c_flat - l_c_flat)
+    coeff = (s_u - s_l) / K.maximum(K.cast(epsilon(), dtype=dtype), u_c_flat - l_c_flat)
     alpha_u_0 = K.switch(greater_equal(s_u_prime, coeff), o_value + z_value * u_c_flat, z_value * u_c_flat)  # (None, n)
+
     alpha_u_1 = (o_value - alpha_u_0) * ((K.sign(l_c_flat) + o_value) / t_value)
 
     w_u_0 = coeff
@@ -663,7 +665,7 @@ def get_t_upper(
     )  # (None, n)
 
     s_t = func(t_value)  # (None, n)
-    w_u = (s_t - s_l) / K.maximum(K.cast(K.epsilon(), dtype=u_c_flat.dtype), t_value - l_c_flat)  # (None, n)
+    w_u = (s_t - s_l) / K.maximum(K.cast(epsilon(), dtype=u_c_flat.dtype), t_value - l_c_flat)  # (None, n)
     b_u = -w_u * l_c_flat + s_l  # + func(l_c_flat)
 
     return [w_u, b_u]
@@ -720,7 +722,7 @@ def get_t_lower(
     )
 
     s_t = func(t_value)  # (None, n)
-    w_l = (s_u - s_t) / K.maximum(K.cast(K.epsilon(), dtype=u_c_flat.dtype), u_c_flat - t_value)  # (None, n)
+    w_l = (s_u - s_t) / K.maximum(K.cast(epsilon(), dtype=u_c_flat.dtype), u_c_flat - t_value)  # (None, n)
     b_l = -w_l * u_c_flat + s_u  # func(u_c_flat)
 
     return [w_l, b_l]

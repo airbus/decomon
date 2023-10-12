@@ -1,3 +1,4 @@
+import keras_core.config as keras_config
 import pytest
 from keras_core.layers import Activation, Flatten, Reshape
 from tensorflow.python.keras.backend import _get_available_gpus
@@ -16,7 +17,7 @@ def test_Backward_NativeActivation_1D_box_model(n, activation, mode, floatx, dec
     inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
 
     # keras layer
-    keras_layer = Activation(activation, dtype=K.floatx())
+    keras_layer = Activation(activation, dtype=keras_config.floatx())
 
     # get backward layer
     backward_layer = to_backward(keras_layer, mode=mode)
@@ -45,7 +46,7 @@ def test_Backward_NativeActivation_multiD_box(odd, activation, floatx, decimal, 
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
 
     # keras layer
-    keras_layer = Activation(activation, dtype=K.floatx())
+    keras_layer = Activation(activation, dtype=keras_config.floatx())
 
     # get backward layer
     backward_layer = to_backward(keras_layer, mode=mode)
@@ -77,7 +78,7 @@ def test_Backward_NativeFlatten_multiD_box(odd, floatx, decimal, mode, data_form
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
 
     # keras layer
-    keras_layer = Flatten(data_format, dtype=K.floatx())
+    keras_layer = Flatten(data_format, dtype=keras_config.floatx())
 
     # get backward layer
     backward_layer = to_backward(keras_layer, mode=mode)
@@ -106,7 +107,7 @@ def test_Backward_NativeReshape_multiD_box(odd, floatx, decimal, mode, helpers):
     inputs_ = helpers.get_standard_values_multid_box(odd, dc_decomp=dc_decomp)
 
     # keras layer
-    keras_layer = Reshape((-1,), dtype=K.floatx())
+    keras_layer = Reshape((-1,), dtype=keras_config.floatx())
 
     # get backward layer
     backward_layer = to_backward(keras_layer, mode=mode)
