@@ -194,27 +194,27 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
 
         if self.dc_decomp:
             h_out = K.concatenate(
-                [self.internal_op(elem) for elem in tf.split(h, n_split, -1)],
+                [self.internal_op(elem) for elem in K.split(h, n_split, -1)],
                 -2,
             )
             g_out = K.concatenate(
-                [self.internal_op(elem) for elem in tf.split(g, n_split, -1)],
+                [self.internal_op(elem) for elem in K.split(g, n_split, -1)],
                 -2,
             )
         else:
             h_out, g_out = empty_tensor, empty_tensor
 
         if self.ibp:
-            u_c_out = K.concatenate([self.internal_op(elem) for elem in tf.split(u_c, n_split, -1)], -2)
-            l_c_out = K.concatenate([self.internal_op(elem) for elem in tf.split(l_c, n_split, -1)], -2)
+            u_c_out = K.concatenate([self.internal_op(elem) for elem in K.split(u_c, n_split, -1)], -2)
+            l_c_out = K.concatenate([self.internal_op(elem) for elem in K.split(l_c, n_split, -1)], -2)
         else:
             u_c_out, l_c_out = empty_tensor, empty_tensor
 
         if self.affine:
-            b_u_out = K.concatenate([self.internal_op(elem) for elem in tf.split(b_u, n_split, -1)], -2)
-            b_l_out = K.concatenate([self.internal_op(elem) for elem in tf.split(b_l, n_split, -1)], -2)
-            w_u_out = K.concatenate([self.internal_op(elem) for elem in tf.split(w_u, n_split, -1)], -2)
-            w_l_out = K.concatenate([self.internal_op(elem) for elem in tf.split(w_l, n_split, -1)], -2)
+            b_u_out = K.concatenate([self.internal_op(elem) for elem in K.split(b_u, n_split, -1)], -2)
+            b_l_out = K.concatenate([self.internal_op(elem) for elem in K.split(b_l, n_split, -1)], -2)
+            w_u_out = K.concatenate([self.internal_op(elem) for elem in K.split(w_u, n_split, -1)], -2)
+            w_l_out = K.concatenate([self.internal_op(elem) for elem in K.split(w_l, n_split, -1)], -2)
         else:
             w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 

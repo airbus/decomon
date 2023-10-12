@@ -112,14 +112,14 @@ class BackwardMaxPooling2D(BackwardLayer):
         )
 
         if self.ibp:
-            u_c_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(u_c, input_shape[-1], -1)], -2)
-            l_c_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(l_c, input_shape[-1], -1)], -2)
+            u_c_tmp = K.concatenate([self.internal_op(elem) for elem in K.split(u_c, input_shape[-1], -1)], -2)
+            l_c_tmp = K.concatenate([self.internal_op(elem) for elem in K.split(l_c, input_shape[-1], -1)], -2)
 
         if self.affine:
-            b_u_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(b_u, input_shape[-1], -1)], -2)
-            b_l_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(b_l, input_shape[-1], -1)], -2)
-            w_u_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(w_u, input_shape[-1], -1)], -2)
-            w_l_tmp = K.concatenate([self.internal_op(elem) for elem in tf.split(w_l, input_shape[-1], -1)], -2)
+            b_u_tmp = K.concatenate([self.internal_op(elem) for elem in K.split(b_u, input_shape[-1], -1)], -2)
+            b_l_tmp = K.concatenate([self.internal_op(elem) for elem in K.split(b_l, input_shape[-1], -1)], -2)
+            w_u_tmp = K.concatenate([self.internal_op(elem) for elem in K.split(w_u, input_shape[-1], -1)], -2)
+            w_l_tmp = K.concatenate([self.internal_op(elem) for elem in K.split(w_l, input_shape[-1], -1)], -2)
 
         if self.dc_decomp:
             raise NotImplementedError()
@@ -153,7 +153,7 @@ class BackwardMaxPooling2D(BackwardLayer):
         n_dim = np.prod(input_shape_channelreduced)
 
         # create diagonal matrix
-        id_list = [tf.linalg.diag(K.ones_like(op_flat(elem[0][None]))) for elem in tf.split(y, input_shape[axis], axis)]
+        id_list = [tf.linalg.diag(K.ones_like(op_flat(elem[0][None]))) for elem in K.split(y, input_shape[axis], axis)]
 
         id_list = [K.reshape(identity_mat, [-1] + input_shape_channelreduced) for identity_mat in id_list]
         w_list = [self.internal_op(identity_mat) for identity_mat in id_list]

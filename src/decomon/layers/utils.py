@@ -290,8 +290,8 @@ def max_(
     # do some transpose so that the last axis is also at the end
 
     if ibp:
-        u_c_list = tf.split(u_c, max_dim, axis)
-        l_c_list = tf.split(l_c, max_dim, axis)
+        u_c_list = K.split(u_c, max_dim, axis)
+        l_c_list = K.split(l_c, max_dim, axis)
         u_c_tmp = u_c_list[0] + 0 * (u_c_list[0])
         l_c_tmp = l_c_list[0] + 0 * (l_c_list[0])
     else:
@@ -299,23 +299,23 @@ def max_(
         u_c_list, l_c_list = empty_tensors_list, empty_tensors_list
 
     if affine:
-        b_u_list = tf.split(b_u, max_dim, axis)
-        b_l_list = tf.split(b_l, max_dim, axis)
+        b_u_list = K.split(b_u, max_dim, axis)
+        b_l_list = K.split(b_l, max_dim, axis)
         b_u_tmp = b_u_list[0] + 0 * (b_u_list[0])
         b_l_tmp = b_l_list[0] + 0 * (b_l_list[0])
 
         if axis == -1:
-            w_u_list = tf.split(w_u, max_dim, axis)
-            w_l_list = tf.split(w_l, max_dim, axis)
+            w_u_list = K.split(w_u, max_dim, axis)
+            w_l_list = K.split(w_l, max_dim, axis)
         else:
-            w_u_list = tf.split(w_u, max_dim, axis + 1)
-            w_l_list = tf.split(w_l, max_dim, axis + 1)
+            w_u_list = K.split(w_u, max_dim, axis + 1)
+            w_l_list = K.split(w_l, max_dim, axis + 1)
         w_u_tmp = w_u_list[0] + 0 * (w_u_list[0])
         w_l_tmp = w_l_list[0] + 0 * (w_l_list[0])
 
         if finetune:
             params = kwargs["finetune_params"]
-            params_split = [e[0] for e in tf.split(params[None], max_dim, axis)]
+            params_split = [e[0] for e in K.split(params[None], max_dim, axis)]
         else:
             params_split = [empty_tensor] * max_dim
 
@@ -678,19 +678,19 @@ def split(
     empty_tensor_list = [empty_tensor] * n
 
     if ibp:
-        u_c_list = tf.split(u_c, num_or_size_splits=n, axis=axis)
-        l_c_list = tf.split(l_c, num_or_size_splits=n, axis=axis)
+        u_c_list = K.split(u_c, num_or_size_splits=n, axis=axis)
+        l_c_list = K.split(l_c, num_or_size_splits=n, axis=axis)
     else:
         u_c_list, l_c_list = empty_tensor_list, empty_tensor_list
 
     if affine:
-        b_u_list = tf.split(b_u, num_or_size_splits=n, axis=axis)
-        b_l_list = tf.split(b_l, num_or_size_splits=n, axis=axis)
+        b_u_list = K.split(b_u, num_or_size_splits=n, axis=axis)
+        b_l_list = K.split(b_l, num_or_size_splits=n, axis=axis)
 
         if axis != -1:
             axis += 1
-        w_u_list = tf.split(w_u, num_or_size_splits=n, axis=axis)
-        w_l_list = tf.split(w_l, num_or_size_splits=n, axis=axis)
+        w_u_list = K.split(w_u, num_or_size_splits=n, axis=axis)
+        w_l_list = K.split(w_l, num_or_size_splits=n, axis=axis)
     else:
         w_u_list, b_u_list, w_l_list, b_l_list = (
             empty_tensor_list,
@@ -756,7 +756,7 @@ def sort(
     empty_tensor_list = [empty_tensor] * n
 
     # what about splitting elements
-    op_split = lambda x: tf.split(x, n, axis=axis)
+    op_split = lambda x: K.split(x, n, axis=axis)
     if ibp:
         u_c_list = op_split(u_c)
         l_c_list = op_split(l_c)
@@ -764,9 +764,9 @@ def sort(
         u_c_list, l_c_list = empty_tensor_list, empty_tensor_list
 
     if affine:
-        w_u_list = tf.split(w_u, n, axis=axis + 1)
+        w_u_list = K.split(w_u, n, axis=axis + 1)
         b_u_list = op_split(b_u)
-        w_l_list = tf.split(w_l, n, axis=axis + 1)
+        w_l_list = K.split(w_l, n, axis=axis + 1)
         b_l_list = op_split(b_l)
     else:
         w_u_list, b_u_list, w_l_list, b_l_list = (
