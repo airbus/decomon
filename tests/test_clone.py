@@ -229,7 +229,7 @@ def test_clone_full_deellip_model_forward(method, mode, helpers):
 
     # deel-lip model and output of reference
     image_data_shape = input_ref_.shape[1:]  # image shape: before flattening
-    flatten_input_shape = (np.prod(image_data_shape),)
+    flatten_input_shape = (int(np.prod(image_data_shape)),)
     ref_nn = DeellipSequential(
         [
             Reshape(target_shape=image_data_shape, input_shape=flatten_input_shape),

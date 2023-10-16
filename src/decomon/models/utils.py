@@ -179,9 +179,9 @@ def get_input_tensors(
 
 def get_input_dim(layer: Layer) -> int:
     if isinstance(layer.input_shape, list):
-        return np.prod(layer.input_shape[0][1:])
+        return int(np.prod(layer.input_shape[0][1:]))
     else:
-        return np.prod(layer.input_shape[1:])
+        return int(np.prod(layer.input_shape[1:]))
 
 
 def prepare_inputs_for_layer(

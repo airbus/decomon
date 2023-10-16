@@ -115,13 +115,13 @@ def get_upper_linear_hull_max(
     if dtype != dtype32:
         w_hull = K.cast(w_hull, dtype=dtype)
 
-    shape_prev = np.prod(inputs[-1].shape[1:axis]).astype("int")
+    shape_prev = int(np.prod(inputs[-1].shape[1:axis]))
     if axis == -1:
         shape_after = 1
     else:
-        shape_after = np.prod(inputs[-1].shape[axis + 1 :]).astype("int")
+        shape_after = int(np.prod(inputs[-1].shape[axis + 1 :]))
     # (-1, shape_prev, axis, shape_after, n_dim+1)
-    flatten_dim = np.prod(w_hull.shape[1:-2])
+    flatten_dim = int(np.prod(w_hull.shape[1:-2]))
     w_hull_flat = K.reshape(w_hull, (-1, flatten_dim, n_dim + 1))
     w_u = K.reshape(w_hull_flat[:, :, :-1], (-1, shape_prev, shape_after, n_dim))  # (-1, shape_, n_dim)
     w_u = K.reshape(K.permute_dimensions(w_u, (0, 1, 3, 2)), [-1] + list(inputs[-1].shape[1:]))

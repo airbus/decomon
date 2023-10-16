@@ -9,7 +9,7 @@ from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
 
 
 def keras_target_shape_reshape(input_ref):
-    return (np.prod(input_ref.shape[1:]),)
+    return (int(np.prod(input_ref.shape[1:])),)
 
 
 def target_shape_keras2np_reshape(target_shape):

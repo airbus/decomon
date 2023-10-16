@@ -106,8 +106,8 @@ def convert_lower_search_2_subset_sum(
     x_max = x[:, 1]
 
     if len(W.shape) > 3:
-        W = K.reshape(W, (-1, W.shape[1], np.prod(W.shape[2:])))
-        b = K.reshape(b, (-1, np.prod(b.shape[1:])))
+        W = K.reshape(W, (-1, W.shape[1], int(np.prod(W.shape[2:]))))
+        b = K.reshape(b, (-1, int(np.prod(b.shape[1:]))))
 
     const = BoxDomain().get_lower(x, W, b)
 
@@ -565,8 +565,8 @@ def get_linear_hull_s_shape(
 
     # flatten
     shape = list(u_c.shape[1:])
-    u_c_flat = K.reshape(u_c, (-1, np.prod(shape)))  # (None, n)
-    l_c_flat = K.reshape(l_c, (-1, np.prod(shape)))  # (None, n)
+    u_c_flat = K.reshape(u_c, (-1, int(np.prod(shape))))  # (None, n)
+    l_c_flat = K.reshape(l_c, (-1, int(np.prod(shape))))  # (None, n)
 
     # upper bound
     # derivative
