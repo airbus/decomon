@@ -5,6 +5,7 @@ import keras_core as keras
 import keras_core.ops as K
 import tensorflow as tf
 from keras_core.layers import InputSpec, Layer
+from keras_core.src.layers.merging.dot import batch_dot
 
 from decomon.core import ForwardMode, PerturbationDomain
 
@@ -139,9 +140,9 @@ def merge_with_previous(inputs: List[keras.KerasTensor]) -> List[keras.KerasTens
     w_b_l_pos = K.maximum(w_b_l, z_value)
     w_b_l_neg = K.minimum(w_b_l, z_value)
 
-    w_u = K.batch_dot(w_u_out, w_b_u_pos, (-1, -2)) + K.batch_dot(w_l_out, w_b_u_neg, (-1, -2))
-    w_l = K.batch_dot(w_l_out, w_b_l_pos, (-1, -2)) + K.batch_dot(w_u_out, w_b_l_neg, (-1, -2))
-    b_u = K.batch_dot(b_u_out, w_b_u_pos, (-1, -2)) + K.batch_dot(b_l_out, w_b_u_neg, (-1, -2)) + b_b_u
-    b_l = K.batch_dot(b_l_out, w_b_l_pos, (-1, -2)) + K.batch_dot(b_u_out, w_b_l_neg, (-1, -2)) + b_b_l
+    w_u = batch_dot(w_u_out, w_b_u_pos, (-1, -2)) + batch_dot(w_l_out, w_b_u_neg, (-1, -2))
+    w_l = batch_dot(w_l_out, w_b_l_pos, (-1, -2)) + batch_dot(w_u_out, w_b_l_neg, (-1, -2))
+    b_u = batch_dot(b_u_out, w_b_u_pos, (-1, -2)) + batch_dot(b_l_out, w_b_u_neg, (-1, -2)) + b_b_u
+    b_l = batch_dot(b_l_out, w_b_l_pos, (-1, -2)) + batch_dot(b_u_out, w_b_l_neg, (-1, -2)) + b_b_l
 
     return [w_u, b_u, w_l, b_l]
