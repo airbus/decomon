@@ -25,6 +25,7 @@ from decomon.models.utils import (
     get_direction,
     get_ibp_affine_from_method,
     get_input_tensors,
+    is_input_node,
     preprocess_layer,
     split_activation,
 )
@@ -40,8 +41,14 @@ def _clone_keras_model(model: Model, layer_fn: Callable[[Layer], List[Layer]]) -
     # initialize output_map and layer_map to avoid
     #   - recreating input layers
     #   - and converting input layers and have a cycle around them
-    output_map: OutputMapDict = {id(input_tensor.node): [input_tensor] for input_tensor in model.inputs}
-    layer_map: LayerMapDict = {id(input_tensor.node): input_tensor.node.outbound_layer for input_tensor in model.inputs}
+    output_map: OutputMapDict = {}
+    layer_map: LayerMapDict = {}
+    for depth, nodes in model._nodes_by_depth.items():
+        for node in nodes:
+            if is_input_node(node):
+                output_map[id(node)] = node.output_tensors
+                layer_map[id(node)] = node.operation
+
     _, output, _, _ = convert_forward_functional_model(
         model=model,
         input_tensors=model.inputs,
@@ -239,7 +246,7 @@ def clone(
         final_affine=final_affine,
     )
 
-    back_bounds_from_inputs = [elem for elem in back_bounds if isinstance(elem._keras_history.layer, InputLayer)]
+    back_bounds_from_inputs = [elem for elem in back_bounds if isinstance(elem._keras_history.operation, InputLayer)]
 
     return DecomonModel(
         inputs=[z_tensor] + back_bounds_from_inputs + extra_inputs,
