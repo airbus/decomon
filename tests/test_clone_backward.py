@@ -6,6 +6,7 @@ import keras_core.config as keras_config
 from decomon.core import get_affine, get_ibp
 from decomon.models.backward_cloning import convert_backward
 from decomon.models.forward_cloning import convert_forward
+from decomon.models.utils import ensure_functional_model
 
 
 def test_convert_backward_1D(n, mode, floatx, decimal, helpers):
@@ -27,6 +28,9 @@ def test_convert_backward_1D(n, mode, floatx, decimal, helpers):
     # keras model and output of reference
     ref_nn = helpers.toy_network_tutorial(dtype=keras_config.floatx())
     output_ref_ = ref_nn.predict(input_ref_)
+
+    # convert to functional
+    ref_nn = ensure_functional_model(ref_nn)
 
     # decomon conversion
     back_bounds = []

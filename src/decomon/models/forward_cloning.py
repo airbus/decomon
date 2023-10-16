@@ -17,6 +17,7 @@ from decomon.layers.convert import to_decomon
 from decomon.layers.core import DecomonLayer
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.utils import (
+    ensure_functional_model,
     get_depth_dict,
     get_inner_layers,
     get_input_dim,
@@ -110,6 +111,8 @@ def convert_forward(
     if not isinstance(model, Model):
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
 
+    model = ensure_functional_model(model)
+
     if input_dim == -1:
         input_dim = get_input_dim(model)
 
@@ -148,7 +151,8 @@ def convert_forward_functional_model(
     if softmax_to_linear:
         model, has_softmax = softmax_2_linear(model)
 
-    # create input tensors
+    # ensure the model is functional (to be able to use get_depth_dict), convert sequential ones into functional ones
+    model = ensure_functional_model(model)
 
     # sort nodes from input to output
     dico_nodes = get_depth_dict(model)

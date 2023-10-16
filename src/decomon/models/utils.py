@@ -5,6 +5,7 @@ import keras_core as keras
 import keras_core.ops as K
 import numpy as np
 import tensorflow as tf
+from keras_core import Model, Sequential
 from keras_core.layers import (
     Activation,
     Concatenate,
@@ -15,7 +16,7 @@ from keras_core.layers import (
     Maximum,
     Minimum,
 )
-from keras_core.models import Model
+from keras_core.src import Functional
 from keras_core.src.ops.node import Node
 
 from decomon.core import (
@@ -411,3 +412,14 @@ class Convert2Mode(Layer):
             {"mode_from": self.mode_from, "mode_to": self.mode_to, "perturbation_domain": self.perturbation_domain}
         )
         return config
+
+
+def ensure_functional_model(model: Model) -> Functional:
+    if isinstance(model, Functional):
+        return model
+    elif isinstance(model, Sequential):
+        model = Model(model.inputs, model.outputs)
+        assert isinstance(model, Functional)  # should be the case after passage in Model.__init__()
+        return model
+    else:
+        raise NotImplementedError("Decomon model available only for functional or sequential models.")
