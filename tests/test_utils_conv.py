@@ -12,11 +12,9 @@ from decomon.core import get_affine, get_ibp
 from decomon.layers.convert import to_decomon
 
 
-def test_toeplitz_from_Keras(channels, filter_size, strides, flatten, data_format, padding, floatx, helpers):
+def test_toeplitz_from_Keras(channels, filter_size, strides, flatten, data_format, padding, floatx, decimal, helpers):
     # filter_size, strides, flatten,
-    decimal = 5
     if floatx == 16:
-        config.set_epsilon(1e-2)
         decimal = 0
 
     if data_format == "channels_first" and not len(K._get_available_gpus()):
@@ -66,14 +64,14 @@ def test_toeplitz_from_Keras(channels, filter_size, strides, flatten, data_forma
     )
 
 
-def test_toeplitz_from_Decomon(floatx, mode, channels, filter_size, strides, flatten, data_format, padding, helpers):
+def test_toeplitz_from_Decomon(
+    floatx, decimal, mode, channels, filter_size, strides, flatten, data_format, padding, helpers
+):
     if data_format == "channels_first" and not len(K._get_available_gpus()):
         pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     odd, m_0, m_1 = 0, 0, 1
-    decimal = 4
     if floatx == 16:
-        config.set_epsilon(1e-2)
         decimal = 0
 
     dc_decomp = False
