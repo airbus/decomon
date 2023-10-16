@@ -167,7 +167,7 @@ def convert_forward_functional_model(
     for depth in keys:
         nodes = dico_nodes[depth]
         for node in nodes:
-            layer = node.outbound_layer
+            layer = node.operation
             parents = node.parent_nodes
             if id(node) in output_map.keys() and joint:
                 continue
@@ -201,10 +201,10 @@ def convert_forward_functional_model(
     output = []
     output_nodes = dico_nodes[0]
     # the ordering may change
-    output_names = [tensor._keras_history.layer.name for tensor in to_list(model.output)]
+    output_names = [tensor._keras_history.operation.name for tensor in to_list(model.output)]
     for output_name in output_names:
         for node in output_nodes:
-            if node.outbound_layer.name == output_name:
+            if node.operation.name == output_name:
                 output += output_map[id(node)]
 
     return input_tensors, output, layer_map, output_map

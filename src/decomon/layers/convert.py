@@ -183,7 +183,7 @@ def get_layer_input_shape(layer: Layer) -> List[SingleInputShapeType]:
         RuntimeError: if called in Eager mode.
     """
 
-    if not layer.inbound_nodes:
+    if not layer._inbound_nodes:
         raise AttributeError(
             f'The layer "{layer.name}" has never been called '
             "and thus has no defined input shape. Note that the "
@@ -191,10 +191,10 @@ def get_layer_input_shape(layer: Layer) -> List[SingleInputShapeType]:
             "Functional and Sequential models."
         )
     all_input_shapes = set(
-        [str(get_input_shapes_as_a_list_of_input_shape(node.input_shapes)) for node in layer.inbound_nodes]
+        [str(get_input_shapes_as_a_list_of_input_shape(node.input_shapes)) for node in layer._inbound_nodes]
     )
     if len(all_input_shapes) == 1:
-        return get_input_shapes_as_a_list_of_input_shape(layer.inbound_nodes[0].input_shapes)
+        return get_input_shapes_as_a_list_of_input_shape(layer._inbound_nodes[0].input_shapes)
     else:
         raise AttributeError(
             'The layer "' + str(layer.name) + '" has multiple inbound nodes, '
