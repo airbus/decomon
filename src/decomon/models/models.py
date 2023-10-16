@@ -1,4 +1,3 @@
-import copy
 from typing import Any, Dict, List, Optional, Union
 
 import keras_core as keras
@@ -11,15 +10,6 @@ from decomon.core import (
     PerturbationDomain,
 )
 from decomon.models.utils import ConvertMethod
-
-try:
-    from keras_core.src.engine.functional import (
-        get_network_config,  # new path starting from keras 2.13
-    )
-except ImportError:
-    from keras_core.engine.functional import (
-        get_network_config,  # old path until keras 2.12
-    )
 
 
 class DecomonModel(keras.Model):
@@ -80,11 +70,6 @@ class DecomonModel(keras.Model):
         for layer in self.layers:
             if hasattr(layer, "reset_finetuning"):
                 layer.reset_finetuning()
-
-    def get_config(self) -> Dict[str, Any]:
-        # Continue adding configs into what the super class has added.
-        config = super().get_config()
-        return copy.deepcopy(get_network_config(self, config=config))
 
 
 def _check_domain(
