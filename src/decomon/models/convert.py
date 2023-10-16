@@ -1,10 +1,7 @@
-from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import keras_core as keras
-import keras_core.ops as K
-import numpy as np
-from keras_core.layers import Input, InputLayer, Lambda, Layer
+from keras_core.layers import InputLayer, Layer
 from keras_core.models import Model
 
 from decomon.backward_layers.core import BackwardLayer
@@ -24,6 +21,7 @@ from decomon.models.utils import (
     FeedDirection,
     check_model2convert_inputs,
     convert_deellip_to_keras,
+    ensure_functional_model,
     get_direction,
     get_ibp_affine_from_method,
     get_input_tensors,
@@ -35,6 +33,9 @@ from decomon.models.utils import (
 def _clone_keras_model(model: Model, layer_fn: Callable[[Layer], List[Layer]]) -> Model:
     if model.inputs is None:
         raise ValueError("model.inputs must be not None. You should call the model on a batch of data.")
+
+    # ensure the model is functional or convert to it if a sequential one
+    model = ensure_functional_model(model)
 
     # initialize output_map and layer_map to avoid
     #   - recreating input layers
@@ -205,7 +206,8 @@ def clone(
         finetune_forward = True
         finetune_backward = True
 
-    # Check hypotheses: 1 flattened input
+    # Check hypotheses: functional model + 1 flattened input
+    model = ensure_functional_model(model)
     check_model2convert_inputs(model)
 
     z_tensor, input_tensors = get_input_tensors(

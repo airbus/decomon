@@ -25,7 +25,7 @@ from decomon.core import (
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.crown import Convert2BackwardMode, Fuse, MergeWithPrevious
 from decomon.models.forward_cloning import OutputMapDict
-from decomon.models.utils import Convert2Mode, get_depth_dict
+from decomon.models.utils import Convert2Mode, ensure_functional_model, get_depth_dict
 
 
 def get_disconnected_input(
@@ -409,6 +409,7 @@ def convert_backward(
     final_affine: bool = False,
     **kwargs: Any,
 ) -> Tuple[List[keras.KerasTensor], List[keras.KerasTensor], Dict[int, BackwardLayer], None]:
+    model = ensure_functional_model(model)
     if back_bounds is None:
         back_bounds = []
     if forward_map is None:

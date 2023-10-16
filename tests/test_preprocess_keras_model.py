@@ -18,6 +18,7 @@ from decomon.models.convert import (
     preprocess_keras_model,
     split_activations_in_keras_model,
 )
+from decomon.models.utils import ensure_functional_model
 
 try:
     import deel.lip
