@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from keras_core.layers import Activation, Dense
+from keras_core.layers import Activation, Dense, Input
 from keras_core.models import Sequential
 from numpy.testing import assert_almost_equal
 
@@ -12,7 +12,8 @@ from decomon.models import clone
 @pytest.fixture()
 def toy_model_1d():
     sequential = Sequential()
-    sequential.add(Dense(1, activation="linear", input_dim=1))
+    sequential.add(Input((1,)))
+    sequential.add(Dense(1, activation="linear"))
     sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
     return sequential
@@ -22,7 +23,8 @@ def toy_model_1d():
 def toy_model_multid(odd, helpers):
     input_dim = helpers.get_input_dim_multid_box(odd)
     sequential = Sequential()
-    sequential.add(Dense(1, activation="linear", input_dim=input_dim))
+    sequential.add(Input((input_dim,)))
+    sequential.add(Dense(1, activation="linear"))
     sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
     return sequential
