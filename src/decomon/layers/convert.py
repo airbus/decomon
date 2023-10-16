@@ -155,15 +155,6 @@ def _prepare_input_tensors(
 SingleInputShapeType = Tuple[Optional[int]]
 
 
-def get_input_shapes_as_a_list_of_input_shape(
-    input_shapes: Union[List[SingleInputShapeType], SingleInputShapeType]
-) -> List[SingleInputShapeType]:
-    if not isinstance(input_shapes, list):
-        return [input_shapes]
-    else:
-        return input_shapes
-
-
 def get_layer_input_shape(layer: Layer) -> List[SingleInputShapeType]:
     """Retrieves the input shape(s) of a layer.
 
@@ -184,23 +175,14 @@ def get_layer_input_shape(layer: Layer) -> List[SingleInputShapeType]:
     """
 
     if not layer._inbound_nodes:
-        raise AttributeError(
-            f'The layer "{layer.name}" has never been called '
-            "and thus has no defined input shape. Note that the "
-            "`input_shape` property is only available for "
-            "Functional and Sequential models."
-        )
-    all_input_shapes = set(
-        [str(get_input_shapes_as_a_list_of_input_shape(node.input_shapes)) for node in layer._inbound_nodes]
-    )
+        raise AttributeError(f'The layer "{layer.name}" has never been called ' "and thus has no defined input shape.")
+    all_input_shapes = set([str([tensor.shape for tensor in node.input_tensors]) for node in layer._inbound_nodes])
     if len(all_input_shapes) == 1:
-        return get_input_shapes_as_a_list_of_input_shape(layer._inbound_nodes[0].input_shapes)
+        return [tensor.shape for tensor in layer._inbound_nodes[0].input_tensors]
     else:
         raise AttributeError(
             'The layer "' + str(layer.name) + '" has multiple inbound nodes, '
             "with different input shapes. Hence "
             'the notion of "input shape" is '
             "ill-defined for the layer. "
-            "Use `get_input_shape_at(node_index)` "
-            "instead."
         )
