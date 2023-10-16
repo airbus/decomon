@@ -83,7 +83,9 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
             self.input_spec += [InputSpec(ndim=4), InputSpec(ndim=4)]
 
         # express maxpooling with convolutions
-        self.filters = np.zeros((self.pool_size[0], self.pool_size[1], 1, np.prod(self.pool_size)), dtype=self.dtype)
+        self.filters = np.zeros(
+            (self.pool_size[0], self.pool_size[1], 1, int(np.prod(self.pool_size))), dtype=self.dtype
+        )
         for i in range(self.pool_size[0]):
             for j in range(self.pool_size[1]):
                 self.filters[i, j, 0, i * self.pool_size[0] + j] = 1

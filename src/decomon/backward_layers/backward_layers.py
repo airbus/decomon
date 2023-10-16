@@ -181,8 +181,8 @@ class BackwardConv2D(BackwardLayer):
 
         z_value = K.cast(0.0, self.dtype)
         y_ = inputs[-1]
-        shape = np.prod(y_.shape[1:])
-        y_flatten = K.reshape(z_value * y_, (-1, np.prod(shape)))  # (None, n_in)
+        shape = int(np.prod(y_.shape[1:]))
+        y_flatten = K.reshape(z_value * y_, (-1, int(np.prod(shape))))  # (None, n_in)
         w_out_ = K.sum(y_flatten, -1)[:, None, None] + w_out_u_
         b_out_ = K.sum(y_flatten, -1)[:, None] + b_out_u_
 
@@ -254,7 +254,7 @@ class BackwardActivation(BackwardLayer):
         Returns:
 
         """
-        input_dim = np.prod(input_shape[-1][1:])
+        input_dim = int(np.prod(input_shape[-1][1:]))
 
         if self.finetune and self.activation_name != "linear":
             if isinstance(self.perturbation_domain, GridDomain):
@@ -580,7 +580,7 @@ class BackwardBatchNormalization(BackwardLayer):
         w = K.expand_dims(K.expand_dims(w, -1), 1)
         b = K.expand_dims(K.expand_dims(b, -1), 1)
 
-        n_dim = np.prod(y.shape[1:])
+        n_dim = int(np.prod(y.shape[1:]))
         w_u_b = K.reshape(w_u_out * w, (-1, n_dim, n_out))
         w_l_b = K.reshape(w_l_out * w, (-1, n_dim, n_out))
         axis = [i for i in range(2, len(b.shape) - 1)]

@@ -151,7 +151,7 @@ class BackwardMaxPooling2D(BackwardLayer):
         input_shape_channelreduced = list(inputs[0].shape[1:])
         n_axis = input_shape_channelreduced[axis]
         input_shape_channelreduced[axis] = 1
-        n_dim = np.prod(input_shape_channelreduced)
+        n_dim = int(np.prod(input_shape_channelreduced))
 
         # create diagonal matrix
         id_list = [tf.linalg.diag(K.ones_like(op_flat(elem[0][None]))) for elem in K.split(y, input_shape[axis], axis)]
@@ -160,7 +160,7 @@ class BackwardMaxPooling2D(BackwardLayer):
         w_list = [self.internal_op(identity_mat) for identity_mat in id_list]
 
         # flatten
-        weights = [K.reshape(op_flat(weights), (n_dim, -1, np.prod(self.pool_size))) for weights in w_list]
+        weights = [K.reshape(op_flat(weights), (n_dim, -1, int(np.prod(self.pool_size)))) for weights in w_list]
 
         n_0 = weights[0].shape[1]
         n_1 = weights[0].shape[2]

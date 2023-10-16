@@ -809,7 +809,7 @@ class DecomonFlatten(DecomonLayer, Flatten):
             b_u_out = op(b_u)
             b_l_out = op(b_l)
             input_dim = x.shape[-1]
-            output_shape = np.prod(list(K.int_shape(b_u_out))[1:])
+            output_shape = int(np.prod(list(K.int_shape(b_u_out))[1:]))
             w_u_out = K.reshape(w_u, (-1, input_dim, output_shape))
             w_l_out = K.reshape(w_l, (-1, input_dim, output_shape))
         else:

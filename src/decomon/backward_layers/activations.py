@@ -80,7 +80,7 @@ def backward_relu(
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
         input_shape = inputs_outputs_spec.get_input_shape(inputs)
         bounds = get_linear_hull_relu(upper=u_c, lower=l_c, slope=slope, **kwargs)
-        dim = np.prod(input_shape[1:])
+        dim = int(np.prod(input_shape[1:]))
         return [K.reshape(elem, (-1, dim)) for elem in bounds]
 
     raise NotImplementedError()
@@ -354,7 +354,7 @@ def backward_softsign(
     bounds = get_linear_hull_s_shape(
         inputs, func=K.softsign, f_prime=softsign_prime, perturbation_domain=perturbation_domain, mode=mode
     )
-    shape = np.prod(inputs[-1].shape[1:])
+    shape = int(np.prod(inputs[-1].shape[1:]))
     return [K.reshape(elem, (-1, shape)) for elem in bounds]
 
 
