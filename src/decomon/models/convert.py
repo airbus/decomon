@@ -22,6 +22,7 @@ from decomon.models.utils import (
     Convert2Mode,
     ConvertMethod,
     FeedDirection,
+    check_model2convert_inputs,
     convert_deellip_to_keras,
     get_direction,
     get_ibp_affine_from_method,
@@ -203,6 +204,9 @@ def clone(
     if finetune:
         finetune_forward = True
         finetune_backward = True
+
+    # Check hypotheses: 1 flattened input
+    check_model2convert_inputs(model)
 
     z_tensor, input_tensors = get_input_tensors(
         model=model,

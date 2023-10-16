@@ -6,7 +6,7 @@ import keras_core.ops as K
 import numpy as np
 import pytest
 from keras_core.layers import Activation, Dense, Flatten, Input, Reshape
-from keras_core.models import Sequential
+from keras_core.models import Model, Sequential
 
 from decomon.core import ForwardMode, Slope, get_affine, get_ibp, get_mode
 from decomon.layers.decomon_reshape import DecomonReshape
@@ -35,6 +35,23 @@ else:
 
 
 deel_lip_skip_reason = "deel-lip is not available"
+
+
+def test_convert_nok_several_inputs():
+    a = Input((1,))
+    b = Input((2,))
+    model = Model([a, b], a)
+
+    with pytest.raises(ValueError, match="only 1 input"):
+        clone(model)
+
+
+def test_convert_nok_unflattened_input():
+    a = Input((1, 2))
+    model = Model(a, a)
+
+    with pytest.raises(ValueError, match="flattened input"):
+        clone(model)
 
 
 def test_convert_1D(n, method, mode, floatx, decimal, helpers):
