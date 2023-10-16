@@ -1360,7 +1360,8 @@ class Helpers:
     @staticmethod
     def toy_network_tutorial(dtype="float32"):
         layers = []
-        layers.append(Dense(100, input_dim=1, dtype=dtype))  # specify the dimension of the input space
+        layers.append(Input((1,), dtype=dtype))
+        layers.append(Dense(100, dtype=dtype))
         layers.append(Activation("relu", dtype=dtype))
         layers.append(Dense(100, dtype=dtype))
         layers.append(Dense(1, activation="linear", dtype=dtype))
@@ -1370,9 +1371,8 @@ class Helpers:
     @staticmethod
     def toy_network_tutorial_with_embedded_activation(dtype="float32"):
         layers = []
-        layers.append(
-            Dense(100, input_dim=1, activation="relu", dtype=dtype)
-        )  # specify the dimension of the input space
+        layers.append(Input((1,), dtype=dtype))
+        layers.append(Dense(100, activation="relu", dtype=dtype))
         layers.append(Dense(100, dtype=dtype))
         layers.append(Dense(1, activation="linear", dtype=dtype))
         model = Sequential(layers)
@@ -1382,9 +1382,8 @@ class Helpers:
     def toy_embedded_sequential(dtype="float32"):
         layers = []
         units = 10
-        layers.append(
-            Dense(units, input_dim=1, activation="relu", dtype=dtype)
-        )  # specify the dimension of the input space
+        layers.append(Input((1,), dtype=dtype))
+        layers.append(Dense(units, activation="relu", dtype=dtype))
         layers.append(
             Helpers.dense_NN_1D(
                 dtype=dtype, archi=[2, 3, 2], sequential=True, input_dim=units, activation="relu", use_bias=False
@@ -1396,24 +1395,24 @@ class Helpers:
 
     @staticmethod
     def dense_NN_1D(input_dim, archi, sequential, activation, use_bias, dtype="float32"):
-        layers = [Dense(archi[0], use_bias=use_bias, activation=activation, input_dim=input_dim, dtype=dtype)]
-        layers += [Dense(n_i, use_bias=use_bias, activation=activation, dtype=dtype) for n_i in archi[1:]]
+        layers = [Input((input_dim,), dtype=dtype)]
+        layers += [Dense(n_i, use_bias=use_bias, activation=activation, dtype=dtype) for n_i in archi]
 
         if sequential:
             return Sequential(layers)
         else:
-            x = Input(input_dim, dtype=dtype)
-            output = layers[0](x)
+            input = layers[0]
+            output = input
             for layer_ in layers[1:]:
                 output = layer_(output)
-            return Model(x, output)
+            return Model(input, output)
 
     @staticmethod
     def toy_struct_v0_1D(input_dim, archi, activation, use_bias, merge_op=Add, dtype="float32"):
         nnet_0 = Helpers.dense_NN_1D(
             input_dim=input_dim, archi=archi, sequential=False, activation=activation, use_bias=use_bias, dtype=dtype
         )
-        nnet_1 = Dense(archi[-1], use_bias=use_bias, activation="linear", input_dim=input_dim, name="toto", dtype=dtype)
+        nnet_1 = Dense(archi[-1], use_bias=use_bias, activation="linear", name="toto", dtype=dtype)
 
         x = Input(input_dim, dtype=dtype)
         h_0 = nnet_0(x)
@@ -1459,7 +1458,7 @@ class Helpers:
             use_bias=use_bias,
             dtype=dtype,
         )
-        nnet_2 = Dense(archi[-1], use_bias=use_bias, activation="linear", input_dim=input_dim, dtype=dtype)
+        nnet_2 = Dense(archi[-1], use_bias=use_bias, activation="linear", dtype=dtype)
 
         x = Input(input_dim, dtype=dtype)
         nnet_0(x)
@@ -1475,7 +1474,8 @@ class Helpers:
     def toy_struct_cnn(dtype="float32", image_data_shape=(6, 6, 2)):
         input_dim = np.prod(image_data_shape)
         layers = [
-            Reshape(target_shape=image_data_shape, input_dim=input_dim),
+            Input((input_dim,)),
+            Reshape(target_shape=image_data_shape),
             Conv2D(
                 10,
                 kernel_size=(3, 3),

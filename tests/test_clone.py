@@ -115,7 +115,8 @@ def test_convert_1D_backward_slope(slope, helpers):
 
 def test_name_forward():
     layers = []
-    layers.append(Dense(1, input_dim=1))
+    layers.append(Input((1,)))
+    layers.append(Dense(1))
     layers.append(Dense(1, name="superman"))  # specify the dimension of the input space
     layers.append(Activation("relu"))
     layers.append(Dense(1, activation="relu", name="batman"))
@@ -131,7 +132,8 @@ def test_name_forward():
 @pytest.mark.skipif(not (deel_lip_available), reason=deel_lip_skip_reason)
 def test_name_forward_deellip():
     layers = []
-    layers.append(Dense(1, input_dim=1))
+    layers.append(Input((1,)))
+    layers.append(Dense(1))
     layers.append(SpectralDense(1, name="superman"))  # specify the dimension of the input space
     layers.append(Activation("relu"))
     layers.append(SpectralDense(1, activation=GroupSort(n=1), name="batman"))
@@ -146,7 +148,8 @@ def test_name_forward_deellip():
 
 def test_name_backward():
     layers = []
-    layers.append(Dense(1, input_dim=1))
+    layers.append(Input((1,)))
+    layers.append(Dense(1))
     layers.append(Dense(1, name="superman"))  # specify the dimension of the input space
     layers.append(Activation("relu"))
     layers.append(Dense(1, activation="relu", name="batman"))
@@ -162,7 +165,8 @@ def test_name_backward():
 @pytest.mark.skipif(not (deel_lip_available), reason=deel_lip_skip_reason)
 def test_name_backward_deellip():
     layers = []
-    layers.append(Dense(1, input_dim=1))
+    layers.append(Input((1,)))
+    layers.append(Dense(1))
     layers.append(SpectralDense(1, name="superman"))  # specify the dimension of the input space
     layers.append(Activation("relu"))
     layers.append(SpectralDense(1, activation="relu", name="batman"))
