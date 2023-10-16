@@ -75,6 +75,7 @@ disallow_untyped_defs = true
 module = [
     "tensorflow.*",
     "keras.*",
-    "deel.lip.*"
+    "deel.lip.*",
+    "keras_core.*"
 ]
 ignore_missing_imports = true
