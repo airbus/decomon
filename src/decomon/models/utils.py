@@ -179,16 +179,6 @@ def get_input_tensors(
     return z_tensor, input_tensors
 
 
-def get_input_tensors_keras_only(
-    model: Model,
-    input_shape: Tuple[int, ...],
-) -> List[keras.KerasTensor]:
-    input_tensors = []
-    for i in range(len(model._input_layers)):
-        input_tensors.append(Input(input_shape[1:], dtype=model.layers[0].dtype))
-    return input_tensors
-
-
 def get_input_dim(layer: Layer) -> int:
     if isinstance(layer.input_shape, list):
         return np.prod(layer.input_shape[0][1:])
