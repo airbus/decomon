@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import keras_core as keras
 import keras_core.ops as K
+import tensorflow as tf
 from keras_core.config import floatx
 from keras_core.layers import Concatenate, Lambda, Layer
 from keras_core.models import Model
