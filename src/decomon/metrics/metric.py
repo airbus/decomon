@@ -387,7 +387,7 @@ def _get_ibp_score(
     if target_tensor is None:
         target_tensor = 1.0 - source_tensor
 
-    shape = np.prod(u_c.shape[1:])
+    shape = int(np.prod(u_c.shape[1:]))
     u_c_reshaped = K.reshape(u_c, (-1, shape))
     l_c_reshaped = K.reshape(l_c, (-1, shape))
 
@@ -414,7 +414,7 @@ def _get_affine_score(
         target_tensor = 1.0 - source_tensor
 
     n_dim = w_u.shape[1]
-    shape = np.prod(b_u.shape[1:])
+    shape = int(np.prod(b_u.shape[1:]))
     w_u_reshaped = K.reshape(w_u, (-1, n_dim, shape, 1))
     w_l_reshaped = K.reshape(w_l, (-1, n_dim, 1, shape))
     b_u_reshaped = K.reshape(b_u, (-1, shape, 1))

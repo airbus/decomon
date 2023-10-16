@@ -1472,7 +1472,7 @@ class Helpers:
 
     @staticmethod
     def toy_struct_cnn(dtype="float32", image_data_shape=(6, 6, 2)):
-        input_dim = np.prod(image_data_shape)
+        input_dim = int(np.prod(image_data_shape))
         layers = [
             Input((input_dim,)),
             Reshape(target_shape=image_data_shape),

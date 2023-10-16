@@ -131,7 +131,7 @@ def linear_hull_s_shape(
         )
         if len(w_u.shape) == len(b_u.shape):
             # it happens with the convert function to spare memory footprint
-            n_dim = np.prod(w_u.shape[1:])
+            n_dim = int(np.prod(w_u.shape[1:]))
             M = np.reshape(
                 np.diag([K.cast(1, dtype=w_u_0.dtype)] * n_dim), [1, n_dim] + list(w_u.shape[1:])
             )  # usage de numpy pb pour les types

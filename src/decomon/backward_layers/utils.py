@@ -536,7 +536,7 @@ def backward_multiply(
 
     z_value = K.cast(0.0, u_c_0.dtype)
 
-    n = np.prod(u_c_0.shape[1:])
+    n = int(np.prod(u_c_0.shape[1:]))
     n_shape = [-1, n]
     # broadcast dimensions if needed
     n_out = len(w_u_out.shape[1:])
@@ -614,7 +614,7 @@ def backward_sort(
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
 
     # build fake inputs with no linearity
-    n_dim = np.prod(u_c.shape[1:])
+    n_dim = int(np.prod(u_c.shape[1:]))
     w_tmp = z_value * K.concatenate([u_c[:, None] * n_dim], 1)
 
     inputs_tmp = [x, u_c, w_tmp, u_c, l_c, w_tmp, l_c]
@@ -646,7 +646,7 @@ def backward_sort(
 
 def get_identity_lirpa(inputs: List[keras.KerasTensor]) -> List[keras.KerasTensor]:
     y = inputs[-1]
-    shape = np.prod(y.shape[1:])
+    shape = int(np.prod(y.shape[1:]))
 
     z_value = K.cast(0.0, y.dtype)
     o_value = K.cast(1.0, y.dtype)
