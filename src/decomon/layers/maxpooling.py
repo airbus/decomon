@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import keras_core as keras
 import keras_core.ops as K
 import numpy as np
-from keras_core.backend import conv2d
+from keras.backend import conv2d
 from keras_core.layers import InputSpec, MaxPooling2D
 
 from decomon.core import ForwardMode, PerturbationDomain
