@@ -3,6 +3,7 @@ import warnings
 import keras_core as keras
 import keras_core.ops as K
 import numpy as np
+import tensorflow as tf
 from keras_core.layers import Conv2D, Input
 
 

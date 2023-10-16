@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import keras_core as keras
 import keras_core.ops as K
+import tensorflow as tf
 from keras_core.layers import InputSpec, Layer
 
 from decomon.core import ForwardMode, PerturbationDomain
