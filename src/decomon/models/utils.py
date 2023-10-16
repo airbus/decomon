@@ -80,6 +80,21 @@ def has_merge_layers(model: Model) -> bool:
     return any(is_a_merge_layer(layer) for layer in model.layers)
 
 
+def check_model2convert_inputs(model: Model) -> None:
+    """Check that the model to convert satisfy the hypotheses for decomon on inputs.
+
+    Which means:
+
+    - only one input
+    - the input must be flattened: only batchsize + another dimension
+
+    """
+    if len(model.inputs) > 1:
+        raise ValueError("The model must have only 1 input to be converted.")
+    if len(model.inputs[0].shape) > 2:
+        raise ValueError("The model must have a flattened input to be converted.")
+
+
 def get_input_tensors(
     model: Model,
     perturbation_domain: PerturbationDomain,
@@ -87,23 +102,6 @@ def get_input_tensors(
     affine: bool = True,
 ) -> Tuple[keras.KerasTensor, List[keras.KerasTensor]]:
     input_dim = get_input_dim(model)
-    input_shape = None
-    input_shape_vec = None
-
-    for input_layer in model._input_layers:
-        if len(input_layer.input_shape) > 1:
-            raise ValueError(f"Expected one input tensor but got {len(input_layer.input_shape)}")
-        input_shape_vec_default = input_layer.input_shape[0]
-        input_shape_default = tuple(list(input_shape_vec_default)[1:])
-
-        if input_shape_vec is None:
-            input_shape_vec = input_shape_vec_default
-        if input_shape is None:
-            input_shape = input_shape_default
-        else:
-            if not np.allclose(input_shape, input_shape_default):
-                raise ValueError("Expected that every input layers use the same input_tensor")
-
     mode = get_mode(ibp=ibp, affine=affine)
     dc_decomp = False
     inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
