@@ -11,7 +11,7 @@ def get_graph_complexity(model: keras.Model) -> int:
     for depth in depth_keys:
         nodes = model._nodes_by_depth[depth]
         for node in nodes:
-            if isinstance(node.outbound_layer, (InputLayer, Lambda)):
+            if isinstance(node.operation, (InputLayer, Lambda)):
                 continue
 
             nb_nodes += 1

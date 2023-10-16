@@ -305,6 +305,10 @@ def preprocess_layer(layer: Layer) -> List[Layer]:
     return [convert_deellip_to_keras(l) for l in layers]
 
 
+def is_input_node(node: Node) -> bool:
+    return len(node.input_tensors) == 0
+
+
 def get_depth_dict(model: Model) -> Dict[int, List[Node]]:
     depth_keys = list(model._nodes_by_depth.keys())
     depth_keys.sort(reverse=True)

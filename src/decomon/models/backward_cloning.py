@@ -66,7 +66,7 @@ def retrieve_layer(
     if id(node) in backward_map:
         backward_layer = backward_map[id(node)]
     else:
-        backward_layer = layer_fn(node.outbound_layer)
+        backward_layer = layer_fn(node.operation)
         if joint:
             backward_map[id(node)] = backward_layer
     return backward_layer
@@ -113,12 +113,12 @@ def crown_(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
 
-    if isinstance(node.outbound_layer, Model):
+    if isinstance(node.operation, Model):
         inputs_tensors = get_disconnected_input(get_mode(ibp, affine), perturbation_domain, dtype=inputs[0].dtype)(
             inputs
         )
         _, backward_bounds, _, _ = crown_model(
-            model=node.outbound_layer,
+            model=node.operation,
             input_tensors=inputs_tensors,
             backward_bounds=backward_bounds,
             ibp=ibp,
@@ -232,7 +232,7 @@ def get_input_nodes(
     for depth in keys:
         nodes = dico_nodes[depth]
         for node in nodes:
-            layer = node.outbound_layer
+            layer = node.operation
 
             parents = node.parent_nodes
             if not len(parents):
@@ -361,11 +361,11 @@ def crown_model(
     output = []
     output_nodes = dico_nodes[0]
     # the ordering may change
-    output_names = [tensor._keras_history.layer.name for tensor in to_list(model.output)]
+    output_names = [tensor._keras_history.operation.name for tensor in to_list(model.output)]
     fuse_layer = None
     for output_name in output_names:
         for node in output_nodes:
-            if node.outbound_layer.name == output_name:
+            if node.operation.name == output_name:
                 # compute with crown
                 output_crown, fuse_layer = crown_(
                     node=node,
