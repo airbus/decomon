@@ -250,15 +250,22 @@ class DecomonConv2D(DecomonLayer, Conv2D):
             w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
         if self.use_bias:
+            # put bias to the correct shape
+            if self.data_format == "channels_last":
+                bias_shape = (1,) * (self.rank + 1) + (self.filters,)
+            else:
+                bias_shape = (1, self.filters) + (1,) * self.rank
+            reshaped_bias = K.reshape(self.bias, bias_shape)
+
             if self.dc_decomp:
-                g_out = K.bias_add(g_out, K.minimum(z_value, self.bias), data_format=self.data_format)
-                h_out = K.bias_add(h_out, K.maximum(z_value, self.bias), data_format=self.data_format)
+                g_out += K.reshape(K.minimum(z_value, self.bias), bias_shape)
+                h_out += K.reshape(K.maximum(z_value, self.bias), bias_shape)
             if self.affine:
-                b_u_out = K.bias_add(b_u_out, self.bias, data_format=self.data_format)
-                b_l_out = K.bias_add(b_l_out, self.bias, data_format=self.data_format)
+                b_u_out += reshaped_bias
+                b_l_out += reshaped_bias
             if self.ibp:
-                u_c_out = K.bias_add(u_c_out, self.bias, data_format=self.data_format)
-                l_c_out = K.bias_add(l_c_out, self.bias, data_format=self.data_format)
+                u_c_out += reshaped_bias
+                l_c_out += reshaped_bias
 
         return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
             [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
@@ -531,11 +538,11 @@ class DecomonDense(DecomonLayer, Dense):
         if self.use_bias:
             if not self.has_backward_bounds:
                 if self.ibp:
-                    u_c_out = K.bias_add(u_c_out, self.bias, data_format="channels_last")
-                    l_c_out = K.bias_add(l_c_out, self.bias, data_format="channels_last")
+                    u_c_out += self.bias
+                    l_c_out += self.bias
                 if self.affine:
-                    b_u_out = K.bias_add(b_u_out, self.bias, data_format="channels_last")
-                    b_l_out = K.bias_add(b_l_out, self.bias, data_format="channels_last")
+                    b_u_out += self.bias
+                    b_l_out += self.bias
             else:
                 b = K.sum(back_bound * self.bias[None, None], 1)
                 if self.ibp:
@@ -548,8 +555,8 @@ class DecomonDense(DecomonLayer, Dense):
             if self.dc_decomp:
                 if self.has_backward_bounds:
                     raise NotImplementedError()
-                h_out = K.bias_add(h_out, K.maximum(z_value, self.bias), data_format="channels_last")
-                g_out = K.bias_add(g_out, K.minimum(z_value, self.bias), data_format="channels_last")
+                h_out += K.maximum(z_value, self.bias)
+                g_out += K.minimum(z_value, self.bias)
 
         return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
             [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
