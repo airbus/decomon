@@ -207,11 +207,7 @@ def test_convert_deellip_to_keras_groupsort():
 def test_convert_deellip_to_keras_spectraldense():
     units = 3
     layer = SpectralDense(units=units)
-    layer(
-        Input(
-            1,
-        )
-    )
+    layer(Input((1,)))
     keras_layer = convert_deellip_to_keras(layer)
     # new attributes added
     assert hasattr(keras_layer, "is_lipschitz")
