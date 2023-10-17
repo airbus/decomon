@@ -73,10 +73,10 @@ def get_toeplitz_channels_last(conv_layer: Conv2D, flatten: bool = True) -> kera
     shape = np.arange(len(diag_patches_.shape))
     shape[-1] -= 1
     shape[-2] += 1
-    diag_patches_ = K.permute_dimensions(diag_patches_, shape)
+    diag_patches_ = K.transpose(diag_patches_, shape)
     kernel = conv_layer.kernel  # (filter_size, filter_size, c_in, c_out)
 
-    kernel = K.permute_dimensions(K.reshape(kernel, (filter_size**2, c_in, c_out)), (1, 2, 0))[
+    kernel = K.transpose(K.reshape(kernel, (filter_size**2, c_in, c_out)), (1, 2, 0))[
         None, None, None, None, None
     ]  # (1,1,c_in, c_out, filter_size^2)
 
@@ -136,10 +136,10 @@ def get_toeplitz_channels_first(conv_layer: Conv2D, flatten: bool = True) -> ker
     shape = np.arange(len(diag_patches_.shape))
     shape[-1] -= 1
     shape[-2] += 1
-    diag_patches_ = K.permute_dimensions(diag_patches_, shape)
+    diag_patches_ = K.transpose(diag_patches_, shape)
     kernel = conv_layer.kernel  # (filter_size, filter_size, c_in, c_out)
 
-    kernel = K.permute_dimensions(K.reshape(kernel, (filter_size**2, c_in, c_out)), (1, 2, 0))[
+    kernel = K.transpose(K.reshape(kernel, (filter_size**2, c_in, c_out)), (1, 2, 0))[
         None, None, None, None, None
     ]  # (1,1,c_in, c_out, filter_size^2)
 

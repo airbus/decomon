@@ -105,7 +105,7 @@ def get_upper_linear_hull_max(
     else:
         dim_permutation = np.concatenate([dimensions[:-2], dimensions[-1:], [dimensions[-2]]])
 
-    corners_collapse = K.permute_dimensions(corners_collapse, dim_permutation)
+    corners_collapse = K.transpose(corners_collapse, dim_permutation)
     # tf.linalg.solve works only for float32
     if dtype != dtype32:
         corners_collapse = K.cast(corners_collapse, dtype32)
@@ -124,7 +124,7 @@ def get_upper_linear_hull_max(
     flatten_dim = int(np.prod(w_hull.shape[1:-2]))
     w_hull_flat = K.reshape(w_hull, (-1, flatten_dim, n_dim + 1))
     w_u = K.reshape(w_hull_flat[:, :, :-1], (-1, shape_prev, shape_after, n_dim))  # (-1, shape_, n_dim)
-    w_u = K.reshape(K.permute_dimensions(w_u, (0, 1, 3, 2)), [-1] + list(inputs[-1].shape[1:]))
+    w_u = K.reshape(K.transpose(w_u, (0, 1, 3, 2)), [-1] + list(inputs[-1].shape[1:]))
     # reshape w_u
     shape_max = K.max(inputs[-1], axis).shape[1:]
     b_u = K.reshape(w_hull_flat[:, :, -1], [-1] + list(shape_max))  # (-1, shape_)

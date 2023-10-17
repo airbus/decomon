@@ -46,7 +46,7 @@ def get_model(model: DecomonModel) -> DecomonModel:
             if len(x_0.shape) == 2:
                 x_0_reshaped = x_0[:, :, None]
             else:
-                x_0_reshaped = K.permute_dimensions(x_0, (0, 2, 1))
+                x_0_reshaped = K.transpose(x_0, (0, 2, 1))
             x_fake = K.sum(x_0_reshaped, 1)[:, None]
             x_0_reshaped = K.concatenate([x_0_reshaped, x_fake], 1)  # (None, n_in+1, n_comp)
 
@@ -66,7 +66,7 @@ def get_model(model: DecomonModel) -> DecomonModel:
             if len(x_0.shape) == 2:
                 x_0_reshaped = x_0[:, :, None]
             else:
-                x_0_reshaped = K.permute_dimensions(x_0, (0, 2, 1))
+                x_0_reshaped = K.transpose(x_0, (0, 2, 1))
             x_fake = K.sum(x_0_reshaped, 1)[:, None]
             x_0_reshaped = K.concatenate([x_0_reshaped, x_fake, x_fake], 1)  # (None, n_in+2, n_comp)
 
@@ -123,7 +123,7 @@ def get_upper_loss(model: DecomonModel) -> Callable[[keras.KerasTensor, keras.Ke
 
         elif mode == ForwardMode.AFFINE:
             if len(y_pred.shape) == 3:
-                x_0 = K.permute_dimensions(y_pred[:, :-1, :n_comp], (0, 2, 1))
+                x_0 = K.transpose(y_pred[:, :-1, :n_comp], (0, 2, 1))
             else:
                 x_0 = y_pred[:, :-1, 0]
 
@@ -132,7 +132,7 @@ def get_upper_loss(model: DecomonModel) -> Callable[[keras.KerasTensor, keras.Ke
 
         elif mode == ForwardMode.HYBRID:
             if len(y_pred.shape) == 3:
-                x_0 = K.permute_dimensions(y_pred[:, :-2, :n_comp], (0, 2, 1))
+                x_0 = K.transpose(y_pred[:, :-2, :n_comp], (0, 2, 1))
             else:
                 x_0 = y_pred[:, :-2, 0]
 
@@ -187,7 +187,7 @@ def get_lower_loss(model: DecomonModel) -> Callable[[keras.KerasTensor, keras.Ke
 
         elif mode == ForwardMode.AFFINE:
             if len(y_pred.shape) == 3:
-                x_0 = K.permute_dimensions(y_pred[:, :-1, :n_comp], (0, 2, 1))
+                x_0 = K.transpose(y_pred[:, :-1, :n_comp], (0, 2, 1))
             else:
                 x_0 = y_pred[:, :-1, 0]
 
@@ -196,7 +196,7 @@ def get_lower_loss(model: DecomonModel) -> Callable[[keras.KerasTensor, keras.Ke
 
         elif mode == ForwardMode.HYBRID:
             if len(y_pred.shape) == 3:
-                x_0 = K.permute_dimensions(y_pred[:, :-2, :n_comp], (0, 2, 1))
+                x_0 = K.transpose(y_pred[:, :-2, :n_comp], (0, 2, 1))
             else:
                 x_0 = y_pred[:, :-2, 0]
 
@@ -285,7 +285,7 @@ def get_adv_loss(
 
         elif mode == ForwardMode.AFFINE:
             if len(y_pred.shape) == 3:
-                x_0 = K.permute_dimensions(y_pred[:, :-1, :n_comp], (0, 2, 1))
+                x_0 = K.transpose(y_pred[:, :-1, :n_comp], (0, 2, 1))
             else:
                 x_0 = y_pred[:, :-1, 0]
 
@@ -301,7 +301,7 @@ def get_adv_loss(
 
         elif mode == ForwardMode.HYBRID:
             if len(y_pred.shape) == 3:
-                x_0 = K.permute_dimensions(y_pred[:, :-2, :n_comp], (0, 2, 1))
+                x_0 = K.transpose(y_pred[:, :-2, :n_comp], (0, 2, 1))
             else:
                 x_0 = y_pred[:, :-2, 0]
 

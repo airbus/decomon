@@ -4,7 +4,6 @@ import keras_core as keras
 import keras_core.ops as K
 import numpy as np
 import tensorflow as tf
-from keras_core.constraints import NonNeg
 from keras_core.layers import (
     Activation,
     BatchNormalization,
@@ -18,6 +17,7 @@ from keras_core.layers import (
     Lambda,
     Layer,
 )
+from keras_core.src.backend import rnn
 
 from decomon.core import ForwardMode, PerturbationDomain, Slope
 from decomon.layers import activations
@@ -161,20 +161,20 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
         def conv_pos(x: keras.KerasTensor) -> keras.KerasTensor:
-            return K.conv2d(
+            return K.conv(
                 x,
                 K.maximum(z_value, self.kernel),
-                strides=self.strides,
+                strides=list(self.strides),
                 padding=self.padding,
                 data_format=self.data_format,
                 dilation_rate=self.dilation_rate,
             )
 
         def conv_neg(x: keras.KerasTensor) -> keras.KerasTensor:
-            return K.conv2d(
+            return K.conv(
                 x,
                 K.minimum(z_value, self.kernel),
-                strides=self.strides,
+                strides=list(self.strides),
                 padding=self.padding,
                 data_format=self.data_format,
                 dilation_rate=self.dilation_rate,
@@ -193,10 +193,10 @@ class DecomonConv2D(DecomonLayer, Conv2D):
             u_c_out, l_c_out = empty_tensor, empty_tensor
 
         if self.affine:
-            y = K.conv2d(
+            y = K.conv(
                 b_u,
                 self.kernel,
-                strides=self.strides,
+                strides=list(self.strides),
                 padding=self.padding,
                 data_format=self.data_format,
                 dilation_rate=self.dilation_rate,
@@ -207,10 +207,10 @@ class DecomonConv2D(DecomonLayer, Conv2D):
 
                 identity_tensor = K.reshape(identity_tensor, [-1] + list(b_u.shape[1:]))
 
-                w_u_out = K.conv2d(
+                w_u_out = K.conv(
                     identity_tensor,
                     self.kernel,
-                    strides=self.strides,
+                    strides=list(self.strides),
                     padding=self.padding,
                     data_format=self.data_format,
                     dilation_rate=self.dilation_rate,
@@ -239,12 +239,12 @@ class DecomonConv2D(DecomonLayer, Conv2D):
                 b_l_out = conv_pos(b_l) + conv_neg(b_u)
 
                 w_u_out = (
-                    K.rnn(step_function=step_pos, inputs=w_u, initial_states=[], unroll=False)[1]
-                    + K.rnn(step_function=step_neg, inputs=w_l, initial_states=[], unroll=False)[1]
+                    rnn(step_function=step_pos, inputs=w_u, initial_states=[], unroll=False)[1]
+                    + rnn(step_function=step_neg, inputs=w_l, initial_states=[], unroll=False)[1]
                 )
                 w_l_out = (
-                    K.rnn(step_function=step_pos, inputs=w_l, initial_states=[], unroll=False)[1]
-                    + K.rnn(step_function=step_neg, inputs=w_u, initial_states=[], unroll=False)[1]
+                    rnn(step_function=step_pos, inputs=w_l, initial_states=[], unroll=False)[1]
+                    + rnn(step_function=step_neg, inputs=w_u, initial_states=[], unroll=False)[1]
                 )
         else:
             w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
@@ -697,10 +697,10 @@ class DecomonActivation(DecomonLayer, Activation):
         if self.finetune and self.mode != ForwardMode.IBP:
             if self.activation_name != "linear":
                 if self.activation_name[:4] == "relu":
-                    K.set_value(self.beta_l_f, np.ones_like(self.beta_l_f.value()))
+                    self.beta_l_f.assign(np.ones_like(self.beta_l_f.value()))
                 else:
-                    K.set_value(self.beta_u_f, np.ones_like(self.beta_u_f.value()))
-                    K.set_value(self.beta_l_f, np.ones_like(self.beta_l_f.value()))
+                    self.beta_u_f.assign(np.ones_like(self.beta_u_f.value()))
+                    self.beta_l_f.assign(np.ones_like(self.beta_l_f.value()))
 
     def freeze_alpha(self) -> None:
         if not self.frozen_alpha:
@@ -816,7 +816,7 @@ class DecomonFlatten(DecomonLayer, Flatten):
             b_u_out = op(b_u)
             b_l_out = op(b_l)
             input_dim = x.shape[-1]
-            output_shape = int(np.prod(list(K.int_shape(b_u_out))[1:]))
+            output_shape = int(np.prod(b_u_out.shape[1:]))
             w_u_out = K.reshape(w_u, (-1, input_dim, output_shape))
             w_l_out = K.reshape(w_l, (-1, input_dim, output_shape))
         else:

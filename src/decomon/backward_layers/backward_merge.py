@@ -580,15 +580,15 @@ class BackwardDot(BackwardMerge):
         index_1[axes[1] + 1] = 2
 
         bounds_m_0 = [
-            K.permute_dimensions(bounds_m_0[0], index_0),
+            K.transpose(bounds_m_0[0], index_0),
             bounds_m_0[1],
-            K.permute_dimensions(bounds_m_0[2], index_0),
+            K.transpose(bounds_m_0[2], index_0),
             bounds_m_0[3],
         ]
         bounds_m_1 = [
-            K.permute_dimensions(bounds_m_1[0], index_1),
+            K.transpose(bounds_m_1[0], index_1),
             bounds_m_1[1],
-            K.permute_dimensions(bounds_m_1[2], index_1),
+            K.transpose(bounds_m_1[2], index_1),
             bounds_m_1[3],
         ]
 

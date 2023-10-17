@@ -170,14 +170,14 @@ class BackwardConv2D(BackwardLayer):
         if self.layer.data_format == "channels_last":
             b_out_u_ = K.reshape(K.zeros(output_shape, dtype=self.layer.dtype), (-1, output_shape[-1]))
         else:
-            b_out_u_ = K.permute_dimensions(
+            b_out_u_ = K.transpose(
                 K.reshape(K.zeros(output_shape, dtype=self.layer.dtype), (-1, output_shape[0])), (1, 0)
             )
 
         if self.layer.use_bias:
             bias_ = K.cast(self.layer.bias, self.layer.dtype)
             b_out_u_ = b_out_u_ + bias_[None]
-        b_out_u_ = K.flatten(b_out_u_)
+        b_out_u_ = K.ravel(b_out_u_)
 
         z_value = K.cast(0.0, self.dtype)
         y_ = inputs[-1]
@@ -271,7 +271,7 @@ class BackwardActivation(BackwardLayer):
                     )
                     alpha_b_l = np.zeros((3, input_dim))
                     alpha_b_l[0] = 1
-                    K.set_value(self.alpha_b_l, alpha_b_l)
+                    self.alpha_b_l.assign(alpha_b_l)
                     self.finetune_param.append(self.alpha_b_l)
 
             else:
@@ -284,7 +284,7 @@ class BackwardActivation(BackwardLayer):
                 )
                 alpha_b_l = np.ones((input_dim,))
                 # alpha_b_l[0] = 1
-                K.set_value(self.alpha_b_l, alpha_b_l)
+                self.alpha_b_l.assign(alpha_b_l)
 
                 if self.activation_name[:4] != "relu":
                     self.alpha_b_u = self.add_weight(
@@ -496,8 +496,8 @@ class BackwardPermute(BackwardLayer):
 
         dims = [0] + list(self.dims) + [len(y.shape)]
         dims = list(np.argsort(dims))
-        w_u_out = K.reshape(K.permute_dimensions(w_u_out, dims), (-1, n_dim, n_out))
-        w_l_out = K.reshape(K.permute_dimensions(w_l_out, dims), (-1, n_dim, n_out))
+        w_u_out = K.reshape(K.transpose(w_u_out, dims), (-1, n_dim, n_out))
+        w_l_out = K.reshape(K.transpose(w_l_out, dims), (-1, n_dim, n_out))
 
         return [w_u_out, b_u_out, w_l_out, b_l_out]
 

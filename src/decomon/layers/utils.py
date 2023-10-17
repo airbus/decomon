@@ -272,7 +272,7 @@ def max_(
     inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
     inputs_outputs_spec_no_dc = InputsOutputsSpec(dc_decomp=False, mode=mode, perturbation_domain=perturbation_domain)
 
-    input_shape = K.int_shape(inputs[-1])
+    input_shape = inputs[-1].shape
     max_dim = input_shape[axis]
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(
         inputs, tight=False, compute_ibp_from_affine=False
@@ -563,15 +563,15 @@ def permute_dimensions(
     index_w = np.insert(np.delete(index_w, axis), axis_perm + 1, axis)
 
     if ibp:
-        u_c_out = K.permute_dimensions(u_c, index)
-        l_c_out = K.permute_dimensions(l_c, index)
+        u_c_out = K.transpose(u_c, index)
+        l_c_out = K.transpose(l_c, index)
     else:
         u_c_out, l_c_out = empty_tensor, empty_tensor
     if affine:
-        w_u_out = K.permute_dimensions(w_u, index_w)
-        b_u_out = K.permute_dimensions(b_u, index)
-        w_l_out = K.permute_dimensions(w_l, index_w)
-        b_l_out = K.permute_dimensions(b_l, index)
+        w_u_out = K.transpose(w_u, index_w)
+        b_u_out = K.transpose(b_u, index)
+        w_l_out = K.transpose(w_l, index_w)
+        b_l_out = K.transpose(b_l, index)
     else:
         w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
@@ -936,7 +936,7 @@ def frac_pos_hull(
 
     l_c = K.maximum(l_c, 1.0)
     z = (u_c + l_c) / 2.0
-    w_l = -1 / K.pow(z)
+    w_l = -1 / K.power(z)
     b_l = 2 / z
     w_u = (1.0 / u_c - 1.0 / l_c) / (u_c - l_c)
     b_u = 1.0 / u_c - w_u * u_c
