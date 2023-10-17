@@ -9,9 +9,9 @@ readme = "README.md"
 authors = [
     {email ="ai.decomon@gmail.com"},
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies =[
-    "tensorflow >=2.6.0",
+    "tensorflow >=2.13.0",
     "matplotlib",
     "numpy >=1.21",
     "keras-core",
@@ -23,7 +23,7 @@ documentation = "https://airbus.github.io/decomon"
 repository = "https://github.com/airbus/decomon"
 
 [project.optional-dependencies]
-dev = ["pytest>=6.2.2", "black", "tox>=3.20.1"]
+dev = ["tox>=4.6.4"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -40,7 +40,7 @@ addopts = [
 
 [tool.black]
 line-length = 120
-target-version = ['py37']
+target-version = ['py39']
 include = '\.pyi?$'
 exclude = '''
 
