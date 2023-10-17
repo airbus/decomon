@@ -58,7 +58,7 @@ def tanh_prime(x: keras.KerasTensor) -> keras.KerasTensor:
     """
 
     s_x = K.tanh(x)
-    return K.cast(1, dtype=x.dtype) - K.pow(s_x, K.cast(2, dtype=x.dtype))
+    return K.cast(1, dtype=x.dtype) - K.power(s_x, K.cast(2, dtype=x.dtype))
 
 
 def softsign_prime(x: keras.KerasTensor) -> keras.KerasTensor:
@@ -71,7 +71,7 @@ def softsign_prime(x: keras.KerasTensor) -> keras.KerasTensor:
 
     """
 
-    return K.cast(1.0, dtype=x.dtype) / K.pow(K.cast(1.0, dtype=x.dtype) + K.abs(x), K.cast(2, dtype=x.dtype))
+    return K.cast(1.0, dtype=x.dtype) / K.power(K.cast(1.0, dtype=x.dtype) + K.abs(x), K.cast(2, dtype=x.dtype))
 
 
 ##### corners ######
@@ -117,7 +117,7 @@ def convert_lower_search_2_subset_sum(
 
 def subset_sum_lower(W: keras.KerasTensor, b: keras.KerasTensor, repeat: int = 1) -> keras.KerasTensor:
     B = K.sort(W, axis=1)
-    C = K.repeat_elements(B, rep=repeat, axis=1)
+    C = K.repeat(B, repeats=repeat, axis=1)
     C_reduced = K.cumsum(C, axis=1)
     D = K.minimum(K.sign(K.expand_dims(-b, 1) - C_reduced) + 1, 1)
 
@@ -577,7 +577,7 @@ def get_linear_hull_s_shape(
 
     # case 0:
     coeff = (s_u - s_l) / K.maximum(K.cast(epsilon(), dtype=dtype), u_c_flat - l_c_flat)
-    alpha_u_0 = K.switch(
+    alpha_u_0 = K.where(
         K.greater_equal(s_u_prime, coeff), o_value + z_value * u_c_flat, z_value * u_c_flat
     )  # (None, n)
     alpha_u_1 = (o_value - alpha_u_0) * ((K.sign(l_c_flat) + o_value) / t_value)
@@ -595,7 +595,7 @@ def get_linear_hull_s_shape(
 
     # linear hull
     # case 0:
-    alpha_l_0 = K.switch(
+    alpha_l_0 = K.where(
         K.greater_equal(s_l_prime, coeff), o_value + z_value * l_c_flat, z_value * l_c_flat
     )  # (None, n)
     alpha_l_1 = (o_value - alpha_l_0) * ((K.sign(-u_c_flat) + o_value) / t_value)
@@ -651,10 +651,10 @@ def get_t_upper(
     threshold = K.min(score, -1)  # (None, n)
 
     index_t = K.cast(
-        K.switch(K.greater(threshold, z_value * threshold), index, K.clip(index - 1, 0, 100)), dtype=u_c_flat.dtype
+        K.where(K.greater(threshold, z_value * threshold), index, K.clip(index - 1, 0, 100)), dtype=u_c_flat.dtype
     )  # (None, n)
     t_value = K.sum(
-        K.switch(
+        K.where(
             K.equal(
                 o_value * K.cast(np.arange(0, 100)[None, None, :], dtype=u_c_flat.dtype) + z_value * u_c_reshaped,
                 K.expand_dims(index_t, -1) + z_value * u_c_reshaped,
@@ -708,10 +708,10 @@ def get_t_lower(
 
     threshold = K.min(score, -1)
     index_t = K.cast(
-        K.switch(K.greater(threshold, z_value * threshold), index, K.clip(index + 1, 0, 100)), dtype=u_c_flat.dtype
+        K.where(K.greater(threshold, z_value * threshold), index, K.clip(index + 1, 0, 100)), dtype=u_c_flat.dtype
     )  # (None, n)
     t_value = K.sum(
-        K.switch(
+        K.where(
             K.equal(
                 o_value * K.cast(np.arange(0, 100)[None, None, :], dtype=u_c_flat.dtype) + z_value * u_c_reshaped,
                 K.expand_dims(index_t, -1) + z_value * u_c_reshaped,

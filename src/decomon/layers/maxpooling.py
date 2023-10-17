@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import keras_core as keras
 import keras_core.ops as K
 import numpy as np
-from keras.backend import conv2d
 from keras_core.layers import InputSpec, MaxPooling2D
 
 from decomon.core import ForwardMode, PerturbationDomain
@@ -94,10 +93,10 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
             if self.data_format in [None, "channels_last"]:
                 return K.cast(
                     K.expand_dims(
-                        conv2d(
+                        K.conv(
                             x,
                             self.filters,
-                            strides=self.strides,
+                            strides=list(self.strides),
                             padding=self.padding,
                             data_format=self.data_format,
                         ),
@@ -108,10 +107,10 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
             else:
                 return K.cast(
                     K.expand_dims(
-                        conv2d(
+                        K.conv(
                             x,
                             self.filters,
-                            strides=self.strides,
+                            strides=list(self.strides),
                             padding=self.padding,
                             data_format=self.data_format,
                         ),
@@ -161,8 +160,8 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
-        l_c_out = K.pool2d(l_c, self.pool_size, self.strides, self.padding, self.data_format, pool_mode="max")
-        u_c_out = K.pool2d(u_c, self.pool_size, self.strides, self.padding, self.data_format, pool_mode="max")
+        l_c_out = K.max_pool(l_c, self.pool_size, self.strides, self.padding, self.data_format)
+        u_c_out = K.max_pool(u_c, self.pool_size, self.strides, self.padding, self.data_format)
 
         if self.affine:
             n_in = x.shape[-1]
