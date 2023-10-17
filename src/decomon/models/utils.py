@@ -30,13 +30,6 @@ from decomon.core import (
 from decomon.layers.utils import is_a_merge_layer
 
 try:
-    from keras.src.backend import (
-        observe_object_name,  # new path starting from keras 2.13
-    )
-except ImportError:
-    from keras_core.backend import observe_object_name  # old path until keras 2.12
-
-try:
     from deel.lip.layers import LipschitzLayer
 except ImportError:
     LipschitzLayer = type(None)
@@ -260,7 +253,6 @@ def split_activation(
                 activation_layer = layer.activation
                 # update the name to starts with main layer name
                 activation_layer_name = f"{layer.name}_activation_{layer.activation.name}"
-                observe_object_name(activation_layer_name)
                 activation_layer._name = activation_layer_name
             else:
                 raise RuntimeError("Cannot construct activation layer from layer.activation!")
