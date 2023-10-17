@@ -1414,7 +1414,7 @@ class Helpers:
         )
         nnet_1 = Dense(archi[-1], use_bias=use_bias, activation="linear", name="toto", dtype=dtype)
 
-        x = Input(input_dim, dtype=dtype)
+        x = Input((input_dim,), dtype=dtype)
         h_0 = nnet_0(x)
         h_1 = nnet_1(x)
 
@@ -1433,7 +1433,7 @@ class Helpers:
             dtype=dtype,
         )
 
-        x = Input(input_dim, dtype=dtype)
+        x = Input((input_dim,), dtype=dtype)
         h_0 = nnet_0(x)
         h_1 = nnet_0(x)
         y = merge_op(dtype=dtype)([h_0, h_1])
@@ -1460,7 +1460,7 @@ class Helpers:
         )
         nnet_2 = Dense(archi[-1], use_bias=use_bias, activation="linear", dtype=dtype)
 
-        x = Input(input_dim, dtype=dtype)
+        x = Input((input_dim,), dtype=dtype)
         nnet_0(x)
         nnet_1(x)
         nnet_1.set_weights([-p for p in nnet_0.get_weights()])  # be sure that the produced output will differ
