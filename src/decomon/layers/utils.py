@@ -213,16 +213,16 @@ def frac_pos(
     dtype = x.dtype
     empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
-    u_c_out = 1.0 / l_c
-    l_c_out = 1.0 / u_c
+    u_c_out = K.cast(1.0, dtype=l_c.dtype) / l_c
+    l_c_out = K.cast(1.0, dtype=u_c.dtype) / u_c
 
     if affine:
         w_u_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, epsilon())
         b_u_0 = l_c_out - w_u_0 * l_c
 
         y = (u_c + l_c) / 2.0
-        b_l_0 = 2.0 / y
-        w_l_0 = -1 / y**2
+        b_l_0 = K.cast(2.0, dtype=y.dtype) / y
+        w_l_0 = -K.cast(1.0, dtype=y.dtype) / y**2
 
         w_u_out = w_u_0[:, None] * w_l
         b_u_out = b_u_0 * b_l + b_u_0
@@ -936,10 +936,10 @@ def frac_pos_hull(
 
     l_c = K.maximum(l_c, 1.0)
     z = (u_c + l_c) / 2.0
-    w_l = -1 / K.power(z)
-    b_l = 2 / z
-    w_u = (1.0 / u_c - 1.0 / l_c) / (u_c - l_c)
-    b_u = 1.0 / u_c - w_u * u_c
+    w_l = -K.cast(1.0, dtype=z.dtype) / K.power(z)
+    b_l = K.cast(2.0, dtype=z.dtype) / z
+    w_u = (K.cast(1.0, dtype=u_c.dtype) / u_c - K.cast(1.0, dtype=l_c.dtype) / l_c) / (u_c - l_c)
+    b_u = K.cast(1.0, dtype=u_c.dtype) / u_c - w_u * u_c
 
     return [w_u, b_u, w_l, b_l]
 
@@ -1080,7 +1080,7 @@ def log(
         w_l_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, epsilon())
         b_l_0 = l_c_out - w_l_0 * l_c
 
-        w_u_0 = 1 / y
+        w_u_0 = K.cast(1, dtype=y.dtype) / y
         b_u_0 = K.log(y) - 1
 
         w_u_out = w_u_0[:, None] * w_u
@@ -1144,7 +1144,7 @@ def exp(
         b_u_0 = l_c_out - w_u_0 * l_c
 
         w_l_0 = K.exp(y)
-        b_l_0 = w_l_0 * (1 - y)
+        b_l_0 = w_l_0 * (-y + 1)
 
         w_u_out = w_u_0[:, None] * w_u
         b_u_out = w_u_0 * b_u + b_u_0
