@@ -51,8 +51,8 @@ class BackwardMaxPooling2D(BackwardLayer):
 
         op_flat = Flatten()
 
-        b_u_pooled = K.pool2d(u_c, self.pool_size, self.strides, self.padding, self.data_format, pool_mode="max")
-        b_l_pooled = K.pool2d(l_c, self.pool_size, self.strides, self.padding, self.data_format, pool_mode="max")
+        b_u_pooled = K.max_pool(u_c, self.pool_size, self.strides, self.padding, self.data_format)
+        b_l_pooled = K.max_pool(l_c, self.pool_size, self.strides, self.padding, self.data_format)
 
         b_u_pooled = K.expand_dims(K.expand_dims(op_flat(b_u_pooled), 1), -1)
         b_l_pooled = K.expand_dims(K.expand_dims(op_flat(b_l_pooled), 1), -1)
@@ -95,7 +95,7 @@ class BackwardMaxPooling2D(BackwardLayer):
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
         y = inputs[-1]
-        input_shape = K.int_shape(y)
+        input_shape = y.shape
 
         if self.data_format in [None, "channels_last"]:
             axis = -1

@@ -465,7 +465,7 @@ def get_lq_norm(x: keras.KerasTensor, p: float, axis: int = -1) -> keras.KerasTe
     if p == 1:
         x_q = K.max(K.abs(x), axis)
     elif p == 2:
-        x_q = K.sqrt(K.sum(K.pow(x, p), axis))
+        x_q = K.sqrt(K.sum(K.power(x, p), axis))
     else:
         raise NotImplementedError("p must be equal to 1 or 2")
 

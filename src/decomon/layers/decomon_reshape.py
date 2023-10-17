@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union
 import keras_core as keras
 import keras_core.ops as K
 from keras_core.layers import InputSpec, Layer, Permute, Reshape
+from keras_core.src.backend import rnn
 
 from decomon.core import ForwardMode, PerturbationDomain, get_affine, get_ibp
 from decomon.layers.core import DecomonLayer
@@ -106,8 +107,8 @@ class DecomonReshape(DecomonLayer, Reshape):
                 ) -> Tuple[keras.KerasTensor, List[keras.KerasTensor]]:
                     return op(x), _
 
-                w_u_out = K.rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]
-                w_l_out = K.rnn(step_function=step_func, inputs=w_l, initial_states=[], unroll=False)[1]
+                w_u_out = rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]
+                w_l_out = rnn(step_function=step_func, inputs=w_l, initial_states=[], unroll=False)[1]
         else:
             w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
@@ -215,8 +216,8 @@ class DecomonPermute(DecomonLayer, Permute):
                 ) -> Tuple[keras.KerasTensor, List[keras.KerasTensor]]:
                     return op(x), _
 
-                w_u_out = K.rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]
-                w_l_out = K.rnn(step_function=step_func, inputs=w_l, initial_states=[], unroll=False)[1]
+                w_u_out = rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]
+                w_l_out = rnn(step_function=step_func, inputs=w_l, initial_states=[], unroll=False)[1]
         else:
             w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
