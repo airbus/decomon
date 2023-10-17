@@ -906,12 +906,7 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
             output += [output_shape, output_shape]
         return output
 
-    def call(
-        self, inputs: List[keras.KerasTensor], training: Optional[bool] = None, **kwargs: Any
-    ) -> List[keras.KerasTensor]:
-        if training is None:
-            training = K.learning_phase()
-
+    def call(self, inputs: List[keras.KerasTensor], training: bool = False, **kwargs: Any) -> List[keras.KerasTensor]:
         z_value = K.cast(0.0, self.dtype)
 
         if training:
@@ -1033,12 +1028,7 @@ class DecomonDropout(DecomonLayer, Dropout):
         super().build(input_shape)
         self.input_spec = [InputSpec(min_ndim=len(elem)) for elem in input_shape]
 
-    def call(
-        self, inputs: List[keras.KerasTensor], training: Optional[bool] = None, **kwargs: Any
-    ) -> List[keras.KerasTensor]:
-        if training is None:
-            training = K.learning_phase()
-
+    def call(self, inputs: List[keras.KerasTensor], training: bool = False, **kwargs: Any) -> List[keras.KerasTensor]:
         if training:
             raise NotImplementedError("not working during training")
 
