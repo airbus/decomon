@@ -8,6 +8,7 @@ from keras_core.layers import (
     Concatenate,
     Dot,
     Lambda,
+    Layer,
     Maximum,
     Minimum,
     Multiply,
@@ -26,7 +27,16 @@ class DecomonMerge(DecomonLayer):
     """Base class for Decomon layers based on Mergind Keras layers."""
 
     def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
-        return input_shape
+        """Compute output shapes from input shapes.
+
+        By default, we assume that all inputs will be merged into "one" (still a list of tensors though).
+
+        """
+        input_shapes_list = self.inputs_outputs_spec.split_inputsformode_to_merge(input_shape)
+        return input_shapes_list[0]
+
+    def compute_output_spec(self, *args, **kwargs):
+        return Layer.compute_output_spec(self, *args, **kwargs)
 
     def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
         n_comp = self.nb_tensors
