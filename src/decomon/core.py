@@ -357,7 +357,7 @@ class InputsOutputsSpec:
 
         return [inputs_x, inputs_u_c, inputs_w_u, inputs_b_u, inputs_l_c, inputs_w_l, inputs_b_l, inputs_h, inputs_g]
 
-    def split_inputsformode_to_merge(self, inputsformode: List[keras.KerasTensor]) -> List[List[keras.KerasTensor]]:
+    def split_inputsformode_to_merge(self, inputsformode: List[Any]) -> List[List[Any]]:
         n_comp = self.nb_tensors
         return [inputsformode[n_comp * i : n_comp * (i + 1)] for i in range(len(inputsformode) // n_comp)]
 
