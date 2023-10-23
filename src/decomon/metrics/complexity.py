@@ -1,5 +1,5 @@
-import keras_core as keras
-from keras_core.layers import InputLayer, Lambda
+import keras
+from keras.layers import InputLayer, Lambda
 
 
 def get_graph_complexity(model: keras.Model) -> int:

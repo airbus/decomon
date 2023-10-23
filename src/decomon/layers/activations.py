@@ -1,8 +1,8 @@
 import warnings
 from typing import Any, Callable, Dict, List, Optional, Union
 
-import keras_core as keras
-import keras_core.ops as K
+import keras
+import keras.ops as K
 import numpy as np
 
 from decomon.core import (

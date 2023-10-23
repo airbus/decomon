@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
-from keras_core.layers import Activation, Dense, Input
-from keras_core.models import Sequential
+from keras.layers import Activation, Dense, Input
+from keras.models import Sequential
 from numpy.testing import assert_almost_equal
 
 from decomon import get_lower_box, get_range_box, get_upper_box

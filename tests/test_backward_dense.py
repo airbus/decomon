@@ -1,5 +1,5 @@
-import keras_core.config as keras_config
-from keras_core.layers import Dense, Input
+import keras.config as keras_config
+from keras.layers import Dense, Input
 
 from decomon.backward_layers.convert import to_backward
 from decomon.core import ForwardMode

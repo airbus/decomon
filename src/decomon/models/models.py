@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Union
 
-import keras_core as keras
+import keras
 
 from decomon.core import (
     BoxDomain,

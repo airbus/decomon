@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import keras_core as keras
-import keras_core.ops as K
+import keras
+import keras.ops as K
 import numpy as np
-from keras_core.config import floatx
+from keras.config import floatx
 
 
 class Option(str, Enum):

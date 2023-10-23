@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 from itertools import chain
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import keras_core as keras
-import keras_core.ops as K
+import keras
+import keras.ops as K
 import numpy as np
-from keras_core.layers import Layer, Wrapper
+from keras.layers import Layer, Wrapper
 
 from decomon.backward_layers.utils import (
     backward_add,

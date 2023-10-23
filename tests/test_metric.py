@@ -1,4 +1,4 @@
-import keras_core.ops as K
+import keras.ops as K
 
 from decomon.metrics.utils import categorical_cross_entropy
 

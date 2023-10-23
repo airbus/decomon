@@ -1,9 +1,9 @@
 # Test unit for decomon with Dense layers
 
-import keras_core.config as keras_config
+import keras.config as keras_config
 import numpy as np
 import pytest
-from keras_core.layers import Input
+from keras.layers import Input
 
 from decomon.backward_layers.utils import (
     backward_add,

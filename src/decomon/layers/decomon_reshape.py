@@ -1,9 +1,9 @@
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
-import keras_core as keras
-import keras_core.ops as K
-from keras_core.layers import InputSpec, Layer, Permute, Reshape
-from keras_core.src.backend import rnn
+import keras
+import keras.ops as K
+from keras.layers import InputSpec, Layer, Permute, Reshape
+from keras.src.backend import rnn
 
 from decomon.core import ForwardMode, PerturbationDomain, get_affine, get_ibp
 from decomon.layers.core import DecomonLayer

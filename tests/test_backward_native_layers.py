@@ -1,6 +1,6 @@
-import keras_core.config as keras_config
+import keras.config as keras_config
 import pytest
-from keras_core.layers import Activation, Flatten, Reshape
+from keras.layers import Activation, Flatten, Reshape
 from tensorflow.python.keras.backend import _get_available_gpus
 
 from decomon.backward_layers.convert import to_backward

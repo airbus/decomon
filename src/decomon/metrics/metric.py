@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-import keras_core as keras
-import keras_core.ops as K
+import keras
+import keras.ops as K
 import numpy as np
-from keras_core.layers import Input, Layer
-from keras_core.models import Model
+from keras.layers import Input, Layer
+from keras.models import Model
 
 from decomon.core import BoxDomain, PerturbationDomain
 from decomon.models.models import DecomonModel

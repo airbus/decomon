@@ -1,13 +1,13 @@
 from typing import List, Optional, Union
 
-import keras_core as keras
-import keras_core.config as keras_config
-import keras_core.ops as K
+import keras
+import keras.config as keras_config
+import keras.ops as K
 import numpy as np
 import numpy.typing as npt
 import pytest
-from keras_core import KerasTensor
-from keras_core.layers import (
+from keras import KerasTensor
+from keras.layers import (
     Activation,
     Add,
     Average,
@@ -17,7 +17,7 @@ from keras_core.layers import (
     Input,
     Reshape,
 )
-from keras_core.models import Model, Sequential
+from keras.models import Model, Sequential
 from numpy.testing import assert_almost_equal
 
 from decomon.core import ForwardMode, Slope

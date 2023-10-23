@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import keras_core as keras
-from keras_core.layers import Activation, Input, Layer
+import keras
+from keras.layers import Activation, Input, Layer
 
 import decomon.layers.decomon_layers
 import decomon.layers.decomon_merge_layers
