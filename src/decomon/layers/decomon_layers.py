@@ -1,10 +1,10 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import keras_core as keras
-import keras_core.ops as K
+import keras
+import keras.ops as K
 import numpy as np
 import tensorflow as tf
-from keras_core.layers import (
+from keras.layers import (
     Activation,
     BatchNormalization,
     Conv2D,
@@ -17,7 +17,7 @@ from keras_core.layers import (
     Lambda,
     Layer,
 )
-from keras_core.src.backend import rnn
+from keras.src.backend import rnn
 
 from decomon.core import ForwardMode, PerturbationDomain, Slope
 from decomon.layers import activations

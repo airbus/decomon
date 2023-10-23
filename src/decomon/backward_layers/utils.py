@@ -1,11 +1,11 @@
 from typing import Any, List, Optional, Union
 
-import keras_core as keras
-import keras_core.ops as K
+import keras
+import keras.ops as K
 import numpy as np
 import tensorflow as tf
-from keras_core.config import floatx
-from keras_core.layers import Flatten
+from keras.config import floatx
+from keras.layers import Flatten
 
 from decomon.core import (
     BoxDomain,

@@ -1,5 +1,5 @@
-import keras_core as keras
-from keras_core.layers import Layer
+import keras
+from keras.layers import Layer
 
 
 def get_weight_index(layer: Layer, weight: keras.Variable) -> int:

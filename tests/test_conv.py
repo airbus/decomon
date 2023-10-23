@@ -1,10 +1,10 @@
 # Test unit for decomon with Dense layers
 
 
-import keras_core.config as keras_config
+import keras.config as keras_config
 import numpy as np
 import pytest
-from keras_core.layers import Conv2D
+from keras.layers import Conv2D
 from tensorflow.python.keras.backend import _get_available_gpus
 
 from decomon.core import ForwardMode, get_affine, get_ibp

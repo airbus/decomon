@@ -1,9 +1,9 @@
 # Test unit for decomon with Dense layers
 
 
-import keras_core.config as keras_config
+import keras.config as keras_config
 import numpy as np
-from keras_core.layers import Dense
+from keras.layers import Dense
 from numpy.testing import assert_almost_equal
 
 from decomon.core import ForwardMode, get_affine, get_ibp

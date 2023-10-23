@@ -1,7 +1,7 @@
-import keras_core.config as keras_config
+import keras.config as keras_config
 import numpy as np
 import pytest
-from keras_core.layers import Permute, Reshape
+from keras.layers import Permute, Reshape
 
 from decomon.core import ForwardMode, get_affine, get_ibp
 from decomon.layers.convert import to_decomon

@@ -1,16 +1,8 @@
-import keras_core.ops as K
+import keras.ops as K
 import numpy as np
 import pytest
-from keras_core.layers import (
-    Activation,
-    Conv2D,
-    Dense,
-    Flatten,
-    Input,
-    InputLayer,
-    PReLU,
-)
-from keras_core.models import Model, Sequential
+from keras.layers import Activation, Conv2D, Dense, Flatten, Input, InputLayer, PReLU
+from keras.models import Model, Sequential
 from numpy.testing import assert_almost_equal
 
 from decomon.models.convert import (

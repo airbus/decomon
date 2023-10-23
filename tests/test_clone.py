@@ -1,12 +1,12 @@
 # creating toy network and assess that the decomposition is correct
 
 
-import keras_core.config as keras_config
-import keras_core.ops as K
+import keras.config as keras_config
+import keras.ops as K
 import numpy as np
 import pytest
-from keras_core.layers import Activation, Dense, Flatten, Input, Reshape
-from keras_core.models import Model, Sequential
+from keras.layers import Activation, Dense, Flatten, Input, Reshape
+from keras.models import Model, Sequential
 
 from decomon.core import ForwardMode, Slope, get_affine, get_ibp, get_mode
 from decomon.layers.decomon_reshape import DecomonReshape

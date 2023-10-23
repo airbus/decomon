@@ -1,5 +1,5 @@
-import keras_core.config as keras_config
-from keras_core.layers import MaxPooling2D
+import keras.config as keras_config
+from keras.layers import MaxPooling2D
 
 from decomon.layers.maxpooling import DecomonMaxPooling2D
 

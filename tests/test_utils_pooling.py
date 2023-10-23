@@ -1,4 +1,4 @@
-import keras_core.ops as K
+import keras.ops as K
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
