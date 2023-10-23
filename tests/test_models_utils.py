@@ -91,7 +91,7 @@ def test_split_activation_do_nothing(layer_class, layer_kwargs):
 
 def test_split_activation_uninitialized_layer_ko():
     layer = Dense(3, activation="relu")
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError):
         layers = split_activation(layer)
 
 
@@ -237,7 +237,7 @@ def test_convert_deellip_to_keras_spectraldense():
 def test_convert_deellip_to_keras_spectraldense_not_initialized_ko():
     units = 3
     layer = SpectralDense(units=units)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError):
         keras_layer = convert_deellip_to_keras(layer)
 
 

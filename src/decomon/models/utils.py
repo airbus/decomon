@@ -229,8 +229,6 @@ def split_activation(
         layer_wo_activation = layer.__class__.from_config(config)
         share_some_attributes(layer_wo_activation, layer)  # share (deel-lip) attributes
         # build the layer
-        if not hasattr(layer, "input_shape"):
-            raise RuntimeError("The layer should properly initialized so that layer.input_shape is defined.")
         inputs = Input(
             shape=layer.input.shape,
             dtype=layer.input.dtype,
@@ -270,8 +268,6 @@ def convert_deellip_to_keras(layer: Layer) -> Layer:
     if isinstance(layer, LipschitzLayer) or hasattr(layer, "vanilla_export"):
         layer.is_lipschitz = True
     if hasattr(layer, "vanilla_export"):
-        if not hasattr(layer, "input_shape"):
-            raise RuntimeError("The layer should properly initialized so that layer.input_shape is defined.")
         new_layer = layer.vanilla_export()
         # build layer
         inputs = Input(
