@@ -1,4 +1,4 @@
-import keras
+import keras.ops as K
 import numpy as np
 import pytest
 from keras.layers import BatchNormalization, Conv2D, Dense, Flatten
