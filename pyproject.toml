@@ -14,7 +14,7 @@ dependencies =[
     "tensorflow >=2.13.0",
     "matplotlib",
     "numpy >=1.21",
-    "keras-core",
+    "keras-nightly",
 ]
 dynamic = ["version"]
 
