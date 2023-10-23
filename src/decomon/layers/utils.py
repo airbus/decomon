@@ -1,12 +1,12 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import keras_core as keras
-import keras_core.ops as K
+import keras
+import keras.ops as K
 import numpy as np
-from keras_core.config import epsilon
-from keras_core.constraints import Constraint
-from keras_core.initializers import Initializer
-from keras_core.layers import Layer
+from keras.config import epsilon
+from keras.constraints import Constraint
+from keras.initializers import Initializer
+from keras.layers import Layer
 
 from decomon.core import (
     BallDomain,

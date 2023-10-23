@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Dict, Optional, Union
 
-from keras_core.layers import Layer
+from keras.layers import Layer
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.core import ForwardMode, PerturbationDomain, get_affine, get_ibp

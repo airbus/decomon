@@ -1,18 +1,10 @@
 # Test unit for decomon with Dense layers
 
 
-import keras_core.config as keras_config
+import keras.config as keras_config
 import numpy as np
 import pytest
-from keras_core.layers import (
-    Add,
-    Average,
-    Concatenate,
-    Maximum,
-    Minimum,
-    Multiply,
-    Subtract,
-)
+from keras.layers import Add, Average, Concatenate, Maximum, Minimum, Multiply, Subtract
 
 from decomon.core import ForwardMode, get_affine, get_ibp
 from decomon.layers.convert import to_decomon

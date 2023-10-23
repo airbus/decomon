@@ -1,5 +1,5 @@
 import pytest
-from keras_core.layers import Dense, Input
+from keras.layers import Dense, Input
 
 from decomon.layers.convert import get_layer_input_shape
 

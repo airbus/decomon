@@ -1,7 +1,7 @@
-import keras_core as keras
-import keras_core.ops as K
+import keras
+import keras.ops as K
 import pytest
-from keras_core.layers import Dense
+from keras.layers import Dense
 
 from decomon.keras_utils import get_weight_index_from_name
 

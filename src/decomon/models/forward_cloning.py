@@ -7,10 +7,10 @@ import inspect
 from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-import keras_core as keras
-from keras_core.layers import Layer
-from keras_core.models import Model
-from keras_core.src.utils.python_utils import to_list
+import keras
+from keras.layers import Layer
+from keras.models import Model
+from keras.src.utils.python_utils import to_list
 
 from decomon.core import BoxDomain, PerturbationDomain, Slope
 from decomon.layers.convert import to_decomon

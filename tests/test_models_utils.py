@@ -1,9 +1,9 @@
-import keras_core as keras
-import keras_core.ops as K
+import keras
+import keras.ops as K
 import numpy as np
 import pytest
-from keras_core import Input
-from keras_core.layers import Activation, Conv2D, Dense, Layer, Permute, PReLU
+from keras import Input
+from keras.layers import Activation, Conv2D, Dense, Layer, Permute, PReLU
 from numpy.testing import assert_almost_equal
 
 from decomon.models.utils import (

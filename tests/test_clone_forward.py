@@ -1,7 +1,7 @@
 # creating toy network and assess that the decomposition is correct
 
 
-import keras_core.config as keras_config
+import keras.config as keras_config
 
 from decomon.core import get_affine, get_ibp
 from decomon.models.forward_cloning import convert_forward

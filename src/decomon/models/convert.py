@@ -1,8 +1,8 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-import keras_core as keras
-from keras_core.layers import InputLayer, Layer
-from keras_core.models import Model
+import keras
+from keras.layers import InputLayer, Layer
+from keras.models import Model
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.core import BoxDomain, PerturbationDomain, Slope, get_mode

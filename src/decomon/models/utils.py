@@ -1,12 +1,12 @@
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-import keras_core as keras
-import keras_core.ops as K
+import keras
+import keras.ops as K
 import numpy as np
 import tensorflow as tf
-from keras_core import Model, Sequential
-from keras_core.layers import (
+from keras import Model, Sequential
+from keras.layers import (
     Activation,
     Concatenate,
     Flatten,
@@ -16,8 +16,8 @@ from keras_core.layers import (
     Maximum,
     Minimum,
 )
-from keras_core.src import Functional
-from keras_core.src.ops.node import Node
+from keras.src import Functional
+from keras.src.ops.node import Node
 
 from decomon.core import (
     BallDomain,

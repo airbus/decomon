@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Union
 
-import keras_core as keras
-import keras_core.ops as K
+import keras
+import keras.ops as K
 import numpy as np
 import tensorflow as tf
 

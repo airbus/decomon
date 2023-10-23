@@ -1,9 +1,9 @@
 from typing import Union
 
-import keras_core as keras
+import keras
 import numpy as np
 import numpy.typing as npt
-from keras_core.optimizers import Adam
+from keras.optimizers import Adam
 
 from decomon.metrics.loss import get_upper_loss
 from decomon.models.models import DecomonModel

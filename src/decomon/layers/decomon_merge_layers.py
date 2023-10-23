@@ -1,8 +1,8 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import keras_core as keras
-import keras_core.ops as K
-from keras_core.layers import (
+import keras
+import keras.ops as K
+from keras.layers import (
     Add,
     Average,
     Concatenate,

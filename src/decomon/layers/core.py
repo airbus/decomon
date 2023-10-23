@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
-import keras_core as keras
-from keras_core.layers import Layer
+import keras
+from keras.layers import Layer
 
 from decomon.core import (
     BoxDomain,

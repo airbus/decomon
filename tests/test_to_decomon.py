@@ -1,5 +1,5 @@
 import pytest
-from keras_core.layers import Add, Conv2D, Dense, Input, Layer, Reshape
+from keras.layers import Add, Conv2D, Dense, Input, Layer, Reshape
 
 from decomon.layers.convert import to_decomon
 from decomon.layers.utils import is_a_merge_layer

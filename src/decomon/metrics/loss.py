@@ -1,11 +1,11 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-import keras_core as keras
-import keras_core.ops as K
+import keras
+import keras.ops as K
 import numpy as np
 import tensorflow as tf
-from keras_core.config import epsilon
-from keras_core.layers import Lambda, Layer
+from keras.config import epsilon
+from keras.layers import Lambda, Layer
 
 from decomon.core import (
     BallDomain,
