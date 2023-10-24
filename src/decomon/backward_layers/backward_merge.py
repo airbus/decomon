@@ -402,7 +402,7 @@ class BackwardConcatenate(BackwardMerge):
 
         inputs_list = self.inputs_outputs_spec.split_inputsformode_to_merge(inputs)
         n_elem = len(inputs_list)
-        n_list = [self.inputs_outputs_spec.get_input_shape(subinputs)[self.axis] for subinputs in inputs_list]
+        n_list = [self.inputs_outputs_spec.get_kerasinputshape(subinputs)[self.axis] for subinputs in inputs_list]
         indices_split = np.cumsum(n_list[:-1])
         axis_w = self.axis
         if axis_w != -1:
