@@ -6,6 +6,7 @@ from keras import Input
 from keras.layers import Activation, Conv2D, Dense, Layer, Permute, PReLU
 from numpy.testing import assert_almost_equal
 
+from decomon.keras_utils import get_weight_index_from_name
 from decomon.models.utils import (
     convert_deellip_to_keras,
     preprocess_layer,
@@ -56,7 +57,7 @@ def test_split_activation_do_split(
     else:
         assert isinstance(activation_layer, Activation)
         assert activation_layer.get_config()["activation"] == layer_kwargs["activation"]
-    # check names starts with with original name + "_"
+    # check names starts with original name + "_"
     assert layer_wo_activation.name.startswith(f"{layer.name}_")
     assert activation_layer.name.startswith(f"{layer.name}_")
     # check already built
@@ -70,8 +71,13 @@ def test_split_activation_do_split(
     output_np_new = activation_layer(layer_wo_activation(inputs_np)).numpy()
     assert_almost_equal(output_np_new, output_np_ref)
     # check same trainable weights
-    for i in range(len(layer._trainable_weights)):
-        assert layer._trainable_weights[i] is layer_wo_activation._trainable_weights[i]
+    original_layer_weights = layer.get_weights()
+    layer_wo_activation_weights = layer_wo_activation.get_weights()
+    for w in layer_wo_activation.trainable_weights:
+        assert_almost_equal(
+            original_layer_weights[get_weight_index_from_name(layer, w.name)],
+            layer_wo_activation_weights[get_weight_index_from_name(layer_wo_activation, w.name)],
+        )
 
 
 @pytest.mark.parametrize(
@@ -156,8 +162,13 @@ def test_split_activation_do_split_with_deellip(
     output_np_new = activation_layer(layer_wo_activation(inputs_np)).numpy()
     assert_almost_equal(output_np_new, output_np_ref)
     # check same trainable weights
-    for i in range(len(layer._trainable_weights)):
-        assert layer._trainable_weights[i] is layer_wo_activation._trainable_weights[i]
+    original_layer_weights = layer.get_weights()
+    layer_wo_activation_weights = layer_wo_activation.get_weights()
+    for w in layer_wo_activation.trainable_weights:
+        assert_almost_equal(
+            original_layer_weights[get_weight_index_from_name(layer, w.name)],
+            layer_wo_activation_weights[get_weight_index_from_name(layer_wo_activation, w.name)],
+        )
 
 
 def test_convert_deellip_to_keras_dense():
@@ -365,8 +376,13 @@ def test_preprocess_layer_nonlinear_activation(
     assert_almost_equal(output_np_new, output_np_ref)
     # check same trainable weights
     if not is_deellip_layer:
-        for i in range(len(layer._trainable_weights)):
-            assert layer._trainable_weights[i] is layer_wo_activation._trainable_weights[i]
+        original_layer_weights = layer.get_weights()
+        layer_wo_activation_weights = layer_wo_activation.get_weights()
+        for w in layer_wo_activation.trainable_weights:
+            assert_almost_equal(
+                original_layer_weights[get_weight_index_from_name(layer, w.name)],
+                layer_wo_activation_weights[get_weight_index_from_name(layer_wo_activation, w.name)],
+            )
     # check deel-lip attributes
     for i, keras_layer in enumerate(layers):
         # new attributes added

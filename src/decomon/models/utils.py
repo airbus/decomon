@@ -27,6 +27,7 @@ from decomon.core import (
     PerturbationDomain,
     get_mode,
 )
+from decomon.keras_utils import reset_layer_all_weights
 from decomon.layers.utils import is_a_merge_layer
 
 try:
@@ -235,16 +236,7 @@ def split_activation(
         )
         outputs = layer_wo_activation(inputs)
         # use same weights
-        actual_activation = layer.activation  # store activation
-        layer.activation = None  # remove activation in case of a layer having weights (would be in layer.get_weights())
-        layer_wo_activation.set_weights(layer.get_weights())
-        layer.activation = actual_activation  # put back the actual activation
-        # even share the object themselves if possible
-        # (dense and conv2d have kernel and bias weight attributes)
-        if hasattr(layer_wo_activation, "kernel"):
-            layer_wo_activation.kernel = layer.kernel
-        if hasattr(layer_wo_activation, "bias"):
-            layer_wo_activation.bias = layer.bias
+        reset_layer_all_weights(new_layer=layer_wo_activation, original_layer=layer)
         # activation layer
         if isinstance(activation, dict):
             if isinstance(layer.activation, Layer):  # can be an Activation, a PReLU, or a deel.lip.activations layer
