@@ -78,7 +78,7 @@ def backward_relu(
         # default values: return relu_(x) = max(x, 0)
         inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
-        input_shape = inputs_outputs_spec.get_input_shape(inputs)
+        input_shape = inputs_outputs_spec.get_kerasinputshape(inputs)
         bounds = get_linear_hull_relu(upper=u_c, lower=l_c, slope=slope, **kwargs)
         dim = int(np.prod(input_shape[1:]))
         return [K.reshape(elem, (-1, dim)) for elem in bounds]

@@ -553,7 +553,7 @@ def permute_dimensions(
     dtype = x.dtype
     empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 
-    input_shape = inputs_outputs_spec.get_input_shape(inputs)
+    input_shape = inputs_outputs_spec.get_kerasinputshape(inputs)
     if len(input_shape) <= 2:
         # not enough dim to permute
         return inputs
@@ -664,7 +664,7 @@ def split(
     ibp = get_ibp(mode)
     inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
 
-    input_shape = inputs_outputs_spec.get_input_shape(inputs)
+    input_shape = inputs_outputs_spec.get_kerasinputshape(inputs)
     if axis == -1:
         n = input_shape[-1]
         axis = len(input_shape) - 1
@@ -743,7 +743,7 @@ def sort(
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(
         inputs, tight=False, compute_ibp_from_affine=False
     )
-    input_shape = inputs_outputs_spec.get_input_shape(inputs)
+    input_shape = inputs_outputs_spec.get_kerasinputshape(inputs)
     dtype = x.dtype
     empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
 

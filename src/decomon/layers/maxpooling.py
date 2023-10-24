@@ -190,7 +190,7 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
         )
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
-        input_shape = self.inputs_outputs_spec.get_input_shape(inputs)
+        input_shape = self.inputs_outputs_spec.get_kerasinputshape(inputs)
         n_split = input_shape[-1]
 
         if self.dc_decomp:

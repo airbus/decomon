@@ -263,7 +263,7 @@ def backward_max_(
         inputs, tight=False, compute_ibp_from_affine=False
     )
     dtype = x.dtype
-    input_shape = inputs_outputs_spec.get_input_shape(inputs)
+    input_shape = inputs_outputs_spec.get_kerasinputshape(inputs)
     max_dim = input_shape[axis]
     empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
     empty_tensor_list = [empty_tensor] * max_dim
