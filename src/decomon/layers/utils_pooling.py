@@ -47,7 +47,7 @@ def get_upper_linear_hull_max(
 
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
     dtype = x.dtype
-    input_shape = inputs_outputs_spec.get_input_shape(inputs)
+    input_shape = inputs_outputs_spec.get_kerasinputshape(inputs)
 
     # attention if axis=-1 or axis=n
     dtype32 = "float32"
@@ -164,7 +164,7 @@ def get_lower_linear_hull_max(
 
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
     dtype = x.dtype
-    input_shape = inputs_outputs_spec.get_input_shape(inputs)
+    input_shape = inputs_outputs_spec.get_kerasinputshape(inputs)
 
     o_value = K.cast(1.0, dtype)
     z_value = K.cast(0.0, dtype)

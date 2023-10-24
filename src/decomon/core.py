@@ -210,8 +210,69 @@ class InputsOutputsSpec:
     def affine(self) -> bool:
         return get_affine(self.mode)
 
-    def get_input_shape(self, inputsformode: List[keras.KerasTensor]) -> Tuple[Optional[int]]:
+    def get_kerasinputshape(self, inputsformode: List[keras.KerasTensor]) -> Tuple[Optional[int]]:
         return inputsformode[-1].shape
+
+    def get_kerasinputshape_from_inputshapesformode(
+        self, inputshapesformode: List[Tuple[Optional[int]]]
+    ) -> Tuple[Optional[int]]:
+        return inputshapesformode[-1]
+
+    def get_fullinputshapes_from_inputshapesformode(
+        self,
+        inputshapesformode: List[Tuple[Optional[int]]],
+    ) -> List[Tuple[Optional[int]]]:
+        nb_tensors = self.nb_tensors
+        empty_shape: Tuple[Optional[int]] = tuple()
+        if self.dc_decomp:
+            if self.mode == ForwardMode.HYBRID:
+                (
+                    x_shape,
+                    u_c_shape,
+                    w_u_shape,
+                    b_u_shape,
+                    l_c_shape,
+                    w_l_shape,
+                    b_l_shape,
+                    h_shape,
+                    g_shape,
+                ) = inputshapesformode[:nb_tensors]
+            elif self.mode == ForwardMode.IBP:
+                u_c_shape, l_c_shape, h_shape, g_shape = inputshapesformode[:nb_tensors]
+                x_shape, w_u_shape, b_u_shape, w_l_shape, b_l_shape = (
+                    empty_shape,
+                    empty_shape,
+                    empty_shape,
+                    empty_shape,
+                    empty_shape,
+                )
+            elif self.mode == ForwardMode.AFFINE:
+                x_shape, w_u_shape, b_u_shape, w_l_shape, b_l_shape, h_shape, g_shape = inputshapesformode[:nb_tensors]
+                u_c_shape, l_c_shape = empty_shape, empty_shape
+            else:
+                raise ValueError(f"Unknown mode {self.mode}")
+        else:
+            h_shape, g_shape = empty_shape, empty_shape
+            if self.mode == ForwardMode.HYBRID:
+                x_shape, u_c_shape, w_u_shape, b_u_shape, l_c_shape, w_l_shape, b_l_shape = inputshapesformode[
+                    :nb_tensors
+                ]
+            elif self.mode == ForwardMode.IBP:
+                u_c_shape, l_c_shape = inputshapesformode[:nb_tensors]
+                x_shape, w_u_shape, b_u_shape, w_l_shape, b_l_shape = (
+                    empty_shape,
+                    empty_shape,
+                    empty_shape,
+                    empty_shape,
+                    empty_shape,
+                )
+            elif self.mode == ForwardMode.AFFINE:
+                x_shape, w_u_shape, b_u_shape, w_l_shape, b_l_shape = inputshapesformode[:nb_tensors]
+                u_c_shape, l_c_shape = empty_shape, empty_shape
+            else:
+                raise ValueError(f"Unknown mode {self.mode}")
+
+        return [x_shape, u_c_shape, w_u_shape, b_u_shape, l_c_shape, w_l_shape, b_l_shape, h_shape, g_shape]
 
     def get_fullinputs_from_inputsformode(
         self, inputsformode: List[keras.KerasTensor], compute_ibp_from_affine: bool = True, tight: bool = True
@@ -374,6 +435,22 @@ class InputsOutputsSpec:
         if self.dc_decomp:
             inputsformode += [h, g]
         return inputsformode
+
+    def extract_inputshapesformode_from_fullinputshapes(
+        self, inputshapes: List[Tuple[Optional[int]]]
+    ) -> List[Tuple[Optional[int]]]:
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputshapes
+        if self.mode == ForwardMode.HYBRID:
+            inputshapesformode = [x, u_c, w_u, b_u, l_c, w_l, b_l]
+        elif self.mode == ForwardMode.IBP:
+            inputshapesformode = [u_c, l_c]
+        elif self.mode == ForwardMode.AFFINE:
+            inputshapesformode = [x, w_u, b_u, w_l, b_l]
+        else:
+            raise ValueError(f"Unknown mode {self.mode}")
+        if self.dc_decomp:
+            inputshapesformode += [h, g]
+        return inputshapesformode
 
     def extract_outputsformode_from_fulloutputs(self, outputs: List[keras.KerasTensor]) -> List[keras.KerasTensor]:
         return self.extract_inputsformode_from_fullinputs(outputs)

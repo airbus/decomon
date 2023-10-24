@@ -540,8 +540,8 @@ class DecomonDot(DecomonMerge, Dot):
         else:
             raise NotImplementedError("This layer is not implemented to merge more than 2 layers.")
 
-        input_shape_0 = self.inputs_outputs_spec.get_input_shape(inputs_0)
-        input_shape_1 = self.inputs_outputs_spec.get_input_shape(inputs_1)
+        input_shape_0 = self.inputs_outputs_spec.get_kerasinputshape(inputs_0)
+        input_shape_1 = self.inputs_outputs_spec.get_kerasinputshape(inputs_1)
         n_0 = len(input_shape_0) - 2
         n_1 = len(input_shape_1) - 2
 
