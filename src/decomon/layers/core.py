@@ -12,7 +12,7 @@ from decomon.core import (
     get_affine,
     get_ibp,
 )
-from decomon.keras_utils import get_weight_index_from_name
+from decomon.keras_utils import reset_layer
 
 
 class DecomonLayer(ABC, Layer):
@@ -130,7 +130,7 @@ class DecomonLayer(ABC, Layer):
         """
         weight_names = self.keras_weights_names
         if len(weight_names) > 0:
-            reset_layer(decomon_layer=self, keras_layer=layer, weight_names=weight_names)
+            reset_layer(new_layer=self, original_layer=layer, weight_names=weight_names)
 
     @property
     def keras_weights_names(self) -> List[str]:
@@ -175,28 +175,3 @@ class DecomonLayer(ABC, Layer):
 
     def set_back_bounds(self, has_backward_bounds: bool) -> None:
         pass
-
-
-def reset_layer(decomon_layer: DecomonLayer, keras_layer: Layer, weight_names: List[str]) -> None:
-    """Reset the weights of a decomon layer by using the weights of another (a priori non-decomon) layer.
-
-    Args:
-        decomon_layer: the decomon layer whose weights will be updated
-        keras_layer: the layer used to update the weights
-        weight_names: the names of the weights to update
-
-    Returns:
-
-    """
-    if not keras_layer.built:
-        raise ValueError(f"the layer {keras_layer.name} has not been built yet")
-    if not decomon_layer.built:
-        raise ValueError(f"the layer {decomon_layer.name} has not been built yet")
-    else:
-        decomon_params = decomon_layer.get_weights()
-        original_params = keras_layer.get_weights()
-        for weight_name in weight_names:
-            decomon_params[get_weight_index_from_name(decomon_layer, weight_name)] = original_params[
-                get_weight_index_from_name(keras_layer, weight_name)
-            ]
-        decomon_layer.set_weights(decomon_params)
