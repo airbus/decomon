@@ -271,53 +271,6 @@ class DecomonConv2D(DecomonLayer, Conv2D):
             [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
         )
 
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
-        """
-        Args:
-            input_shape
-
-        Returns:
-
-        """
-        assert len(input_shape) == self.nb_tensors
-
-        if self.mode == ForwardMode.IBP:
-            y_shape = input_shape[0]
-        elif self.mode == ForwardMode.AFFINE:
-            x_0_shape = input_shape[0]
-            y_shape = input_shape[2]
-        elif self.mode == ForwardMode.HYBRID:
-            x_0_shape = input_shape[0]
-            y_shape = input_shape[1]
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
-
-        if self.data_format == "channels_last":
-            space = y_shape[1:-1]
-        elif self.data_format == "channels_first":
-            space = y_shape[2:]
-        else:
-            raise ValueError(f"Unknown data_format {self.data_format}")
-
-        output_shape_keras = self.original_keras_layer_class.compute_output_shape(self, y_shape)
-
-        if self.mode == ForwardMode.IBP:
-            output_shape = [output_shape_keras] * 2
-        else:
-            input_dim = x_0_shape[-1]
-            w_shape = tuple([output_shape_keras[0], input_dim] + list(output_shape_keras)[1:])
-            if self.mode == ForwardMode.AFFINE:
-                output_shape = [x_0_shape] + [w_shape, output_shape_keras] * 2
-            elif self.mode == ForwardMode.HYBRID:
-                output_shape = [x_0_shape] + [output_shape_keras, w_shape, output_shape_keras] * 2
-            else:
-                raise ValueError(f"Unknown mode {self.mode}")
-
-        if self.dc_decomp:
-            output_shape += [output_shape_keras] * 2
-
-        return output_shape
-
     @property
     def keras_weights_names(self) -> List[str]:
         """Weights names of the corresponding Keras layer.
@@ -561,26 +514,6 @@ class DecomonDense(DecomonLayer, Dense):
         return self.inputs_outputs_spec.extract_outputsformode_from_fulloutputs(
             [x, u_c_out, w_u_out, b_u_out, l_c_out, w_l_out, b_l_out, h_out, g_out]
         )
-
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
-        """
-        Args:
-            input_shape
-
-        Returns:
-
-        """
-
-        assert len(input_shape) == self.nb_tensors
-        output_shape = [list(elem) for elem in input_shape[: self.nb_tensors]]
-
-        for i in range(1, self.nb_tensors):
-            output_shape[i][-1] = self.units
-
-        if self.mode == ForwardMode.IBP:
-            output_shape[0][-1] = self.units
-
-        return [tuple(shape) for shape in output_shape]
 
     @property
     def keras_weights_names(self) -> List[str]:
@@ -884,28 +817,6 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
         super().build(input_shape)
         self.input_spec = [InputSpec(min_ndim=len(elem)) for elem in input_shape]
 
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
-        output_shape: Tuple[Optional[int]] = BatchNormalization.compute_output_shape(self, input_shape[-1])
-
-        if self.mode == ForwardMode.IBP:
-            output = [output_shape] * 2
-
-        elif self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID]:
-            x_shape = input_shape[0]
-            input_dim = x_shape[-1]
-            w_shape = np.array(output_shape)[:, None]
-            w_shape[:, 0] = input_dim
-            if self.mode == ForwardMode.AFFINE:
-                output = [x_shape] + [w_shape, output_shape] * 2
-            else:
-                output = [x_shape] + [output_shape, w_shape, output_shape] * 2
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
-
-        if self.dc_decomp:
-            output += [output_shape, output_shape]
-        return output
-
     def call(self, inputs: List[keras.KerasTensor], training: bool = False, **kwargs: Any) -> List[keras.KerasTensor]:
         z_value = K.cast(0.0, self.dtype)
 
@@ -1021,9 +932,6 @@ class DecomonDropout(DecomonLayer, Dropout):
             **kwargs,
         )
 
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
-        return input_shape
-
     def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
         super().build(input_shape)
         self.input_spec = [InputSpec(min_ndim=len(elem)) for elem in input_shape]
@@ -1078,6 +986,3 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
 
     def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
         return inputs
-
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
-        return input_shape
