@@ -123,9 +123,6 @@ else:
                 shape_in, mode=self.mode, perturbation_domain=self.perturbation_domain, dc_decomp=self.dc_decomp
             ).call(outputs)
 
-        def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
-            return input_shape
-
     class DecomonGroupSort2(DecomonLayer):
         original_keras_layer_class = GroupSort2
 
@@ -172,9 +169,6 @@ else:
                 }
             )
             return config
-
-        def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
-            return input_shape
 
         def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
             inputs_reshaped = self.op_reshape_in(inputs)

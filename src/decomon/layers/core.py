@@ -110,7 +110,10 @@ class DecomonLayer(ABC, Layer):
     def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
         """Compute expected output shape according to input shape
 
-        Used by symbolic calls on Keras Tensors. By default, return same shape(s).
+        Will be called by symbolic calls on Keras Tensors.
+
+        - We use the original (Keras) layer compute_output_shape() if available to update accordingly the input shapes.
+        - Else we simply return the input shapes
 
         Args:
             input_shape
@@ -118,7 +121,48 @@ class DecomonLayer(ABC, Layer):
         Returns:
 
         """
-        return input_shape
+        y_shape = self.inputs_outputs_spec.get_kerasinputshape_from_inputshapesformode(
+            input_shape
+        )  # input shape for the original layer
+        try:
+            y_out_shape = self.original_keras_layer_class.compute_output_shape(
+                self, y_shape
+            )  # output shape of the original layer
+        except NotImplementedError:
+            # no compute_output_shape existing (e.g. InputLayer)
+            return input_shape
+        else:
+            (
+                x_shape,
+                u_c_shape,
+                w_u_shape,
+                b_u_shape,
+                l_c_shape,
+                w_l_shape,
+                b_l_shape,
+                h_shape,
+                g_shape,
+            ) = self.inputs_outputs_spec.get_fullinputshapes_from_inputshapesformode(input_shape)
+            # we now the original output shape => deduce the decomon output shapes
+            y_out_shape_wo_batchsize = y_out_shape[1:]
+            if self.inputs_outputs_spec.affine:
+                model_inputdim = x_shape[-1]
+                batchsize = x_shape[0]
+                w_out_shape = (batchsize, model_inputdim) + y_out_shape_wo_batchsize
+            else:
+                w_out_shape = tuple()
+            fulloutputshapes = [
+                x_shape,
+                y_out_shape,
+                w_out_shape,
+                y_out_shape,
+                y_out_shape,
+                w_out_shape,
+                y_out_shape,
+                y_out_shape,
+                y_out_shape,
+            ]
+            return self.inputs_outputs_spec.extract_inputshapesformode_from_fullinputshapes(fulloutputshapes)
 
     def compute_output_spec(self, *args, **kwargs):
         """Compute output spec from output shape in case of symbolic call."""

@@ -121,37 +121,6 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
 
         self.internal_op = conv_
 
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
-        """
-        Args:
-            input_shape
-
-        Returns:
-
-        """
-
-        if self.grad_bounds:
-            raise NotImplementedError()
-
-        output_shape_keras = MaxPooling2D.compute_output_shape(self, input_shape[0])
-        input_dim = input_shape[-1][1]
-        if self.mode == ForwardMode.IBP:
-            output_shape = [output_shape_keras] * 2
-        elif self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
-            x_shape = input_shape[1]
-            w_shape = tuple([output_shape_keras[0], input_dim] + list(output_shape_keras)[1:])
-            if self.mode == ForwardMode.AFFINE:
-                output_shape = [x_shape] + [w_shape, output_shape_keras] * 2
-            else:
-                output_shape = [x_shape] + [output_shape_keras, w_shape, output_shape_keras] * 2
-        else:
-            raise ValueError(f"Unknown mode {self.mode}")
-
-        if self.dc_decomp:
-            output_shape += [output_shape_keras] * 2
-
-        return output_shape
-
     def _pooling_function_fast(
         self,
         inputs: List[keras.KerasTensor],
