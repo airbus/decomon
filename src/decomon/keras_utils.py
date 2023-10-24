@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 
 import keras
 from keras.layers import Layer
@@ -83,3 +83,21 @@ def reset_layer_all_weights(new_layer: Layer, original_layer: Layer) -> None:
 
     """
     reset_layer(new_layer=new_layer, original_layer=original_layer, weight_names=[w.name for w in new_layer.weights])
+
+
+def check_if_single_shape(shape: Any) -> bool:
+    """
+
+    Args:
+        input_shape:
+
+    Returns:
+
+    """
+    if isinstance(shape, list) and shape and isinstance(shape[0], (int, type(None))):
+        return True
+
+    if not isinstance(shape, (list, tuple, dict)):
+        shape = tuple(shape)
+
+    return isinstance(shape, tuple) and shape and isinstance(shape[0], (int, type(None)))
