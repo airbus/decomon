@@ -53,11 +53,12 @@ def test_decomondense_reset_layer_decomon_with_new_weights(helpers):
     layer(K.zeros((2, input_dim)))
     decomon_layer = DecomonDense(units=units, mode=mode, dc_decomp=dc_decomp)
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
-    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
-    decomon_layer(inputs_for_mode)
     # Add new variables
     decomon_layer.add_weight(shape=(input_dim, units), initializer="ones", name="alpha", trainable=True)
     decomon_layer.add_weight(shape=(input_dim, units), initializer="ones", name="beta", trainable=False)
+    # Build layer
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    decomon_layer(inputs_for_mode)
     assert len(decomon_layer.weights) == 4
     assert len(decomon_layer.trainable_weights) == 3
 
@@ -79,13 +80,13 @@ def test_decomondense_reset_layer_keras_with_new_weights(helpers):
     units = 3
     mode = ForwardMode.HYBRID
     layer = Dense(units=units)
+    # Add new variables
+    layer.add_weight(shape=(input_dim, units), initializer="ones", name="alpha", trainable=False)
     layer(K.zeros((2, input_dim)))
     decomon_layer = DecomonDense(units=units, mode=mode, dc_decomp=dc_decomp)
     inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
     inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
     decomon_layer(inputs_for_mode)
-    # Add new variables
-    layer.add_weight(shape=(input_dim, units), initializer="ones", name="alpha", trainable=False)
     assert len(layer.weights) == 3
 
     kernel = layer.kernel
