@@ -151,9 +151,6 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         z_value = K.cast(0.0, self.dtype)
         o_value = K.cast(1.0, self.dtype)
 
-        if not isinstance(inputs, list):
-            raise ValueError("A merge layer should be called on a list of inputs.")
-
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(
             inputs, compute_ibp_from_affine=False
         )
@@ -432,9 +429,6 @@ class DecomonDense(DecomonLayer, Dense):
             raise RuntimeError("self.kernel cannot be None when calling call()")
 
         z_value = K.cast(0.0, self.dtype)
-
-        if not isinstance(inputs, list):
-            raise ValueError("A merge layer should be called " "on a list of inputs.")
 
         if self.has_backward_bounds:
             back_bound = inputs[-1]
