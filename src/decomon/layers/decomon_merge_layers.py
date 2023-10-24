@@ -35,9 +35,6 @@ class DecomonMerge(DecomonLayer):
         input_shapes_list = self.inputs_outputs_spec.split_inputsformode_to_merge(input_shape)
         return input_shapes_list[0]
 
-    def compute_output_spec(self, *args, **kwargs):
-        return Layer.compute_output_spec(self, *args, **kwargs)
-
     def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
         n_comp = self.nb_tensors
         input_shape_y = input_shape[n_comp - 1 :: n_comp]
