@@ -12,7 +12,7 @@ from decomon.core import (
     get_affine,
     get_ibp,
 )
-from decomon.keras_utils import reset_layer
+from decomon.keras_utils import check_if_single_shape, reset_layer
 
 
 class DecomonLayer(ABC, Layer):
@@ -107,7 +107,9 @@ class DecomonLayer(ABC, Layer):
 
         """
 
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
+    def compute_output_shape(
+        self, input_shape: Union[Tuple[Optional[int]], List[Tuple[Optional[int]]]]
+    ) -> Union[Tuple[Optional[int]], List[Tuple[Optional[int]]]]:
         """Compute expected output shape according to input shape
 
         Will be called by symbolic calls on Keras Tensors.
@@ -115,12 +117,26 @@ class DecomonLayer(ABC, Layer):
         - We use the original (Keras) layer compute_output_shape() if available to update accordingly the input shapes.
         - Else we simply return the input shapes
 
+        Beware, compute_output_shape() is sometimes called by the original keras layer inside its `call()`,
+        which can be called inside the decomon layer call(). Check this by looking at input_shape
+        (list of shapes or simple shape?)
+
         Args:
             input_shape
 
         Returns:
 
         """
+        if check_if_single_shape(input_shape):
+            # call from a keras layer call() with a single shape
+            try:
+                return self.original_keras_layer_class.compute_output_shape(
+                    self, input_shape
+                )  # output shape of the original layer
+            except NotImplementedError:
+                # no compute_output_shape implemented (e.g. InputLayer)
+                return input_shape
+
         y_shape = self.inputs_outputs_spec.get_kerasinputshape_from_inputshapesformode(
             input_shape
         )  # input shape for the original layer
@@ -129,9 +145,10 @@ class DecomonLayer(ABC, Layer):
                 self, y_shape
             )  # output shape of the original layer
         except NotImplementedError:
-            # no compute_output_shape existing (e.g. InputLayer)
+            # no compute_output_shape implemented (e.g. InputLayer)
             return input_shape
         else:
+            # we now the original output shape => deduce the decomon output shapes
             (
                 x_shape,
                 u_c_shape,
@@ -143,7 +160,6 @@ class DecomonLayer(ABC, Layer):
                 h_shape,
                 g_shape,
             ) = self.inputs_outputs_spec.get_fullinputshapes_from_inputshapesformode(input_shape)
-            # we now the original output shape => deduce the decomon output shapes
             y_out_shape_wo_batchsize = y_out_shape[1:]
             if self.inputs_outputs_spec.affine:
                 model_inputdim = x_shape[-1]
