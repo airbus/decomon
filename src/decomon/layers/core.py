@@ -108,14 +108,21 @@ class DecomonLayer(ABC, Layer):
         """
 
     def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> List[Tuple[Optional[int]]]:
-        """
+        """Compute expected output shape according to input shape
+
+        Used by symbolic calls on Keras Tensors. By default, return same shape(s).
+
         Args:
             input_shape
 
         Returns:
 
         """
-        return self.original_keras_layer_class.compute_output_shape(self, input_shape)
+        return input_shape
+
+    def compute_output_spec(self, *args, **kwargs):
+        """Compute output spec from output shape in case of symbolic call."""
+        return Layer.compute_output_spec(self, *args, **kwargs)
 
     def reset_layer(self, layer: Layer) -> None:
         """Reset the weights by using the weights of another (a priori non-decomon) layer.
