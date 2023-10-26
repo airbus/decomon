@@ -8,7 +8,7 @@ from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import keras
-from keras.layers import Layer
+from keras.layers import InputLayer, Layer
 from keras.models import Model
 from keras.src.utils.python_utils import to_list
 
@@ -176,7 +176,10 @@ def convert_forward_functional_model(
                 for parent in parents:
                     output += output_map[id(parent)]
 
-            if isinstance(layer, Model):
+            if isinstance(layer, InputLayer):
+                # no conversion, no transformation for output (instead of trying to pass in identity layer)
+                layer_map[id(node)] = layer
+            elif isinstance(layer, Model):
                 _, output, layer_map_submodel, output_map_submodel = convert_forward_functional_model(
                     model=layer,
                     input_tensors=output,
