@@ -565,11 +565,16 @@ class BackwardBatchNormalization(BackwardLayer):
 
         n_dim = len(y.shape)
         shape = [1] * n_dim
-        for i, ax in enumerate(self.axis):
-            shape[ax] = self.layer.moving_mean.shape[i]
+        shape[self.axis] = self.layer.moving_mean.shape[0]
 
-        gamma = K.reshape(self.layer.gamma + 0.0, shape)
-        beta = K.reshape(self.layer.beta + 0.0, shape)
+        if not hasattr(self.layer, "gamma") or self.layer.gamma is None:  # scale = False
+            gamma = K.ones(shape)
+        else:  # scale = True
+            gamma = K.reshape(self.layer.gamma + 0.0, shape)
+        if not hasattr(self.layer, "beta") or self.layer.beta is None:  # center = False
+            beta = K.zeros(shape)
+        else:  # center = True
+            beta = K.reshape(self.layer.beta + 0.0, shape)
         moving_mean = K.reshape(self.layer.moving_mean + 0.0, shape)
         moving_variance = K.reshape(self.layer.moving_variance + 0.0, shape)
 
