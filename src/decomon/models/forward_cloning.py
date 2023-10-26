@@ -185,8 +185,9 @@ def convert_forward_functional_model(
                     count=count,
                 )
                 count = count + get_inner_layers(layer)
+                layer_map.update(layer_map_submodel)
+                output_map.update(output_map_submodel)
                 layer_map[id(node)] = layer_map_submodel
-                output_map[id(node)] = output_map_submodel
             else:
                 converted_layers = layer_fn(layer)
                 for converted_layer in converted_layers:
