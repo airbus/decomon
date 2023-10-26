@@ -207,7 +207,7 @@ def convert_forward_functional_model(
                     converted_layers = layer_fn(layer)
                     layer2layer_map[id(layer)] = converted_layers
                 for converted_layer in converted_layers:
-                    converted_layer._name = f"{converted_layer.name}_{count}"
+                    converted_layer.name = f"{converted_layer.name}_{count}"
                     count += 1
                     output = converted_layer(prepare_inputs_for_layer(output))
                     if len(converted_layers) > 1:
