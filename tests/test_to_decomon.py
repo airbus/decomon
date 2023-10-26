@@ -65,13 +65,12 @@ def test_to_decomon_not_implemented_ko():
 def test_to_decomon_ok(layer_class, layer_kwargs, input_shape_wo_batchsize, nb_inputs):
     layer = layer_class(**layer_kwargs)
     # init input_shape and weights
-    input_shape = (None,) + input_shape_wo_batchsize
     # input_tensors + build layer
     if nb_inputs == 1:
-        input_tensor = Input(input_shape)
+        input_tensor = Input(input_shape_wo_batchsize)
         layer(input_tensor)
     else:
-        input_tensors = [Input(input_shape) for _ in range(nb_inputs)]
+        input_tensors = [Input(input_shape_wo_batchsize) for _ in range(nb_inputs)]
         layer(input_tensors)
     decomon_layer = to_decomon(layer, input_dim=1)
     # check trainable weights
