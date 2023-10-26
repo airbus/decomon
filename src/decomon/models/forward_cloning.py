@@ -102,7 +102,6 @@ def convert_forward(
     finetune: bool = False,
     shared: bool = True,
     softmax_to_linear: bool = True,
-    joint: bool = True,
     **kwargs: Any,
 ) -> Tuple[List[keras.KerasTensor], List[keras.KerasTensor], LayerMapDict, OutputMapDict]:
     if perturbation_domain is None:
@@ -132,7 +131,6 @@ def convert_forward(
         input_tensors=input_tensors,
         layer_fn=layer_fn_to_list,
         softmax_to_linear=softmax_to_linear,
-        joint=joint,
     )
 
     return f_output
@@ -144,7 +142,6 @@ def convert_forward_functional_model(
     input_tensors: List[keras.KerasTensor],
     softmax_to_linear: bool = True,
     count: int = 0,
-    joint: bool = True,
     output_map: Optional[OutputMapDict] = None,
     layer_map: Optional[LayerMapDict] = None,
 ) -> Tuple[List[keras.KerasTensor], List[keras.KerasTensor], LayerMapDict, OutputMapDict]:
@@ -169,7 +166,7 @@ def convert_forward_functional_model(
         for node in nodes:
             layer = node.operation
             parents = node.parent_nodes
-            if id(node) in output_map.keys() and joint:
+            if id(node) in output_map.keys():
                 continue
             if len(parents):
                 output = []
