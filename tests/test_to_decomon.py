@@ -75,5 +75,5 @@ def test_to_decomon_ok(layer_class, layer_kwargs, input_shape_wo_batchsize, nb_i
         layer(input_tensors)
     decomon_layer = to_decomon(layer, input_dim=1)
     # check trainable weights
-    for i in range(len(layer._trainable_weights)):
-        assert layer._trainable_weights[i] is decomon_layer._trainable_weights[i]
+    for i in range(len(layer.weights)):
+        assert layer.weights[i] is decomon_layer.weights[i]
