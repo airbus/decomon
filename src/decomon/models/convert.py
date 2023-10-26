@@ -49,7 +49,7 @@ def _clone_keras_model(model: Model, layer_fn: Callable[[Layer], List[Layer]]) -
                 output_map[id(node)] = node.output_tensors
                 layer_map[id(node)] = node.operation
 
-    _, output, _, _ = convert_forward_functional_model(
+    _, output, _, _, _ = convert_forward_functional_model(
         model=model,
         input_tensors=model.inputs,
         softmax_to_linear=False,

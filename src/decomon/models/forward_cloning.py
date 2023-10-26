@@ -126,14 +126,14 @@ def convert_forward(
         shared=shared,
     )  # return a list of Decomon layers
 
-    f_output = convert_forward_functional_model(
+    input_tensors, output, layer_map, output_map, _ = convert_forward_functional_model(
         model=model,
         input_tensors=input_tensors,
         layer_fn=layer_fn_to_list,
         softmax_to_linear=softmax_to_linear,
     )
 
-    return f_output
+    return input_tensors, output, layer_map, output_map
 
 
 def convert_forward_functional_model(
@@ -144,7 +144,8 @@ def convert_forward_functional_model(
     count: int = 0,
     output_map: Optional[OutputMapDict] = None,
     layer_map: Optional[LayerMapDict] = None,
-) -> Tuple[List[keras.KerasTensor], List[keras.KerasTensor], LayerMapDict, OutputMapDict]:
+    layer2layer_map: Optional[Dict[int, List[Layer]]] = None,
+) -> Tuple[List[keras.KerasTensor], List[keras.KerasTensor], LayerMapDict, OutputMapDict, Dict[int, List[Layer]]]:
     if softmax_to_linear:
         model, has_softmax = softmax_2_linear(model)
 
@@ -160,6 +161,8 @@ def convert_forward_functional_model(
         output_map = {}
     if layer_map is None:
         layer_map = {}
+    if layer2layer_map is None:
+        layer2layer_map = {}
     output: List[keras.KerasTensor] = input_tensors
     for depth in keys:
         nodes = dico_nodes[depth]
@@ -177,19 +180,32 @@ def convert_forward_functional_model(
                 # no conversion, no transformation for output (instead of trying to pass in identity layer)
                 layer_map[id(node)] = layer
             elif isinstance(layer, Model):
-                _, output, layer_map_submodel, output_map_submodel = convert_forward_functional_model(
+                (
+                    _,
+                    output,
+                    layer_map_submodel,
+                    output_map_submodel,
+                    layer2layer_map_submodel,
+                ) = convert_forward_functional_model(
                     model=layer,
                     input_tensors=output,
                     layer_fn=layer_fn,
                     softmax_to_linear=softmax_to_linear,
                     count=count,
+                    layer2layer_map=layer2layer_map,
                 )
                 count = count + get_inner_layers(layer)
                 layer_map.update(layer_map_submodel)
                 output_map.update(output_map_submodel)
+                layer2layer_map.update(layer2layer_map_submodel)
                 layer_map[id(node)] = layer_map_submodel
             else:
-                converted_layers = layer_fn(layer)
+                if id(layer) in layer2layer_map:
+                    # avoid converting twice layers that are shared by several nodes
+                    converted_layers = layer2layer_map[id(layer)]
+                else:
+                    converted_layers = layer_fn(layer)
+                    layer2layer_map[id(layer)] = converted_layers
                 for converted_layer in converted_layers:
                     converted_layer._name = f"{converted_layer.name}_{count}"
                     count += 1
@@ -208,4 +224,4 @@ def convert_forward_functional_model(
             if node.operation.name == output_name:
                 output += output_map[id(node)]
 
-    return input_tensors, output, layer_map, output_map
+    return input_tensors, output, layer_map, output_map, layer2layer_map
