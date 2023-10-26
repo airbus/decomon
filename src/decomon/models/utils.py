@@ -243,7 +243,7 @@ def split_activation(
                 activation_layer = layer.activation
                 # update the name to starts with main layer name
                 activation_layer_name = f"{layer.name}_activation_{layer.activation.name}"
-                activation_layer._name = activation_layer_name
+                activation_layer.name = activation_layer_name
             else:
                 raise RuntimeError("Cannot construct activation layer from layer.activation!")
         else:
