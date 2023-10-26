@@ -830,14 +830,13 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
 
         n_dim = len(y.shape)
         shape = [1] * n_dim
-        for i, ax in enumerate(self.axis):
-            shape[ax] = self.moving_mean.shape[i]
+        shape[self.axis] = self.moving_mean.shape[0]
 
-        if self.gamma is None:  # scale = False
+        if not hasattr(self, "gamma") or self.gamma is None:  # scale = False
             gamma = K.ones(shape)
         else:  # scale = True
             gamma = K.reshape(self.gamma + z_value, shape)
-        if self.beta is None:  # center = False
+        if not hasattr(self, "beta") or self.beta is None:  # center = False
             beta = K.zeros(shape)
         else:  # center = True
             beta = K.reshape(self.beta + z_value, shape)
