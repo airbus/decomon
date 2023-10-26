@@ -943,15 +943,18 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
 
     original_keras_layer_class = InputLayer
 
+    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+        return inputs
+
     def __init__(
         self,
-        input_shape: Optional[Tuple[int, ...]] = None,
+        shape: Optional[Tuple[int, ...]] = None,
         batch_size: Optional[int] = None,
         dtype: Optional[str] = None,
-        input_tensor: Optional[keras.KerasTensor] = None,
         sparse: Optional[bool] = None,
+        batch_shape: Optional[Tuple[Optional[int], ...]] = None,
+        input_tensor: Optional[keras.KerasTensor] = None,
         name: Optional[str] = None,
-        ragged: Optional[bool] = None,
         perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -961,13 +964,13 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
         **kwargs: Any,
     ):
         super().__init__(
-            input_shape=input_shape,
+            shape=shape,
             batch_size=batch_size,
             dtype=dtype,
             input_tensor=input_tensor,
             sparse=sparse,
             name=name,
-            ragged=ragged,
+            batch_shape=batch_shape,
             perturbation_domain=perturbation_domain,
             dc_decomp=dc_decomp,
             mode=mode,
@@ -976,6 +979,3 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
             fast=fast,
             **kwargs,
         )
-
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
-        return inputs
