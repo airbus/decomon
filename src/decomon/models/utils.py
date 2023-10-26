@@ -231,7 +231,7 @@ def split_activation(
         share_some_attributes(layer_wo_activation, layer)  # share (deel-lip) attributes
         # build the layer
         inputs = Input(
-            shape=layer.input.shape,
+            shape=layer.input.shape[1:],  # shape without batch_size
             dtype=layer.input.dtype,
         )
         outputs = layer_wo_activation(inputs)
@@ -263,7 +263,7 @@ def convert_deellip_to_keras(layer: Layer) -> Layer:
         new_layer = layer.vanilla_export()
         # build layer
         inputs = Input(
-            shape=layer.input.shape,
+            shape=layer.input.shape[1:],  # shape without batch_size
             dtype=layer.input.dtype,
         )
         new_layer(inputs)
