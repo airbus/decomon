@@ -114,13 +114,16 @@ def test_decomon_layers():
     config = layer.get_config()
     assert config["rate"] == rate
 
-    for cls in [DecomonBatchNormalization, DecomonInputLayer, DecomonFlatten]:
+    shape = (2, 5)
+    layer = DecomonInputLayer(shape=shape)
+    config = layer.get_config()
+    assert config["batch_shape"] == (None,) + shape
+
+    for cls in [DecomonBatchNormalization, DecomonFlatten]:
         layer = cls()
         config = layer.get_config()
         assert "mode" in config
         if layer == DecomonBatchNormalization:
             assert "axis" in config
-        elif layer == DecomonInputLayer:
-            assert "input_shape" in config
         elif layer == DecomonFlatten:
             assert "data_format" in config
