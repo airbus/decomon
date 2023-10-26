@@ -32,8 +32,54 @@ class DecomonMerge(DecomonLayer):
         By default, we assume that all inputs will be merged into "one" (still a list of tensors though).
 
         """
+        # split inputs
         input_shapes_list = self.inputs_outputs_spec.split_inputsformode_to_merge(input_shape)
-        return input_shapes_list[0]
+
+        # compute original layer output shape
+        y_shapes = [
+            self.inputs_outputs_spec.get_kerasinputshape_from_inputshapesformode(input_shapes)
+            for input_shapes in input_shapes_list
+        ]  # input shapes for the original layer
+        y_out_shape = self.original_keras_layer_class.compute_output_shape(
+            self, y_shapes
+        )  # output shape of the original layer
+
+        # same shape as one input or not?
+        if y_out_shape == y_shapes[0]:
+            # same output shape as one input
+            return input_shapes_list[0]
+        else:
+            # something change along the way (cf Concatenate), => we deduce decomon output shape
+            (
+                x_shape,
+                u_c_shape,
+                w_u_shape,
+                b_u_shape,
+                l_c_shape,
+                w_l_shape,
+                b_l_shape,
+                h_shape,
+                g_shape,
+            ) = self.inputs_outputs_spec.get_fullinputshapes_from_inputshapesformode(input_shapes_list[0])
+            y_out_shape_wo_batchsize = y_out_shape[1:]
+            if self.inputs_outputs_spec.affine:
+                model_inputdim = x_shape[-1]
+                batchsize = x_shape[0]
+                w_out_shape = (batchsize, model_inputdim) + y_out_shape_wo_batchsize
+            else:
+                w_out_shape = tuple()
+            fulloutputshapes = [
+                x_shape,
+                y_out_shape,
+                w_out_shape,
+                y_out_shape,
+                y_out_shape,
+                w_out_shape,
+                y_out_shape,
+                y_out_shape,
+                y_out_shape,
+            ]
+            return self.inputs_outputs_spec.extract_inputshapesformode_from_fullinputshapes(fulloutputshapes)
 
     def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
         n_comp = self.nb_tensors
