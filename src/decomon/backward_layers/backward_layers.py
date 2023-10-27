@@ -163,9 +163,11 @@ class BackwardConv2D(BackwardLayer):
         """
 
         w_out_u_ = get_toeplitz(self.layer, True)
-        output_shape = self.layer.get_output_shape_at(0)
-        if isinstance(output_shape, list):
-            output_shape = output_shape[-1]
+        output = self.layer.output
+        if isinstance(output, keras.KerasTensor):
+            output_shape = output.shape
+        else:  # list of outputs
+            output_shape = output[-1].shape
         output_shape = output_shape[1:]
         if self.layer.data_format == "channels_last":
             b_out_u_ = K.reshape(K.zeros(output_shape, dtype=self.layer.dtype), (-1, output_shape[-1]))

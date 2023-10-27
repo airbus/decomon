@@ -42,14 +42,18 @@ def get_toeplitz_channels_last(conv_layer: Conv2D, flatten: bool = True) -> kera
          the affine operator W: conv(x)= Wx + bias
     """
 
-    input_shape = conv_layer.get_input_shape_at(0)
-    if isinstance(input_shape, list):
-        input_shape = input_shape[-1]
+    input = conv_layer.input
+    if isinstance(input, keras.KerasTensor):
+        input_shape = input.shape
+    else:  # list of inputs
+        input_shape = input[-1].shape
     _, w_in, h_in, c_in = input_shape
     padding = conv_layer.padding.upper()
-    output_shape = conv_layer.get_output_shape_at(0)
-    if isinstance(output_shape, list):
-        output_shape = output_shape[-1]
+    output = conv_layer.output
+    if isinstance(output, keras.KerasTensor):
+        output_shape = output.shape
+    else:  # list of outputs
+        output_shape = output[-1].shape
     _, w_out, h_out, c_out = output_shape
 
     kernel_filter = conv_layer.kernel
@@ -112,14 +116,18 @@ def get_toeplitz_channels_first(conv_layer: Conv2D, flatten: bool = True) -> ker
         the affine operator W: conv(x)= Wx + bias
     """
 
-    input_shape = conv_layer.get_input_shape_at(0)
-    if isinstance(input_shape, list):
-        input_shape = input_shape[-1]
+    input = conv_layer.input
+    if isinstance(input, keras.KerasTensor):
+        input_shape = input.shape
+    else:  # list of inputs
+        input_shape = input[-1].shape
     _, c_in, w_in, h_in = input_shape
     padding = conv_layer.padding.upper()
-    output_shape = conv_layer.get_output_shape_at(0)
-    if isinstance(output_shape, list):
-        output_shape = output_shape[-1]
+    output = conv_layer.output
+    if isinstance(output, keras.KerasTensor):
+        output_shape = output.shape
+    else:  # list of outputs
+        output_shape = output[-1].shape
     _, c_out, w_out, h_out = output_shape
     kernel_filter = conv_layer.kernel
     filter_size = kernel_filter.shape[0]
