@@ -107,7 +107,7 @@ def backward_linear_prod(
     w_u, b_u, w_l, b_l = back_bounds
 
     if len(w_u_i.shape) > 3:
-        n_dim = w_u_i.get_input_shape_at(0)[1]
+        n_dim = w_u_i.shape[1]
         w_u_i = K.reshape(w_u_i, (-1, n_dim, n_dim))
         w_l_i = K.reshape(w_l_i, (-1, n_dim, n_dim))
         b_u_i = K.reshape(b_u_i, (-1, n_dim))
