@@ -164,6 +164,12 @@ class ModelNumpyFromKerasTensors:
 
 class Helpers:
     @staticmethod
+    def tensorflow_in_GPU_mode() -> bool:
+        import tensorflow
+
+        return len(tensorflow.config.list_physical_devices("GPU")) > 0
+
+    @staticmethod
     def is_method_mode_compatible(method, mode):
         return not (
             ConvertMethod(method) in {ConvertMethod.CROWN_FORWARD_IBP, ConvertMethod.FORWARD_IBP}
