@@ -152,7 +152,7 @@ def _prepare_input_tensors(
     return flatten_input_list
 
 
-SingleInputShapeType = Tuple[Optional[int]]
+SingleInputShapeType = Tuple[Optional[int], ...]
 
 
 def get_layer_input_shape(layer: Layer) -> List[SingleInputShapeType]:

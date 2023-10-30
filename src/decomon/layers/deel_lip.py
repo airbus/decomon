@@ -69,7 +69,7 @@ else:
             )
             return config
 
-        def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
+        def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
             if (self.n is None) or (self.n > input_shape[-1][self.channel_axis]):
                 self.n = input_shape[-1][self.channel_axis]
                 if self.n is None:  # for mypy
@@ -201,7 +201,7 @@ else:
             output = self.op_concat(inputs_min + inputs_max)
             return self.op_reshape_out(output)
 
-        def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
+        def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
             input_shape = input_shape[-1]
 
             if self.data_format == "channels_last":

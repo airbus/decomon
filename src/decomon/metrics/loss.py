@@ -435,10 +435,10 @@ class DecomonLossFusion(DecomonLayer):
         else:
             return self.call_no_backward(inputs, **kwargs)
 
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> Tuple[Optional[int]]:
+    def compute_output_shape(self, input_shape: List[Tuple[Optional[int], ...]]) -> Tuple[Optional[int], ...]:
         return input_shape[-1]
 
-    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         return None
 
 
@@ -552,10 +552,10 @@ class DecomonRadiusRobust(DecomonLayer):
         else:
             return self.call_no_backward(inputs, **kwargs)
 
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int]]]) -> Tuple[Optional[int]]:
+    def compute_output_shape(self, input_shape: List[Tuple[Optional[int], ...]]) -> Tuple[Optional[int], ...]:
         return input_shape[-1]
 
-    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         return None
 
 
