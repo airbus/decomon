@@ -85,7 +85,7 @@ class DecomonLayer(ABC, Layer):
         )
         return config
 
-    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         """
         Args:
             input_shape
@@ -108,8 +108,8 @@ class DecomonLayer(ABC, Layer):
         """
 
     def compute_output_shape(
-        self, input_shape: Union[Tuple[Optional[int]], List[Tuple[Optional[int]]]]
-    ) -> Union[Tuple[Optional[int]], List[Tuple[Optional[int]]]]:
+        self, input_shape: Union[Tuple[Optional[int], ...], List[Tuple[Optional[int], ...]]]
+    ) -> Union[Tuple[Optional[int], ...], List[Tuple[Optional[int], ...]]]:
         """Compute expected output shape according to input shape
 
         Will be called by symbolic calls on Keras Tensors.
