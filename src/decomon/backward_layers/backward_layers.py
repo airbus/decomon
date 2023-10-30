@@ -79,7 +79,7 @@ class BackwardDense(BackwardLayer):
             b_u_out, b_l_out = [z_value * w_u_out[:, 0]] * 2
         return [w_u_out, b_u_out, w_l_out, b_l_out]
 
-    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         """
         Args:
             input_shape: list of input shape
@@ -248,7 +248,7 @@ class BackwardActivation(BackwardLayer):
         )
         return config
 
-    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         """
         Args:
             input_shape: list of input shape

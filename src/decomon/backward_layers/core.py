@@ -78,7 +78,7 @@ class BackwardLayer(ABC, Wrapper):
         """
         pass
 
-    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         """
         Args:
             input_shape

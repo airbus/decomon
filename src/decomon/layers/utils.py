@@ -89,7 +89,9 @@ class Project_initializer_pos(Initializer):
         super().__init__(**kwargs)
         self.initializer = initializer
 
-    def __call__(self, shape: Tuple[Optional[int]], dtype: Optional[str] = None, **kwargs: Any) -> keras.KerasTensor:
+    def __call__(
+        self, shape: Tuple[Optional[int], ...], dtype: Optional[str] = None, **kwargs: Any
+    ) -> keras.KerasTensor:
         w = self.initializer.__call__(shape, dtype)
         return K.maximum(0.0, w)
 
@@ -101,7 +103,9 @@ class Project_initializer_neg(Initializer):
         super().__init__(**kwargs)
         self.initializer = initializer
 
-    def __call__(self, shape: Tuple[Optional[int]], dtype: Optional[str] = None, **kwargs: Any) -> keras.KerasTensor:
+    def __call__(
+        self, shape: Tuple[Optional[int], ...], dtype: Optional[str] = None, **kwargs: Any
+    ) -> keras.KerasTensor:
         w = self.initializer.__call__(shape, dtype)
         return K.minimum(0.0, w)
 

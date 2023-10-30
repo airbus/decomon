@@ -210,20 +210,20 @@ class InputsOutputsSpec:
     def affine(self) -> bool:
         return get_affine(self.mode)
 
-    def get_kerasinputshape(self, inputsformode: List[keras.KerasTensor]) -> Tuple[Optional[int]]:
+    def get_kerasinputshape(self, inputsformode: List[keras.KerasTensor]) -> Tuple[Optional[int], ...]:
         return inputsformode[-1].shape
 
     def get_kerasinputshape_from_inputshapesformode(
-        self, inputshapesformode: List[Tuple[Optional[int]]]
-    ) -> Tuple[Optional[int]]:
+        self, inputshapesformode: List[Tuple[Optional[int], ...]]
+    ) -> Tuple[Optional[int], ...]:
         return inputshapesformode[-1]
 
     def get_fullinputshapes_from_inputshapesformode(
         self,
-        inputshapesformode: List[Tuple[Optional[int]]],
-    ) -> List[Tuple[Optional[int]]]:
+        inputshapesformode: List[Tuple[Optional[int], ...]],
+    ) -> List[Tuple[Optional[int], ...]]:
         nb_tensors = self.nb_tensors
-        empty_shape: Tuple[Optional[int]] = tuple()
+        empty_shape: Tuple[Optional[int], ...] = tuple()
         if self.dc_decomp:
             if self.mode == ForwardMode.HYBRID:
                 (
@@ -437,8 +437,8 @@ class InputsOutputsSpec:
         return inputsformode
 
     def extract_inputshapesformode_from_fullinputshapes(
-        self, inputshapes: List[Tuple[Optional[int]]]
-    ) -> List[Tuple[Optional[int]]]:
+        self, inputshapes: List[Tuple[Optional[int], ...]]
+    ) -> List[Tuple[Optional[int], ...]]:
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputshapes
         if self.mode == ForwardMode.HYBRID:
             inputshapesformode = [x, u_c, w_u, b_u, l_c, w_l, b_l]

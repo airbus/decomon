@@ -90,7 +90,7 @@ class DecomonConv2D(DecomonLayer, Conv2D):
 
         self.diag_op = Lambda(tf.linalg.diag)
 
-    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         """
         Args:
             input_shape
@@ -325,10 +325,10 @@ class DecomonDense(DecomonLayer, Dense):
             **kwargs,
         )
         self.input_spec = [InputSpec(min_ndim=2) for _ in range(self.nb_tensors)]
-        self.input_shape_build: Optional[List[Tuple[Optional[int]]]] = None
+        self.input_shape_build: Optional[List[Tuple[Optional[int], ...]]] = None
         self.op_dot = K.dot
 
-    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         """
         Args:
             input_shape: list of input shape
@@ -569,7 +569,7 @@ class DecomonActivation(DecomonLayer, Activation):
         self.activation = activations.get(activation)
         self.activation_name = activation
 
-    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         if self.finetune and self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
             shape = input_shape[-1][1:]
 
@@ -706,7 +706,7 @@ class DecomonFlatten(DecomonLayer, Flatten):
         if self.dc_decomp:
             self.input_spec += [InputSpec(min_ndim=1), InputSpec(min_ndim=1)]
 
-    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         """
         Args:
             self
@@ -807,7 +807,7 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
             **kwargs,
         )
 
-    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         super().build(input_shape)
         self.input_spec = [InputSpec(min_ndim=len(elem)) for elem in input_shape]
 
@@ -925,7 +925,7 @@ class DecomonDropout(DecomonLayer, Dropout):
             **kwargs,
         )
 
-    def build(self, input_shape: List[Tuple[Optional[int]]]) -> None:
+    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         super().build(input_shape)
         self.input_spec = [InputSpec(min_ndim=len(elem)) for elem in input_shape]
 
