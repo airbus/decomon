@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import keras
 import keras.ops as K
@@ -658,3 +658,14 @@ def get_identity_lirpa(inputs: List[keras.KerasTensor]) -> List[keras.KerasTenso
     w_l_out = tf.linalg.diag(w_l_out)
 
     return [w_u_out, b_u_out, w_l_out, b_l_out]
+
+
+def get_identity_lirpa_shapes(input_shapes: List[Tuple[Optional[int], ...]]) -> List[Tuple[Optional[int], ...]]:
+    y_shape = input_shapes[-1]
+    batch_size = y_shape[0]
+    flatten_dim = int(np.prod(y_shape[1:]))
+
+    b_shape = batch_size, flatten_dim
+    w_shape = batch_size, flatten_dim, flatten_dim
+
+    return [w_shape, b_shape, w_shape, b_shape]
