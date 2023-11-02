@@ -70,13 +70,13 @@ def test_convert_1D(n, method, mode, floatx, decimal, helpers):
 
     #  keras model and output of reference
     ref_nn = helpers.toy_network_tutorial(dtype=keras_config.floatx())
-    output_ref_ = ref_nn.predict(input_ref_)
+    output_ref_ = helpers.predict_on_small_numpy(ref_nn, input_ref_)
 
     # decomon conversion
     decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
 
     #  decomon outputs
-    outputs_ = decomon_model.predict(input_decomon_)
+    outputs_ = helpers.predict_on_small_numpy(decomon_model, input_decomon_)
 
     #  check bounds consistency
     helpers.assert_decomon_model_output_properties_box(
@@ -258,13 +258,13 @@ def test_clone_full_deellip_model_forward(method, mode, helpers):
         k_coef_lip=1.0,
         name="hkr_model",
     )
-    output_ref_ = ref_nn.predict(input_ref_reshaped_)
+    output_ref_ = helpers.predict_on_small_numpy(ref_nn, input_ref_reshaped_)
 
     # decomon conversion
     decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
 
     #  decomon outputs
-    outputs_ = decomon_model.predict(input_decomon_)
+    outputs_ = helpers.predict_on_small_numpy(decomon_model, input_decomon_)
 
     #  check bounds consistency
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = helpers.get_full_outputs_from_outputs_for_mode(
@@ -305,7 +305,7 @@ def test_convert_toy_models_1d(toy_model_1d, method, mode, helpers):
 
     #  keras model and output of reference
     ref_nn = toy_model_1d
-    output_ref_ = ref_nn.predict(input_ref_)
+    output_ref_ = helpers.predict_on_small_numpy(ref_nn, input_ref_)
 
     # decomon conversion
     if (get_direction(method) == FeedDirection.BACKWARD) and has_merge_layers(ref_nn):
@@ -317,7 +317,7 @@ def test_convert_toy_models_1d(toy_model_1d, method, mode, helpers):
     decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
 
     #  decomon outputs
-    outputs_ = decomon_model.predict(input_decomon_)
+    outputs_ = helpers.predict_on_small_numpy(decomon_model, input_decomon_)
 
     #  check bounds consistency
     helpers.assert_decomon_model_output_properties_box(
@@ -363,13 +363,13 @@ def test_convert_cnn(method, mode, helpers):
     #  keras model and output of reference
     image_data_shape = input_ref_.shape[1:]  # image shape: before flattening
     ref_nn = helpers.toy_struct_cnn(dtype=keras_config.floatx(), image_data_shape=image_data_shape)
-    output_ref_ = ref_nn.predict(input_ref_reshaped_)
+    output_ref_ = helpers.predict_on_small_numpy(ref_nn, input_ref_reshaped_)
 
     # decomon conversion
     decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
 
     #  decomon outputs
-    outputs_ = decomon_model.predict(input_decomon_)
+    outputs_ = helpers.predict_on_small_numpy(decomon_model, input_decomon_)
 
     #  check bounds consistency
     z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = helpers.get_full_outputs_from_outputs_for_mode(
