@@ -42,7 +42,7 @@ def test_get_upper_1d_box(toy_model_1d, n, method, mode, helpers):
     affine = get_affine(mode)
     backward_model = clone(toy_model_1d, method=method, ibp=ibp, affine=affine, mode=mode)
     upper = get_upper_box(backward_model, z[:, 0], z[:, 1])
-    y_ref = toy_model_1d.predict(y)
+    y_ref = helpers.predict_on_small_numpy(toy_model_1d, y)
 
     try:
         assert (upper - y_ref).min() + 1e-6 >= 0.0
@@ -63,7 +63,7 @@ def test_get_lower_1d_box(toy_model_1d, n, method, mode, helpers):
     affine = get_affine(mode)
     backward_model = clone(toy_model_1d, method=method, final_ibp=ibp, final_affine=affine)
     lower = get_lower_box(backward_model, z[:, 0], z[:, 1])
-    y_ref = toy_model_1d.predict(y)
+    y_ref = helpers.predict_on_small_numpy(toy_model_1d, y)
 
     try:
         assert (y_ref - lower).min() + 1e-6 >= 0.0
@@ -84,7 +84,7 @@ def test_get_range_1d_box(toy_model_1d, n, method, mode, helpers):
     affine = get_affine(mode)
     backward_model = clone(toy_model_1d, method=method, final_ibp=ibp, final_affine=affine)
     upper, lower = get_range_box(backward_model, z[:, 0], z[:, 1])
-    y_ref = toy_model_1d.predict(y)
+    y_ref = helpers.predict_on_small_numpy(toy_model_1d, y)
 
     try:
         assert (upper - y_ref).min() + 1e-6 >= 0.0
@@ -105,7 +105,7 @@ def test_get_upper_multid_box(toy_model_multid, odd, method, mode, helpers):
     affine = get_affine(mode)
     backward_model = clone(toy_model_multid, method=method, final_ibp=ibp, final_affine=affine)
     upper = get_upper_box(backward_model, z[:, 0], z[:, 1])
-    y_ref = toy_model_multid.predict(y)
+    y_ref = helpers.predict_on_small_numpy(toy_model_multid, y)
 
     assert (upper - y_ref).min() + 1e-6 >= 0.0
 
@@ -122,7 +122,7 @@ def test_get_lower_multid_box(toy_model_multid, odd, method, mode, helpers):
     affine = get_affine(mode)
     backward_model = clone(toy_model_multid, method=method, final_ibp=ibp, final_affine=affine)
     lower = get_lower_box(backward_model, z[:, 0], z[:, 1])
-    y_ref = toy_model_multid.predict(y)
+    y_ref = helpers.predict_on_small_numpy(toy_model_multid, y)
 
     assert (y_ref - lower).min() + 1e-6 >= 0.0
 
@@ -139,7 +139,7 @@ def test_get_range_multid_box(toy_model_multid, odd, method, mode, helpers):
     affine = get_affine(mode)
     backward_model = clone(toy_model_multid, method=method, final_ibp=ibp, final_affine=affine)
     upper, lower = get_range_box(backward_model, z[:, 0], z[:, 1])
-    y_ref = toy_model_multid.predict(y)
+    y_ref = helpers.predict_on_small_numpy(toy_model_multid, y)
 
     assert (upper - y_ref).min() + 1e-6 >= 0.0
     assert (y_ref - lower).min() + 1e-6 >= 0.0

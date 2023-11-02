@@ -25,7 +25,7 @@ def test_convert_forward_1D(n, mode, floatx, decimal, helpers):
 
     # keras model and output of reference
     ref_nn = helpers.toy_network_tutorial(dtype=keras_config.floatx())
-    output_ref_ = ref_nn.predict(input_ref_)
+    output_ref_ = helpers.predict_on_small_numpy(ref_nn, input_ref_)
 
     # decomon conversion
     _, outputs, _, _ = convert_forward(ref_nn, ibp=ibp, affine=affine, shared=True, input_tensors=input_tensors)
