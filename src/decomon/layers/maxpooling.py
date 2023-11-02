@@ -89,6 +89,9 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
             for j in range(self.pool_size[1]):
                 self.filters[i, j, 0, i * self.pool_size[0] + j] = 1
 
+        self.filters_w = self.filters[None]
+        self.strides_w = (1,) + self.strides
+
         def conv_(x: keras.KerasTensor) -> keras.KerasTensor:
             if self.data_format in [None, "channels_last"]:
                 return K.cast(
@@ -119,7 +122,38 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
                     self.dtype,
                 )
 
+        def conv_w_(x: keras.KerasTensor) -> keras.KerasTensor:
+            if self.data_format in [None, "channels_last"]:
+                return K.cast(
+                    K.expand_dims(
+                        K.conv(
+                            x,
+                            self.filters_w,
+                            strides=list(self.strides_w),
+                            padding=self.padding,
+                            data_format=self.data_format,
+                        ),
+                        -2,
+                    ),
+                    self.dtype,
+                )
+            else:
+                return K.cast(
+                    K.expand_dims(
+                        K.conv(
+                            x,
+                            self.filters_w,
+                            strides=list(self.strides_w),
+                            padding=self.padding,
+                            data_format=self.data_format,
+                        ),
+                        1,
+                    ),
+                    self.dtype,
+                )
+
         self.internal_op = conv_
+        self.internal_op_w = conv_w_
 
     def _pooling_function_fast(
         self,
@@ -183,8 +217,8 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
         if self.affine:
             b_u_out = K.concatenate([self.internal_op(elem) for elem in K.split(b_u, n_split, -1)], -2)
             b_l_out = K.concatenate([self.internal_op(elem) for elem in K.split(b_l, n_split, -1)], -2)
-            w_u_out = K.concatenate([self.internal_op(elem) for elem in K.split(w_u, n_split, -1)], -2)
-            w_l_out = K.concatenate([self.internal_op(elem) for elem in K.split(w_l, n_split, -1)], -2)
+            w_u_out = K.concatenate([self.internal_op_w(elem) for elem in K.split(w_u, n_split, -1)], -2)
+            w_l_out = K.concatenate([self.internal_op_w(elem) for elem in K.split(w_l, n_split, -1)], -2)
         else:
             w_u_out, b_u_out, w_l_out, b_l_out = empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
