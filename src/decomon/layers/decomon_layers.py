@@ -88,8 +88,6 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         if self.dc_decomp:
             self.input_spec += [InputSpec(min_ndim=4), InputSpec(min_ndim=4)]
 
-        self.diag_op = Lambda(tf.linalg.diag)
-
     def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         """
         Args:
@@ -200,10 +198,8 @@ class DecomonConv2D(DecomonLayer, Conv2D):
             )
 
             if len(w_u.shape) == len(b_u.shape):
-                identity_tensor = self.diag_op(z_value * Flatten()(b_u[0][None]) + o_value)
-
-                identity_tensor = K.reshape(identity_tensor, [-1] + list(b_u.shape[1:]))
-
+                flatdim = int(np.prod(b_u.shape[1:]))
+                identity_tensor = K.reshape(K.identity(flatdim, dtype=self.dtype), (-1,) + tuple(b_u.shape[1:]))
                 w_u_out = K.conv(
                     identity_tensor,
                     self.kernel,
