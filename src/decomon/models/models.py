@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, Union
 
 import keras
+import numpy as np
 
 from decomon.core import (
     BoxDomain,
@@ -70,6 +71,29 @@ class DecomonModel(keras.Model):
         for layer in self.layers:
             if hasattr(layer, "reset_finetuning"):
                 layer.reset_finetuning()
+
+    def predict_on_single_batch_np(
+        self, inputs: Union[np.ndarray, List[np.ndarray]]
+    ) -> Union[np.ndarray, List[np.ndarray]]:
+        """Make predictions on numpy arrays fitting in one batch
+
+        Avoid using `self.predict()` known to be not designed for small arrays,
+        and leading to memory leaks when used in loops.
+
+        See https://keras.io/api/models/model_training_apis/#predict-method and
+        https://github.com/tensorflow/tensorflow/issues/44711
+
+        Args:
+            inputs:
+
+        Returns:
+
+        """
+        output_tensors = self(inputs)
+        if isinstance(output_tensors, list):
+            return [output.numpy() for output in output_tensors]
+        else:
+            return output_tensors.numpy()
 
 
 def _check_domain(
