@@ -8,6 +8,7 @@ from keras.layers import InputSpec, Layer
 from keras.src.layers.merging.dot import batch_dot
 
 from decomon.core import ForwardMode, PerturbationDomain
+from decomon.keras_utils import BatchedDiagLike
 
 
 class Fuse(Layer):
@@ -121,16 +122,16 @@ def merge_with_previous(inputs: List[keras.KerasTensor]) -> List[keras.KerasTens
     # result (None, n_h_in, n_out)
 
     if len(w_u_out.shape) == 2:
-        w_u_out = tf.linalg.diag(w_u_out)
+        w_u_out = BatchedDiagLike()(w_u_out)
 
     if len(w_l_out.shape) == 2:
-        w_l_out = tf.linalg.diag(w_l_out)
+        w_l_out = BatchedDiagLike()(w_l_out)
 
     if len(w_b_u.shape) == 2:
-        w_b_u = tf.linalg.diag(w_b_u)
+        w_b_u = BatchedDiagLike()(w_b_u)
 
     if len(w_b_l.shape) == 2:
-        w_b_l = tf.linalg.diag(w_b_l)
+        w_b_l = BatchedDiagLike()(w_b_l)
 
     # import pdb; pdb.set_trace()
 

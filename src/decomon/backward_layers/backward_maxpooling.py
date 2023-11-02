@@ -9,6 +9,7 @@ from keras.layers import Flatten, Layer
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import backward_max_, get_identity_lirpa
 from decomon.core import ForwardMode, PerturbationDomain
+from decomon.keras_utils import BatchedIdentityLike
 
 
 class BackwardMaxPooling2D(BackwardLayer):
@@ -154,7 +155,7 @@ class BackwardMaxPooling2D(BackwardLayer):
         n_dim = int(np.prod(input_shape_channelreduced))
 
         # create diagonal matrix
-        id_list = [tf.linalg.diag(K.ones_like(op_flat(elem[0][None]))) for elem in K.split(y, input_shape[axis], axis)]
+        id_list = [BatchedIdentityLike()(op_flat(elem[0][None])) for elem in K.split(y, input_shape[axis], axis)]
 
         id_list = [K.reshape(identity_mat, [-1] + input_shape_channelreduced) for identity_mat in id_list]
         w_list = [self.internal_op(identity_mat) for identity_mat in id_list]

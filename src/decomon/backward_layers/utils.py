@@ -3,7 +3,6 @@ from typing import Any, List, Optional, Tuple, Union
 import keras
 import keras.ops as K
 import numpy as np
-import tensorflow as tf
 from keras.config import floatx
 from keras.layers import Flatten
 
@@ -17,6 +16,7 @@ from decomon.core import (
     get_lower_box,
     get_upper_box,
 )
+from decomon.keras_utils import BatchedIdentityLike
 from decomon.layers.utils import sort
 from decomon.utils import maximum, minus, relu_, subtract
 
@@ -648,14 +648,10 @@ def get_identity_lirpa(inputs: List[keras.KerasTensor]) -> List[keras.KerasTenso
     y = inputs[-1]
     shape = int(np.prod(y.shape[1:]))
 
-    z_value = K.cast(0.0, y.dtype)
-    o_value = K.cast(1.0, y.dtype)
     y_flat = K.reshape(y, [-1, shape])
 
-    w_u_out, w_l_out = [o_value + z_value * y_flat] * 2
-    b_u_out, b_l_out = [z_value * y_flat] * 2
-    w_u_out = tf.linalg.diag(w_u_out)
-    w_l_out = tf.linalg.diag(w_l_out)
+    w_u_out, w_l_out = [BatchedIdentityLike()(y_flat)] * 2
+    b_u_out, b_l_out = [K.zeros_like(y_flat)] * 2
 
     return [w_u_out, b_u_out, w_l_out, b_l_out]
 

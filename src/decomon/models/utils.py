@@ -27,7 +27,7 @@ from decomon.core import (
     PerturbationDomain,
     get_mode,
 )
-from decomon.keras_utils import reset_layer_all_weights
+from decomon.keras_utils import BatchedIdentityLike, reset_layer_all_weights
 from decomon.layers.utils import is_a_merge_layer
 
 try:
@@ -119,10 +119,8 @@ def get_input_tensors(
             l_c_tensor = Lambda(lambda z: z[:, 0], dtype=z_tensor.dtype)(z_tensor)
 
         if affine:
-            z_value = K.cast(0.0, z_tensor.dtype)
-            o_value = K.cast(1.0, z_tensor.dtype)
-            W = Lambda(lambda z: tf.linalg.diag(z_value * z[:, 0] + o_value), dtype=z_tensor.dtype)(z_tensor)
-            b = Lambda(lambda z: z_value * z[:, 1], dtype=z_tensor.dtype)(z_tensor)
+            W = BatchedIdentityLike()(z_tensor[:, 0])
+            b = K.zeros_like(z_tensor[:, 0])
 
     elif isinstance(perturbation_domain, BallDomain):
         if perturbation_domain.p == np.inf:
@@ -135,33 +133,16 @@ def get_input_tensors(
                     lambda var: var - K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
                 )(z_tensor)
             if affine:
-                z_value = K.cast(0.0, model.layers[0].dtype)
-                o_value = K.cast(1.0, model.layers[0].dtype)
-
-                W = tf.linalg.diag(z_value * u_c_tensor + o_value)
-                b = z_value * u_c_tensor
+                W = BatchedIdentityLike()(u_c_tensor)
+                b = K.zeros_like(u_c_tensor)
 
         else:
-            z_value = K.cast(0.0, model.layers[0].dtype)
-            o_value = K.cast(1.0, model.layers[0].dtype)
-
-            def get_bounds(z: keras.KerasTensor) -> List[keras.KerasTensor]:
-                outputs = []
-                W = tf.linalg.diag(z_value * z + o_value)
-                b = z_value * z
-                if affine:
-                    outputs += [W, b]
-                if ibp:
-                    u_c_out = perturbation_domain.get_upper(z, W, b)
-                    l_c_out = perturbation_domain.get_lower(z, W, b)
-                    outputs += [u_c_out, l_c_out]
-                return outputs
-
-            outputs = get_bounds(z_tensor)
+            W = BatchedIdentityLike()(z_tensor)
+            b = K.zeros_like(z_tensor)
             if ibp:
-                u_c_tensor, l_c_tensor = outputs[-2:]
-            if affine:
-                W, b = outputs[:2]
+                u_c_tensor = perturbation_domain.get_upper(z_tensor, W, b)
+                l_c_tensor = perturbation_domain.get_lower(z_tensor, W, b)
+
     else:
         raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
 
@@ -379,12 +360,10 @@ class Convert2Mode(Layer):
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec_from.get_fullinputs_from_inputsformode(
             inputs, compute_ibp_from_affine=compute_ibp_from_affine, tight=tight
         )
-        dtype = x.dtype
 
         if compute_dummy_affine:
             x = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
-            z_value = K.cast(0.0, dtype=dtype)
-            w = tf.linalg.diag(z_value * l_c)
+            w = K.zeros_like(BatchedIdentityLike()(l_c))
             w_u = w
             b_u = u_c
             w_l = w
