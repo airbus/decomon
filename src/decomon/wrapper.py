@@ -149,9 +149,9 @@ def get_adv_box(
         output: npt.NDArray[np.float_]
         if decomon_model.backward_bounds:
             C = np.diag([1] * n_label)[None] - source_labels[:, :, None]
-            output = decomon_model.predict([z, C], verbose=0)
+            output = decomon_model.predict_on_single_batch_np([z, C])
         else:
-            output = decomon_model.predict(z, verbose=0)
+            output = decomon_model.predict_on_single_batch_np(z)
 
         def get_ibp_score(
             u_c: npt.NDArray[np.float_],
@@ -361,7 +361,7 @@ def check_adv_box(
         )
 
     else:
-        output = decomon_model.predict(z, verbose=0)
+        output = decomon_model.predict_on_single_batch_np(z)
 
         if not affine:
             # translate  into affine information
@@ -532,7 +532,7 @@ def get_range_box(
         ibp = decomon_model.ibp
         affine = decomon_model.affine
 
-        output = decomon_model.predict(z, verbose=0)
+        output = decomon_model.predict_on_single_batch_np(z)
         shape = list(output[-1].shape[1:])
         output_dim = np.prod(shape)
 
@@ -701,7 +701,7 @@ def get_range_noise(
     ibp = decomon_model.ibp
     affine = decomon_model.affine
 
-    output = decomon_model.predict(x_reshaped, verbose=0)
+    output = decomon_model.predict_on_single_batch_np(x_reshaped)
     shape = list(output[-1].shape[1:])
     output_dim = np.prod(shape)
 
@@ -1006,7 +1006,7 @@ def get_adv_noise(
     else:
         ibp = decomon_model.ibp
         affine = decomon_model.affine
-        output = decomon_model.predict(x_reshaped, verbose=0)
+        output = decomon_model.predict_on_single_batch_np(x_reshaped)
 
         def get_ibp_score(
             u_c: npt.NDArray[np.float_],
