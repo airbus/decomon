@@ -179,6 +179,31 @@ class Helpers:
     function = ModelNumpyFromKerasTensors
 
     @staticmethod
+    def predict_on_small_numpy(
+        model: Model, x: Union[np.ndarray, List[np.ndarray]]
+    ) -> Union[np.ndarray, List[np.ndarray]]:
+        """Make predictions for model directly on small numpy arrays
+
+        Avoid using `model.predict()` known to be not designed for small arrays,
+        and leading to memory leaks when used in loops.
+
+        See https://keras.io/api/models/model_training_apis/#predict-method and
+        https://github.com/tensorflow/tensorflow/issues/44711
+
+        Args:
+            model:
+            x:
+
+        Returns:
+
+        """
+        output_tensors = model(x)
+        if isinstance(output_tensors, list):
+            return [output.numpy() for output in output_tensors]
+        else:
+            return output_tensors.numpy()
+
+    @staticmethod
     def get_standard_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
         """A set of functions with their monotonic decomposition for testing the activations"""
         w_u_ = np.ones(nb, dtype=keras_config.floatx())
