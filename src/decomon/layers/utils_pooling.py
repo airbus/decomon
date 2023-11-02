@@ -92,11 +92,11 @@ def get_upper_linear_hull_max(
 
     # include bias in corners
     if axis != -1:
-        bias_corner = o_value + tf.math.reduce_sum(z_value * corners, axis, keepdims=True)
+        bias_corner = o_value + K.sum(z_value * corners, axis, keepdims=True)
         corners_collapse = K.concatenate([corners_collapse, bias_corner], axis=axis)  # (None, shape_, n_dim+1, n_dim+1)
 
     else:
-        bias_corner = o_value + tf.math.reduce_sum(z_value * corners, -2, keepdims=True)
+        bias_corner = o_value + K.sum(z_value * corners, -2, keepdims=True)
         corners_collapse = K.concatenate([corners_collapse, bias_corner], axis=-2)
 
     dimensions = np.arange(len(corners.shape))
