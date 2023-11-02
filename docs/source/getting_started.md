@@ -9,8 +9,8 @@ within a box domain.
 ````python
 # Imports
 import numpy as np
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.models import Sequential
+from keras.layers import Dense
+from keras.models import Sequential
 
 from decomon import get_lower_box, get_upper_box
 from decomon.models import clone
