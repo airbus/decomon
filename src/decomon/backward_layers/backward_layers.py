@@ -19,6 +19,7 @@ from decomon.core import (
     get_affine,
     get_ibp,
 )
+from decomon.keras_utils import BatchedDiagLike
 from decomon.layers.convert import to_decomon
 from decomon.layers.core import DecomonLayer
 from decomon.layers.decomon_layers import DecomonBatchNormalization
@@ -375,9 +376,9 @@ class BackwardActivation(BackwardLayer):
             w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
         if len(w_u_out.shape) == 2:
-            w_u_out = tf.linalg.diag(w_u_out)
+            w_u_out = BatchedDiagLike()(w_u_out)
         if len(w_l_out.shape) == 2:
-            w_l_out = tf.linalg.diag(w_l_out)
+            w_l_out = BatchedDiagLike()(w_l_out)
 
         return [w_u_out, b_u_out, w_l_out, b_l_out]
 

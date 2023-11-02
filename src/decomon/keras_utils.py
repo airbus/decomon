@@ -1,7 +1,59 @@
 from typing import Any, List
 
 import keras
+import keras.ops as K
+import numpy as np
 from keras.layers import Layer
+
+
+class BatchedIdentityLike(keras.Operation):
+    """Keras Operation creating an identity tensor with shape (including batch_size) based on input.
+
+    The output shape is tuple(x.shape) + (x.shape[-1],), the tensor being the identity
+    along the 2 last dimensions.
+
+    """
+
+    def call(self, x):
+        input_shape = x.shape
+        identity_tensor = K.identity(input_shape[-1], dtype=x.dtype)
+        n_repeat = int(np.prod(input_shape[:-1]))
+        return K.reshape(K.repeat(identity_tensor[None], n_repeat, axis=0), tuple(input_shape) + (-1,))
+
+    def compute_output_spec(self, x):
+        x_shape = x.shape
+        x_type = getattr(x, "dtype", type(x))
+        x_sparse = getattr(x, "sparse", False)
+        return keras.KerasTensor(
+            shape=tuple(x_shape) + (x_shape[-1],),
+            dtype=x_type,
+            sparse=x_sparse,
+        )
+
+
+class BatchedDiagLike(keras.Operation):
+    """Keras Operation transforming last dimension into a diagonal tensor.
+
+    The output shape is tuple(x.shape) + (x.shape[-1],).
+    When fixing all but 2 last dimensions, the output tensor is a square tensor
+    whose main diagonal is the input tensor with same first dimensions fixed, and 0 elsewhere.
+
+    This is a replacement for tensorflow.linalg.diag().
+
+    """
+
+    def call(self, x):
+        return K.concatenate([K.diag(K.ravel(w_part))[None] for w_part in K.split(x, len(x), axis=0)], axis=0)
+
+    def compute_output_spec(self, x):
+        x_shape = x.shape
+        x_type = getattr(x, "dtype", type(x))
+        x_sparse = getattr(x, "sparse", False)
+        return keras.KerasTensor(
+            shape=tuple(x_shape) + (x_shape[-1],),
+            dtype=x_type,
+            sparse=x_sparse,
+        )
 
 
 def get_weight_index(layer: Layer, weight: keras.Variable) -> int:

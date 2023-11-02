@@ -349,6 +349,12 @@ def get_adv_loss(
     return loss_adv
 
 
+def _create_identity_tensor_like(x: keras.KerasTensor) -> keras.KerasTensor:
+    identity_tensor = K.identity(x.shape[-1])
+    n_repeat = int(np.prod(x.shape[:-1]))
+    return K.reshape(K.repeat(identity_tensor[None], n_repeat, axis=0), tuple(x.shape) + (-1,))
+
+
 # create a layer
 class DecomonLossFusion(DecomonLayer):
     original_keras_layer_class = Layer
@@ -416,7 +422,7 @@ class DecomonLossFusion(DecomonLayer):
                 upper = upper - (const + K.cast(1, const.dtype)) * (1 - M)
                 return K.max(upper, (-1, -2))
 
-            source_tensor = tf.linalg.diag(K.ones_like(l_c))
+            source_tensor = _create_identity_tensor_like(l_c)
 
             score = K.concatenate([adv_ibp(u_c, l_c, source_tensor[:, i])[:, None] for i in range(shape)], -1)
             return K.maximum(score, -1)  # + 1e-3*K.maximum(K.max(K.abs(u_c), -1)[:,None], K.abs(l_c))
@@ -493,7 +499,7 @@ class DecomonRadiusRobust(DecomonLayer):
         # compute center
         x_0 = (x[:, 0] + x[:, 1]) / 2.0
         radius = K.maximum((x[:, 1] - x[:, 0]) / 2.0, epsilon())
-        source_tensor = tf.linalg.diag(K.ones_like(b_l))
+        source_tensor = _create_identity_tensor_like(b_l)
 
         shape = b_l.shape[-1]
 
@@ -527,7 +533,7 @@ class DecomonRadiusRobust(DecomonLayer):
         # compute center
         x_0 = (x[:, 0] + x[:, 1]) / 2.0
         radius = K.maximum((x[:, 1] - x[:, 0]) / 2.0, epsilon())
-        source_tensor = tf.linalg.diag(K.ones_like(b_l))
+        source_tensor = _create_identity_tensor_like(b_l)
 
         shape = b_l.shape[-1]
 

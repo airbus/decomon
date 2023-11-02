@@ -62,7 +62,7 @@ def get_upper_linear_hull_max(
     n_dim = input_shape[axis]
 
     # expand dim/broadcast
-    mask = tf.linalg.diag(K.ones((n_dim), dtype=dtype))  # (n_dim, n_dim)
+    mask = K.identity(n_dim, dtype=dtype)  # (n_dim, n_dim)
     mask_shape = np.ones(len(u_c.shape) + 1)
     mask_shape[-1] = n_dim
     if axis != -1:

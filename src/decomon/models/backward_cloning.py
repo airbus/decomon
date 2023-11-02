@@ -22,6 +22,7 @@ from decomon.core import (
     get_affine,
     get_mode,
 )
+from decomon.keras_utils import BatchedIdentityLike
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.crown import Convert2BackwardMode, Fuse, MergeWithPrevious
 from decomon.models.forward_cloning import OutputMapDict
@@ -47,8 +48,8 @@ def get_disconnected_input(
 
         if affine:
             x = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
-            w_u = tf.linalg.diag(K.cast(0.0, x.dtype) * u_c + K.cast(1.0, x.dtype))
-            b_u = K.cast(0.0, x.dtype) * u_c
+            w_u = BatchedIdentityLike()(u_c)
+            b_u = K.zeros_like(u_c)
         else:
             w_u, b_u = empty_tensor, empty_tensor
 
