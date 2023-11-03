@@ -29,14 +29,14 @@ class NonPos(Constraint):
     """Constrains the weights to be non-negative."""
 
     def __call__(self, w: keras.KerasTensor) -> keras.KerasTensor:
-        return K.minimum(w, 0.0)
+        return K.minimum(w, K.cast(0.0, dtype=w.dtype))
 
 
 class NonNeg(Constraint):
     """Constrains the weights to be non-negative."""
 
     def __call__(self, w: keras.KerasTensor) -> keras.KerasTensor:
-        return K.maximum(w, 0.0)
+        return K.maximum(w, K.cast(0.0, dtype=w.dtype))
 
 
 class ClipAlpha(Constraint):
@@ -51,7 +51,7 @@ class ClipAlphaGrid(Constraint):
 
     def __call__(self, w: keras.KerasTensor) -> keras.KerasTensor:
         w = K.clip(w, 0.0, 1.0)
-        w /= K.maximum(K.sum(w, 0), 1.0)[None]
+        w /= K.maximum(K.sum(w, 0), K.cast(1.0, dtype=w.dtype))[None]
         return w
 
 
@@ -61,7 +61,7 @@ class ClipAlphaAndSumtoOne(Constraint):
     def __call__(self, w: keras.KerasTensor) -> keras.KerasTensor:
         w = K.clip(w, 0.0, 1.0)
         # normalize the first colum to 1
-        w_scale = K.maximum(K.sum(w, 0), epsilon())
+        w_scale = K.maximum(K.sum(w, 0), K.cast(epsilon(), dtype=w.dtype))
         return w / w_scale[:, None, None, None]
 
 
@@ -93,7 +93,7 @@ class Project_initializer_pos(Initializer):
         self, shape: Tuple[Optional[int], ...], dtype: Optional[str] = None, **kwargs: Any
     ) -> keras.KerasTensor:
         w = self.initializer.__call__(shape, dtype)
-        return K.maximum(0.0, w)
+        return K.maximum(K.cast(0.0, dtype=dtype), w)
 
 
 class Project_initializer_neg(Initializer):
@@ -107,7 +107,7 @@ class Project_initializer_neg(Initializer):
         self, shape: Tuple[Optional[int], ...], dtype: Optional[str] = None, **kwargs: Any
     ) -> keras.KerasTensor:
         w = self.initializer.__call__(shape, dtype)
-        return K.minimum(0.0, w)
+        return K.minimum(K.cast(0.0, dtype=dtype), w)
 
 
 def softplus_(
@@ -221,7 +221,7 @@ def frac_pos(
     l_c_out = K.cast(1.0, dtype=u_c.dtype) / u_c
 
     if affine:
-        w_u_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, epsilon())
+        w_u_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, K.cast(epsilon(), dtype=u_c.dtype))
         b_u_0 = l_c_out - w_u_0 * l_c
 
         y = (u_c + l_c) / 2.0
@@ -485,12 +485,13 @@ def multiply(
         u_c_out, l_c_out = empty_tensor, empty_tensor
 
     if affine:
+        z_value = K.cast(0.0, dtype=u_c_0.dtype)
         # xy <= x_u * y + x * y_L - xU * y_L
-        cx_u_pos = K.maximum(u_c_0, 0.0)
-        cx_u_neg = K.minimum(u_c_0, 0.0)
+        cx_u_pos = K.maximum(u_c_0, z_value)
+        cx_u_neg = K.minimum(u_c_0, z_value)
 
-        cy_l_pos = K.maximum(l_c_1, 0.0)
-        cy_l_neg = K.minimum(l_c_1, 0.0)
+        cy_l_pos = K.maximum(l_c_1, z_value)
+        cy_l_neg = K.minimum(l_c_1, z_value)
         w_u_out = (
             cx_u_pos[:, None] * w_u_1
             + cx_u_neg[:, None] * w_l_1
@@ -500,8 +501,8 @@ def multiply(
         b_u_out = cx_u_pos * b_u_1 + cx_u_neg * b_l_1 + cy_l_pos * b_u_0 + cy_l_neg * b_l_0 - u_c_0 * l_c_1
 
         # xy >= x_U*y + x*y_U - x_U*y_U
-        cx_l_pos = K.maximum(l_c_0, 0.0)
-        cx_l_neg = K.minimum(l_c_0, 0.0)
+        cx_l_pos = K.maximum(l_c_0, z_value)
+        cx_l_neg = K.minimum(l_c_0, z_value)
 
         w_l_out = (
             cx_l_pos[:, None] * w_l_1
@@ -938,7 +939,7 @@ def frac_pos_hull(
 
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
 
-    l_c = K.maximum(l_c, 1.0)
+    l_c = K.maximum(l_c, K.cast(1.0, dtype=l_c.dtype))
     z = (u_c + l_c) / 2.0
     w_l = -K.cast(1.0, dtype=z.dtype) / K.power(z)
     b_l = K.cast(2.0, dtype=z.dtype) / z
@@ -1081,7 +1082,7 @@ def log(
     if affine:
         y = (u_c + l_c) / 2.0
 
-        w_l_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, epsilon())
+        w_l_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, K.cast(epsilon(), dtype=u_c.dtype))
         b_l_0 = l_c_out - w_l_0 * l_c
 
         w_u_0 = K.cast(1, dtype=y.dtype) / y
@@ -1144,7 +1145,7 @@ def exp(
     if affine:
         y = (u_c + l_c) / 2.0  # do finetuneting
 
-        w_u_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, epsilon())
+        w_u_0 = (u_c_out - l_c_out) / K.maximum(u_c - l_c, K.cast(epsilon(), dtype=u_c.dtype))
         b_u_0 = l_c_out - w_u_0 * l_c
 
         w_l_0 = K.exp(y)
