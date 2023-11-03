@@ -15,6 +15,12 @@ class BatchedIdentityLike(keras.Operation):
     """
 
     def call(self, x):
+        if is_symbolic_tensor(x):
+            return self.compute_output_spec(x)
+        else:
+            return self._call(x)
+
+    def _call(self, x):
         input_shape = x.shape
         identity_tensor = K.identity(input_shape[-1], dtype=x.dtype)
         n_repeat = int(np.prod(input_shape[:-1]))
@@ -43,6 +49,12 @@ class BatchedDiagLike(keras.Operation):
     """
 
     def call(self, x):
+        if is_symbolic_tensor(x):
+            return self.compute_output_spec(x)
+        else:
+            return self._call(x)
+
+    def _call(self, x):
         return K.concatenate([K.diag(K.ravel(w_part))[None] for w_part in K.split(x, len(x), axis=0)], axis=0)
 
     def compute_output_spec(self, x):
@@ -54,6 +66,16 @@ class BatchedDiagLike(keras.Operation):
             dtype=x_type,
             sparse=x_sparse,
         )
+
+
+def is_symbolic_tensor(x):
+    """Check whether the tensor is symbolic or not.
+
+    Works even during backend calls made by layers without actual compute_output_shape().
+    In this case, x is not KerasTensor anymore but a backend Tensor with None in its shape.
+
+    """
+    return None in x.shape
 
 
 def get_weight_index(layer: Layer, weight: keras.Variable) -> int:
