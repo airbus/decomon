@@ -119,9 +119,9 @@ def subset_sum_lower(W: keras.KerasTensor, b: keras.KerasTensor, repeat: int = 1
     B = K.sort(W, axis=1)
     C = K.repeat(B, repeats=repeat, axis=1)
     C_reduced = K.cumsum(C, axis=1)
-    D = K.minimum(K.sign(K.expand_dims(-b, 1) - C_reduced) + 1, 1)
+    D = K.minimum(K.sign(K.expand_dims(-b, 1) - C_reduced) + 1, K.cast(1.0, dtype=b.dtype))
 
-    score = K.minimum(K.sum(D * C, 1) + b, 0.0)
+    score = K.minimum(K.sum(D * C, 1) + b, K.cast(0.0, dtype=b.dtype))
     return score
 
 
