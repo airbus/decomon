@@ -634,6 +634,7 @@ def get_lower_ball_finetune(
         alpha = kwargs["finetune_lower"]
         # assume alpha is the same shape as w, minus the batch dimension
         n_shape = len(w.shape) - 2
+        z_value = K.cast(0.0, dtype=w.dtype)
 
         if "upper" and "lower" in kwargs:
             upper = kwargs["upper"]  # flatten vector
@@ -645,8 +646,8 @@ def get_lower_ball_finetune(
             w_alpha = w * alpha[None]
             w_alpha_bar = w * (1 - alpha)
 
-            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * lower_reshaped, 1) + K.sum(
-                K.minimum(0.0, w_alpha_bar) * upper_reshaped, 1
+            score_box = K.sum(K.maximum(z_value, w_alpha_bar) * lower_reshaped, 1) + K.sum(
+                K.minimum(z_value, w_alpha_bar) * upper_reshaped, 1
             )
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
@@ -656,10 +657,10 @@ def get_lower_ball_finetune(
             upper = kwargs["upper"]  # flatten vector
             upper_reshaped = np.reshape(upper, [1, -1] + [1] * n_shape)
 
-            w_alpha = K.minimum(0, w) * alpha[None] + K.maximum(0.0, w)
-            w_alpha_bar = K.minimum(0, w) * (1 - alpha[None])
+            w_alpha = K.minimum(z_value, w) * alpha[None] + K.maximum(z_value, w)
+            w_alpha_bar = K.minimum(z_value, w) * (1 - alpha[None])
 
-            score_box = K.sum(K.minimum(0.0, w_alpha_bar) * upper_reshaped, 1)
+            score_box = K.sum(K.minimum(z_value, w_alpha_bar) * upper_reshaped, 1)
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
             return score_box + score_ball
@@ -668,10 +669,10 @@ def get_lower_ball_finetune(
             lower = kwargs["lower"]  # flatten vector
             lower_reshaped = np.reshape(lower, [1, -1] + [1] * n_shape)
 
-            w_alpha = K.maximum(0, w) * alpha[None] + K.minimum(0.0, w)
-            w_alpha_bar = K.maximum(0, w) * (1 - alpha[None])
+            w_alpha = K.maximum(z_value, w) * alpha[None] + K.minimum(z_value, w)
+            w_alpha_bar = K.maximum(z_value, w) * (1 - alpha[None])
 
-            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * lower_reshaped, 1)
+            score_box = K.sum(K.maximum(z_value, w_alpha_bar) * lower_reshaped, 1)
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
             return score_box + score_ball
@@ -686,6 +687,7 @@ def get_upper_ball_finetune(
         alpha = kwargs["finetune_upper"]
         # assume alpha is the same shape as w, minus the batch dimension
         n_shape = len(w.shape) - 2
+        z_value = K.cast(0.0, dtype=w.dtype)
 
         if "upper" and "lower" in kwargs:
             upper = kwargs["upper"]  # flatten vector
@@ -697,8 +699,8 @@ def get_upper_ball_finetune(
             w_alpha = w * alpha[None]
             w_alpha_bar = w * (1 - alpha)
 
-            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * upper_reshaped, 1) + K.sum(
-                K.minimum(0.0, w_alpha_bar) * lower_reshaped, 1
+            score_box = K.sum(K.maximum(z_value, w_alpha_bar) * upper_reshaped, 1) + K.sum(
+                K.minimum(z_value, w_alpha_bar) * lower_reshaped, 1
             )
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
@@ -708,10 +710,10 @@ def get_upper_ball_finetune(
             upper = kwargs["upper"]  # flatten vector
             upper_reshaped = np.reshape(upper, [1, -1] + [1] * n_shape)
 
-            w_alpha = K.minimum(0, w) * alpha[None] + K.maximum(0.0, w)
-            w_alpha_bar = K.minimum(0, w) * (1 - alpha[None])
+            w_alpha = K.minimum(z_value, w) * alpha[None] + K.maximum(z_value, w)
+            w_alpha_bar = K.minimum(z_value, w) * (1 - alpha[None])
 
-            score_box = K.sum(K.maximum(0.0, w_alpha_bar) * upper_reshaped, 1)
+            score_box = K.sum(K.maximum(z_value, w_alpha_bar) * upper_reshaped, 1)
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
             return score_box + score_ball
@@ -720,10 +722,10 @@ def get_upper_ball_finetune(
             lower = kwargs["lower"]  # flatten vector
             lower_reshaped = np.reshape(lower, [1, -1] + [1] * n_shape)
 
-            w_alpha = K.maximum(0, w) * alpha[None] + K.minimum(0.0, w)
-            w_alpha_bar = K.maximum(0, w) * (1 - alpha[None])
+            w_alpha = K.maximum(z_value, w) * alpha[None] + K.minimum(z_value, w)
+            w_alpha_bar = K.maximum(z_value, w) * (1 - alpha[None])
 
-            score_box = K.sum(K.minimum(0.0, w_alpha_bar) * lower_reshaped, 1)
+            score_box = K.sum(K.minimum(z_value, w_alpha_bar) * lower_reshaped, 1)
             score_ball = get_lower_ball(x_0, eps, p, w_alpha, b)
 
             return score_box + score_ball

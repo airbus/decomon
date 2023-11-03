@@ -64,11 +64,16 @@ class BackwardMaxPooling2D(BackwardLayer):
         w_u_out_new = K.concatenate([K.expand_dims(K.expand_dims(0 * (op_flat(y)), 1), -1)] * n_out, -1)
         w_l_out_new = w_u_out_new
 
+        z_value = K.cast(0.0, dtype=w_u_out.dtype)
         b_u_out_new = (
-            K.sum(K.maximum(w_u_out, 0) * b_u_pooled, 2) + K.sum(K.minimum(w_u_out, 0) * b_l_pooled, 2) + b_u_out
+            K.sum(K.maximum(w_u_out, z_value) * b_u_pooled, 2)
+            + K.sum(K.minimum(w_u_out, z_value) * b_l_pooled, 2)
+            + b_u_out
         )
         b_l_out_new = (
-            K.sum(K.maximum(w_l_out, 0) * b_l_pooled, 2) + K.sum(K.minimum(w_l_out, 0) * b_u_pooled, 2) + b_l_out
+            K.sum(K.maximum(w_l_out, z_value) * b_l_pooled, 2)
+            + K.sum(K.minimum(w_l_out, z_value) * b_u_pooled, 2)
+            + b_l_out
         )
 
         return [w_u_out_new, b_u_out_new, w_l_out_new, b_l_out_new]

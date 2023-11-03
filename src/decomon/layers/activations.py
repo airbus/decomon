@@ -492,8 +492,10 @@ def softmax(
         outputs, compute_ibp_from_affine=False
     )
     if ibp:
-        u_c = K.minimum(u_c, 1.0)
-        l_c = K.maximum(l_c, 0.0)
+        o_value = K.cast(1.0, dtype=u_c.dtype)
+        z_value = K.cast(0.0, dtype=u_c.dtype)
+        u_c = K.minimum(u_c, o_value)
+        l_c = K.maximum(l_c, z_value)
 
     return inputs_outputs_spec.extract_outputsformode_from_fulloutputs([x, u_c, w_u, b_u, l_c, w_l, b_l, h, g])
 

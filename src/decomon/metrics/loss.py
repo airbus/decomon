@@ -322,11 +322,11 @@ def get_adv_loss(
         if ibp:
             score_ibp = adv_ibp(u_c, l_c, y_true)
             if clip_value is not None:
-                score_ibp = K.maximum(score_ibp, clip_value)
+                score_ibp = K.maximum(score_ibp, K.cast(clip_value, dtype=score_ibp.dtype))
         if affine:
             score_affine = adv_affine(x_0, w_u, b_u, w_l, b_l, y_true)
             if clip_value is not None:
-                score_affine = K.maximum(score_affine, clip_value)
+                score_affine = K.maximum(score_affine, K.cast(clip_value, dtype=score_affine.dtype))
 
         if mode == ForwardMode.IBP:
             if sigmoid:
@@ -425,7 +425,9 @@ class DecomonLossFusion(DecomonLayer):
             source_tensor = _create_identity_tensor_like(l_c)
 
             score = K.concatenate([adv_ibp(u_c, l_c, source_tensor[:, i])[:, None] for i in range(shape)], -1)
-            return K.maximum(score, -1)  # + 1e-3*K.maximum(K.max(K.abs(u_c), -1)[:,None], K.abs(l_c))
+            return K.maximum(
+                score, K.cast(-1, dtype=score.dtype)
+            )  # + 1e-3*K.maximum(K.max(K.abs(u_c), -1)[:,None], K.abs(l_c))
 
     def call_backward(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
         if not self.asymptotic:
@@ -498,7 +500,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
         # compute center
         x_0 = (x[:, 0] + x[:, 1]) / 2.0
-        radius = K.maximum((x[:, 1] - x[:, 0]) / 2.0, epsilon())
+        radius = K.maximum((x[:, 1] - x[:, 0]) / 2.0, K.cast(epsilon(), dtype=x.dtype))
         source_tensor = _create_identity_tensor_like(b_l)
 
         shape = b_l.shape[-1]
@@ -514,9 +516,11 @@ class DecomonRadiusRobust(DecomonLayer):
 
             score = K.sum(W_adv * x_0[:, :, None], 1) + b_adv  # (None, n_out)
 
-            denum = K.maximum(K.sum(K.abs(W_adv * radius[:, :, None]), 1), epsilon())  # (None, n_out)
+            denum = K.maximum(
+                K.sum(K.abs(W_adv * radius[:, :, None]), 1), K.cast(epsilon(), dtype=W_adv.dtype)
+            )  # (None, n_out)
 
-            eps_adv = K.minimum(-score / denum + y_tensor, 2.0)
+            eps_adv = K.minimum(-score / denum + y_tensor, K.cast(2.0, dtype=score.dtype))
 
             adv_volume = 1.0 - eps_adv
 
@@ -532,7 +536,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
         # compute center
         x_0 = (x[:, 0] + x[:, 1]) / 2.0
-        radius = K.maximum((x[:, 1] - x[:, 0]) / 2.0, epsilon())
+        radius = K.maximum((x[:, 1] - x[:, 0]) / 2.0, K.cast(epsilon(), dtype=x.dtype))
         source_tensor = _create_identity_tensor_like(b_l)
 
         shape = b_l.shape[-1]
@@ -542,9 +546,11 @@ class DecomonRadiusRobust(DecomonLayer):
             b_adv = b_u - 1e6 * y_tensor
 
             score = K.sum(W_adv * x_0[:, :, None], 1) + b_adv  # (None, n_out)
-            denum = K.maximum(K.sum(K.abs(W_adv * radius[:, :, None]), 1), epsilon())  # (None, n_out)
+            denum = K.maximum(
+                K.sum(K.abs(W_adv * radius[:, :, None]), 1), K.cast(epsilon(), dtype=W_adv.dtype)
+            )  # (None, n_out)
 
-            eps_adv = K.minimum(-score / denum + y_tensor, 2.0)
+            eps_adv = K.minimum(-score / denum + y_tensor, K.cast(2.0, dtype=score.dtype))
 
             adv_volume = 1.0 - eps_adv
 
