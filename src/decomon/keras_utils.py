@@ -16,7 +16,7 @@ class BatchedIdentityLike(keras.Operation):
 
     """
 
-    def call(self, x: Tensor) -> Tensor:
+    def call(self, x: BackendTensor) -> Tensor:
         if is_symbolic_tensor(x):
             return self.compute_output_spec(x)
         else:
@@ -50,7 +50,7 @@ class BatchedDiagLike(keras.Operation):
 
     """
 
-    def call(self, x: Tensor) -> Tensor:
+    def call(self, x: BackendTensor) -> Tensor:
         if is_symbolic_tensor(x):
             return self.compute_output_spec(x)
         else:

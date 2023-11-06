@@ -1,6 +1,5 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import keras
 import keras.ops as K
 from keras.layers import (
     Add,
@@ -18,6 +17,7 @@ from keras.layers import (
 from decomon.core import ForwardMode, PerturbationDomain
 from decomon.layers.core import DecomonLayer
 from decomon.layers.utils import broadcast, multiply, permute_dimensions
+from decomon.types import BackendTensor
 from decomon.utils import maximum, minus, subtract
 
 ##### Merge Layer ####
@@ -115,7 +115,7 @@ class DecomonAdd(DecomonMerge, Add):
             **kwargs,
         )
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         # splits the inputs
         (
             inputs_x,
@@ -186,7 +186,7 @@ class DecomonAverage(DecomonMerge, Average):
         )
         self.op = Lambda(lambda x: sum(x) / len(x))
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         # splits the inputs
         (
             inputs_x,
@@ -256,7 +256,7 @@ class DecomonSubtract(DecomonMerge, Subtract):
             **kwargs,
         )
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         if self.dc_decomp:
             raise NotImplementedError()
 
@@ -305,7 +305,7 @@ class DecomonMinimum(DecomonMerge, Minimum):
             **kwargs,
         )
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         if self.dc_decomp:
             raise NotImplementedError()
 
@@ -368,7 +368,7 @@ class DecomonMaximum(DecomonMerge, Maximum):
             **kwargs,
         )
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         if self.dc_decomp:
             raise NotImplementedError()
 
@@ -428,7 +428,7 @@ class DecomonConcatenate(DecomonMerge, Concatenate):
             **kwargs,
         )
 
-        def func(inputs: List[keras.KerasTensor]) -> keras.KerasTensor:
+        def func(inputs: List[BackendTensor]) -> BackendTensor:
             return Concatenate.call(self, inputs)
 
         self.op = func
@@ -437,7 +437,7 @@ class DecomonConcatenate(DecomonMerge, Concatenate):
         else:
             self.op_w = Concatenate(axis=self.axis + 1)
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         # splits the inputs
         (
             inputs_x,
@@ -507,7 +507,7 @@ class DecomonMultiply(DecomonMerge, Multiply):
             **kwargs,
         )
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         if self.dc_decomp:
             raise NotImplementedError()
 
@@ -571,7 +571,7 @@ class DecomonDot(DecomonMerge, Dot):
         else:
             self.axes = axes
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         if self.dc_decomp:
             raise NotImplementedError()
 
