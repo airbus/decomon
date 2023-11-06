@@ -146,12 +146,12 @@ def get_adv_box(
         n_label = source_labels.shape[-1]
 
         # two possitible cases: the model improves the bound based on the knowledge of the labels
-        output: npt.NDArray[np.float_]
+        output: List[npt.NDArray[np.float_]]
         if decomon_model.backward_bounds:
             C = np.diag([1] * n_label)[None] - source_labels[:, :, None]
-            output = decomon_model.predict_on_single_batch_np([z, C])
+            output = decomon_model.predict_on_single_batch_np([z, C])  # type: ignore
         else:
-            output = decomon_model.predict_on_single_batch_np(z)
+            output = decomon_model.predict_on_single_batch_np(z)  # type: ignore
 
         def get_ibp_score(
             u_c: npt.NDArray[np.float_],

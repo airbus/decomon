@@ -675,6 +675,9 @@ def split(
         axis = len(input_shape) - 1
     else:
         n = input_shape[axis]
+    if n is None:
+        raise ValueError(f"Dimension {axis} corresponding to `axis` cannot be None")
+
     x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(
         inputs, tight=False, compute_ibp_from_affine=False
     )
@@ -757,6 +760,8 @@ def sort(
         axis = len(input_shape) - 1
     else:
         n = input_shape[axis]
+    if n is None:
+        raise ValueError(f"Dimension {axis} corresponding to `axis` cannot be None")
 
     empty_tensor_list = [empty_tensor] * n
 

@@ -5,6 +5,8 @@ import keras.ops as K
 import numpy as np
 from keras.layers import Layer
 
+from decomon.types import BackendTensor, Tensor
+
 
 class BatchedIdentityLike(keras.Operation):
     """Keras Operation creating an identity tensor with shape (including batch_size) based on input.
@@ -14,19 +16,19 @@ class BatchedIdentityLike(keras.Operation):
 
     """
 
-    def call(self, x):
+    def call(self, x: Tensor) -> Tensor:
         if is_symbolic_tensor(x):
             return self.compute_output_spec(x)
         else:
             return self._call(x)
 
-    def _call(self, x):
+    def _call(self, x: BackendTensor) -> BackendTensor:
         input_shape = x.shape
         identity_tensor = K.identity(input_shape[-1], dtype=x.dtype)
         n_repeat = int(np.prod(input_shape[:-1]))
         return K.reshape(K.repeat(identity_tensor[None], n_repeat, axis=0), tuple(input_shape) + (-1,))
 
-    def compute_output_spec(self, x):
+    def compute_output_spec(self, x: Tensor) -> keras.KerasTensor:
         x_shape = x.shape
         x_type = getattr(x, "dtype", type(x))
         x_sparse = getattr(x, "sparse", False)
@@ -48,16 +50,16 @@ class BatchedDiagLike(keras.Operation):
 
     """
 
-    def call(self, x):
+    def call(self, x: Tensor) -> Tensor:
         if is_symbolic_tensor(x):
             return self.compute_output_spec(x)
         else:
             return self._call(x)
 
-    def _call(self, x):
+    def _call(self, x: BackendTensor) -> BackendTensor:
         return K.concatenate([K.diag(K.ravel(w_part))[None] for w_part in K.split(x, len(x), axis=0)], axis=0)
 
-    def compute_output_spec(self, x):
+    def compute_output_spec(self, x: Tensor) -> keras.KerasTensor:
         x_shape = x.shape
         x_type = getattr(x, "dtype", type(x))
         x_sparse = getattr(x, "sparse", False)
@@ -68,7 +70,7 @@ class BatchedDiagLike(keras.Operation):
         )
 
 
-def is_symbolic_tensor(x):
+def is_symbolic_tensor(x: Tensor) -> bool:
     """Check whether the tensor is symbolic or not.
 
     Works even during backend calls made by layers without actual compute_output_shape().
@@ -174,4 +176,4 @@ def check_if_single_shape(shape: Any) -> bool:
     if not isinstance(shape, (list, tuple, dict)):
         shape = tuple(shape)
 
-    return isinstance(shape, tuple) and shape and isinstance(shape[0], (int, type(None)))
+    return isinstance(shape, tuple) and len(shape) > 0 and isinstance(shape[0], (int, type(None)))
