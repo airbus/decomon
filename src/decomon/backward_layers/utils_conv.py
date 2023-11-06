@@ -3,8 +3,8 @@ import warnings
 import keras
 import keras.ops as K
 import numpy as np
-import tensorflow as tf
 from keras.layers import Conv2D, Input
+from keras.ops.image import extract_patches
 
 
 def get_toeplitz(conv_layer: Conv2D, flatten: bool = True) -> keras.KerasTensor:
@@ -48,7 +48,6 @@ def get_toeplitz_channels_last(conv_layer: Conv2D, flatten: bool = True) -> kera
     else:  # list of inputs
         input_shape = input[-1].shape
     _, w_in, h_in, c_in = input_shape
-    padding = conv_layer.padding.upper()
     output = conv_layer.output
     if isinstance(output, keras.KerasTensor):
         output_shape = output.shape
@@ -58,17 +57,15 @@ def get_toeplitz_channels_last(conv_layer: Conv2D, flatten: bool = True) -> kera
 
     kernel_filter = conv_layer.kernel
     filter_size = kernel_filter.shape[0]
-    stride_rows, stride_cols = conv_layer.strides
-    rates_rows, rates_cols = conv_layer.dilation_rate
 
     diag = K.reshape(K.identity(w_in * h_in * c_in), (w_in * h_in * c_in, w_in, h_in, c_in))
 
-    diag_patches = tf.image.extract_patches(
+    diag_patches = extract_patches(
         diag,
-        [1, filter_size, filter_size, 1],
-        strides=[1, stride_rows, stride_cols, 1],
-        rates=[1, rates_rows, rates_cols, 1],
-        padding=padding,
+        size=[filter_size, filter_size],
+        strides=list(conv_layer.strides),
+        dilation_rate=list(conv_layer.dilation_rate),
+        padding=conv_layer.padding,
     )
 
     diag_patches_ = K.reshape(diag_patches, (w_in, h_in, c_in, w_out, h_out, filter_size**2, c_in))
@@ -121,7 +118,6 @@ def get_toeplitz_channels_first(conv_layer: Conv2D, flatten: bool = True) -> ker
     else:  # list of inputs
         input_shape = input[-1].shape
     _, c_in, w_in, h_in = input_shape
-    padding = conv_layer.padding.upper()
     output = conv_layer.output
     if isinstance(output, keras.KerasTensor):
         output_shape = output.shape
@@ -133,9 +129,7 @@ def get_toeplitz_channels_first(conv_layer: Conv2D, flatten: bool = True) -> ker
 
     diag = K.reshape(K.identity(w_in * h_in * c_in), (w_in * h_in * c_in, w_in, h_in, c_in))
 
-    diag_patches = tf.image.extract_patches(
-        diag, [1, filter_size, filter_size, 1], [1, 1, 1, 1], [1, 1, 1, 1], padding=padding
-    )
+    diag_patches = extract_patches(diag, [filter_size, filter_size], [1, 1], [1, 1], padding=conv_layer.padding)
 
     diag_patches_ = K.reshape(diag_patches, (w_in, h_in, c_in, w_out, h_out, filter_size**2, c_in))
 
