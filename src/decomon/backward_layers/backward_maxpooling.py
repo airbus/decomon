@@ -1,15 +1,14 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import keras
 import keras.ops as K
 import numpy as np
-import tensorflow as tf
 from keras.layers import Flatten, Layer
 
 from decomon.backward_layers.core import BackwardLayer
 from decomon.backward_layers.utils import backward_max_, get_identity_lirpa
 from decomon.core import ForwardMode, PerturbationDomain
 from decomon.keras_utils import BatchedIdentityLike
+from decomon.types import BackendTensor
 
 
 class BackwardMaxPooling2D(BackwardLayer):
@@ -42,12 +41,12 @@ class BackwardMaxPooling2D(BackwardLayer):
 
     def _pooling_function_fast(
         self,
-        inputs: List[keras.KerasTensor],
-        w_u_out: keras.KerasTensor,
-        b_u_out: keras.KerasTensor,
-        w_l_out: keras.KerasTensor,
-        b_l_out: keras.KerasTensor,
-    ) -> List[keras.KerasTensor]:
+        inputs: List[BackendTensor],
+        w_u_out: BackendTensor,
+        b_u_out: BackendTensor,
+        w_l_out: BackendTensor,
+        b_l_out: BackendTensor,
+    ) -> List[BackendTensor]:
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
 
         op_flat = Flatten()
@@ -80,12 +79,12 @@ class BackwardMaxPooling2D(BackwardLayer):
 
     def _pooling_function_not_fast(
         self,
-        inputs: List[keras.KerasTensor],
-        w_u_out: keras.KerasTensor,
-        b_u_out: keras.KerasTensor,
-        w_l_out: keras.KerasTensor,
-        b_l_out: keras.KerasTensor,
-    ) -> List[keras.KerasTensor]:
+        inputs: List[BackendTensor],
+        w_u_out: BackendTensor,
+        b_u_out: BackendTensor,
+        w_l_out: BackendTensor,
+        b_l_out: BackendTensor,
+    ) -> List[BackendTensor]:
         """
         Args:
             inputs
@@ -185,7 +184,7 @@ class BackwardMaxPooling2D(BackwardLayer):
 
         return [w_u_out, b_u_out, w_l_out, b_l_out]
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
         if self.fast:
             return self._pooling_function_fast(

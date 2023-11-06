@@ -1,6 +1,5 @@
 from typing import Any, Callable, List, Optional, Tuple, Union
 
-import keras
 import keras.ops as K
 import numpy as np
 from keras.config import epsilon
@@ -15,12 +14,13 @@ from decomon.core import (
     get_affine,
     get_ibp,
 )
+from decomon.types import Tensor
 
-TensorFunction = Callable[[keras.KerasTensor], keras.KerasTensor]
+TensorFunction = Callable[[Tensor], Tensor]
 
 
 # linear hull for activation function
-def relu_prime(x: keras.KerasTensor) -> keras.KerasTensor:
+def relu_prime(x: Tensor) -> Tensor:
     """Derivative of relu
 
     Args:
@@ -33,7 +33,7 @@ def relu_prime(x: keras.KerasTensor) -> keras.KerasTensor:
     return K.clip(K.sign(x), K.cast(0, dtype=x.dtype), K.cast(1, dtype=x.dtype))
 
 
-def sigmoid_prime(x: keras.KerasTensor) -> keras.KerasTensor:
+def sigmoid_prime(x: Tensor) -> Tensor:
     """Derivative of sigmoid
 
     Args:
@@ -47,7 +47,7 @@ def sigmoid_prime(x: keras.KerasTensor) -> keras.KerasTensor:
     return s_x * (K.cast(1, dtype=x.dtype) - s_x)
 
 
-def tanh_prime(x: keras.KerasTensor) -> keras.KerasTensor:
+def tanh_prime(x: Tensor) -> Tensor:
     """Derivative of tanh
 
     Args:
@@ -61,7 +61,7 @@ def tanh_prime(x: keras.KerasTensor) -> keras.KerasTensor:
     return K.cast(1, dtype=x.dtype) - K.power(s_x, K.cast(2, dtype=x.dtype))
 
 
-def softsign_prime(x: keras.KerasTensor) -> keras.KerasTensor:
+def softsign_prime(x: Tensor) -> Tensor:
     """Derivative of softsign
 
     Args:
@@ -75,23 +75,23 @@ def softsign_prime(x: keras.KerasTensor) -> keras.KerasTensor:
 
 
 ##### corners ######
-def get_lower_bound_grid(x: keras.KerasTensor, W: keras.KerasTensor, b: keras.KerasTensor, n: int) -> keras.KerasTensor:
+def get_lower_bound_grid(x: Tensor, W: Tensor, b: Tensor, n: int) -> Tensor:
     A, B = convert_lower_search_2_subset_sum(x, W, b, n)
     return subset_sum_lower(A, B, repeat=n)
 
 
-def get_upper_bound_grid(x: keras.KerasTensor, W: keras.KerasTensor, b: keras.KerasTensor, n: int) -> keras.KerasTensor:
+def get_upper_bound_grid(x: Tensor, W: Tensor, b: Tensor, n: int) -> Tensor:
     return -get_lower_bound_grid(x, -W, -b, n)
 
 
 def get_bound_grid(
-    x: keras.KerasTensor,
-    W_u: keras.KerasTensor,
-    b_u: keras.KerasTensor,
-    W_l: keras.KerasTensor,
-    b_l: keras.KerasTensor,
+    x: Tensor,
+    W_u: Tensor,
+    b_u: Tensor,
+    W_l: Tensor,
+    b_l: Tensor,
     n: int,
-) -> Tuple[keras.KerasTensor, keras.KerasTensor]:
+) -> Tuple[Tensor, Tensor]:
     upper = get_upper_bound_grid(x, W_u, b_u, n)
     lower = get_lower_bound_grid(x, W_l, b_l, n)
 
@@ -99,9 +99,7 @@ def get_bound_grid(
 
 
 # convert max Wx +b s.t Wx+b<=0 into a subset-sum problem with positive values
-def convert_lower_search_2_subset_sum(
-    x: keras.KerasTensor, W: keras.KerasTensor, b: keras.KerasTensor, n: int
-) -> Tuple[keras.KerasTensor, keras.KerasTensor]:
+def convert_lower_search_2_subset_sum(x: Tensor, W: Tensor, b: Tensor, n: int) -> Tuple[Tensor, Tensor]:
     x_min = x[:, 0]
     x_max = x[:, 1]
 
@@ -115,7 +113,7 @@ def convert_lower_search_2_subset_sum(
     return weights, const
 
 
-def subset_sum_lower(W: keras.KerasTensor, b: keras.KerasTensor, repeat: int = 1) -> keras.KerasTensor:
+def subset_sum_lower(W: Tensor, b: Tensor, repeat: int = 1) -> Tensor:
     B = K.sort(W, axis=1)
     C = K.repeat(B, repeats=repeat, axis=1)
     C_reduced = K.cumsum(C, axis=1)
@@ -127,13 +125,13 @@ def subset_sum_lower(W: keras.KerasTensor, b: keras.KerasTensor, repeat: int = 1
 
 # define routines to get linear relaxations useful both for forward and backward
 def get_linear_hull_relu(
-    upper: keras.KerasTensor,
-    lower: keras.KerasTensor,
+    upper: Tensor,
+    lower: Tensor,
     slope: Union[str, Slope],
     upper_g: float = 0.0,
     lower_g: float = 0.0,
     **kwargs: Any,
-) -> List[keras.KerasTensor]:
+) -> List[Tensor]:
     slope = Slope(slope)
     # in case upper=lower, this cases are
     # considered with index_dead and index_linear
@@ -202,23 +200,17 @@ def get_linear_hull_relu(
     return [w_u, b_u, w_l, b_l]
 
 
-def get_linear_hull_sigmoid(
-    upper: keras.KerasTensor, lower: keras.KerasTensor, slope: Union[str, Slope], **kwargs: Any
-) -> List[keras.KerasTensor]:
+def get_linear_hull_sigmoid(upper: Tensor, lower: Tensor, slope: Union[str, Slope], **kwargs: Any) -> List[Tensor]:
     x = [upper, lower]
     return get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, mode=ForwardMode.IBP, **kwargs)
 
 
-def get_linear_hull_tanh(
-    upper: keras.KerasTensor, lower: keras.KerasTensor, slope: Union[str, Slope], **kwargs: Any
-) -> List[keras.KerasTensor]:
+def get_linear_hull_tanh(upper: Tensor, lower: Tensor, slope: Union[str, Slope], **kwargs: Any) -> List[Tensor]:
     x = [upper, lower]
     return get_linear_hull_s_shape(x, func=K.tanh, f_prime=tanh_prime, mode=ForwardMode.IBP, **kwargs)
 
 
-def get_linear_softplus_hull(
-    upper: keras.KerasTensor, lower: keras.KerasTensor, slope: Union[str, Slope], **kwargs: Any
-) -> List[keras.KerasTensor]:
+def get_linear_softplus_hull(upper: Tensor, lower: Tensor, slope: Union[str, Slope], **kwargs: Any) -> List[Tensor]:
     slope = Slope(slope)
     # in case upper=lower, this cases are
     # considered with index_dead and index_linear
@@ -273,12 +265,12 @@ def get_linear_softplus_hull(
 
 
 def subtract(
-    inputs_0: List[keras.KerasTensor],
-    inputs_1: List[keras.KerasTensor],
+    inputs_0: List[Tensor],
+    inputs_1: List[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-) -> List[keras.KerasTensor]:
+) -> List[Tensor]:
     """LiRPA implementation of inputs_0-inputs_1
 
     Args:
@@ -300,12 +292,12 @@ def subtract(
 
 
 def add(
-    inputs_0: List[keras.KerasTensor],
-    inputs_1: List[keras.KerasTensor],
+    inputs_0: List[Tensor],
+    inputs_1: List[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-) -> List[keras.KerasTensor]:
+) -> List[Tensor]:
     """LiRPA implementation of inputs_0+inputs_1
 
     Args:
@@ -348,13 +340,13 @@ def add(
 
 
 def relu_(
-    inputs: List[keras.KerasTensor],
+    inputs: List[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[keras.KerasTensor]:
+) -> List[Tensor]:
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
 
@@ -409,12 +401,12 @@ def relu_(
 
 
 def minus(
-    inputs: List[keras.KerasTensor],
+    inputs: List[Tensor],
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     **kwargs: Any,
-) -> List[keras.KerasTensor]:
+) -> List[Tensor]:
     """LiRPA implementation of minus(x)=-x.
 
     Args:
@@ -448,14 +440,14 @@ def minus(
 
 
 def maximum(
-    inputs_0: List[keras.KerasTensor],
-    inputs_1: List[keras.KerasTensor],
+    inputs_0: List[Tensor],
+    inputs_1: List[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     finetune: bool = False,
     **kwargs: Any,
-) -> List[keras.KerasTensor]:
+) -> List[Tensor]:
     """LiRPA implementation of element-wise max
 
     Args:
@@ -489,14 +481,14 @@ def maximum(
 
 
 def minimum(
-    inputs_0: List[keras.KerasTensor],
-    inputs_1: List[keras.KerasTensor],
+    inputs_0: List[Tensor],
+    inputs_1: List[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     finetune: bool = False,
     **kwargs: Any,
-) -> List[keras.KerasTensor]:
+) -> List[Tensor]:
     """LiRPA implementation of element-wise min
 
     Args:
@@ -529,7 +521,7 @@ def minimum(
 
 
 def get_linear_hull_s_shape(
-    inputs: List[keras.KerasTensor],
+    inputs: List[Tensor],
     func: TensorFunction = K.sigmoid,
     f_prime: TensorFunction = sigmoid_prime,
     perturbation_domain: Optional[PerturbationDomain] = None,
@@ -537,7 +529,7 @@ def get_linear_hull_s_shape(
     slope: Union[str, Slope] = Slope.V_SLOPE,
     dc_decomp: bool = False,
     **kwargs: Any,
-) -> List[keras.KerasTensor]:
+) -> List[Tensor]:
     """Computing the linear hull of shape functions  given the pre activation neurons
 
     Args:
@@ -615,12 +607,12 @@ def get_linear_hull_s_shape(
 
 
 def get_t_upper(
-    u_c_flat: keras.KerasTensor,
-    l_c_flat: keras.KerasTensor,
-    s_l: keras.KerasTensor,
+    u_c_flat: Tensor,
+    l_c_flat: Tensor,
+    s_l: Tensor,
     func: TensorFunction = K.sigmoid,
     f_prime: TensorFunction = sigmoid_prime,
-) -> List[keras.KerasTensor]:
+) -> List[Tensor]:
     """linear interpolation between lower and upper bounds on the function func to have a symbolic approximation of the best
     coefficient for the affine upper bound
 
@@ -673,12 +665,12 @@ def get_t_upper(
 
 
 def get_t_lower(
-    u_c_flat: keras.KerasTensor,
-    l_c_flat: keras.KerasTensor,
-    s_u: keras.KerasTensor,
+    u_c_flat: Tensor,
+    l_c_flat: Tensor,
+    s_u: Tensor,
     func: TensorFunction = K.sigmoid,
     f_prime: TensorFunction = sigmoid_prime,
-) -> List[keras.KerasTensor]:
+) -> List[Tensor]:
     """linear interpolation between lower and upper bounds on the function func to have a symbolic approximation of the best
     coefficient for the affine lower bound
 

@@ -1,12 +1,11 @@
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
-import keras
-import keras.ops as K
 from keras.layers import InputSpec, Layer, Permute, Reshape
 from keras.src.backend import rnn
 
 from decomon.core import ForwardMode, PerturbationDomain, get_affine, get_ibp
 from decomon.layers.core import DecomonLayer
+from decomon.types import BackendTensor
 
 
 class DecomonReshape(DecomonLayer, Reshape):
@@ -70,8 +69,8 @@ class DecomonReshape(DecomonLayer, Reshape):
         if self.dc_decomp:
             self.input_spec += [InputSpec(min_ndim=1), InputSpec(min_ndim=1)]
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
-        def op(x: keras.KerasTensor) -> keras.KerasTensor:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+        def op(x: BackendTensor) -> BackendTensor:
             return Reshape.call(self, x)
 
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(
@@ -102,9 +101,7 @@ class DecomonReshape(DecomonLayer, Reshape):
 
             else:
 
-                def step_func(
-                    x: keras.KerasTensor, _: List[keras.KerasTensor]
-                ) -> Tuple[keras.KerasTensor, List[keras.KerasTensor]]:
+                def step_func(x: BackendTensor, _: List[BackendTensor]) -> Tuple[BackendTensor, List[BackendTensor]]:
                     return op(x), _
 
                 w_u_out = rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]
@@ -180,8 +177,8 @@ class DecomonPermute(DecomonLayer, Permute):
         if self.dc_decomp:
             self.input_spec += [InputSpec(min_ndim=1), InputSpec(min_ndim=1)]
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
-        def op(x: keras.KerasTensor) -> keras.KerasTensor:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+        def op(x: BackendTensor) -> BackendTensor:
             return Permute.call(self, x)
 
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(
@@ -211,9 +208,7 @@ class DecomonPermute(DecomonLayer, Permute):
                 w_l_out = op(w_l)
             else:
 
-                def step_func(
-                    x: keras.KerasTensor, _: List[keras.KerasTensor]
-                ) -> Tuple[keras.KerasTensor, List[keras.KerasTensor]]:
+                def step_func(x: BackendTensor, _: List[BackendTensor]) -> Tuple[BackendTensor, List[BackendTensor]]:
                     return op(x), _
 
                 w_u_out = rnn(step_function=step_func, inputs=w_u, initial_states=[], unroll=False)[1]

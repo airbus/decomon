@@ -13,6 +13,7 @@ from decomon.core import (
     get_ibp,
 )
 from decomon.layers.core import DecomonLayer
+from decomon.types import BackendTensor
 
 
 class BackwardLayer(ABC, Wrapper):
@@ -68,7 +69,7 @@ class BackwardLayer(ABC, Wrapper):
         return config
 
     @abstractmethod
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         """
         Args:
             inputs

@@ -29,6 +29,7 @@ from decomon.core import (
 )
 from decomon.keras_utils import BatchedIdentityLike, reset_layer_all_weights
 from decomon.layers.utils import is_a_merge_layer
+from decomon.types import BackendTensor
 
 try:
     from deel.lip.layers import LipschitzLayer
@@ -341,7 +342,7 @@ class Convert2Mode(Layer):
         self.mode_to = ForwardMode(mode_to)
         self.perturbation_domain = perturbation_domain
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         mode_from = self.mode_from
         mode_to = self.mode_to
         perturbation_domain = self.perturbation_domain
