@@ -9,6 +9,7 @@ from decomon.layers.core import DecomonLayer
 from decomon.layers.decomon_merge_layers import DecomonConcatenate
 from decomon.layers.decomon_reshape import DecomonReshape
 from decomon.layers.utils import ClipAlpha, expand_dims, max_, min_, sort
+from decomon.types import BackendTensor
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ else:
                 (-1, self.n), mode=self.mode, perturbation_domain=self.perturbation_domain, dc_decomp=self.dc_decomp
             ).call
 
-        def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+        def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
             shape_in = tuple(inputs[-1].shape[1:])
             inputs_reshaped = self.reshape(inputs)
             if self.n == 2:
@@ -174,7 +175,7 @@ else:
             )
             return config
 
-        def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+        def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
             inputs_reshaped = self.op_reshape_in(inputs)
             inputs_max = expand_dims(
                 max_(

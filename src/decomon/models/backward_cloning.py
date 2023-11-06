@@ -27,6 +27,7 @@ from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.crown import Convert2BackwardMode, Fuse, MergeWithPrevious
 from decomon.models.forward_cloning import OutputMapDict
 from decomon.models.utils import Convert2Mode, ensure_functional_model, get_depth_dict
+from decomon.types import BackendTensor, Tensor
 
 
 def get_disconnected_input(
@@ -41,7 +42,7 @@ def get_disconnected_input(
     if dtype is None:
         dtype = floatx()
 
-    def disco_priv(inputs: List[keras.KerasTensor]) -> List[keras.KerasTensor]:
+    def disco_priv(inputs: List[Tensor]) -> List[Tensor]:
         x, u_c, w_f_u, b_f_u, l_c, w_f_l, b_f_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
         dtype = x.dtype
         empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)

@@ -10,6 +10,7 @@ from keras.models import Model
 
 from decomon.core import BoxDomain, PerturbationDomain
 from decomon.models.models import DecomonModel
+from decomon.types import BackendTensor, Tensor
 
 
 class MetricMode(str, Enum):
@@ -61,7 +62,7 @@ class MetricLayer(ABC, Layer):
         return config
 
     @abstractmethod
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> BackendTensor:
         """
         Args:
             inputs
@@ -99,13 +100,13 @@ class AdversarialCheck(MetricLayer):
 
     def linear_adv(
         self,
-        z_tensor: keras.KerasTensor,
-        y_tensor: keras.KerasTensor,
-        w_u: keras.KerasTensor,
-        b_u: keras.KerasTensor,
-        w_l: keras.KerasTensor,
-        b_l: keras.KerasTensor,
-    ) -> keras.KerasTensor:
+        z_tensor: Tensor,
+        y_tensor: Tensor,
+        w_u: Tensor,
+        b_u: Tensor,
+        w_l: Tensor,
+        b_l: Tensor,
+    ) -> Tensor:
         w_upper = w_u * (1 - y_tensor[:, None]) - K.expand_dims(K.sum(w_l * y_tensor[:, None], -1), -1)
         b_upper = b_u * (1 - y_tensor) - b_l * y_tensor
 
@@ -113,7 +114,7 @@ class AdversarialCheck(MetricLayer):
 
         return K.max(adv_score, -1)
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> BackendTensor:
         """
         Args:
             inputs
@@ -185,7 +186,7 @@ class AdversarialScore(AdversarialCheck):
         """
         super().__init__(ibp=ibp, affine=affine, mode=mode, perturbation_domain=perturbation_domain, **kwargs)
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> BackendTensor:
         """
         Args:
             inputs
@@ -309,9 +310,7 @@ class UpperScore(MetricLayer):
         """
         super().__init__(ibp=ibp, affine=affine, mode=mode, perturbation_domain=perturbation_domain, **kwargs)
 
-    def linear_upper(
-        self, z_tensor: keras.KerasTensor, y_tensor: keras.KerasTensor, w_u: keras.KerasTensor, b_u: keras.KerasTensor
-    ) -> keras.KerasTensor:
+    def linear_upper(self, z_tensor: Tensor, y_tensor: Tensor, w_u: Tensor, b_u: Tensor) -> Tensor:
         w_upper = w_u * y_tensor[:, None]
         b_upper = b_u * y_tensor
 
@@ -319,7 +318,7 @@ class UpperScore(MetricLayer):
 
         return K.sum(upper_score, -1)
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> keras.KerasTensor:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> BackendTensor:
         """
         Args:
             inputs
@@ -379,11 +378,11 @@ def build_formal_upper_model(decomon_model: DecomonModel) -> keras.Model:
 
 
 def _get_ibp_score(
-    u_c: keras.KerasTensor,
-    l_c: keras.KerasTensor,
-    source_tensor: keras.KerasTensor,
-    target_tensor: Optional[keras.KerasTensor] = None,
-) -> keras.KerasTensor:
+    u_c: Tensor,
+    l_c: Tensor,
+    source_tensor: Tensor,
+    target_tensor: Optional[Tensor] = None,
+) -> Tensor:
     if target_tensor is None:
         target_tensor = 1.0 - source_tensor
 
@@ -401,15 +400,15 @@ def _get_ibp_score(
 
 
 def _get_affine_score(
-    z_tensor: keras.KerasTensor,
-    w_u: keras.KerasTensor,
-    b_u: keras.KerasTensor,
-    w_l: keras.KerasTensor,
-    b_l: keras.KerasTensor,
-    source_tensor: keras.KerasTensor,
+    z_tensor: Tensor,
+    w_u: Tensor,
+    b_u: Tensor,
+    w_l: Tensor,
+    b_l: Tensor,
+    source_tensor: Tensor,
     perturbation_domain: PerturbationDomain,
-    target_tensor: Optional[keras.KerasTensor] = None,
-) -> keras.KerasTensor:
+    target_tensor: Optional[Tensor] = None,
+) -> Tensor:
     if target_tensor is None:
         target_tensor = 1.0 - source_tensor
 
@@ -432,15 +431,15 @@ def _get_affine_score(
 
 
 def _get_backward_score(
-    z_tensor: keras.KerasTensor,
-    w_u: keras.KerasTensor,
-    b_u: keras.KerasTensor,
-    w_l: keras.KerasTensor,
-    b_l: keras.KerasTensor,
-    source_tensor: keras.KerasTensor,
+    z_tensor: Tensor,
+    w_u: Tensor,
+    b_u: Tensor,
+    w_l: Tensor,
+    b_l: Tensor,
+    source_tensor: Tensor,
     perturbation_domain: PerturbationDomain,
-    target_tensor: Optional[keras.KerasTensor] = None,
-) -> keras.KerasTensor:
+    target_tensor: Optional[Tensor] = None,
+) -> Tensor:
     return _get_affine_score(
         z_tensor,
         w_u[:, 0],

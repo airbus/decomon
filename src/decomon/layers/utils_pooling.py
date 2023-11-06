@@ -1,6 +1,5 @@
 from typing import Any, Dict, List, Optional, Union
 
-import keras
 import keras.ops as K
 import numpy as np
 import tensorflow as tf
@@ -12,19 +11,20 @@ from decomon.core import (
     PerturbationDomain,
     get_affine,
 )
+from decomon.types import BackendTensor, Tensor
 
 # step 1: compute (x_i, y_i) such that x_i[j]=l_j if j==i else u_j
 # dataset of size n+1 on which we can compute an affine bound
 
 
 def get_upper_linear_hull_max(
-    inputs: List[keras.KerasTensor],
+    inputs: List[Tensor],
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     perturbation_domain: Optional[PerturbationDomain] = None,
     axis: int = -1,
     dc_decomp: bool = False,
     **kwargs: Any,
-) -> List[keras.KerasTensor]:
+) -> List[Tensor]:
     """Compute the linear hull that overapproximates max along the axis dimension
 
     Args:
@@ -135,14 +135,14 @@ def get_upper_linear_hull_max(
 
 
 def get_lower_linear_hull_max(
-    inputs: List[keras.KerasTensor],
+    inputs: List[Tensor],
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     perturbation_domain: Optional[PerturbationDomain] = None,
     axis: int = -1,
-    finetune_lower: Optional[keras.KerasTensor] = None,
+    finetune_lower: Optional[BackendTensor] = None,
     dc_decomp: bool = False,
     **kwargs: Any,
-) -> List[keras.KerasTensor]:
+) -> List[Tensor]:
     """Compute the linear hull that overapproximates max along the axis dimension
 
     Args:

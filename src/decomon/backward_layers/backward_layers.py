@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import keras
 import keras.ops as K
 import numpy as np
-import tensorflow as tf
 from keras.layers import Flatten, Layer
 
 from decomon.backward_layers.activations import get
@@ -25,6 +24,7 @@ from decomon.layers.core import DecomonLayer
 from decomon.layers.decomon_layers import DecomonBatchNormalization
 from decomon.layers.utils import ClipAlpha, NonNeg, NonPos
 from decomon.models.utils import get_input_dim
+from decomon.types import BackendTensor
 
 
 class BackwardDense(BackwardLayer):
@@ -65,7 +65,7 @@ class BackwardDense(BackwardLayer):
             )
         self.frozen_weights = False
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         if len(inputs) == 0:
             inputs = self.layer.input
 
@@ -150,7 +150,7 @@ class BackwardConv2D(BackwardLayer):
             )
         self.frozen_weights = False
 
-    def get_affine_components(self, inputs: List[keras.KerasTensor]) -> Tuple[keras.KerasTensor, keras.KerasTensor]:
+    def get_affine_components(self, inputs: List[BackendTensor]) -> Tuple[BackendTensor, BackendTensor]:
         """Express the implicit affine matrix of the convolution layer.
 
         Conv is a linear operator but its affine component is implicit
@@ -191,7 +191,7 @@ class BackwardConv2D(BackwardLayer):
 
         return w_out_, b_out_
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         weight_, bias_ = self.get_affine_components(inputs)
         return [weight_, bias_] * 2
 
@@ -352,7 +352,7 @@ class BackwardActivation(BackwardLayer):
 
         self.built = True
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         # infer the output dimension
         if self.activation_name != "linear":
             if self.finetune:
@@ -433,7 +433,7 @@ class BackwardFlatten(BackwardLayer):
             **kwargs,
         )
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         return get_identity_lirpa(inputs)
 
 
@@ -458,7 +458,7 @@ class BackwardReshape(BackwardLayer):
             **kwargs,
         )
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         return get_identity_lirpa(inputs)
 
 
@@ -485,7 +485,7 @@ class BackwardPermute(BackwardLayer):
         self.dims = layer.dims
         self.op = layer.call
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
         # w_u_out (None, n_in, n_out)
@@ -526,7 +526,7 @@ class BackwardDropout(BackwardLayer):
             **kwargs,
         )
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         return get_identity_lirpa(inputs)
 
 
@@ -556,7 +556,7 @@ class BackwardBatchNormalization(BackwardLayer):
         self.axis = self.layer.axis
         self.op_flat = Flatten()
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         y = inputs[-1]
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
 
@@ -617,5 +617,5 @@ class BackwardInputLayer(BackwardLayer):
             **kwargs,
         )
 
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         return get_identity_lirpa(inputs)

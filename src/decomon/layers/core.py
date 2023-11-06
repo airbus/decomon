@@ -13,6 +13,7 @@ from decomon.core import (
     get_ibp,
 )
 from decomon.keras_utils import check_if_single_shape, reset_layer
+from decomon.types import BackendTensor
 
 
 class DecomonLayer(ABC, Layer):
@@ -98,7 +99,7 @@ class DecomonLayer(ABC, Layer):
         self.original_keras_layer_class.build(self, y_input_shape)
 
     @abstractmethod
-    def call(self, inputs: List[keras.KerasTensor], **kwargs: Any) -> List[keras.KerasTensor]:
+    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         """
         Args:
             inputs
@@ -210,7 +211,7 @@ class DecomonLayer(ABC, Layer):
         """
         return []
 
-    def join(self, bounds: List[keras.KerasTensor]) -> List[keras.KerasTensor]:
+    def join(self, bounds: List[BackendTensor]) -> List[BackendTensor]:
         """
         Args:
             bounds
