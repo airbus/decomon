@@ -26,7 +26,7 @@ from decomon.utils import maximum, minus, subtract
 class DecomonMerge(DecomonLayer):
     """Base class for Decomon layers based on Mergind Keras layers."""
 
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int], ...]]) -> List[Tuple[Optional[int], ...]]:
+    def compute_output_shape(self, input_shape: List[Tuple[Optional[int], ...]]) -> List[Tuple[Optional[int], ...]]:  # type: ignore
         """Compute output shapes from input shapes.
 
         By default, we assume that all inputs will be merged into "one" (still a list of tensors though).

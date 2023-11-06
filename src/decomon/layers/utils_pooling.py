@@ -60,6 +60,8 @@ def get_upper_linear_hull_max(
 
     # get the shape of the dimension
     n_dim = input_shape[axis]
+    if n_dim is None:
+        raise ValueError(f"Dimension {axis} corresponding to `axis` cannot be None")
 
     # expand dim/broadcast
     mask = K.identity(n_dim, dtype=dtype)  # (n_dim, n_dim)

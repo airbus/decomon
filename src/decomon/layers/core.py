@@ -137,8 +137,10 @@ class DecomonLayer(ABC, Layer):
                 # no compute_output_shape implemented (e.g. InputLayer)
                 return input_shape
 
+        # we know from here that we got a list of input shapes. Mypy does not.
+        input_shapes: List[Tuple[Optional[int], ...]] = input_shape  # type: ignore
         y_shape = self.inputs_outputs_spec.get_kerasinputshape_from_inputshapesformode(
-            input_shape
+            input_shapes
         )  # input shape for the original layer
         try:
             y_out_shape = self.original_keras_layer_class.compute_output_shape(
@@ -159,7 +161,7 @@ class DecomonLayer(ABC, Layer):
                 b_l_shape,
                 h_shape,
                 g_shape,
-            ) = self.inputs_outputs_spec.get_fullinputshapes_from_inputshapesformode(input_shape)
+            ) = self.inputs_outputs_spec.get_fullinputshapes_from_inputshapesformode(input_shapes)
             y_out_shape_wo_batchsize = y_out_shape[1:]
             if self.inputs_outputs_spec.affine:
                 model_inputdim = x_shape[-1]
@@ -180,7 +182,7 @@ class DecomonLayer(ABC, Layer):
             ]
             return self.inputs_outputs_spec.extract_inputshapesformode_from_fullinputshapes(fulloutputshapes)
 
-    def compute_output_spec(self, *args, **kwargs):
+    def compute_output_spec(self, *args: Any, **kwargs: Any) -> keras.KerasTensor:
         """Compute output spec from output shape in case of symbolic call."""
         return Layer.compute_output_spec(self, *args, **kwargs)
 

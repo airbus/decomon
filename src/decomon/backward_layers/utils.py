@@ -265,6 +265,8 @@ def backward_max_(
     dtype = x.dtype
     input_shape = inputs_outputs_spec.get_kerasinputshape(inputs)
     max_dim = input_shape[axis]
+    if max_dim is None:
+        raise ValueError(f"Dimension {axis} corresponding to `axis` cannot be None")
     empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
     empty_tensor_list = [empty_tensor] * max_dim
     z_value = K.cast(0.0, dtype=dtype)
@@ -659,7 +661,7 @@ def get_identity_lirpa(inputs: List[keras.KerasTensor]) -> List[keras.KerasTenso
 def get_identity_lirpa_shapes(input_shapes: List[Tuple[Optional[int], ...]]) -> List[Tuple[Optional[int], ...]]:
     y_shape = input_shapes[-1]
     batch_size = y_shape[0]
-    flatten_dim = int(np.prod(y_shape[1:]))
+    flatten_dim = int(np.prod(y_shape[1:]))  # type: ignore
 
     b_shape = batch_size, flatten_dim
     w_shape = batch_size, flatten_dim, flatten_dim

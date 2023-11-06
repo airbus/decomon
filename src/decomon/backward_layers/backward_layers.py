@@ -257,7 +257,7 @@ class BackwardActivation(BackwardLayer):
         Returns:
 
         """
-        input_dim = int(np.prod(input_shape[-1][1:]))
+        input_dim = int(np.prod(input_shape[-1][1:]))  # type: ignore
 
         if self.finetune and self.activation_name != "linear":
             if isinstance(self.perturbation_domain, GridDomain):
