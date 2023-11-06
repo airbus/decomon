@@ -70,9 +70,13 @@ else:
             return config
 
         def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
-            if (self.n is None) or (self.n > input_shape[-1][self.channel_axis]):
-                self.n = input_shape[-1][self.channel_axis]
-                if self.n is None:  # for mypy
+            channel_dim = input_shape[-1][self.channel_axis]
+            if channel_dim is None:
+                raise ValueError(f"Dimension {self.channel_axis} corresponding to `channel_axis` cannot be None")
+
+            if (self.n is None) or (self.n > channel_dim):
+                self.n = channel_dim
+                if self.n is None:
                     raise RuntimeError("self.n cannot be None at this point.")
             self.reshape = DecomonReshape(
                 (-1, self.n), mode=self.mode, perturbation_domain=self.perturbation_domain, dc_decomp=self.dc_decomp
@@ -202,16 +206,19 @@ else:
             return self.op_reshape_out(output)
 
         def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
-            input_shape = input_shape[-1]
+            single_input_shape = input_shape[-1]
+            single_input_shape_wo_batchsize: List[int] = single_input_shape[1:]  # type: ignore
 
             if self.data_format == "channels_last":
-                if input_shape[-1] % 2 != 0:
+                channel_dim = single_input_shape_wo_batchsize[-1]
+                if channel_dim % 2 != 0:
                     raise ValueError()
-                target_shape = list(input_shape[1:-2]) + [int(input_shape[-1] / 2), 2]
+                target_shape = list(single_input_shape_wo_batchsize[:-2]) + [int(channel_dim / 2), 2]
             else:
-                if input_shape[1] % 2 != 0:
+                channel_dim = single_input_shape_wo_batchsize[0]
+                if channel_dim % 2 != 0:
                     raise ValueError()
-                target_shape = [2, int(input_shape[1] / 2)] + list(input_shape[2:])
+                target_shape = [2, int(channel_dim / 2)] + list(single_input_shape_wo_batchsize[1:])
 
             self.params_max = []
             self.params_min = []
@@ -227,7 +234,7 @@ else:
                 self.params_min = [self.beta_min]
 
             self.op_reshape_in = DecomonReshape(tuple(target_shape), mode=self.mode)
-            self.op_reshape_out = DecomonReshape(tuple(input_shape[1:]), mode=self.mode)
+            self.op_reshape_out = DecomonReshape(tuple(single_input_shape_wo_batchsize), mode=self.mode)
 
         def reset_layer(self, layer: Layer) -> None:
             pass
