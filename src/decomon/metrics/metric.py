@@ -410,7 +410,7 @@ def _get_affine_score(
     target_tensor: Optional[Tensor] = None,
 ) -> Tensor:
     if target_tensor is None:
-        target_tensor = 1.0 - source_tensor
+        target_tensor = 1 - source_tensor
 
     n_dim = w_u.shape[1]
     shape = int(np.prod(b_u.shape[1:]))
@@ -423,8 +423,10 @@ def _get_affine_score(
     b_u_f = b_l_reshaped - b_u_reshaped
 
     # add penalties on biases
-    b_u_f = b_u_f - 1e6 * (1 - target_tensor)[:, None, :]
-    b_u_f = b_u_f - 1e6 * (1 - source_tensor)[:, :, None]
+    oneminus_target_tensor: Tensor = 1 - target_tensor  # for mypy
+    oneminus_source_tensor: Tensor = 1 - source_tensor  # for mypy
+    b_u_f = b_u_f - 1e6 * oneminus_target_tensor[:, None, :]
+    b_u_f = b_u_f - 1e6 * oneminus_source_tensor[:, :, None]
 
     upper = perturbation_domain.get_upper(z_tensor, w_u_f, b_u_f)
     return K.max(upper, (-1, -2))
