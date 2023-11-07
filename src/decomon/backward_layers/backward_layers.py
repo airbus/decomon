@@ -69,16 +69,32 @@ class BackwardDense(BackwardLayer):
         if len(inputs) == 0:
             inputs = self.layer.input
 
-        weights = self.kernel
         y = inputs[-1]
-        z_value = K.cast(0.0, self.dtype)
-        w_u_out, w_l_out = [weights[None] + z_value * K.expand_dims(y, -1)] * 2
+        flatten_inputdim_wo_last_dim = int(np.prod(y.shape[1:-1]))
+        flatten_outputdim = flatten_inputdim_wo_last_dim * self.layer.units
+        batchsize = y.shape[0]
+
+        # kernel reshaped: diagonal by blocks, with original kernel on the diagonal, `flatten_inputdim_wo_last_dim` times
+        #                  repeated batchsize times
+        zero_block = K.zeros_like(self.kernel)
+        kernel_diag_by_block = K.concatenate(
+            [
+                K.concatenate(
+                    [self.kernel if i == j else zero_block for i in range(flatten_inputdim_wo_last_dim)], axis=-1
+                )
+                for j in range(flatten_inputdim_wo_last_dim)
+            ],
+            axis=-2,
+        )
+        w = K.repeat(kernel_diag_by_block[None], batchsize, axis=0)
         if self.use_bias:
-            bias = self.bias
-            b_u_out, b_l_out = [bias[None] + z_value * w_u_out[:, 0]] * 2
+            b = K.repeat(
+                K.reshape(K.repeat(self.bias[None], flatten_inputdim_wo_last_dim, axis=0), (1, -1)), batchsize, axis=0
+            )
         else:
-            b_u_out, b_l_out = [z_value * w_u_out[:, 0]] * 2
-        return [w_u_out, b_u_out, w_l_out, b_l_out]
+            b = K.zeros((batchsize, flatten_outputdim), dtype=self.dtype)
+
+        return [w, b, w, b]
 
     def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         """
