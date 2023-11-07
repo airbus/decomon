@@ -18,7 +18,7 @@ from decomon.core import (
     get_affine,
     get_ibp,
 )
-from decomon.keras_utils import BatchedDiagLike
+from decomon.keras_utils import BatchedDiagLike, BatchedIdentityLike
 from decomon.layers.convert import to_decomon
 from decomon.layers.core import DecomonLayer
 from decomon.layers.decomon_layers import DecomonBatchNormalization
@@ -554,51 +554,40 @@ class BackwardBatchNormalization(BackwardLayer):
             **kwargs,
         )
 
-        if not isinstance(layer, DecomonBatchNormalization):
-            raise NotImplementedError()
         self.axis = self.layer.axis
         self.op_flat = Flatten()
 
     def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         y = inputs[-1]
-        w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
-
-        n_dim = y.shape[1:]
-        n_out = w_u_out.shape[-1]
-        # reshape
-        w_u_out = K.reshape(w_u_out, [-1, 1] + list(n_dim) + [n_out])
-        w_l_out = K.reshape(w_l_out, [-1, 1] + list(n_dim) + [n_out])
+        n_out = int(np.prod(y.shape[1:]))
 
         n_dim = len(y.shape)
         shape = [1] * n_dim
         shape[self.axis] = self.layer.moving_mean.shape[0]
 
         if not hasattr(self.layer, "gamma") or self.layer.gamma is None:  # scale = False
-            gamma = K.ones(shape)
+            gamma = K.ones_like(self.layer.moving_variance)
         else:  # scale = True
-            gamma = K.reshape(self.layer.gamma + 0.0, shape)
+            gamma = self.layer.gamma
         if not hasattr(self.layer, "beta") or self.layer.beta is None:  # center = False
-            beta = K.zeros(shape)
+            beta = K.zeros_like(self.layer.moving_mean)
         else:  # center = True
-            beta = K.reshape(self.layer.beta + 0.0, shape)
-        moving_mean = K.reshape(self.layer.moving_mean + 0.0, shape)
-        moving_variance = K.reshape(self.layer.moving_variance + 0.0, shape)
+            beta = self.layer.beta
 
-        w = gamma / K.sqrt(moving_variance + self.layer.epsilon)
-        b = beta - w * moving_mean
+        w = gamma / K.sqrt(self.layer.moving_variance + self.layer.epsilon)
+        b = beta - w * self.layer.moving_mean
 
-        # flatten w_, b_
-        w = K.expand_dims(K.expand_dims(w, -1), 1)
-        b = K.expand_dims(K.expand_dims(b, -1), 1)
+        # reshape w
+        w_b = K.reshape(
+            K.reshape(BatchedIdentityLike()(K.reshape(y, (-1, n_out))), tuple(y.shape) + (-1,))
+            * K.reshape(w, shape + [1]),
+            (-1, n_out, n_out),
+        )
 
-        n_dim = int(np.prod(y.shape[1:]))
-        w_u_b = K.reshape(w_u_out * w, (-1, n_dim, n_out))
-        w_l_b = K.reshape(w_l_out * w, (-1, n_dim, n_out))
-        axis = [i for i in range(2, len(b.shape) - 1)]
-        b_u_b = K.sum(w_u_out * b, axis) + b_u_out
-        b_l_b = K.sum(w_l_out * b, axis) + b_l_out
+        # reshape b
+        b_b = K.reshape(K.ones_like(y) * K.reshape(b, shape), (-1, n_out))
 
-        return [w_u_b, b_u_b, w_l_b, b_l_b]
+        return [w_b, b_b, w_b, b_b]
 
 
 class BackwardInputLayer(BackwardLayer):
