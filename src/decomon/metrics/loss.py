@@ -234,7 +234,7 @@ def get_adv_loss(
     n_out = np.prod(model.output[-1].shape[1:])
 
     def adv_ibp(u_c: Tensor, l_c: Tensor, y_tensor: Tensor) -> Tensor:
-        t_tensor = 1 - y_tensor
+        t_tensor: Tensor = 1 - y_tensor
         s_tensor = y_tensor
 
         t_tensor = t_tensor[:, :, None]
@@ -261,7 +261,7 @@ def get_adv_loss(
 
         upper = perturbation_domain.get_upper(x, w_adv, b_adv)
 
-        t_tensor = 1 - y_tensor
+        t_tensor: Tensor = 1 - y_tensor
         s_tensor = y_tensor
 
         t_tensor = t_tensor[:, :, None]
