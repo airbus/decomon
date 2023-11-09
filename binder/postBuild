@@ -1,3 +1,7 @@
+# use keras-nighlty (keras 3) instead of last release of keras (keras 2)
+pip uninstall -y keras keras-nightly
+pip install keras-nightly
+
 # tensorboard launches at startup
 mv binder/tensorboardserverextension.py ${NB_PYTHON_PREFIX}/lib/python*/site-packages/
 # enable tensorboard extension
