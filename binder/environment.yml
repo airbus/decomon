@@ -1,8 +1,8 @@
-name: nb-decomon-py3.8
+name: nb-decomon-py3.9
 channels:
   - defaults
 dependencies:
-  - python=3.8
+  - python=3.9
   - pip
   - pip:
       - kaggle
