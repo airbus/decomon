@@ -54,6 +54,44 @@ def test_convert_nok_unflattened_input():
         clone(model)
 
 
+def test_clone_with_backbounds(method, helpers):
+    dc_decomp = False
+    n = 0
+    ibp, affine = get_ibp_affine_from_method(method)
+    mode = get_mode(ibp, affine)
+
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
+    input_decomon_wo_backbounds = helpers.get_inputs_np_for_decomon_model_from_full_inputs(inputs=inputs_)
+
+    #  keras model and output of reference
+    ref_nn = helpers.toy_network_tutorial()
+    output_ref_ = helpers.predict_on_small_numpy(ref_nn, input_ref_)
+
+    # create back_bounds for adversarial robustness like studies
+    output_dim = int(np.prod(ref_nn.output_shape[1:]))
+    C = Input((output_dim, output_dim))
+    batchsize = input_decomon_wo_backbounds.shape[0]
+    C_ = np.repeat(np.identity(output_dim), repeats=batchsize, axis=0)
+    inputs_decomon_ = [input_decomon_wo_backbounds, C_]
+
+    # decomon conversion
+    decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine, back_bounds=[C])
+
+    #  decomon outputs
+    outputs_ = helpers.predict_on_small_numpy(decomon_model, inputs_decomon_)
+
+    #  check bounds consistency
+    helpers.assert_decomon_model_output_properties_box(
+        full_inputs=inputs_,
+        output_ref=output_ref_,
+        outputs_for_mode=outputs_,
+        mode=mode,
+        dc_decomp=dc_decomp,
+    )
+
+
 def test_convert_1D(n, method, mode, floatx, decimal, helpers):
     if not helpers.is_method_mode_compatible(method=method, mode=mode):
         # skip method=ibp/crown-ibp with mode=affine/hybrid

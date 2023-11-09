@@ -4,7 +4,7 @@ from keras.layers import Activation, Dense, Input
 from keras.models import Sequential
 from numpy.testing import assert_almost_equal
 
-from decomon import get_lower_box, get_range_box, get_upper_box
+from decomon import get_adv_box, get_lower_box, get_range_box, get_upper_box
 from decomon.core import get_affine, get_ibp
 from decomon.models import clone
 
@@ -28,6 +28,13 @@ def toy_model_multid(odd, helpers):
     sequential.add(Activation("relu"))
     sequential.add(Dense(1, activation="linear"))
     return sequential
+
+
+def test_get_adv_box_1d(toy_model_1d, helpers):
+    inputs_ = helpers.get_standard_values_1d_box(n=0, dc_decomp=False)
+    x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs_
+
+    score = get_adv_box(toy_model_1d, z[:, 0], z[:, 1], source_labels=0)
 
 
 def test_get_upper_1d_box(toy_model_1d, n, method, mode, helpers):
