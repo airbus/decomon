@@ -421,7 +421,7 @@ def convert_backward(
     if len(back_bounds):
         if len(back_bounds) == 1:
             C = back_bounds[0]
-            bias = K.cast(0.0, model.layers[0].dtype) * C[:, 0]
+            bias = K.zeros_like(C[:, 0])
             back_bounds = [C, bias] * 2
     result = crown_model(
         model=model,
