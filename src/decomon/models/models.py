@@ -2,6 +2,8 @@ from typing import Any, Dict, List, Optional, Union
 
 import keras
 import numpy as np
+from keras import Model
+from keras.utils import serialize_keras_object
 
 from decomon.core import (
     BoxDomain,
@@ -39,6 +41,26 @@ class DecomonModel(keras.Model):
         self.finetune = finetune
         self.backward_bounds = backward_bounds
         self.shared = shared
+
+    def get_config(self) -> Dict[str, Any]:
+        # force having functional config which is skipped by default
+        # because DecomonModel.__init__() has not same signature as Functional.__init__()
+        config = Model(self.inputs, self.outputs).get_config()
+        # update with correct name + specific attributes of decomon model
+        config.update(
+            dict(
+                name=self.name,
+                perturbation_domain=serialize_keras_object(self.perturbation_domain),
+                dc_decomp=self.dc_decomp,
+                method=self.method,
+                ibp=self.ibp,
+                affine=self.affine,
+                finetune=self.finetune,
+                shared=self.shared,
+                backward_bounds=self.backward_bounds,
+            )
+        )
+        return config
 
     def set_domain(self, perturbation_domain: PerturbationDomain) -> None:
         perturbation_domain = _check_domain(self.perturbation_domain, perturbation_domain)
