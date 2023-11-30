@@ -9,5 +9,6 @@ dependencies:
       - pandas
       - scipy
       - tensorboard>=2.13
+      - tensorflow>=2.15
       - jupyter-server-proxy
       - ..  # decomon
