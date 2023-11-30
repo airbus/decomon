@@ -11,10 +11,9 @@ authors = [
 ]
 requires-python = ">=3.9"
 dependencies =[
-    "tensorflow >=2.13.0",
     "matplotlib",
     "numpy >=1.21",
-    "keras-nightly",
+    "keras>=3",
 ]
 dynamic = ["version"]
 
