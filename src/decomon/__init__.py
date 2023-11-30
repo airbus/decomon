@@ -4,8 +4,9 @@ The goal of Decomon is to provide a simple interface to the latest explanation
 techniques for certified perturbation analysis
 """
 
-
 from importlib.metadata import PackageNotFoundError, version
+
+import keras
 
 from . import layers, models
 from .metrics.loss import get_adv_loss, get_lower_loss, get_model, get_upper_loss
@@ -30,3 +31,13 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+
+
+# Check keras version
+if not hasattr(keras, "__version__") or not keras.__version__.startswith("3"):
+    raise RuntimeError(
+        "Decomon is now compatible only with keras >= 3.0. "
+        "Please check your keras version. "
+        "You might have a keras 2 installed forcefully by tensorflow. "
+        "In that case, you just need to reinstall keras 3 after installing tensorflow."
+    )

@@ -92,6 +92,9 @@ jobs:
           python -m pip install -U pip setuptools
           pip install .
           pip install -r docs/requirements.txt
+          # ensure having keras 3 instead of keras 2.15 installed by tensorflow
+          pip uninstall -y keras
+          pip install "keras>=3"
       - name: generate documentation
         id: sphinx-build
         run: |
