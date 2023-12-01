@@ -1,7 +1,6 @@
 import keras.config as keras_config
 import pytest
 from keras.layers import Layer, Reshape
-from tensorflow.python.keras.backend import _get_available_gpus
 
 from decomon.backward_layers.convert import to_backward
 from decomon.core import ForwardMode, Slope
@@ -105,7 +104,7 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, decimal, mode, 
 
 
 def test_Backward_Flatten_multiD_box(odd, floatx, decimal, mode, data_format, helpers):
-    if data_format == "channels_first" and not helpers.tensorflow_in_GPU_mode():
+    if data_format == "channels_first" and not helpers.in_GPU_mode():
         pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     dc_decomp = False

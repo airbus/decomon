@@ -21,6 +21,12 @@ from keras.models import Model, Sequential
 from numpy.testing import assert_almost_equal
 
 from decomon.core import ForwardMode, Slope
+from decomon.keras_utils import (
+    BACKEND_JAX,
+    BACKEND_NUMPY,
+    BACKEND_PYTORCH,
+    BACKEND_TENSORFLOW,
+)
 from decomon.models.utils import ConvertMethod
 from decomon.types import Tensor
 
@@ -165,10 +171,24 @@ class ModelNumpyFromKerasTensors:
 
 class Helpers:
     @staticmethod
-    def tensorflow_in_GPU_mode() -> bool:
-        import tensorflow
+    def in_GPU_mode() -> bool:
+        backend = keras.config.backend()
+        if backend == BACKEND_TENSORFLOW:
+            import tensorflow
 
-        return len(tensorflow.config.list_physical_devices("GPU")) > 0
+            return len(tensorflow.config.list_physical_devices("GPU")) > 0
+        elif backend == BACKEND_PYTORCH:
+            import torch
+
+            return torch.cuda.is_available()
+        elif backend == BACKEND_NUMPY:
+            return False
+        elif backend == BACKEND_JAX:
+            import jax
+
+            return jax.devices()[0].platform != "cpu"
+        else:
+            raise NotImplementedError(f"Not implemented for {backend} backend.")
 
     @staticmethod
     def is_method_mode_compatible(method, mode):
