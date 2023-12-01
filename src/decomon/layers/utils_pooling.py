@@ -11,6 +11,7 @@ from decomon.core import (
     PerturbationDomain,
     get_affine,
 )
+from decomon.keras_utils import LinalgSolve
 from decomon.types import BackendTensor, Tensor
 
 # step 1: compute (x_i, y_i) such that x_i[j]=l_j if j==i else u_j
@@ -112,7 +113,7 @@ def get_upper_linear_hull_max(
     if dtype != dtype32:
         corners_collapse = K.cast(corners_collapse, dtype32)
         corners_pred = K.cast(corners_pred, dtype32)
-    w_hull = tf.linalg.solve(matrix=corners_collapse, rhs=K.expand_dims(corners_pred, -1))  # (None, shape_, n_dim+1, 1)
+    w_hull = LinalgSolve()(matrix=corners_collapse, rhs=K.expand_dims(corners_pred, -1))  # (None, shape_, n_dim+1, 1)
 
     if dtype != dtype32:
         w_hull = K.cast(w_hull, dtype=dtype)
