@@ -2,7 +2,6 @@ from typing import Any, Dict, List, Optional, Union
 
 import keras.ops as K
 import numpy as np
-import tensorflow as tf
 
 from decomon.core import (
     BoxDomain,
