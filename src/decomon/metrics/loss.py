@@ -3,7 +3,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import keras
 import keras.ops as K
 import numpy as np
-import tensorflow as tf
 from keras.config import epsilon
 from keras.layers import Lambda, Layer
 

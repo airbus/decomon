@@ -4,7 +4,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import keras
 import keras.ops as K
 import numpy as np
-import tensorflow as tf
 from keras import Model, Sequential
 from keras.layers import (
     Activation,
