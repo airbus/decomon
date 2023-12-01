@@ -5,7 +5,6 @@ import keras.config as keras_config
 import numpy as np
 import pytest
 from keras.layers import Conv2D
-from tensorflow.python.keras.backend import _get_available_gpus
 
 from decomon.core import ForwardMode, get_affine, get_ibp
 from decomon.layers.convert import to_decomon
@@ -13,7 +12,7 @@ from decomon.layers.decomon_layers import DecomonConv2D
 
 
 def test_Decomon_conv_box(data_format, mode, dc_decomp, floatx, decimal, helpers):
-    if data_format == "channels_first" and not helpers.tensorflow_in_GPU_mode():
+    if data_format == "channels_first" and not helpers.in_GPU_mode():
         pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     odd, m_0, m_1 = 0, 0, 1

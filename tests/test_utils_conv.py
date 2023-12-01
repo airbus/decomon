@@ -17,7 +17,7 @@ def test_toeplitz_from_Keras(channels, filter_size, strides, flatten, data_forma
     if floatx == 16:
         decimal = 0
 
-    if data_format == "channels_first" and not helpers.tensorflow_in_GPU_mode():
+    if data_format == "channels_first" and not helpers.in_GPU_mode():
         pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     dc_decomp = False
@@ -67,7 +67,7 @@ def test_toeplitz_from_Keras(channels, filter_size, strides, flatten, data_forma
 def test_toeplitz_from_Decomon(
     floatx, decimal, mode, channels, filter_size, strides, flatten, data_format, padding, helpers
 ):
-    if data_format == "channels_first" and not helpers.tensorflow_in_GPU_mode():
+    if data_format == "channels_first" and not helpers.in_GPU_mode():
         pytest.skip("data format 'channels first' is possible only in GPU mode")
 
     odd, m_0, m_1 = 0, 0, 1
