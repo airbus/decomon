@@ -65,6 +65,7 @@ jobs:
         python-version: ["3.9", "3.11"]
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         nodeellip: [ true ]
+        backend: ["tf", "torch"]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -86,8 +87,9 @@ jobs:
         with:
           path: .tox
           key:
-            tox-${{ matrix.python-version }}-${{ matrix.os }}-${{ hashFiles('pyproject.toml') }}
+            tox-${{ matrix.python-version }}-${{ matrix.os }}-${{ matrix.backend }}-${{ hashFiles('pyproject.toml') }}
           restore-keys:
+            tox-${{ matrix.python-version }}-${{ matrix.os }}-${{ matrix.backend }}
             tox-${{ matrix.python-version }}-${{ matrix.os }}
       - name: Pick proper tox env
         shell: python
@@ -101,6 +103,7 @@ jobs:
           pythonversion = f'py{"" if platform.python_implementation() == "CPython" else "py"}3{sys.version_info.minor}'
           platformversion=platform_mapping[platform.system()]
           toxenv = f"{pythonversion}-{platformversion}"
+          toxenv += "-${{ matrix.backend }}"
           if "${{ matrix.nodeellip }}" == "true":
               toxenv += "-nodeellip"
           set_toxenv_cmd = f"TOXENV={toxenv}"
