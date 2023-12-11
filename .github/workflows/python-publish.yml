@@ -69,7 +69,8 @@ jobs:
             # install from TestPypi if on a fork
             new_pip_spec_pattern="${new_pip_spec_pattern} --extra-index-url https://test.pypi.org/simple/"
           fi
-          sed -i -e "s|${old_pip_spec_pattern}|${new_pip_spec_pattern}|" tutorials/*.ipynb
+          shopt -s globstar  # enable **
+          sed -i -e "s|${old_pip_spec_pattern}|${new_pip_spec_pattern}|" tutorials/**/*.ipynb
       - name: replace decomon version to install in binder environment
         run: |
           version=${{ needs.deploy.outputs.package_version }}
@@ -91,7 +92,7 @@ jobs:
           echo ${new_tag_name}
           git config user.name "Actions"
           git config user.email "actions@github.com"
-          git commit binder/environment.yml tutorials/*.ipynb -m "Install appropriate version of decomon"
+          git commit binder/environment.yml tutorials -m "Install appropriate version of decomon"
           git tag ${new_tag_name} -m "Release ${current_tag_name} + installation in tutorials updated"
           git push origin ${new_tag_name}
           # store new tag name
