@@ -26,7 +26,7 @@ from decomon.core import (
     PerturbationDomain,
     get_mode,
 )
-from decomon.keras_utils import BatchedIdentityLike, reset_layer_all_weights
+from decomon.keras_utils import BatchedIdentityLike, share_weights_and_build
 from decomon.layers.utils import is_a_merge_layer
 from decomon.types import BackendTensor
 
@@ -209,15 +209,15 @@ def split_activation(
         # layer without activation
         config["name"] = f"{layer.name}_wo_activation"
         layer_wo_activation = layer.__class__.from_config(config)
-        share_some_attributes(layer_wo_activation, layer)  # share (deel-lip) attributes
-        # build the layer
-        inputs = Input(
-            shape=layer.input.shape[1:],  # shape without batch_size
-            dtype=layer.input.dtype,
-        )
-        outputs = layer_wo_activation(inputs)
-        # use same weights
-        reset_layer_all_weights(new_layer=layer_wo_activation, original_layer=layer)
+        # share (deel-lip) attributes
+        share_some_attributes(layer_wo_activation, layer)
+        # get expected weights names without activation (activation layer could add some weights)
+        layer_wo_activation_tmp = layer.__class__.from_config(config)  # create a temporary layer w/o activation
+        layer_wo_activation_tmp(layer.input)  # build it
+        weights_names = [w.name for w in layer_wo_activation_tmp.weights]
+        # share weights (and build the new layer)
+        share_weights_and_build(original_layer=layer, new_layer=layer_wo_activation, weight_names=weights_names)
+
         # activation layer
         if isinstance(activation, dict):
             if isinstance(layer.activation, Layer):  # can be an Activation, a PReLU, or a deel.lip.activations layer
@@ -230,7 +230,7 @@ def split_activation(
         else:
             activation_layer = Activation(activation=activation, dtype=layer.dtype, name=f"{layer.name}_activation")
         # build activation layer
-        activation_layer(outputs)
+        activation_layer(layer_wo_activation.output)
         return [layer_wo_activation, activation_layer]
 
 
