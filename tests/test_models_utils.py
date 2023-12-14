@@ -70,14 +70,9 @@ def test_split_activation_do_split(
     output_np_ref = K.convert_to_numpy(layer(inputs_np))
     output_np_new = K.convert_to_numpy(activation_layer(layer_wo_activation(inputs_np)))
     assert_almost_equal(output_np_new, output_np_ref)
-    # check same trainable weights
-    original_layer_weights = layer.get_weights()
-    layer_wo_activation_weights = layer_wo_activation.get_weights()
-    for w in layer_wo_activation.trainable_weights:
-        assert_almost_equal(
-            original_layer_weights[get_weight_index_from_name(layer, w.name)],
-            layer_wo_activation_weights[get_weight_index_from_name(layer_wo_activation, w.name)],
-        )
+    # check same weights (really same objects)
+    for i in range(len(layer_wo_activation.weights)):
+        assert layer.weights[i] is layer_wo_activation.weights[i]
 
 
 @pytest.mark.parametrize(
@@ -161,14 +156,9 @@ def test_split_activation_do_split_with_deellip(
     output_np_ref = K.convert_to_numpy(layer(inputs_np))
     output_np_new = K.convert_to_numpy(activation_layer(layer_wo_activation(inputs_np)))
     assert_almost_equal(output_np_new, output_np_ref)
-    # check same trainable weights
-    original_layer_weights = layer.get_weights()
-    layer_wo_activation_weights = layer_wo_activation.get_weights()
-    for w in layer_wo_activation.trainable_weights:
-        assert_almost_equal(
-            original_layer_weights[get_weight_index_from_name(layer, w.name)],
-            layer_wo_activation_weights[get_weight_index_from_name(layer_wo_activation, w.name)],
-        )
+    # check same weights (really same objects)
+    for i in range(len(layer_wo_activation.weights)):
+        assert layer.weights[i] is layer_wo_activation.weights[i]
 
 
 def test_convert_deellip_to_keras_dense():
@@ -374,15 +364,9 @@ def test_preprocess_layer_nonlinear_activation(
     output_np_ref = K.convert_to_numpy(layer(inputs_np))
     output_np_new = K.convert_to_numpy(activation_layer(layer_wo_activation(inputs_np)))
     assert_almost_equal(output_np_new, output_np_ref)
-    # check same trainable weights
-    if not is_deellip_layer:
-        original_layer_weights = layer.get_weights()
-        layer_wo_activation_weights = layer_wo_activation.get_weights()
-        for w in layer_wo_activation.trainable_weights:
-            assert_almost_equal(
-                original_layer_weights[get_weight_index_from_name(layer, w.name)],
-                layer_wo_activation_weights[get_weight_index_from_name(layer_wo_activation, w.name)],
-            )
+    # check same weights (really same objects)
+    for i in range(len(layer_wo_activation.weights)):
+        assert layer.weights[i] is layer_wo_activation.weights[i]
     # check deel-lip attributes
     for i, keras_layer in enumerate(layers):
         # new attributes added
