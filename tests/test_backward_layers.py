@@ -20,6 +20,7 @@ def test_Backward_Activation_1D_box_model(n, activation, mode, floatx, decimal, 
 
     # decomon layer
     decomon_layer = DecomonActivation(activation, dc_decomp=dc_decomp, mode=mode, dtype=keras_config.floatx())
+    decomon_layer(inputs_for_mode)  # build it
 
     # get backward layer
     backward_layer = to_backward(decomon_layer)
@@ -52,6 +53,7 @@ def test_Backward_Activation_1D_box_model_slope(helpers):
 
     #  decomon layer
     decomon_layer = DecomonActivation(activation, dc_decomp=dc_decomp, mode=mode, dtype=keras_config.floatx())
+    decomon_layer(inputs_for_mode)  # build it
 
     # to_backward with a given slope => outputs
     outputs_by_slope = {}
@@ -86,6 +88,7 @@ def test_Backward_Activation_multiD_box(odd, activation, floatx, decimal, mode, 
 
     #  decomon layer
     decomon_layer = DecomonActivation(activation, dc_decomp=dc_decomp, mode=mode, dtype=keras_config.floatx())
+    decomon_layer(inputs_for_mode)  # build it
 
     # get backward layer
     backward_layer = to_backward(decomon_layer)
@@ -118,6 +121,7 @@ def test_Backward_Flatten_multiD_box(odd, floatx, decimal, mode, data_format, he
 
     #  decomon layer
     decomon_layer = DecomonFlatten(data_format, dc_decomp=dc_decomp, mode=mode, dtype=keras_config.floatx())
+    decomon_layer(inputs_for_mode)  # build it
 
     # get backward layer
     backward_layer = to_backward(decomon_layer)
@@ -147,6 +151,7 @@ def test_Backward_Reshape_multiD_box(odd, floatx, decimal, mode, helpers):
 
     #  decomon layer
     decomon_layer = DecomonReshape((-1,), dc_decomp=dc_decomp, mode=mode, dtype=keras_config.floatx())
+    decomon_layer(inputs_for_mode)  # build it
 
     # get backward layer
     backward_layer = to_backward(decomon_layer)
