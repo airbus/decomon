@@ -193,6 +193,61 @@ def reset_layer_all_weights(new_layer: Layer, original_layer: Layer) -> None:
     reset_layer(new_layer=new_layer, original_layer=original_layer, weight_names=[w.name for w in new_layer.weights])
 
 
+def share_layer_all_weights(
+    original_layer: Layer,
+    new_layer: Layer,
+) -> None:
+    """Share all the weights of an already built layer to another unbuilt layer.
+
+    Args:
+        original_layer: the layer used to share the weights
+        new_layer: the new layer which will be buit and will share the weights of the original layer
+
+    Returns:
+
+    """
+    share_weights_and_build(
+        new_layer=new_layer, original_layer=original_layer, weight_names=[w.name for w in original_layer.weights]
+    )
+
+
+def share_weights_and_build(original_layer: Layer, new_layer: Layer, weight_names: List[str]) -> None:
+    """Share the weights specidifed by names of an already built layer to another unbuilt layer.
+
+    We assume that each weight is also an original_laer's attribute whose name is the weight name.
+
+    Args:
+        original_layer: the layer used to share the weights
+        new_layer: the new layer which will be buit and will share the weights of the original layer
+        weight_names: names of the weights to share
+
+    Returns:
+
+    """
+    # Check the original_layer is built and the new_layer is not built
+    if not original_layer.built:
+        raise ValueError("The original layer must already be built for sharing its weights.")
+    if new_layer.built:
+        raise ValueError("The new layer must not be built to get the weights of the original layer")
+    # Check that input exists really (ie that the layer has already been called on a symbolic KerasTensor
+    inp = original_layer.input  # will raise a ValueError if not existing
+
+    # store the weights as a new_layer variable before build (ie before the lock)
+    for w_name in weight_names:
+        w = getattr(original_layer, w_name)
+        setattr(new_layer, w_name, w)
+
+    # build the layer
+    new_layer(inp)
+    # overwrite the newly generated weights and untrack them
+    for w_name in weight_names:
+        w = getattr(original_layer, w_name)
+        w_to_drop = getattr(new_layer, w_name)
+        setattr(new_layer, w_name, w)
+        # untrack the not used anymore kernel
+        new_layer._tracker.untrack(w_to_drop)
+
+
 def check_if_single_shape(shape: Any) -> bool:
     """
 
