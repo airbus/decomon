@@ -35,11 +35,11 @@ def test_decomondense_reset_layer(helpers, use_bias):
 
     decomon_layer.reset_layer(layer)
     assert decomon_layer.kernel is not layer.kernel
-    assert_almost_equal(decomon_layer.kernel.numpy(), layer.kernel.numpy())
+    assert_almost_equal(K.convert_to_numpy(decomon_layer.kernel), K.convert_to_numpy(layer.kernel))
     if use_bias:
         assert len(layer.weights) == 2
         assert decomon_layer.bias is not layer.bias
-        assert_almost_equal(decomon_layer.bias.numpy(), layer.bias.numpy())
+        assert_almost_equal(K.convert_to_numpy(decomon_layer.bias), K.convert_to_numpy(layer.bias))
     else:
         assert len(layer.weights) == 1
 
@@ -70,8 +70,8 @@ def test_decomondense_reset_layer_decomon_with_new_weights(helpers):
     decomon_layer.reset_layer(layer)
     assert decomon_layer.kernel is not layer.kernel
     assert decomon_layer.bias is not layer.bias
-    assert_almost_equal(decomon_layer.kernel.numpy(), layer.kernel.numpy())
-    assert_almost_equal(decomon_layer.bias.numpy(), layer.bias.numpy())
+    assert_almost_equal(K.convert_to_numpy(decomon_layer.kernel), K.convert_to_numpy(layer.kernel))
+    assert_almost_equal(K.convert_to_numpy(decomon_layer.bias), K.convert_to_numpy(layer.bias))
 
 
 def test_decomondense_reset_layer_keras_with_new_weights(helpers):
@@ -99,8 +99,8 @@ def test_decomondense_reset_layer_keras_with_new_weights(helpers):
     decomon_layer.reset_layer(layer)
     assert decomon_layer.kernel is not layer.kernel
     assert decomon_layer.bias is not layer.bias
-    assert_almost_equal(decomon_layer.kernel.numpy(), layer.kernel.numpy())
-    assert_almost_equal(decomon_layer.bias.numpy(), layer.bias.numpy())
+    assert_almost_equal(K.convert_to_numpy(decomon_layer.kernel), K.convert_to_numpy(layer.kernel))
+    assert_almost_equal(K.convert_to_numpy(decomon_layer.bias), K.convert_to_numpy(layer.bias))
 
 
 def test_decomondense_reset_layer_ko_keraslayer_not_nuilt():
@@ -155,10 +155,10 @@ def test_decomonconv2d_reset_layer(helpers, use_bias):
 
     decomon_layer.reset_layer(layer)
     assert decomon_layer.kernel is not layer.kernel
-    assert_almost_equal(decomon_layer.kernel.numpy(), layer.kernel.numpy())
+    assert_almost_equal(K.convert_to_numpy(decomon_layer.kernel), K.convert_to_numpy(layer.kernel))
     if use_bias:
         assert decomon_layer.bias is not layer.bias
-        assert_almost_equal(decomon_layer.bias.numpy(), layer.bias.numpy())
+        assert_almost_equal(K.convert_to_numpy(decomon_layer.bias), K.convert_to_numpy(layer.bias))
 
 
 @pytest.mark.parametrize(

@@ -164,9 +164,9 @@ class ModelNumpyFromKerasTensors:
     def __call__(self, inputs_: List[np.ndarray]):
         output_tensors = self._model(inputs_)
         if isinstance(output_tensors, list):
-            return [output.numpy() for output in output_tensors]
+            return [K.convert_to_numpy(output) for output in output_tensors]
         else:
-            return output_tensors.numpy()
+            return K.convert_to_numpy(output_tensors)
 
 
 class Helpers:
@@ -220,9 +220,9 @@ class Helpers:
         """
         output_tensors = model(x)
         if isinstance(output_tensors, list):
-            return [output.numpy() for output in output_tensors]
+            return [K.convert_to_numpy(output) for output in output_tensors]
         else:
-            return output_tensors.numpy()
+            return K.convert_to_numpy(output_tensors)
 
     @staticmethod
     def get_standard_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
