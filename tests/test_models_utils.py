@@ -67,8 +67,8 @@ def test_split_activation_do_split(
     input_shape_with_batch_size = (5,) + input_shape_wo_batchsize
     flatten_dim = np.prod(input_shape_with_batch_size)
     inputs_np = np.linspace(-1, 1, flatten_dim).reshape(input_shape_with_batch_size)
-    output_np_ref = layer(inputs_np).numpy()
-    output_np_new = activation_layer(layer_wo_activation(inputs_np)).numpy()
+    output_np_ref = K.convert_to_numpy(layer(inputs_np))
+    output_np_new = K.convert_to_numpy(activation_layer(layer_wo_activation(inputs_np)))
     assert_almost_equal(output_np_new, output_np_ref)
     # check same trainable weights
     original_layer_weights = layer.get_weights()
@@ -158,8 +158,8 @@ def test_split_activation_do_split_with_deellip(
     input_shape_with_batch_size = (5,) + input_shape_wo_batchsize
     flatten_dim = np.prod(input_shape_with_batch_size)
     inputs_np = np.linspace(-1, 1, flatten_dim).reshape(input_shape_with_batch_size)
-    output_np_ref = layer(inputs_np).numpy()
-    output_np_new = activation_layer(layer_wo_activation(inputs_np)).numpy()
+    output_np_ref = K.convert_to_numpy(layer(inputs_np))
+    output_np_new = K.convert_to_numpy(activation_layer(layer_wo_activation(inputs_np)))
     assert_almost_equal(output_np_new, output_np_ref)
     # check same trainable weights
     original_layer_weights = layer.get_weights()
@@ -233,8 +233,8 @@ def test_convert_deellip_to_keras_spectraldense():
     assert keras_layer.name.startswith(layer.name)
     # same output?
     input_tensor = K.ones((4, 1))
-    output_ref = layer(input_tensor).numpy()
-    new_output = keras_layer(input_tensor).numpy()
+    output_ref = K.convert_to_numpy(layer(input_tensor))
+    new_output = K.convert_to_numpy(keras_layer(input_tensor))
     assert_almost_equal(new_output, output_ref)
     # idempotency
     keras_layer2 = convert_deellip_to_keras(keras_layer)
@@ -371,8 +371,8 @@ def test_preprocess_layer_nonlinear_activation(
     input_shape_with_batch_size = (5,) + input_shape_wo_batchsize
     flatten_dim = np.prod(input_shape_with_batch_size)
     inputs_np = np.linspace(-1, 1, flatten_dim).reshape(input_shape_with_batch_size)
-    output_np_ref = layer(inputs_np).numpy()
-    output_np_new = activation_layer(layer_wo_activation(inputs_np)).numpy()
+    output_np_ref = K.convert_to_numpy(layer(inputs_np))
+    output_np_new = K.convert_to_numpy(activation_layer(layer_wo_activation(inputs_np)))
     assert_almost_equal(output_np_new, output_np_ref)
     # check same trainable weights
     if not is_deellip_layer:

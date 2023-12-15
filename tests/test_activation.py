@@ -37,7 +37,7 @@ def test_activation_1D_box(n, mode, floatx, decimal, helpers, activation_func, t
     input_ref_ = helpers.get_input_ref_from_full_inputs(inputs=inputs_)
 
     # reference output
-    output_ref_ = tensor_func(input_ref_).numpy()
+    output_ref_ = K.convert_to_numpy(tensor_func(input_ref_))
 
     # decomon output
     output = activation_func(inputs_for_mode, dc_decomp=dc_decomp, mode=mode)

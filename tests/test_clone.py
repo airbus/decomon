@@ -258,9 +258,9 @@ def test_clone_full_deellip_model_forward(method, mode, helpers):
 
     # flatten inputs
     preprocess_layer = Flatten(data_format=data_format)
-    input_ref_reshaped_ = preprocess_layer(input_ref_).numpy()
-    input_ref_min_reshaped_ = preprocess_layer(input_ref_min_).numpy()
-    input_ref_max_reshaped_ = preprocess_layer(input_ref_max_).numpy()
+    input_ref_reshaped_ = K.convert_to_numpy(preprocess_layer(input_ref_))
+    input_ref_min_reshaped_ = K.convert_to_numpy(preprocess_layer(input_ref_min_))
+    input_ref_max_reshaped_ = K.convert_to_numpy(preprocess_layer(input_ref_max_))
 
     # decomon inputs
     input_decomon_ = np.concatenate((input_ref_min_reshaped_[:, None], input_ref_max_reshaped_[:, None]), axis=1)
@@ -392,9 +392,9 @@ def test_convert_cnn(method, mode, helpers):
 
     # flatten inputs
     preprocess_layer = Flatten(data_format=data_format)
-    input_ref_reshaped_ = preprocess_layer(input_ref_).numpy()
-    input_ref_min_reshaped_ = preprocess_layer(input_ref_min_).numpy()
-    input_ref_max_reshaped_ = preprocess_layer(input_ref_max_).numpy()
+    input_ref_reshaped_ = K.convert_to_numpy(preprocess_layer(input_ref_))
+    input_ref_min_reshaped_ = K.convert_to_numpy(preprocess_layer(input_ref_min_))
+    input_ref_max_reshaped_ = K.convert_to_numpy(preprocess_layer(input_ref_max_))
 
     input_decomon_ = np.concatenate((input_ref_min_reshaped_[:, None], input_ref_max_reshaped_[:, None]), axis=1)
 

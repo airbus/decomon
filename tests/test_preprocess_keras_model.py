@@ -52,8 +52,8 @@ def test_split_activations_in_keras_model(toy_model):
     input_shape_with_batch_size = (5,) + input_shape_wo_batchsize
     flatten_dim = np.prod(input_shape_with_batch_size)
     inputs_np = np.linspace(-1, 1, flatten_dim).reshape(input_shape_with_batch_size)
-    output_np_ref = toy_model(inputs_np).numpy()
-    output_np_new = converted_model(inputs_np).numpy()
+    output_np_ref = K.convert_to_numpy(toy_model(inputs_np))
+    output_np_new = K.convert_to_numpy(converted_model(inputs_np))
     assert_almost_equal(output_np_new, output_np_ref, decimal=4)
 
 
@@ -92,8 +92,8 @@ def test_convert_deellip_layers_in_keras_model_ok():
     input_shape_with_batch_size = (5,) + input_shape_wo_batchsize
     flatten_dim = np.prod(input_shape_with_batch_size)
     inputs_np = np.linspace(-1, 1, flatten_dim).reshape(input_shape_with_batch_size)
-    output_np_ref = model(inputs_np).numpy()
-    output_np_new = converted_model(inputs_np).numpy()
+    output_np_ref = K.convert_to_numpy(model(inputs_np))
+    output_np_new = K.convert_to_numpy(converted_model(inputs_np))
     assert_almost_equal(output_np_new, output_np_ref, decimal=4)
 
 
@@ -164,6 +164,6 @@ def test_preprocess(
     input_shape_with_batch_size = (5,) + input_shape_wo_batchsize
     flatten_dim = np.prod(input_shape_with_batch_size)
     inputs_np = np.linspace(-1, 1, flatten_dim).reshape(input_shape_with_batch_size)
-    output_np_ref = model(inputs_np).numpy()
-    output_np_new = converted_model(inputs_np).numpy()
+    output_np_ref = K.convert_to_numpy(model(inputs_np))
+    output_np_new = K.convert_to_numpy(converted_model(inputs_np))
     assert_almost_equal(output_np_new, output_np_ref, decimal=4)
