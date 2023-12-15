@@ -35,60 +35,39 @@ else:
         (DecomonActivation, dict(activation="relu")),
         (Activation, dict(activation="linear")),
         (Activation, dict(activation="relu")),
-        (DecomonConv2D, dict(filters=10, kernel_size=(3, 3), data_format="channels_last")),
+        (DecomonConv2D, dict(filters=10, kernel_size=(3, 3))),
         (DecomonReshape, dict(target_shape=(1, -1, 1))),
         (Reshape, dict(target_shape=(1, -1, 1))),
         (DecomonGroupSort2, dict()),
     ],
 )
-@pytest.mark.parametrize(
-    "kerastensor_inputs_fn_name, kerastensor_inputs_kwargs, np_inputs_fn_name, np_inputs_kwargs",
-    [
-        ("get_tensor_decomposition_1d_box", dict(), "get_standard_values_1d_box", dict(n=0)),
-        ("get_tensor_decomposition_multid_box", dict(odd=0), "get_standard_values_multid_box", dict(odd=0)),
-        (
-            "get_tensor_decomposition_images_box",
-            dict(odd=0, data_format="channels_last"),
-            "get_standard_values_images_box",
-            dict(odd=0, data_format="channels_last"),
-        ),
-    ],
-)
+@pytest.mark.parametrize("dc_decomp", [False])  # limit dc_decomp
+@pytest.mark.parametrize("n", [0])  # limit 1d cases
+@pytest.mark.parametrize("odd", [0])  # limit multid cases
+@pytest.mark.parametrize("data_format", ["channels_last"])  # limit images cases
 def test_compute_output_shape(
     helpers,
     mode,
+    dc_decomp,
     layer_class,
     layer_kwargs,
-    kerastensor_inputs_fn_name,
-    kerastensor_inputs_kwargs,
-    np_inputs_fn_name,
-    np_inputs_kwargs,
+    inputs_for_mode,  # decomon inputs: symbolic tensors
+    input_ref,  # keras input: symbolic tensor
+    inputs_for_mode_,  # decomon inputs: numpy arrays
+    inputs_metadata,  # inputs metadata: data_format, ...
 ):
-    dc_decomp = False
+    # skip nonsensical combinations
     if (layer_class == DecomonBatchNormalization or layer_class == DecomonMaxPooling2D) and dc_decomp:
         pytest.skip(f"{layer_class} with dc_decomp=True not yet implemented.")
-    if (
-        layer_class == DecomonConv2D or layer_class == DecomonMaxPooling2D
-    ) and kerastensor_inputs_fn_name != "get_tensor_decomposition_images_box":
+    if (layer_class == DecomonConv2D or layer_class == DecomonMaxPooling2D) and len(input_ref.shape) < 4:
         pytest.skip(f"{layer_class} applies only on image-like inputs.")
     if layer_class == DecomonGroupSort2:
         if not deel_lip_available:
             pytest.skip("deel-lip is not available")
 
-    # contruct inputs functions
-    kerastensor_inputs_fn = getattr(helpers, kerastensor_inputs_fn_name)
-    kerastensor_inputs_kwargs["dc_decomp"] = dc_decomp
-    np_inputs_fn = getattr(helpers, np_inputs_fn_name)
-    np_inputs_kwargs["dc_decomp"] = dc_decomp
-
-    # tensors inputs
-    inputs = kerastensor_inputs_fn(**kerastensor_inputs_kwargs)
-    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
-    inputs_ref = helpers.get_input_ref_from_full_inputs(inputs)
-
-    # numpy inputs
-    inputs_ = np_inputs_fn(**np_inputs_kwargs)
-    inputs_for_mode_ = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_, mode=mode, dc_decomp=dc_decomp)
+    # add data_format for convolution and maxpooling
+    if layer_class in (DecomonConv2D, DecomonMaxPooling2D):
+        layer_kwargs["data_format"] = inputs_metadata["data_format"]
 
     # construct and build original layer (decomon or keras)
     if issubclass(layer_class, DecomonLayer):
@@ -96,7 +75,7 @@ def test_compute_output_shape(
         layer(inputs_for_mode)
     else:  # keras layer
         layer = layer_class(**layer_kwargs)
-        layer(inputs_ref)
+        layer(input_ref)
 
     # get backward layer
     backward_layer = to_backward(layer, mode=mode)

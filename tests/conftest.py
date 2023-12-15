@@ -19,6 +19,7 @@ from keras.layers import (
 )
 from keras.models import Model, Sequential
 from numpy.testing import assert_almost_equal
+from pytest_cases import fixture, fixture_union, param_fixture
 
 from decomon.core import ForwardMode, Slope
 from decomon.keras_utils import (
@@ -95,9 +96,7 @@ def activation(request):
     return request.param
 
 
-@pytest.fixture(params=["channels_last", "channels_first"])
-def data_format(request):
-    return request.param
+data_format = param_fixture(argname="data_format", argvalues=["channels_last", "channels_first"])
 
 
 @pytest.fixture(params=[0, 1])
@@ -1607,3 +1606,66 @@ def toy_model(request, helpers):
 def toy_model_1d(request, helpers):
     model_name = request.param
     return helpers.toy_model(model_name, dtype=keras_config.floatx())
+
+
+@fixture()
+def decomon_inputs_1d(n, mode, dc_decomp, helpers):
+    # tensors inputs
+    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs)
+
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_1d_box(n=n, dc_decomp=dc_decomp)
+    inputs_for_mode_ = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_, mode=mode, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
+
+    # inputs metadata worth to pass to the layer
+    inputs_metadata = dict()
+
+    return inputs, inputs_for_mode, input_ref, inputs_, inputs_for_mode_, input_ref_, inputs_metadata
+
+
+@fixture()
+def decomon_inputs_multid(odd, mode, dc_decomp, helpers):
+    # tensors inputs
+    inputs = helpers.get_tensor_decomposition_multid_box(odd=odd, dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs)
+
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_multid_box(odd=odd, dc_decomp=dc_decomp)
+    inputs_for_mode_ = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_, mode=mode, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
+
+    # inputs metadata worth to pass to the layer
+    inputs_metadata = dict()
+
+    return inputs, inputs_for_mode, input_ref, inputs_, inputs_for_mode_, input_ref_, inputs_metadata
+
+
+@fixture()
+def decomon_inputs_images(data_format, mode, dc_decomp, helpers):
+    odd, m_0, m_1 = 0, 0, 1
+
+    # tensors inputs
+    inputs = helpers.get_tensor_decomposition_images_box(data_format=data_format, odd=odd, dc_decomp=dc_decomp)
+    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
+    input_ref = helpers.get_input_ref_from_full_inputs(inputs)
+
+    # numpy inputs
+    inputs_ = helpers.get_standard_values_images_box(data_format=data_format, odd=odd, dc_decomp=dc_decomp)
+    inputs_for_mode_ = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_, mode=mode, dc_decomp=dc_decomp)
+    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
+
+    # inputs metadata worth to pass to the layer
+    inputs_metadata = dict(data_format=data_format)
+
+    return inputs, inputs_for_mode, input_ref, inputs_, inputs_for_mode_, input_ref_, inputs_metadata
+
+
+decomon_inputs = fixture_union(
+    "decomon_inputs",
+    [decomon_inputs_1d, decomon_inputs_multid, decomon_inputs_images],
+    unpack_into="inputs, inputs_for_mode, input_ref, inputs_, inputs_for_mode_, input_ref_, inputs_metadata",
+)
