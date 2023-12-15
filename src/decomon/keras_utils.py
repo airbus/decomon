@@ -32,6 +32,10 @@ class LinalgSolve(keras.Operation):
             import tensorflow as tf
 
             return tf.linalg.solve(matrix=matrix, rhs=rhs)
+        elif backend == BACKEND_PYTORCH:
+            import torch
+
+            return torch.linalg.solve(A=matrix, B=rhs)
         else:
             raise NotImplementedError(f"linalg_solve() not yet implemented for backend {backend}.")
 
