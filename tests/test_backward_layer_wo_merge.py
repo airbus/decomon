@@ -42,72 +42,43 @@ from decomon.layers.decomon_layers import DecomonDense
         (Permute, dict(dims=(2, 1, 3))),
     ],
 )
-@pytest.mark.parametrize(
-    "kerastensor_inputs_fn_name, kerastensor_inputs_kwargs, np_inputs_fn_name, np_inputs_kwargs",
-    [
-        ("get_tensor_decomposition_1d_box", dict(), "get_standard_values_1d_box", dict(n=0)),
-        ("get_tensor_decomposition_multid_box", dict(odd=0), "get_standard_values_multid_box", dict(odd=0)),
-        (
-            "get_tensor_decomposition_images_box",
-            dict(odd=0, data_format="channels_last"),
-            "get_standard_values_images_box",
-            dict(odd=0, data_format="channels_last"),
-        ),
-    ],
-)
 @pytest.mark.parametrize("randomize_weights", [False, True])
+@pytest.mark.parametrize("floatx", [32])  # fix floatx
+@pytest.mark.parametrize("data_format", ["channels_last"])  # limit images cases
+@pytest.mark.parametrize("dc_decomp", [False])  # limit dc_decomp
 def test_backward_layer(
     helpers,
     mode,
     layer_class,
     layer_kwargs,
-    kerastensor_inputs_fn_name,
-    kerastensor_inputs_kwargs,
-    np_inputs_fn_name,
-    np_inputs_kwargs,
     randomize_weights,
+    decimal,
+    dc_decomp,
+    inputs_for_mode,  # decomon inputs: symbolic tensors
+    inputs,  # decomon inputs: symbolic tensors
+    input_ref,  # keras input: symbolic tensor
+    inputs_,  # decomon inputs: numpy arrays
+    input_ref_,  # keras input: numpy array
+    inputs_metadata,  # inputs metadata: data_format, ...
 ):
     # skip nonsensical combinations
     if (
         layer_class is BatchNormalization
         and "axis" in layer_kwargs
         and layer_kwargs["axis"] > 1
-        and kerastensor_inputs_fn_name != "get_tensor_decomposition_images_box"
+        and len(input_ref.shape) < 4
     ):
         pytest.skip("batchnormalization on axis>1 possible only for image-like data")
-    if layer_class in (Conv2D, MaxPooling2D) and kerastensor_inputs_fn_name != "get_tensor_decomposition_images_box":
+    if layer_class in (Conv2D, MaxPooling2D) and len(input_ref.shape) < 4:
         pytest.skip("convolution and maxpooling2d possible only for image-like data")
-    if (
-        layer_class is Permute
-        and len(layer_kwargs["dims"]) < 3
-        and kerastensor_inputs_fn_name == "get_tensor_decomposition_images_box"
-    ):
+    if layer_class is Permute and len(layer_kwargs["dims"]) < 3 and len(input_ref.shape) >= 4:
         pytest.skip("1d permutation not possible for image-like data")
-    if (
-        layer_class is Permute
-        and len(layer_kwargs["dims"]) == 3
-        and kerastensor_inputs_fn_name != "get_tensor_decomposition_images_box"
-    ):
+    if layer_class is Permute and len(layer_kwargs["dims"]) == 3 and len(input_ref.shape) < 4:
         pytest.skip("3d permutation possible only for image-like data")
 
-    dc_decomp = False
-    decimal = 4
-
-    # contruct inputs functions
-    kerastensor_inputs_fn = getattr(helpers, kerastensor_inputs_fn_name)
-    kerastensor_inputs_kwargs["dc_decomp"] = dc_decomp
-    np_inputs_fn = getattr(helpers, np_inputs_fn_name)
-    np_inputs_kwargs["dc_decomp"] = dc_decomp
-
-    # tensors inputs
-    inputs = kerastensor_inputs_fn(**kerastensor_inputs_kwargs)
-    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
-    input_ref = helpers.get_input_ref_from_full_inputs(inputs)
-
-    # numpy inputs
-    inputs_ = np_inputs_fn(**np_inputs_kwargs)
-    inputs_for_mode_ = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_, mode=mode, dc_decomp=dc_decomp)
-    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
+    # add data_format for convolution and maxpooling
+    if layer_class in (Conv2D,):
+        layer_kwargs["data_format"] = inputs_metadata["data_format"]
 
     # construct and build original layer (keras)
     layer = layer_class(**layer_kwargs)
