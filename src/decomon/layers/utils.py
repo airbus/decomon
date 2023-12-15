@@ -559,10 +559,10 @@ def permute_dimensions(
     if len(input_shape) <= 2:
         # not enough dim to permute
         return inputs
-    index = np.arange(len(input_shape))
-    index = np.insert(np.delete(index, axis), axis_perm, axis)
-    index_w = np.arange(len(input_shape) + 1)
-    index_w = np.insert(np.delete(index_w, axis), axis_perm + 1, axis)
+    index_np = np.arange(len(input_shape))
+    index = tuple(np.insert(np.delete(index_np, axis), axis_perm, axis))
+    index_w_np = np.arange(len(input_shape) + 1)
+    index_w = tuple(np.insert(np.delete(index_w_np, axis), axis_perm + 1, axis))
 
     if ibp:
         u_c_out = K.transpose(u_c, index)
