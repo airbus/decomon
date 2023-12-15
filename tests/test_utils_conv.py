@@ -1,6 +1,5 @@
 # Test unit for decomon with Dense layers
-
-
+import keras.config
 import keras.ops as K
 import numpy as np
 import pytest
@@ -13,6 +12,10 @@ from decomon.layers.convert import to_decomon
 
 
 def test_toeplitz_from_Keras(channels, filter_size, strides, flatten, data_format, padding, floatx, decimal, helpers):
+    # skip unavailable combinations
+    if floatx == 16 and keras.config.backend() == "torch":
+        pytest.skip("Pytorch does not implement conv2d for float16")
+
     # filter_size, strides, flatten,
     if floatx == 16:
         decimal = 0
@@ -67,6 +70,10 @@ def test_toeplitz_from_Keras(channels, filter_size, strides, flatten, data_forma
 def test_toeplitz_from_Decomon(
     floatx, decimal, mode, channels, filter_size, strides, flatten, data_format, padding, helpers
 ):
+    # skip unavailable combinations
+    if floatx == 16 and keras.config.backend() == "torch" and not helpers.in_GPU_mode():
+        pytest.skip("Pytorch does not implement conv2d for float16 in CPU mode.")
+
     if data_format == "channels_first" and not helpers.in_GPU_mode():
         pytest.skip("data format 'channels first' is possible only in GPU mode")
 
