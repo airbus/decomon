@@ -10,8 +10,12 @@ from decomon.layers.decomon_layers import DecomonConv2D
 
 
 def test_Decomon_conv_box(data_format, padding, use_bias, mode, floatx, decimal, helpers):
-    if data_format == "channels_first" and not helpers.in_GPU_mode():
-        pytest.skip("data format 'channels first' is possible only in GPU mode")
+    # skip unavailable combinations
+    if floatx == 16 and keras_config.backend() == "torch":
+        pytest.skip("Pytorch does not implement conv2d for float16")
+
+    if data_format == "channels_first" and not helpers.in_GPU_mode() and not helpers.in_GPU_mode():
+        pytest.skip("data format 'channels first' is possible only in GPU mode in CPU mode.")
 
     odd, m_0, m_1 = 0, 0, 1
     dc_decomp = False

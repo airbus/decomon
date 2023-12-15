@@ -1,10 +1,15 @@
 import keras.config as keras_config
+import pytest
 from keras.layers import MaxPooling2D
 
 from decomon.layers.maxpooling import DecomonMaxPooling2D
 
 
 def test_MaxPooling2D_box(mode, floatx, decimal, helpers):
+    # skip unavailable combinations
+    if floatx == 16 and keras_config.backend() == "torch" and not helpers.in_GPU_mode():
+        pytest.skip("Pytorch does not implement maxpooling for float16 in CPU mode.")
+
     odd, m_0, m_1 = 0, 0, 1
     data_format = "channels_last"
     dc_decomp = True
