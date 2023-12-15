@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, Union
 
 import keras
+import keras.ops as K
 import numpy as np
 from keras import Model
 from keras.utils import serialize_keras_object
@@ -113,9 +114,9 @@ class DecomonModel(keras.Model):
         """
         output_tensors = self(inputs)
         if isinstance(output_tensors, list):
-            return [output.numpy() for output in output_tensors]
+            return [K.convert_to_numpy(output) for output in output_tensors]
         else:
-            return output_tensors.numpy()
+            return K.convert_to_numpy(output_tensors)
 
 
 def _check_domain(
