@@ -72,7 +72,7 @@ def get_toeplitz_channels_last(conv_layer: Conv2D, flatten: bool = True) -> Back
 
     diag_patches_ = K.reshape(diag_patches, (w_in, h_in, c_in, w_out, h_out, filter_size**2, c_in))
 
-    shape = np.arange(len(diag_patches_.shape))
+    shape = list(range(len(diag_patches_.shape)))
     shape[-1] -= 1
     shape[-2] += 1
     diag_patches_ = K.transpose(diag_patches_, shape)
@@ -135,7 +135,7 @@ def get_toeplitz_channels_first(conv_layer: Conv2D, flatten: bool = True) -> Bac
 
     diag_patches_ = K.reshape(diag_patches, (w_in, h_in, c_in, w_out, h_out, filter_size**2, c_in))
 
-    shape = np.arange(len(diag_patches_.shape))
+    shape = list(range(len(diag_patches_.shape)))
     shape[-1] -= 1
     shape[-2] += 1
     diag_patches_ = K.transpose(diag_patches_, shape)

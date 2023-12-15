@@ -65,7 +65,7 @@ def get_upper_linear_hull_max(
 
     # expand dim/broadcast
     mask = K.identity(n_dim, dtype=dtype)  # (n_dim, n_dim)
-    mask_shape = np.ones(len(u_c.shape) + 1)
+    mask_shape = [1] * (len(u_c.shape) + 1)
     mask_shape[-1] = n_dim
     if axis != -1:
         mask_shape[axis] = n_dim
@@ -101,11 +101,11 @@ def get_upper_linear_hull_max(
         bias_corner = o_value + K.sum(z_value * corners, -2, keepdims=True)
         corners_collapse = K.concatenate([corners_collapse, bias_corner], axis=-2)
 
-    dimensions = np.arange(len(corners.shape))
+    dimensions = list(range(len(corners.shape)))
     if axis != -1:
-        dim_permutation = np.concatenate([dimensions[:axis], dimensions[axis + 1 :], [dimensions[axis]]])
+        dim_permutation = dimensions[:axis] + dimensions[axis + 1 :] + [dimensions[axis]]
     else:
-        dim_permutation = np.concatenate([dimensions[:-2], dimensions[-1:], [dimensions[-2]]])
+        dim_permutation = dimensions[:-2] + dimensions[-1:] + [dimensions[-2]]
 
     corners_collapse = K.transpose(corners_collapse, dim_permutation)
     # tf.linalg.solve works only for float32
