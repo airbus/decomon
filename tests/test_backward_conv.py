@@ -38,6 +38,7 @@ def test_Decomon_conv_box(data_format, padding, use_bias, mode, floatx, decimal,
         use_bias=use_bias,
         mode=mode,
         dtype=keras_config.floatx(),
+        data_format=data_format,
     )
     decomon_layer(inputs_for_mode)  # init weights
 
