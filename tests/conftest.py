@@ -861,18 +861,16 @@ class Helpers:
 
     @staticmethod
     def get_standard_values_images_box(data_format="channels_last", odd=0, m0=0, m1=1, dc_decomp=True):
-        output = Helpers.build_image_from_2D_box(odd, m0, m1, dc_decomp)
-        if dc_decomp:
-            x_0, y_0, z_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0, h_0, g_0 = output
-        else:
-            x_0, y_0, z_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0 = output
-
-        x_ = x_0
-        z_ = z_0
-        z_min_ = z_0[:, 0]
-        z_max_ = z_0[:, 1]
-
         if data_format == "channels_last":
+            output = Helpers.build_image_from_2D_box(odd, m0, m1, dc_decomp)
+            if dc_decomp:
+                x_0, y_0, z_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0, h_0, g_0 = output
+            else:
+                x_0, y_0, z_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0 = output
+
+            x_ = x_0
+            z_ = z_0
+
             y_0 = y_0[:, :, :, None]
             b_u_0 = b_u_0[:, :, :, None]
             b_l_0 = b_l_0[:, :, :, None]
@@ -951,7 +949,7 @@ class Helpers:
                 Input((2, n, n), dtype=keras_config.floatx()),
             ]
             if dc_decomp:
-                output += [Input((n, n, 2), dtype=keras_config.floatx()), Input((n, n, 2), dtype=keras_config.floatx())]
+                output += [Input((2, n, n), dtype=keras_config.floatx()), Input((2, n, n), dtype=keras_config.floatx())]
 
         return output
 
