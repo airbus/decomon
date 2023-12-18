@@ -34,6 +34,7 @@ def test_toeplitz_from_Keras(channels, filter_size, strides, flatten, data_forma
 
     # should be working either with convolution of conv2D
     kwargs_layer = dict(
+        data_format=data_format,
         filters=channels,
         kernel_size=(filter_size, filter_size),
         strides=strides,
@@ -98,6 +99,7 @@ def test_toeplitz_from_Decomon(
         padding=padding,
         use_bias=False,
         dtype=input_ref.dtype,
+        data_format=data_format,
     )
 
     # should be working either with convolution of conv2D
