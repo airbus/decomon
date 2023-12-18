@@ -75,6 +75,7 @@ module = [
     "tensorflow.*",
     "keras.*",
     "deel.lip.*",
-    "keras_core.*"
+    "keras_core.*",
+    "torch.*"
 ]
 ignore_missing_imports = true
