@@ -179,7 +179,10 @@ class BackwardConv2D(BackwardLayer):
 
         if self.layer.use_bias:
             bias_ = K.cast(self.layer.bias, self.layer.dtype)
-            b_out_u_ = b_out_u_ + bias_[None]
+            if self.layer.data_format == "channels_last":
+                b_out_u_ = b_out_u_ + bias_[None]
+            else:
+                b_out_u_ = b_out_u_ + bias_[:, None]
         b_out_u_ = K.ravel(b_out_u_)
 
         z_value = K.cast(0.0, self.dtype)
