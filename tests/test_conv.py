@@ -16,8 +16,8 @@ def test_Decomon_conv_box(data_format, mode, dc_decomp, floatx, decimal, helpers
     if floatx == 16 and keras_config.backend() == "torch" and not helpers.in_GPU_mode():
         pytest.skip("Pytorch does not implement conv2d for float16 in CPU mode.")
 
-    if data_format == "channels_first" and not helpers.in_GPU_mode():
-        pytest.skip("data format 'channels first' is possible only in GPU mode")
+    if data_format == "channels_first" and not helpers.in_GPU_mode() and keras_config.backend() == "tensorflow":
+        pytest.skip("data format 'channels first' is possible only in GPU mode for tensorflow.")
 
     odd, m_0, m_1 = 0, 0, 1
     kwargs_layer = dict(filters=10, kernel_size=(3, 3), dtype=keras_config.floatx(), data_format=data_format)
