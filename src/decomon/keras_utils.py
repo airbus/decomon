@@ -49,12 +49,6 @@ class BatchedIdentityLike(keras.Operation):
     """
 
     def call(self, x: BackendTensor) -> Tensor:
-        if is_symbolic_tensor(x):
-            return self.compute_output_spec(x)
-        else:
-            return self._call(x)
-
-    def _call(self, x: BackendTensor) -> BackendTensor:
         input_shape = x.shape
         identity_tensor = K.identity(input_shape[-1], dtype=x.dtype)
         n_repeat = int(np.prod(input_shape[:-1]))
@@ -83,12 +77,6 @@ class BatchedDiagLike(keras.Operation):
     """
 
     def call(self, x: BackendTensor) -> Tensor:
-        if is_symbolic_tensor(x):
-            return self.compute_output_spec(x)
-        else:
-            return self._call(x)
-
-    def _call(self, x: BackendTensor) -> BackendTensor:
         return K.concatenate([K.diag(K.ravel(w_part))[None] for w_part in K.split(x, len(x), axis=0)], axis=0)
 
     def compute_output_spec(self, x: Tensor) -> keras.KerasTensor:
