@@ -5,12 +5,10 @@ from keras.layers import Layer
 import decomon.backward_layers.backward_layers
 import decomon.backward_layers.backward_maxpooling
 import decomon.backward_layers.backward_merge
-import decomon.backward_layers.deel_lip
 from decomon.backward_layers.core import BackwardLayer
 from decomon.core import BoxDomain, ForwardMode, PerturbationDomain, Slope
 
 _mapping_name2class: Dict[str, Any] = vars(decomon.backward_layers.backward_layers)
-_mapping_name2class.update(vars(decomon.backward_layers.deel_lip))
 _mapping_name2class.update(vars(decomon.backward_layers.backward_merge))
 _mapping_name2class.update(vars(decomon.backward_layers.backward_maxpooling))
 

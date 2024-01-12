@@ -6,7 +6,6 @@ from keras.layers import Activation, Input, Layer
 import decomon.layers.decomon_layers
 import decomon.layers.decomon_merge_layers
 import decomon.layers.decomon_reshape
-import decomon.layers.deel_lip
 import decomon.layers.maxpooling
 from decomon.core import BoxDomain, ForwardMode, PerturbationDomain, Slope, get_mode
 from decomon.layers.core import DecomonLayer
@@ -15,7 +14,6 @@ from decomon.layers.core import DecomonLayer
 _mapping_name2class = vars(decomon.layers.decomon_layers)
 _mapping_name2class.update(vars(decomon.layers.decomon_merge_layers))
 _mapping_name2class.update(vars(decomon.layers.decomon_reshape))
-_mapping_name2class.update(vars(decomon.layers.deel_lip))
 _mapping_name2class.update(vars(decomon.layers.maxpooling))
 
 
