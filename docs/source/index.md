@@ -5,7 +5,7 @@
 </div>
 
 `decomon` is a library that allows the derivation of upper and lower bounds
-for the predictions of a Tensorflow/Keras neural network with perturbed inputs.
+for the predictions of a Keras neural network with perturbed inputs.
 In the current release, these bounds are represented as affine functions with respect to some variable under perturbation.
 
 Previous works that tackled certified robustness with backward propagation relied on forward upper and lower bounds. In `decomon`,
@@ -21,7 +21,8 @@ convex sets described by their vertices.
 
 We believe that decomon is a complementary tool to existing libraries for the certification of neural networks.
 
-Since we rely on Tensorflow and not Pytorch, we are opening up the possibility for a new community
+Since we rely on [Keras 3](https://keras.io/keras_3/) which allows in particular Tensorflow *and* Pytorch backends,
+we are opening up the possibility for a new community
 to formally assess the robustness of their networks, without worrying about the technicality of
 the implementation. In this way, we hope to promote the formal certification of neural networks
 into safety critical systems.
