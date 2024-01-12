@@ -10,15 +10,6 @@ from decomon.layers.decomon_merge_layers import DecomonAdd, DecomonConcatenate
 from decomon.layers.decomon_reshape import DecomonReshape
 from decomon.layers.maxpooling import DecomonMaxPooling2D
 
-try:
-    import deel.lip
-except ImportError:
-    deel_lip_available = False
-    DecomonGroupSort2 = "DecomonGroupSort2"
-else:
-    deel_lip_available = True
-    from decomon.layers.deel_lip import DecomonGroupSort2
-
 
 @pytest.mark.parametrize(
     "layer_class, layer_kwargs",
@@ -30,7 +21,6 @@ else:
         (DecomonConv2D, dict(filters=10, kernel_size=(3, 3))),
         (DecomonMaxPooling2D, dict(pool_size=(2, 2), strides=(2, 2), padding="valid")),
         (DecomonReshape, dict(target_shape=(1, -1, 1))),
-        (DecomonGroupSort2, dict()),
     ],
 )
 @pytest.mark.parametrize("n", [0])  # limit 1d cases
@@ -52,9 +42,6 @@ def test_compute_output_shape(
         pytest.skip(f"{layer_class} with dc_decomp=True not yet implemented.")
     if (layer_class == DecomonConv2D or layer_class == DecomonMaxPooling2D) and len(input_ref.shape) < 4:
         pytest.skip(f"{layer_class} applies only on image-like inputs.")
-    if layer_class == DecomonGroupSort2:
-        if not deel_lip_available:
-            pytest.skip("deel-lip is not available")
 
     # add data_format for convolution and maxpooling
     if layer_class in (DecomonConv2D, DecomonMaxPooling2D):

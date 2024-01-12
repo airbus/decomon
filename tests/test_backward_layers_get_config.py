@@ -22,7 +22,6 @@ from decomon.backward_layers.backward_merge import (
     BackwardMultiply,
     BackwardSubtract,
 )
-from decomon.backward_layers.deel_lip import BackwardGroupSort2
 from decomon.layers.decomon_layers import (
     DecomonActivation,
     DecomonBatchNormalization,
@@ -41,16 +40,6 @@ from decomon.layers.decomon_merge_layers import (
 )
 from decomon.layers.decomon_reshape import DecomonPermute, DecomonReshape
 from decomon.layers.maxpooling import DecomonMaxPooling2D
-
-try:
-    from decomon.layers.deel_lip import DecomonGroupSort2
-except ImportError:
-    deel_lip_available = False
-else:
-    deel_lip_available = True
-
-
-deel_lip_skip_reason = "deel-lip is not available"
 
 
 def test_backward_layers():
@@ -127,14 +116,5 @@ def test_backward_merge():
 def test_backward_maxpooling():
     sublayer = DecomonMaxPooling2D()
     layer = BackwardMaxPooling2D(layer=sublayer)
-    config = layer.get_config()
-    assert config["layer"]["class_name"] == sublayer.__class__.__name__
-
-
-@pytest.mark.skip("Not yet implemented.")
-@pytest.mark.skipif(not (deel_lip_available), reason=deel_lip_skip_reason)
-def test_deel_lip():
-    sublayer = DecomonGroupSort2()
-    layer = BackwardGroupSort2(layer=sublayer)
     config = layer.get_config()
     assert config["layer"]["class_name"] == sublayer.__class__.__name__
