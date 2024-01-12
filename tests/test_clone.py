@@ -18,24 +18,6 @@ from decomon.models.utils import (
     has_merge_layers,
 )
 
-try:
-    import deel.lip
-except ImportError:
-    deel_lip_available = False
-else:
-    deel_lip_available = True
-    from deel.lip.activations import GroupSort
-    from deel.lip.layers import (
-        FrobeniusDense,
-        ScaledL2NormPooling2D,
-        SpectralConv2D,
-        SpectralDense,
-    )
-    from deel.lip.model import Sequential as DeellipSequential
-
-
-deel_lip_skip_reason = "deel-lip is not available"
-
 
 def test_convert_nok_several_inputs():
     a = Input((1,))
@@ -184,23 +166,6 @@ def test_name_forward():
     assert nb_batman_layers == 2
 
 
-@pytest.mark.skipif(not (deel_lip_available), reason=deel_lip_skip_reason)
-def test_name_forward_deellip():
-    layers = []
-    layers.append(Input((1,)))
-    layers.append(Dense(1))
-    layers.append(SpectralDense(1, name="superman"))  # specify the dimension of the input space
-    layers.append(Activation("relu"))
-    layers.append(SpectralDense(1, activation=GroupSort(n=1), name="batman"))
-    model = Sequential(layers)
-
-    decomon_model_f = clone(model=model, method=ConvertMethod.FORWARD_HYBRID)
-    nb_superman_layers = len([layer for layer in decomon_model_f.layers if layer.name.startswith("superman_")])
-    assert nb_superman_layers == 1
-    nb_batman_layers = len([layer for layer in decomon_model_f.layers if layer.name.startswith("batman_")])
-    assert nb_batman_layers == 2
-
-
 def test_name_backward():
     layers = []
     layers.append(Input((1,)))
@@ -215,114 +180,6 @@ def test_name_backward():
     assert nb_superman_layers == 2
     nb_batman_layers = len([layer for layer in decomon_model_b.layers if layer.name.startswith("batman_")])
     assert nb_batman_layers == 3
-
-
-@pytest.mark.skipif(not (deel_lip_available), reason=deel_lip_skip_reason)
-def test_name_backward_deellip():
-    layers = []
-    layers.append(Input((1,)))
-    layers.append(Dense(1))
-    layers.append(SpectralDense(1, name="superman"))  # specify the dimension of the input space
-    layers.append(Activation("relu"))
-    layers.append(SpectralDense(1, activation="relu", name="batman"))
-    model = Sequential(layers)
-
-    decomon_model_b = clone(model=model, method=ConvertMethod.CROWN_FORWARD_HYBRID)
-    nb_superman_layers = len([layer for layer in decomon_model_b.layers if layer.name.startswith("superman_")])
-    assert nb_superman_layers == 2
-    nb_batman_layers = len([layer for layer in decomon_model_b.layers if layer.name.startswith("batman_")])
-    assert nb_batman_layers == 3
-
-
-@pytest.mark.skipif(not (deel_lip_available), reason=deel_lip_skip_reason)
-def test_clone_full_deellip_model_forward(method, mode, helpers):
-    if not helpers.is_method_mode_compatible(method=method, mode=mode):
-        # skip method=ibp/crown-ibp with mode=affine/hybrid
-        pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
-
-    if get_direction(method) == FeedDirection.BACKWARD:
-        # skip as BackwardConv2D not yet ready
-        pytest.skip(f"BackwardConv2D not yet fully implemented")
-
-    decimal = 4
-    data_format = "channels_last"
-    odd, m_0, m_1 = 0, 0, 1
-    dc_decomp = False
-    ibp = get_ibp(mode=mode)
-    affine = get_affine(mode=mode)
-
-    # numpy inputs
-    inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=dc_decomp)
-    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
-    input_ref_min_, input_ref_max_ = helpers.get_input_ref_bounds_from_full_inputs(inputs_)
-
-    # flatten inputs
-    preprocess_layer = Flatten(data_format=data_format)
-    input_ref_reshaped_ = K.convert_to_numpy(preprocess_layer(input_ref_))
-    input_ref_min_reshaped_ = K.convert_to_numpy(preprocess_layer(input_ref_min_))
-    input_ref_max_reshaped_ = K.convert_to_numpy(preprocess_layer(input_ref_max_))
-
-    # decomon inputs
-    input_decomon_ = np.concatenate((input_ref_min_reshaped_[:, None], input_ref_max_reshaped_[:, None]), axis=1)
-
-    # deel-lip model and output of reference
-    image_data_shape = input_ref_.shape[1:]  # image shape: before flattening
-    flatten_input_shape = (int(np.prod(image_data_shape)),)
-    ref_nn = DeellipSequential(
-        [
-            Reshape(target_shape=image_data_shape, input_shape=flatten_input_shape),
-            # Lipschitz layers preserve the API of their superclass ( here Conv2D )
-            # an optional param is available: k_coef_lip which control the lipschitz
-            # constant of the layer
-            SpectralConv2D(
-                filters=16,
-                kernel_size=(3, 3),
-                activation=GroupSort(2),
-                use_bias=True,
-                kernel_initializer="orthogonal",
-            ),
-            # our layers are fully interoperable with existing keras layers
-            Flatten(),
-            SpectralDense(
-                32,
-                activation=GroupSort(2),
-                use_bias=True,
-                kernel_initializer="orthogonal",
-            ),
-            FrobeniusDense(10, activation=None, use_bias=False, kernel_initializer="orthogonal"),
-        ],
-        # similary model has a parameter to set the lipschitz constant
-        # to set automatically the constant of each layer
-        k_coef_lip=1.0,
-        name="hkr_model",
-    )
-    output_ref_ = helpers.predict_on_small_numpy(ref_nn, input_ref_reshaped_)
-
-    # decomon conversion
-    decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
-
-    #  decomon outputs
-    outputs_ = helpers.predict_on_small_numpy(decomon_model, input_decomon_)
-
-    #  check bounds consistency
-    z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = helpers.get_full_outputs_from_outputs_for_mode(
-        outputs_for_mode=outputs_, mode=mode, dc_decomp=dc_decomp, full_inputs=inputs_
-    )
-    helpers.assert_output_properties_box(
-        input_ref_reshaped_,
-        output_ref_,
-        h_,
-        g_,
-        input_ref_min_reshaped_,
-        input_ref_max_reshaped_,
-        u_c_,
-        w_u_,
-        b_u_,
-        l_c_,
-        w_l_,
-        b_l_,
-        decimal=decimal,
-    )
 
 
 def test_convert_toy_models_1d(toy_model_1d, method, mode, helpers):

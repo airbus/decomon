@@ -30,11 +30,6 @@ from decomon.keras_utils import BatchedIdentityLike, share_weights_and_build
 from decomon.layers.utils import is_a_merge_layer
 from decomon.types import BackendTensor
 
-try:
-    from deel.lip.layers import LipschitzLayer
-except ImportError:
-    LipschitzLayer = type(None)
-
 
 class ConvertMethod(str, Enum):
     CROWN = "crown"
@@ -189,16 +184,7 @@ def wrap_outputs_from_layer_in_list(
         return outputs
 
 
-def _share_no_attributes(new_layer: Layer, old_layer: Layer) -> None:
-    return
-
-
-def split_activation(
-    layer: Layer, share_some_attributes: Optional[Callable[[Layer, Layer], None]] = None
-) -> List[Layer]:
-    # init
-    if share_some_attributes is None:
-        share_some_attributes = _share_no_attributes
+def split_activation(layer: Layer) -> List[Layer]:
     # get activation
     config = layer.get_config()
     activation = config.pop("activation", None)
@@ -209,8 +195,6 @@ def split_activation(
         # layer without activation
         config["name"] = f"{layer.name}_wo_activation"
         layer_wo_activation = layer.__class__.from_config(config)
-        # share (deel-lip) attributes
-        share_some_attributes(layer_wo_activation, layer)
         # get expected weights names without activation (activation layer could add some weights)
         layer_wo_activation_tmp = layer.__class__.from_config(config)  # create a temporary layer w/o activation
         layer_wo_activation_tmp(layer.input)  # build it
@@ -220,7 +204,7 @@ def split_activation(
 
         # activation layer
         if isinstance(activation, dict):
-            if isinstance(layer.activation, Layer):  # can be an Activation, a PReLU, or a deel.lip.activations layer
+            if isinstance(layer.activation, Layer):  # can be an Activation or a PReLU layer
                 activation_layer = layer.activation
                 # update the name to starts with main layer name
                 activation_layer_name = f"{layer.name}_activation_{layer.activation.name}"
@@ -234,38 +218,8 @@ def split_activation(
         return [layer_wo_activation, activation_layer]
 
 
-def convert_deellip_to_keras(layer: Layer) -> Layer:
-    # init deel-lip attributes (keep exisiting ones)
-    share_deellip_attributes(layer, layer)
-    # update is_lipschitz
-    if isinstance(layer, LipschitzLayer) or hasattr(layer, "vanilla_export"):
-        layer.is_lipschitz = True
-    if hasattr(layer, "vanilla_export"):
-        new_layer = layer.vanilla_export()
-        # build layer
-        inputs = Input(
-            shape=layer.input.shape[1:],  # shape without batch_size
-            dtype=layer.input.dtype,
-        )
-        new_layer(inputs)
-        # share deel-lip attributes of original layer
-        share_deellip_attributes(new_layer, layer)
-        layer = new_layer
-
-    return layer
-
-
-def share_deellip_attributes(new_layer: Layer, old_layer: Layer = None) -> None:
-    new_layer.is_lipschitz = getattr(old_layer, "is_lipschitz", False)
-    new_layer.deellip_classname = getattr(old_layer, "deellip_classname", new_layer.__class__.__name__)
-    new_layer.k_coef_lip = getattr(old_layer, "k_coef_lip", -1.0)
-
-
 def preprocess_layer(layer: Layer) -> List[Layer]:
-    layer = convert_deellip_to_keras(layer)
-    layers = split_activation(layer, share_some_attributes=share_deellip_attributes)
-    # convert activation layers (if were embedded deel-lip layers)
-    return [convert_deellip_to_keras(l) for l in layers]
+    return split_activation(layer)
 
 
 def is_input_node(node: Node) -> bool:

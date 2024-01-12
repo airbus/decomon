@@ -20,7 +20,6 @@ from decomon.models.utils import (
     ConvertMethod,
     FeedDirection,
     check_model2convert_inputs,
-    convert_deellip_to_keras,
     ensure_functional_model,
     get_direction,
     get_ibp_affine_from_method,
@@ -68,16 +67,6 @@ def split_activations_in_keras_model(
     model: Model,
 ) -> Model:
     return _clone_keras_model(model=model, layer_fn=split_activation)
-
-
-def convert_deellip_layers_in_keras_model(
-    model: Model,
-) -> Model:
-    return _clone_keras_model(model=model, layer_fn=_convert_deellip_to_keras)
-
-
-def _convert_deellip_to_keras(layer: Layer) -> List[Layer]:
-    return [convert_deellip_to_keras(layer=layer)]
 
 
 def preprocess_keras_model(
