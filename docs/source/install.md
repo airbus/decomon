@@ -3,27 +3,27 @@
 
 ## Prerequisites
 
-### Python 3.8+ environment
+### Python 3.9+ environment
 
 The use of a virtual environment is recommended, and you will need to ensure that the environment use a Python version
-greater than 3.8.
+greater than 3.9.
 This can be achieved for instance either by using [conda](https://docs.conda.io/en/latest/) or by using [pyenv](https://github.com/pyenv/pyenv) (or [pyenv-win](https://github.com/pyenv-win/pyenv-win) on windows)
 and [venv](https://docs.python.org/fr/3/library/venv.html) module.
 
-The following examples show how to create a virtual environment with Python version 3.8.13 with the mentioned methods.
+The following examples show how to create a virtual environment with Python version 3.10.13 with the mentioned methods.
 
 #### With conda (all platforms)
 
 ```shell
-conda create -n do-env python=3.8.13
+conda create -n do-env python=3.10.13
 conda activate do-env
 ```
 
 #### With pyenv + venv (Linux/MacOS)
 
 ```shell
-pyenv install 3.8.13
-pyenv shell 3.8.13
+pyenv install 3.10.13
+pyenv shell 3.10.13
 python -m venv do-venv
 source do-venv/bin/activate
 ```
@@ -31,17 +31,35 @@ source do-venv/bin/activate
 #### With pyenv-win + venv (Windows)
 
 ```shell
-pyenv install 3.8.13
-pyenv shell 3.8.13
+pyenv install 3.10.13
+pyenv shell 3.10.13
 python -m venv do-venv
 do-venv\Scripts\activate
 ```
 
-### Tensorflow 2.6+
+### Keras 3+
 
-A version of tensorflow greater than 2.6 is required. If no package tensorflow is detected when installing decomon, a package tensorflow will be installed.
-Howver it is better to do it beforehand to ensure having a version that is adapted to your GPU/CPU. See [tensorflow documentation](https://www.tensorflow.org/install/pip)
-to see how to install it properly.
+Decomon relies on [Keras 3](https://keras.io/keras_3/) which allows the use of several backends: Tensorflow, PyTorch, and JAX.
+
+To use it, you need to install at least one of the backends (refer to the documentation of each backend).
+You can find the version needed to be compatible with keras 3 in
+the [Keras 3 compatibility matrix](https://keras.io/getting_started/#compatibility-matrix)
+
+You choose the backend used at runtime by setting the environment variable `KERAS_BACKEND`. Read more about it in
+[Keras documentation](https://keras.io/getting_started/#configuring-your-backend).
+
+
+#### Warning when using backend Tensorflow 2.15
+
+When installing Tensorflow 2.15, the version 2.15 of Keras will be installed automatically. Be sure to get back keras 3
+by fully uninstalling Keras then reinstalling Keras 3:
+
+```shell
+pip uninstall keras
+pip install "keras>=3"
+```
+
+The problem will not occur starting from tensorflow 2.16.
 
 
 ## Pip install decomon library
