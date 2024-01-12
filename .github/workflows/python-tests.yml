@@ -64,7 +64,6 @@ jobs:
       matrix:
         python-version: ["3.9", "3.11"]
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        nodeellip: [ true ]
         backend: ["tf", "torch"]
     runs-on: ${{ matrix.os }}
     defaults:
@@ -104,8 +103,6 @@ jobs:
           platformversion=platform_mapping[platform.system()]
           toxenv = f"{pythonversion}-{platformversion}"
           toxenv += "-${{ matrix.backend }}"
-          if "${{ matrix.nodeellip }}" == "true":
-              toxenv += "-nodeellip"
           set_toxenv_cmd = f"TOXENV={toxenv}"
           print(f"Picked: {toxenv}")
           with Path(os.environ["GITHUB_ENV"]).open("ta") as file_handler:
