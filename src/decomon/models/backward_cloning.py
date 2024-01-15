@@ -25,7 +25,12 @@ from decomon.keras_utils import BatchedIdentityLike
 from decomon.layers.utils import softmax_to_linear as softmax_2_linear
 from decomon.models.crown import Convert2BackwardMode, Fuse, MergeWithPrevious
 from decomon.models.forward_cloning import OutputMapDict
-from decomon.models.utils import Convert2Mode, ensure_functional_model, get_depth_dict
+from decomon.models.utils import (
+    Convert2Mode,
+    ensure_functional_model,
+    get_depth_dict,
+    get_input_dim,
+)
 from decomon.types import BackendTensor, Tensor
 
 
@@ -408,9 +413,12 @@ def convert_backward(
     layer_fn: Callable[..., BackwardLayer] = to_backward,
     final_ibp: bool = True,
     final_affine: bool = False,
+    input_dim: int = -1,
     **kwargs: Any,
 ) -> Tuple[List[keras.KerasTensor], List[keras.KerasTensor], Dict[int, BackwardLayer], None]:
     model = ensure_functional_model(model)
+    if input_dim == -1:
+        input_dim = get_input_dim(model)
     if back_bounds is None:
         back_bounds = []
     if forward_map is None:
@@ -446,6 +454,7 @@ def convert_backward(
         mode_from=mode_from,
         mode_to=mode_to,
         perturbation_domain=perturbation_domain,
+        input_dim=input_dim,
     )(output)
     if mode_to != mode_from and mode_from == ForwardMode.IBP:
         f_input = Lambda(lambda z: Concatenate(1)([z[0][:, None], z[1][:, None]]))

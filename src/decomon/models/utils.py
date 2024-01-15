@@ -97,7 +97,7 @@ def get_input_tensors(
     inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
     empty_tensor = inputs_outputs_spec.get_empty_tensor()
 
-    input_shape_x = perturbation_domain.get_x_input_shape(input_dim)
+    input_shape_x = perturbation_domain.get_x_input_shape_wo_batchsize(input_dim)
     z_tensor = Input(shape=input_shape_x, dtype=model.layers[0].dtype)
     u_c_tensor, l_c_tensor, W, b, h, g = (
         empty_tensor,
@@ -288,30 +288,34 @@ class Convert2Mode(Layer):
         mode_from: Union[str, ForwardMode],
         mode_to: Union[str, ForwardMode],
         perturbation_domain: PerturbationDomain,
+        input_dim: int = -1,
         **kwargs: Any,
     ):
         super().__init__(**kwargs)
         self.mode_from = ForwardMode(mode_from)
         self.mode_to = ForwardMode(mode_to)
         self.perturbation_domain = perturbation_domain
+        self.input_dim = input_dim
+        dc_decomp = False
+        self.dc_decomp = dc_decomp
+        self.inputs_outputs_spec_from = InputsOutputsSpec(
+            dc_decomp=dc_decomp,
+            mode=mode_from,
+            perturbation_domain=perturbation_domain,
+            model_input_dim=self.input_dim,
+        )
+        self.inputs_outputs_spec_to = InputsOutputsSpec(
+            dc_decomp=dc_decomp,
+            mode=mode_to,
+            perturbation_domain=perturbation_domain,
+            model_input_dim=self.input_dim,
+        )
 
     def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
-        mode_from = self.mode_from
-        mode_to = self.mode_to
-        perturbation_domain = self.perturbation_domain
-
-        dc_decomp = False
-        inputs_outputs_spec_from = InputsOutputsSpec(
-            dc_decomp=dc_decomp, mode=mode_from, perturbation_domain=perturbation_domain
-        )
-        inputs_outputs_spec_to = InputsOutputsSpec(
-            dc_decomp=dc_decomp, mode=mode_to, perturbation_domain=perturbation_domain
-        )
-
-        compute_ibp_from_affine = mode_from == ForwardMode.AFFINE and mode_to != ForwardMode.AFFINE
-        tight = mode_from == ForwardMode.HYBRID and mode_to != ForwardMode.AFFINE
-        compute_dummy_affine = mode_from == ForwardMode.IBP and mode_to != ForwardMode.IBP
-        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs_outputs_spec_from.get_fullinputs_from_inputsformode(
+        compute_ibp_from_affine = self.mode_from == ForwardMode.AFFINE and self.mode_to != ForwardMode.AFFINE
+        tight = self.mode_from == ForwardMode.HYBRID and self.mode_to != ForwardMode.AFFINE
+        compute_dummy_affine = self.mode_from == ForwardMode.IBP and self.mode_to != ForwardMode.IBP
+        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec_from.get_fullinputs_from_inputsformode(
             inputs, compute_ibp_from_affine=compute_ibp_from_affine, tight=tight
         )
 
@@ -323,7 +327,25 @@ class Convert2Mode(Layer):
             w_l = w
             b_l = l_c
 
-        return inputs_outputs_spec_to.extract_outputsformode_from_fulloutputs([x, u_c, w_u, b_u, l_c, w_l, b_l, h, g])
+        return self.inputs_outputs_spec_to.extract_outputsformode_from_fulloutputs(
+            [x, u_c, w_u, b_u, l_c, w_l, b_l, h, g]
+        )
+
+    def compute_output_shape(self, input_shape: List[Tuple[Optional[int], ...]]) -> List[Tuple[Optional[int], ...]]:
+        (
+            x_shape,
+            u_c_shape,
+            w_u_shape,
+            b_u_shape,
+            l_c_shape,
+            w_l_shape,
+            b_l_shape,
+            h_shape,
+            g_shape,
+        ) = self.inputs_outputs_spec_from.get_fullinputshapes_from_inputshapesformode(input_shape)
+        return self.inputs_outputs_spec_to.extract_inputshapesformode_from_fullinputshapes(
+            [x_shape, u_c_shape, w_u_shape, b_u_shape, l_c_shape, w_l_shape, b_l_shape, h_shape, g_shape]
+        )
 
     def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
