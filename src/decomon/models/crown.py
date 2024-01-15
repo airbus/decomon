@@ -28,6 +28,29 @@ class Fuse(Layer):
 
         return merge_with_previous([w_f_u, b_f_u, w_f_l, b_f_l] + backward_bounds)
 
+    def compute_output_shape(self, input_shape: List[Tuple[Optional[int], ...]]) -> List[Tuple[Optional[int], ...]]:
+        inputs_wo_backward_bounds_shapes = input_shape[:-4]
+        backward_bounds_shapes = input_shape[-4:]
+
+        if self.mode == ForwardMode.AFFINE:
+            x_0_shape, w_f_u_shape, b_f_u_shape, w_f_l_shape, b_f_l_shape = inputs_wo_backward_bounds_shapes
+        elif self.mode == ForwardMode.HYBRID:
+            (
+                x_0_shape,
+                u_c_shape,
+                w_f_u_shape,
+                b_f_u_shape,
+                l_c_shape,
+                w_f_l_shape,
+                b_f_l_shape,
+            ) = inputs_wo_backward_bounds_shapes
+        else:
+            return backward_bounds_shapes
+
+        return merge_with_previous_compute_output_shape(
+            [w_f_u_shape, b_f_u_shape, w_f_l_shape, b_f_l_shape] + backward_bounds_shapes
+        )
+
     def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
         config.update({"mode": self.mode})
@@ -97,6 +120,9 @@ class MergeWithPrevious(Layer):
     def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
         return merge_with_previous(inputs)
 
+    def compute_output_shape(self, input_shape: List[Tuple[Optional[int], ...]]) -> List[Tuple[Optional[int], ...]]:
+        return merge_with_previous_compute_output_shape(input_shape)
+
     def get_config(self) -> Dict[str, Any]:
         config = super().get_config()
         config.update(
@@ -106,6 +132,18 @@ class MergeWithPrevious(Layer):
             }
         )
         return config
+
+
+def merge_with_previous_compute_output_shape(
+    input_shapes: List[Tuple[Optional[int], ...]]
+) -> List[Tuple[Optional[int], ...]]:
+    w_b_in_shape, b_b_in_shape = input_shapes[-2:]
+    w_out_in_shape, b_out_in_shape = input_shapes[:2]
+    batch_size, flattened_keras_input_shape, flattened_keras_output_shape = w_out_in_shape
+    _, _, flattened_model_output_shape = w_b_in_shape
+    b_b_out_shape = b_b_in_shape
+    w_b_out_shape = batch_size, flattened_keras_input_shape, flattened_model_output_shape
+    return [w_b_out_shape, b_b_out_shape] * 2
 
 
 def merge_with_previous(inputs: List[BackendTensor]) -> List[BackendTensor]:
