@@ -100,6 +100,19 @@ class BackwardMerge(ABC, Wrapper):
         """
         pass
 
+    def compute_output_shape(self, input_shape: List[Tuple[Optional[int], ...]]) -> List[Tuple[Optional[int], ...]]:
+        """Compute expected output shape according to input shape
+
+        Will be called by symbolic calls on Keras Tensors.
+
+        Args:
+            input_shape
+
+        Returns:
+
+        """
+        raise NotImplementedError()
+
     def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
         """
         Args:
