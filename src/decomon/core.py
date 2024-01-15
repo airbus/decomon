@@ -45,7 +45,7 @@ class PerturbationDomain(ABC):
             "opt_option": self.opt_option,
         }
 
-    def get_x_input_shape(self, original_input_dim: int) -> Tuple[int, ...]:
+    def get_x_input_shape_wo_batchsize(self, original_input_dim: int) -> Tuple[int, ...]:
         n_comp_x = self.get_nb_x_components()
         if n_comp_x == 1:
             return (original_input_dim,)
@@ -157,6 +157,7 @@ class InputsOutputsSpec:
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         perturbation_domain: Optional[PerturbationDomain] = None,
+        model_input_dim: int = -1,
     ):
         """
         Args:
@@ -167,6 +168,7 @@ class InputsOutputsSpec:
 
         """
 
+        self.model_input_dim = model_input_dim
         self.mode = ForwardMode(mode)
         self.dc_decomp = dc_decomp
         self.perturbation_domain: PerturbationDomain
@@ -228,16 +230,21 @@ class InputsOutputsSpec:
                 ) = inputshapesformode[:nb_tensors]
             elif self.mode == ForwardMode.IBP:
                 u_c_shape, l_c_shape, h_shape, g_shape = inputshapesformode[:nb_tensors]
+                batchsize = u_c_shape[0]
+                x_shape = (batchsize,) + self.perturbation_domain.get_x_input_shape_wo_batchsize(self.model_input_dim)
+                b_shape = tuple(u_c_shape)
+                w_shape = tuple(u_c_shape) + (u_c_shape[-1],)
                 x_shape, w_u_shape, b_u_shape, w_l_shape, b_l_shape = (
-                    empty_shape,
-                    empty_shape,
-                    empty_shape,
-                    empty_shape,
-                    empty_shape,
+                    x_shape,
+                    w_shape,
+                    b_shape,
+                    w_shape,
+                    b_shape,
                 )
             elif self.mode == ForwardMode.AFFINE:
                 x_shape, w_u_shape, b_u_shape, w_l_shape, b_l_shape, h_shape, g_shape = inputshapesformode[:nb_tensors]
-                u_c_shape, l_c_shape = empty_shape, empty_shape
+                u_l_shape = tuple(b_u_shape)
+                u_c_shape, l_c_shape = u_l_shape, u_l_shape
             else:
                 raise ValueError(f"Unknown mode {self.mode}")
         else:
@@ -248,16 +255,21 @@ class InputsOutputsSpec:
                 ]
             elif self.mode == ForwardMode.IBP:
                 u_c_shape, l_c_shape = inputshapesformode[:nb_tensors]
+                batchsize = u_c_shape[0]
+                x_shape = (batchsize,) + self.perturbation_domain.get_x_input_shape_wo_batchsize(self.model_input_dim)
+                b_shape = tuple(u_c_shape)
+                w_shape = tuple(u_c_shape) + (u_c_shape[-1],)
                 x_shape, w_u_shape, b_u_shape, w_l_shape, b_l_shape = (
-                    empty_shape,
-                    empty_shape,
-                    empty_shape,
-                    empty_shape,
-                    empty_shape,
+                    x_shape,
+                    w_shape,
+                    b_shape,
+                    w_shape,
+                    b_shape,
                 )
             elif self.mode == ForwardMode.AFFINE:
                 x_shape, w_u_shape, b_u_shape, w_l_shape, b_l_shape = inputshapesformode[:nb_tensors]
-                u_c_shape, l_c_shape = empty_shape, empty_shape
+                u_l_shape = tuple(b_u_shape)
+                u_c_shape, l_c_shape = u_l_shape, u_l_shape
             else:
                 raise ValueError(f"Unknown mode {self.mode}")
 

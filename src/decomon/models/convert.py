@@ -23,6 +23,7 @@ from decomon.models.utils import (
     ensure_functional_model,
     get_direction,
     get_ibp_affine_from_method,
+    get_input_dim,
     get_input_tensors,
     is_input_node,
     preprocess_layer,
@@ -109,6 +110,8 @@ def convert(
     if finetune:
         finetune_forward = True
         finetune_backward = True
+    if input_dim == -1:
+        input_dim = get_input_dim(model)
 
     if isinstance(method, str):
         method = ConvertMethod(method.lower())
@@ -148,13 +151,16 @@ def convert(
             forward_map=forward_map,
             final_ibp=final_ibp,
             final_affine=final_affine,
+            input_dim=input_dim,
             **kwargs,
         )
     else:
         # check final_ibp and final_affine
         mode_from = get_mode(ibp, affine)
         mode_to = get_mode(final_ibp, final_affine)
-        output = Convert2Mode(mode_from=mode_from, mode_to=mode_to, perturbation_domain=perturbation_domain)(output)
+        output = Convert2Mode(
+            mode_from=mode_from, mode_to=mode_to, perturbation_domain=perturbation_domain, input_dim=input_dim
+        )(output)
 
     # build decomon model
     return input_tensors, output, layer_map, forward_map
