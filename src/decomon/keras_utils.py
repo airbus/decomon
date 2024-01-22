@@ -223,7 +223,13 @@ def share_weights_and_build(original_layer: Layer, new_layer: Layer, weight_name
     # store the weights as a new_layer variable before build (ie before the lock)
     for w_name in weight_names:
         w = getattr(original_layer, w_name)
-        setattr(new_layer, w_name, w)
+        try:
+            setattr(new_layer, w_name, w)
+        except AttributeError:
+            # manage hidden weights introduced for LoRA https://github.com/keras-team/keras/pull/18942
+            w_name = f"_{w_name}"
+            w = getattr(original_layer, w_name)
+            setattr(new_layer, w_name, w)
 
     # build the layer
     new_layer(inp)
@@ -231,8 +237,15 @@ def share_weights_and_build(original_layer: Layer, new_layer: Layer, weight_name
     for w_name in weight_names:
         w = getattr(original_layer, w_name)
         w_to_drop = getattr(new_layer, w_name)
-        setattr(new_layer, w_name, w)
-        # untrack the not used anymore kernel
+        try:
+            setattr(new_layer, w_name, w)
+        except AttributeError:
+            # manage hidden weights introduced for LoRA https://github.com/keras-team/keras/pull/18942
+            w_name = f"_{w_name}"
+            w = getattr(original_layer, w_name)
+            w_to_drop = getattr(new_layer, w_name)
+            setattr(new_layer, w_name, w)
+        # untrack the not used anymore weight
         new_layer._tracker.untrack(w_to_drop)
 
 
