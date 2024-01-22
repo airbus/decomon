@@ -334,12 +334,17 @@ class DecomonDense(DecomonLayer, Dense):
         input_dim = input_shape[-1][-1]
 
         if not self.shared:
-            self.kernel = self.add_weight(
+            kernel = self.add_weight(
                 shape=(input_dim, self.units),
                 initializer=Project_initializer_pos(self.kernel_initializer),
                 name="kernel_pos",
                 regularizer=self.kernel_regularizer,
             )
+            try:
+                self.kernel = kernel
+            except AttributeError:
+                # manage hidden weights introduced for LoRA https://github.com/keras-team/keras/pull/18942
+                self._kernel = kernel
 
             if self.use_bias:
                 self.bias = self.add_weight(
@@ -391,7 +396,11 @@ class DecomonDense(DecomonLayer, Dense):
     def share_weights(self, layer: Layer) -> None:
         if not self.shared:
             return
-        self.kernel = layer.kernel
+        try:
+            self.kernel = layer.kernel
+        except AttributeError:
+            # manage hidden weights introduced for LoRA https://github.com/keras-team/keras/pull/18942
+            self._kernel = layer._kernel
         if self.use_bias:
             self.bias = layer.bias
 
