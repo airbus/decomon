@@ -5,7 +5,103 @@ import pytest
 from keras.layers import Dense, Input
 from numpy.testing import assert_almost_equal
 
-from decomon.keras_utils import get_weight_index_from_name, share_layer_all_weights
+from decomon.keras_utils import (
+    batch_multid_dot,
+    get_weight_index_from_name,
+    share_layer_all_weights,
+)
+
+
+def test_batch_multid_dot_symbolic_nok():
+    with pytest.raises(ValueError):
+        batch_multid_dot(Input((2, 5, 1)), Input((4, 8, 2, 9)), nb_merging_axes=2)
+
+
+def test_batch_multid_dot_symbolic_ok():
+    output = batch_multid_dot(Input((2, 5, 1)), Input((5, 1, 8, 2, 9)), nb_merging_axes=2)
+    assert output.shape == (None, 2, 8, 2, 9)
+
+
+def test_batch_multid_dot_nok():
+    with pytest.raises(ValueError):
+        batch_multid_dot(K.ones((10, 2, 5, 1)), K.ones((1, 4, 8, 2, 9)), nb_merging_axes=2)
+
+
+def test_batch_multid_dot_ok():
+    x = K.repeat(K.reshape(K.eye(5), (1, 5, 5, 1)), 10, axis=0)
+    y = K.ones((10, 5, 1, 8, 2, 9))
+    output = batch_multid_dot(x, y, nb_merging_axes=2)
+    expected_shape = (10, 5, 8, 2, 9)
+    assert output.shape == expected_shape
+    assert K.convert_to_numpy(output == K.ones(expected_shape)).all()
+
+
+def test_batch_multid_dot_missing_y_batch_nok():
+    x = K.repeat(K.reshape(K.eye(5), (1, 5, 5, 1)), 10, axis=0)
+    y = K.ones((10, 5, 1, 8, 2, 9))
+    with pytest.raises(ValueError):
+        batch_multid_dot(x, y, nb_merging_axes=2, missing_batchsize=(False, True))
+
+
+def test_batch_multid_dot_missing_y_batch_ok(helpers):
+    batchsize = 10
+    x_shape_wo_batch = (4, 5, 2)
+    y_shape_wo_batch = (5, 2, 3, 7)
+    nb_merging_axes = 2
+    expected_res_shape_wo_batchsize = (4, 3, 7)
+    x_shape = (batchsize,) + x_shape_wo_batch
+
+    x = K.convert_to_tensor(np.random.random(x_shape))
+    y_wo_batch = K.convert_to_tensor(np.random.random(y_shape_wo_batch))
+    y_w_batch = K.repeat(y_wo_batch[None], batchsize, axis=0)
+
+    res = batch_multid_dot(x, y_wo_batch, nb_merging_axes=nb_merging_axes, missing_batchsize=(False, True))
+    assert tuple(res.shape)[1:] == expected_res_shape_wo_batchsize
+    res_w_all_batch = batch_multid_dot(x, y_w_batch, nb_merging_axes=nb_merging_axes)
+    helpers.assert_almost_equal(res, res_w_all_batch)
+
+
+def test_batch_multid_dot_missing_x_batch_ok(helpers):
+    batchsize = 10
+    x_shape_wo_batch = (4, 5, 2)
+    y_shape_wo_batch = (5, 2, 3, 7)
+    nb_merging_axes = 2
+    expected_res_shape_wo_batchsize = (4, 3, 7)
+    y_shape = (batchsize,) + y_shape_wo_batch
+
+    y = K.convert_to_tensor(np.random.random(y_shape))
+    x_wo_batch = K.convert_to_tensor(np.random.random(x_shape_wo_batch))
+    x_w_batch = K.repeat(x_wo_batch[None], batchsize, axis=0)
+
+    res = batch_multid_dot(x_wo_batch, y, nb_merging_axes=nb_merging_axes, missing_batchsize=(True, False))
+    assert tuple(res.shape)[1:] == expected_res_shape_wo_batchsize
+    res_w_all_batch = batch_multid_dot(x_w_batch, y, nb_merging_axes=nb_merging_axes)
+    helpers.assert_almost_equal(res, res_w_all_batch)
+
+
+@pytest.mark.parametrize("missing_batchsize", [(False, False), (True, False), (False, True)])
+def test_batch_multid_dot_default_nb_merging_axes(missing_batchsize, helpers):
+    batchsize = 10
+    x_shape_wo_batch = (4, 5, 2)
+    y_shape_wo_batch = (4, 5, 2, 3, 7)
+    nb_merging_axes = len(x_shape_wo_batch)
+    expected_res_shape_wo_batchsize = (3, 7)
+    x_shape = (batchsize,) + x_shape_wo_batch
+    y_shape = (batchsize,) + y_shape_wo_batch
+
+    x_missing_batchsize, y_missing_batchsize = missing_batchsize
+    if x_missing_batchsize:
+        x = K.convert_to_tensor(np.random.random(x_shape_wo_batch))
+    else:
+        x = K.convert_to_tensor(np.random.random(x_shape))
+    if y_missing_batchsize:
+        y = K.convert_to_tensor(np.random.random(y_shape_wo_batch))
+    else:
+        y = K.convert_to_tensor(np.random.random(y_shape))
+
+    res_default = batch_multid_dot(x, y, missing_batchsize=missing_batchsize)
+    res = batch_multid_dot(x, y, nb_merging_axes=nb_merging_axes, missing_batchsize=missing_batchsize)
+    helpers.assert_almost_equal(res, res_default)
 
 
 def test_get_weight_index_from_name_nok_attribute():

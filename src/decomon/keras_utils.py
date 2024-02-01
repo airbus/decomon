@@ -1,9 +1,9 @@
-from typing import Any
+from typing import Any, Optional
 
 import keras
 import keras.ops as K
 import numpy as np
-from keras.layers import Layer
+from keras.layers import Dot, Layer, Reshape
 
 from decomon.types import BackendTensor, Tensor
 
@@ -11,6 +11,74 @@ BACKEND_TENSORFLOW = "tensorflow"
 BACKEND_PYTORCH = "torch"
 BACKEND_NUMPY = "numpy"
 BACKEND_JAX = "jax"
+
+
+def batch_multid_dot(
+    x: Tensor, y: Tensor, nb_merging_axes: Optional[int] = None, missing_batchsize: tuple[bool, bool] = (False, False)
+) -> Tensor:
+    """Dot product of tensors by batch, along multiple axes
+
+    Hypothesis: we sum over last axes of x and first axes (skipping the batch one) of x.
+
+    The 1-dimensional equivalent would be `batch_dot(x,y, axes=(-1, 1))`
+    or `keras.layers.Dot(axes=(-1, 1))(x,y)`
+
+    Args:
+        x:
+        y:
+        nb_merging_axes: number of axes to be merged.
+          By default, all (non-batch) axes of x,i.e.
+          len(x.shape) if missing_batchsize[0] else len(x.shape) - 1
+        missing_batchsize: specify if a tensor is missing the batch dimension, for x and y.
+            In that case, the corresponding tensor is broadcasted accordingly.
+
+    Returns:
+
+    For performance reasons, instead of actually repeating the tensor `batchsize` along a new first axis,
+    we rather use `keras.ops.tensordot` directly on tensors without broadcasting them.
+
+    Note:
+        The dimensions of axes along which we perform the dot product
+        (i.e. x.shape[-nb_merging_axes:] and y.shape[1:1 + nb_merging_axes]) should match.
+
+    """
+    missing_batchsize_x, missing_batchsize_y = missing_batchsize
+    nb_batch_axe_x = 0 if missing_batchsize_x else 1
+    nb_batch_axe_y = 0 if missing_batchsize_y else 1
+    if nb_merging_axes is None:
+        nb_merging_axes = len(x.shape) - nb_batch_axe_x
+
+    # check shapes compatibility
+    x_merging_axes_shape = x.shape[-nb_merging_axes:]
+    y_merging_axes_shape = y.shape[nb_batch_axe_y : nb_batch_axe_y + nb_merging_axes]
+    if x_merging_axes_shape != y_merging_axes_shape:
+        raise ValueError(
+            "Incompatible input shapes: "
+            f"Merging axes dimension should match. "
+            f"Found {x_merging_axes_shape} and {y_merging_axes_shape}. "
+            f"Full shapes: {x.shape} and {y.shape}."
+        )
+
+    # switch on missing batch axe (e.g. with affine layer representation like Dense's kernel)
+    if missing_batchsize_y:
+        return K.tensordot(x, y, axes=nb_merging_axes)
+    elif missing_batchsize_x:
+        # axes along which summing
+        merging_axes_x = list(range(-nb_merging_axes, 0))
+        merging_axes_y = list(range(nb_batch_axe_y, nb_batch_axe_y + nb_merging_axes))
+        # transposition to make to put back batch axe at the beginning
+        nb_axes_after_merge = len(x.shape) + len(y.shape) - 2 * nb_merging_axes
+        nb_axes_after_merge_from_x = len(x.shape) - nb_merging_axes
+        transpose_indices = (
+            (nb_axes_after_merge_from_x,)
+            + tuple(range(nb_axes_after_merge_from_x))
+            + tuple(range(nb_axes_after_merge_from_x + 1, nb_axes_after_merge))
+        )
+        return K.transpose(K.tensordot(x, y, axes=[merging_axes_x, merging_axes_y]), transpose_indices)
+    else:
+        new_x_shape = tuple(x.shape[1:-nb_merging_axes]) + (-1,)
+        new_y_shape = (-1,) + tuple(y.shape[nb_merging_axes + 1 :])
+        return Dot(axes=(-1, 1))([Reshape(new_x_shape)(x), Reshape(new_y_shape)(y)])
 
 
 class BatchedIdentityLike(keras.Operation):
