@@ -125,6 +125,13 @@ class ForwardMode(str, Enum):
     """Propagation of constant and affines bounds from input to output."""
 
 
+class Propagation(str, Enum):
+    """Propagation direction."""
+
+    FORWARD = "forward"
+    BACKWARD = "backward"
+
+
 def get_mode(ibp: bool = True, affine: bool = True) -> ForwardMode:
     if ibp:
         if affine:
