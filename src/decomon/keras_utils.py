@@ -131,6 +131,10 @@ class BatchedDiagLike(keras.Operation):
         )
 
 
+def is_a_merge_layer(layer: Layer) -> bool:
+    return hasattr(layer, "_merge_function")
+
+
 def is_symbolic_tensor(x: Tensor) -> bool:
     """Check whether the tensor is symbolic or not.
 

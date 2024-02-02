@@ -26,8 +26,11 @@ from decomon.core import (
     PerturbationDomain,
     get_mode,
 )
-from decomon.keras_utils import BatchedIdentityLike, share_weights_and_build
-from decomon.layers.utils import is_a_merge_layer
+from decomon.keras_utils import (
+    BatchedIdentityLike,
+    is_a_merge_layer,
+    share_weights_and_build,
+)
 from decomon.types import BackendTensor
 
 

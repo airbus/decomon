@@ -2,14 +2,35 @@ import keras
 import keras.ops as K
 import numpy as np
 import pytest
-from keras.layers import Dense, Input
+from keras.layers import Dense, Input, Layer
 from numpy.testing import assert_almost_equal
 
 from decomon.keras_utils import (
     batch_multid_dot,
     get_weight_index_from_name,
+    is_a_merge_layer,
     share_layer_all_weights,
 )
+
+
+class MyLayer(Layer):
+    """Mock layer unknown from decomon."""
+
+    ...
+
+
+class MyMerge(Layer):
+    """Mock merge layer unknown from decomon."""
+
+    def _merge_function(self, inputs):
+        return inputs
+
+
+def test_is_merge_layer():
+    layer = MyMerge()
+    assert is_a_merge_layer(layer)
+    layer = MyLayer()
+    assert not is_a_merge_layer(layer)
 
 
 def test_batch_multid_dot_symbolic_nok():
