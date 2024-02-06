@@ -6,6 +6,7 @@ import keras.ops as K
 import numpy as np
 from keras.config import floatx
 
+from decomon.keras_utils import batch_multid_dot
 from decomon.types import Tensor
 
 
@@ -472,7 +473,7 @@ class InputsOutputsSpec:
 
 
 def get_upper_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
-    """#compute the max of an affine function
+    """Compute the max of an affine function
     within a box (hypercube) defined by its extremal corners
 
     Args:
@@ -485,22 +486,14 @@ def get_upper_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, **kwargs: 
         max_(x >= x_min, x<=x_max) w*x + b
     """
 
-    if len(w.shape) == len(b.shape):  # identity function
-        return x_max
+    if len(w.shape) == len(b.shape):
+        raise NotImplementedError
 
-    # split into positive and negative components
     z_value = K.cast(0.0, dtype=x_min.dtype)
     w_pos = K.maximum(w, z_value)
     w_neg = K.minimum(w, z_value)
 
-    x_min_out = x_min + z_value * x_min
-    x_max_out = x_max + z_value * x_max
-
-    for _ in range(len(w.shape) - len(x_max.shape)):
-        x_min_out = K.expand_dims(x_min_out, -1)
-        x_max_out = K.expand_dims(x_max_out, -1)
-
-    return K.sum(w_pos * x_max_out + w_neg * x_min_out, 1) + b
+    return batch_multid_dot(x_max, w_pos) + batch_multid_dot(x_min, w_neg) + b
 
 
 def get_lower_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
@@ -516,21 +509,13 @@ def get_lower_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, **kwargs: 
     """
 
     if len(w.shape) == len(b.shape):
-        return x_min
+        raise NotImplementedError
 
     z_value = K.cast(0.0, dtype=x_min.dtype)
-
     w_pos = K.maximum(w, z_value)
     w_neg = K.minimum(w, z_value)
 
-    x_min_out = x_min + z_value * x_min
-    x_max_out = x_max + z_value * x_max
-
-    for _ in range(len(w.shape) - len(x_max.shape)):
-        x_min_out = K.expand_dims(x_min_out, -1)
-        x_max_out = K.expand_dims(x_max_out, -1)
-
-    return K.sum(w_pos * x_min_out + w_neg * x_max_out, 1) + b
+    return batch_multid_dot(x_min, w_pos) + batch_multid_dot(x_max, w_neg) + b
 
 
 def get_lq_norm(x: Tensor, p: float, axis: int = -1) -> Tensor:
@@ -568,7 +553,7 @@ def get_upper_ball(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kw
         max_(|x - x_0|_p<= eps) w*x + b
     """
     if len(w.shape) == len(b.shape):
-        return x_0 + eps
+        raise NotImplementedError
 
     if p == np.inf:
         # compute x_min and x_max according to eps
