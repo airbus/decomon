@@ -45,15 +45,12 @@ class PerturbationDomain(ABC):
             "opt_option": self.opt_option,
         }
 
-    def get_x_input_shape_wo_batchsize(self, original_input_dim: int) -> tuple[int, ...]:
+    def get_x_input_shape_wo_batchsize(self, original_input_shape: tuple[int, ...]) -> tuple[int, ...]:
         n_comp_x = self.get_nb_x_components()
         if n_comp_x == 1:
-            return (original_input_dim,)
+            return original_input_shape
         else:
-            return (
-                n_comp_x,
-                original_input_dim,
-            )
+            return (n_comp_x,) + original_input_shape
 
 
 class BoxDomain(PerturbationDomain):
@@ -238,7 +235,9 @@ class InputsOutputsSpec:
             elif self.mode == ForwardMode.IBP:
                 u_c_shape, l_c_shape, h_shape, g_shape = inputshapesformode[:nb_tensors]
                 batchsize = u_c_shape[0]
-                x_shape = (batchsize,) + self.perturbation_domain.get_x_input_shape_wo_batchsize(self.model_input_dim)
+                x_shape = (batchsize,) + self.perturbation_domain.get_x_input_shape_wo_batchsize(
+                    (self.model_input_dim,)
+                )
                 b_shape = tuple(u_c_shape)
                 w_shape = tuple(u_c_shape) + (u_c_shape[-1],)
                 x_shape, w_u_shape, b_u_shape, w_l_shape, b_l_shape = (
@@ -263,7 +262,9 @@ class InputsOutputsSpec:
             elif self.mode == ForwardMode.IBP:
                 u_c_shape, l_c_shape = inputshapesformode[:nb_tensors]
                 batchsize = u_c_shape[0]
-                x_shape = (batchsize,) + self.perturbation_domain.get_x_input_shape_wo_batchsize(self.model_input_dim)
+                x_shape = (batchsize,) + self.perturbation_domain.get_x_input_shape_wo_batchsize(
+                    (self.model_input_dim,)
+                )
                 b_shape = tuple(u_c_shape)
                 w_shape = tuple(u_c_shape) + (u_c_shape[-1],)
                 x_shape, w_u_shape, b_u_shape, w_l_shape, b_l_shape = (

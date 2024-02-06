@@ -100,7 +100,7 @@ def get_input_tensors(
     inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
     empty_tensor = inputs_outputs_spec.get_empty_tensor()
 
-    input_shape_x = perturbation_domain.get_x_input_shape_wo_batchsize(input_dim)
+    input_shape_x = perturbation_domain.get_x_input_shape_wo_batchsize((input_dim,))
     z_tensor = Input(shape=input_shape_x, dtype=model.layers[0].dtype)
     u_c_tensor, l_c_tensor, W, b, h, g = (
         empty_tensor,
