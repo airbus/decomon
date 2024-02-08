@@ -4,11 +4,23 @@ import pytest
 from keras.layers import Dense, Input
 
 from decomon.keras_utils import batch_multid_dot
-from decomon.layers.core.dense import DecomonNaiveDense
+from decomon.layers.core.dense import DecomonDense, DecomonNaiveDense
 
 
+@pytest.mark.parametrize("decomon_layer_class", [DecomonNaiveDense, DecomonDense])
 @pytest.mark.parametrize("input_shape", [(1,), (3,), (5, 2, 3)], ids=["0d", "1d", "multid"])
-def test_decomon_dense(use_bias, ibp, affine, propagation, input_shape, perturbation_domain, batchsize, helpers):
+def test_decomon_dense(
+    decomon_layer_class,
+    use_bias,
+    randomize,
+    ibp,
+    affine,
+    propagation,
+    input_shape,
+    perturbation_domain,
+    batchsize,
+    helpers,
+):
     decimal = 5
     units = 7
     output_shape = input_shape[:-1] + (units,)
@@ -27,7 +39,12 @@ def test_decomon_dense(use_bias, ibp, affine, propagation, input_shape, perturba
     layer = Dense(units=units)
     layer(keras_symbolic_input)
 
-    decomon_layer = DecomonNaiveDense(
+    if randomize:
+        # randomize weights => non-zero biases
+        for w in layer.weights:
+            w.assign(np.random.random(w.shape))
+
+    decomon_layer = decomon_layer_class(
         layer=layer, ibp=ibp, affine=affine, propagation=propagation, perturbation_domain=perturbation_domain
     )
     decomon_layer(*decomon_symbolic_inputs)
@@ -45,14 +62,15 @@ def test_decomon_dense(use_bias, ibp, affine, propagation, input_shape, perturba
     keras_output = layer(keras_input)
 
     # check affine representation is ok
-    w, b = decomon_layer.get_affine_representation()
-    keras_output_2 = batch_multid_dot(keras_input, w, missing_batchsize=(False, True))
-    np.testing.assert_almost_equal(
-        K.convert_to_numpy(keras_output),
-        K.convert_to_numpy(keras_output_2),
-        decimal=decimal,
-        err_msg="wrong affine representation",
-    )
+    if decomon_layer_class == DecomonNaiveDense:
+        w, b = decomon_layer.get_affine_representation()
+        keras_output_2 = batch_multid_dot(keras_input, w, missing_batchsize=(False, True)) + b
+        np.testing.assert_almost_equal(
+            K.convert_to_numpy(keras_output),
+            K.convert_to_numpy(keras_output_2),
+            decimal=decimal,
+            err_msg="wrong affine representation",
+        )
 
     decomon_output = decomon_layer(*decomon_inputs)
 
