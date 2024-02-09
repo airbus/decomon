@@ -26,6 +26,8 @@ class DecomonLayer(Wrapper):
        - generic case:
          - `get_affine_bounds()`: affine bounds on layer output w.r.t. layer input
          - `forward_ibp_propagate()`: ibp bounds on layer ouput knowing ibp bounds on layer inpu
+    - set class attribute `diagonal` to True if the affine relaxation is representing w as a diagonal
+      (see explanation for `diagonal`).
 
     Other possibilities exist like overriding directly
         - `forward_affine_propagate()`
@@ -45,6 +47,24 @@ class DecomonLayer(Wrapper):
 
     """
 
+    diagonal: bool = False
+    """Flag telling that the layer affine relaxation can be represented in a diagonal manner.
+
+    This is useful only to compute properly output shapes without making actual computations, during call on symbolic tensors.
+    During a call on actual tensors, this is not used.
+
+    If diagonal is set to True, this means that if the affine relaxation of the layer is w_l, b_l, w_u, b_u then
+    weights and bias will all have the same shape, and that the full representation can be retrieved
+
+    - either in linear case with no batch axis by
+      w_full = K.reshape(K.diag(K.flatten(w)))
+    - or in generic case with a batch axis by the same computation, batch element by batch element, i.e.
+      w_full = K.concatenate([K.reshape(K.diag(K.flatten(w[i])), w.shape + w.shape)[None] for i in range(len(w))], axis=0)
+
+    In this case, the computations when merging affine bounds can be simplified.
+
+    """
+
     def __init__(
         self,
         layer: Layer,
@@ -52,6 +72,7 @@ class DecomonLayer(Wrapper):
         ibp: bool = True,
         affine: bool = True,
         propagation: Propagation = Propagation.FORWARD,
+        model_output_shape_length: int = 0,
         **kwargs: Any,
     ):
         """
@@ -63,6 +84,10 @@ class DecomonLayer(Wrapper):
             propagation: direction of bounds propagation
               - forward: from input to output
               - backward: from output to input
+            model_output_shape_length: length of the shape of the model output (omitting batch axis)
+               w.r.t which backward affine bounds will be computed.
+               It allows determining if the backward bounds are with a bacth axis or not.
+               This has no meaning in forward propagation.
             **kwargs:
 
         """
@@ -83,12 +108,15 @@ class DecomonLayer(Wrapper):
             raise ValueError(f"The underlying keras layer {layer.name} is not built.")
         if not ibp and not affine:
             raise ValueError("ibp and affine cannot be both False.")
+        if propagation == Propagation.BACKWARD and model_output_shape_length == 0:
+            raise ValueError("model_output_shape_length must be positive in backward propagation.")
 
         # attributes
         self.ibp = ibp
         self.affine = affine
         self.perturbation_domain = perturbation_domain
         self.propagation = propagation
+        self.model_output_shape_length = model_output_shape_length
 
     def get_config(self) -> dict[str, Any]:
         config = super().get_config()
@@ -98,6 +126,7 @@ class DecomonLayer(Wrapper):
                 "affine": self.affine,
                 "perturbation_domain": self.perturbation_domain,
                 "propagation": self.propagation,
+                "model_output_shape_length": self.model_output_shape_length,
             }
         )
         return config
@@ -123,9 +152,23 @@ class DecomonLayer(Wrapper):
         layer(z) = batch_multid_dot(z, w, missing_batchsize=(False, True)) + b
         ```
 
+        If w can be represented as a diagonal tensor, which means that the full version of w is retrieved by
+            w_full = K.reshape(K.diag(K.flatten(w)), w.shape + w.shape)
+        then
+        - class attribute `diagonal` should be set to True (in order to have a correct `compute_output_shape()`)
+        - we got
+          ```
+          layer(z) = batch_multid_dot(z, w, missing_batchsize=(False, True), diagonal=(False, True)) + b
+          ```
+
         Shapes: !no batchsize!
-            w  ~ self.layer.input.shape[1:] + self.layer.output.shape[1:]
-            b ~ self.layer.output.shape[1:]
+            if diagonal is False:
+                w  ~ self.layer.input.shape[1:] + self.layer.output.shape[1:]
+                b ~ self.layer.output.shape[1:]
+            if diagonal is True:
+                w  ~ self.layer.output.shape[1:]
+                b ~ self.layer.output.shape[1:]
+
 
         """
         if not self.linear:
@@ -155,10 +198,19 @@ class DecomonLayer(Wrapper):
                 w_l * z + b_l <= layer(z) <= w_u * z + b_u
                 with lower <= z <= upper
 
+        If w(_l or_u) can be represented as a diagonal tensor, which means that the full version of w is retrieved by
+            w_full = K.concatenate([K.reshape(K.diag(K.flatten(w[i])), w.shape + w.shape)[None] for i in range(len(w))], axis=0)
+        then the class attribute `diagonal` should be set to True (in order to have a correct `compute_output_shape()`)
+
         Shapes:
-            lower, upper ~ (batchsize,) + self.layer.input.shape[1:]
-            w_l, w_u  ~ (batchsize,) + self.layer.input.shape[1:] + self.layer.output.shape[1:]
-            b_l, b_u ~ (batchsize,) + self.layer.output.shape[1:]
+            if diagonal is False:
+                lower, upper ~ (batchsize,) + self.layer.input.shape[1:]
+                w_l, w_u  ~ (batchsize,) + self.layer.input.shape[1:] + self.layer.output.shape[1:]
+                b_l, b_u ~ (batchsize,) + self.layer.output.shape[1:]
+            if diagonal is True:
+                lower, upper ~ (batchsize,) + self.layer.input.shape[1:]
+                w_l, w_u  ~ (batchsize,) + self.layer.output.shape[1:]
+                b_l, b_u ~ (batchsize,) + self.layer.output.shape[1:]
 
         Note:
             `w * z` means here  `batch_multid_dot(z, w)`.
@@ -458,10 +510,31 @@ class DecomonLayer(Wrapper):
             if self.affine:
                 keras_layer_input_shape_wo_batchsize = self.layer.input.shape[1:]
                 keras_layer_output_shape_wo_batchsize = self.layer.output.shape[1:]
-                w_in_shape = affine_bounds_to_propagate_shape[0]
-                model_input_shape = w_in_shape[: -len(keras_layer_input_shape_wo_batchsize)]
-                w_out_shape = model_input_shape + keras_layer_output_shape_wo_batchsize
-                b_out_shape = self.layer.output.shape
+
+                # inputs are in diagonal representation? without batch axis?
+                if self.is_diagonal_bounds_shape(affine_bounds_to_propagate_shape):
+                    model_input_shape_wo_batchsize = keras_layer_input_shape_wo_batchsize
+                else:
+                    w_in_shape = affine_bounds_to_propagate_shape[0]
+                    if self.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
+                        model_input_shape_wo_batchsize = w_in_shape[: -len(keras_layer_input_shape_wo_batchsize)]
+                    else:
+                        model_input_shape_wo_batchsize = w_in_shape[1 : -len(keras_layer_input_shape_wo_batchsize)]
+
+                # outputs shape depends if layer and inputs are diagonal / linear (w/o batch)
+                b_out_shape_wo_batchsize = keras_layer_output_shape_wo_batchsize
+                if self.diagonal and self.is_diagonal_bounds_shape(affine_bounds_to_propagate_shape):
+                    # propagated bounds still diagonal
+                    w_out_shape_wo_batchsize = b_out_shape_wo_batchsize
+                else:
+                    w_out_shape_wo_batchsize = model_input_shape_wo_batchsize + keras_layer_output_shape_wo_batchsize
+                if self.linear and self.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
+                    # no batch in propagated bounds
+                    w_out_shape = w_out_shape_wo_batchsize
+                    b_out_shape = b_out_shape_wo_batchsize
+                else:
+                    w_out_shape = (None,) + w_out_shape_wo_batchsize
+                    b_out_shape = (None,) + b_out_shape_wo_batchsize
                 affine_bounds_propagated_shape = [w_out_shape, b_out_shape, w_out_shape, b_out_shape]
             else:
                 affine_bounds_propagated_shape = []
@@ -469,10 +542,29 @@ class DecomonLayer(Wrapper):
             return [affine_bounds_propagated_shape, constant_bounds_propagated_shape]
 
         else:  # backward
-            b_shape = affine_bounds_to_propagate_shape[1]
-            model_output_shape_wo_batchsize = b_shape[1:]
-            w_shape = self.layer.input.shape + model_output_shape_wo_batchsize
-            affine_bounds_propagated_shape = [w_shape, b_shape, w_shape, b_shape]
+            # find model output shape
+            if self.is_identity_bounds_shape(affine_bounds_to_propagate_shape):
+                model_output_shape_wo_batchsize = self.layer.output.shape[1:]
+            else:
+                b_shape = affine_bounds_to_propagate_shape[1]
+                if self.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
+                    model_output_shape_wo_batchsize = b_shape
+                else:
+                    model_output_shape_wo_batchsize = b_shape[1:]
+            # outputs shape depends if layer and inputs are diagonal / linear (w/o batch)
+            b_shape_wo_batchisze = model_output_shape_wo_batchsize
+            if self.diagonal and self.is_diagonal_bounds_shape(affine_bounds_to_propagate_shape):
+                w_shape_wo_batchsize = model_output_shape_wo_batchsize
+            else:
+                w_shape_wo_batchsize = self.layer.input.shape[1:] + model_output_shape_wo_batchsize
+            if self.linear and self.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
+                b_new_shape = b_shape_wo_batchisze
+                w_shape = w_shape_wo_batchsize
+            else:
+                b_new_shape = (None,) + b_shape_wo_batchisze
+                w_shape = (None,) + w_shape_wo_batchsize
+
+            affine_bounds_propagated_shape = [w_shape, b_new_shape, w_shape, b_new_shape]
 
             return [affine_bounds_propagated_shape]
 
@@ -488,6 +580,42 @@ class DecomonLayer(Wrapper):
                 return l
 
         return [replace_empty_tensor(l) for l in output_spec]
+
+    def is_identity_bounds(self, affine_bounds: list[Tensor]) -> bool:
+        return len(affine_bounds) == 0
+
+    def is_identity_bounds_shape(self, affine_bounds_shape: list[tuple[Optional[int], ...]]) -> bool:
+        return len(affine_bounds_shape) == 0
+
+    def is_diagonal_bounds(self, affine_bounds: list[Tensor]) -> bool:
+        if self.is_identity_bounds(affine_bounds):
+            return True
+        w, b = affine_bounds[:2]
+        return w.shape == b.shape
+
+    def is_diagonal_bounds_shape(self, affine_bounds_shape: list[tuple[Optional[int], ...]]) -> bool:
+        if self.is_identity_bounds_shape(affine_bounds_shape):
+            return True
+        w_shape, b_shape = affine_bounds_shape[:2]
+        return w_shape == b_shape
+
+    def is_wo_batch_bounds(self, affine_bounds: list[Tensor]) -> bool:
+        if self.is_identity_bounds(affine_bounds):
+            return True
+        b = affine_bounds[1]
+        if self.propagation == Propagation.FORWARD:
+            return len(b.shape) == len(self.layer.input.shape) - 1
+        else:
+            return len(b.shape) == self.model_output_shape_length
+
+    def is_wo_batch_bounds_shape(self, affine_bounds_shape: list[tuple[Optional[int], ...]]) -> bool:
+        if self.is_identity_bounds_shape(affine_bounds_shape):
+            return True
+        b_shape = affine_bounds_shape[1]
+        if self.propagation == Propagation.FORWARD:
+            return len(b_shape) == len(self.layer.input.shape) - 1
+        else:
+            return len(b_shape) == self.model_output_shape_length
 
 
 def combine_affine_bounds(
