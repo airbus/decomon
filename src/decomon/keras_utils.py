@@ -14,7 +14,11 @@ BACKEND_JAX = "jax"
 
 
 def batch_multid_dot(
-    x: Tensor, y: Tensor, nb_merging_axes: Optional[int] = None, missing_batchsize: tuple[bool, bool] = (False, False)
+    x: Tensor,
+    y: Tensor,
+    nb_merging_axes: Optional[int] = None,
+    missing_batchsize: tuple[bool, bool] = (False, False),
+    diagonal: tuple[bool, bool] = (False, False),
 ) -> Tensor:
     """Dot product of tensors by batch, along multiple axes
 
@@ -31,17 +35,22 @@ def batch_multid_dot(
           len(x.shape) if missing_batchsize[0] else len(x.shape) - 1
         missing_batchsize: specify if a tensor is missing the batch dimension, for x and y.
             In that case, the corresponding tensor is broadcasted accordingly.
+        diagonal: specify is a tensor is only represented by its diagonal. See below for an example.
 
     Returns:
 
     For performance reasons, instead of actually repeating the tensor `batchsize` along a new first axis,
     we rather use `keras.ops.tensordot` directly on tensors without broadcasting them.
 
-    Note:
-        The dimensions of axes along which we perform the dot product
-        (i.e. x.shape[-nb_merging_axes:] and y.shape[1:1 + nb_merging_axes]) should match.
+    Notes:
+        - The dimensions of axes along which we perform the dot product
+         (i.e. x.shape[-nb_merging_axes:] and y.shape[1:1 + nb_merging_axes] when no batch axe is missing) should match.
+        - diagonal example: if x is diagonal and missing its batch axis, it means that the full tensor x is retrieve with
+             x_full = K.reshape(K.diag(K.ravel(x)), x.shape + x.shape)
+          With the batch axis, the above computation should be made batch element by batch element.
 
     """
+    diag_x, diag_y = diagonal
     missing_batchsize_x, missing_batchsize_y = missing_batchsize
     nb_batch_axe_x = 0 if missing_batchsize_x else 1
     nb_batch_axe_y = 0 if missing_batchsize_y else 1
@@ -59,26 +68,45 @@ def batch_multid_dot(
             f"Full shapes: {x.shape} and {y.shape}."
         )
 
-    # switch on missing batch axe (e.g. with affine layer representation like Dense's kernel)
-    if missing_batchsize_y:
-        return K.tensordot(x, y, axes=nb_merging_axes)
-    elif missing_batchsize_x:
-        # axes along which summing
-        merging_axes_x = list(range(-nb_merging_axes, 0))
-        merging_axes_y = list(range(nb_batch_axe_y, nb_batch_axe_y + nb_merging_axes))
-        # transposition to make to put back batch axe at the beginning
-        nb_axes_after_merge = len(x.shape) + len(y.shape) - 2 * nb_merging_axes
-        nb_axes_after_merge_from_x = len(x.shape) - nb_merging_axes
-        transpose_indices = (
-            (nb_axes_after_merge_from_x,)
-            + tuple(range(nb_axes_after_merge_from_x))
-            + tuple(range(nb_axes_after_merge_from_x + 1, nb_axes_after_merge))
-        )
-        return K.transpose(K.tensordot(x, y, axes=[merging_axes_x, merging_axes_y]), transpose_indices)
+    # Special cases: diagonal entries (represented only by their diagonal)
+    if diag_x and diag_y:
+        # all inputs diagonal: we keep a diagonal output (with batch axis if one input has one)
+        return x * y
+    elif diag_x:
+        # reshape to make broadcast possible
+        nb_missing_batch_axe_x = 1 - nb_batch_axe_x
+        nb_missing_axes_x_wo_batch = len(y.shape) - nb_batch_axe_y - len(x.shape) + nb_batch_axe_x
+        new_shape = nb_missing_batch_axe_x * (1,) + x.shape + (1,) * nb_missing_axes_x_wo_batch
+        return K.reshape(x, new_shape) * y
+    elif diag_y:
+        # reshape necessary for broadcast, only if y has a batch axis
+        if not missing_batchsize_y:
+            nb_missing_axes_y_wo_batch = len(x.shape) - nb_batch_axe_x - len(y.shape) + nb_batch_axe_y
+            new_shape = y.shape[:1] + (1,) * nb_missing_axes_y_wo_batch + y.shape[1:]
+            return x * K.reshape(y, new_shape)
+        else:
+            return x * y
     else:
-        new_x_shape = tuple(x.shape[1:-nb_merging_axes]) + (-1,)
-        new_y_shape = (-1,) + tuple(y.shape[nb_merging_axes + 1 :])
-        return Dot(axes=(-1, 1))([Reshape(new_x_shape)(x), Reshape(new_y_shape)(y)])
+        # switch on missing batch axe (e.g. with affine layer representation like Dense's kernel)
+        if missing_batchsize_y:
+            return K.tensordot(x, y, axes=nb_merging_axes)
+        elif missing_batchsize_x:
+            # axes along which summing
+            merging_axes_x = list(range(-nb_merging_axes, 0))
+            merging_axes_y = list(range(nb_batch_axe_y, nb_batch_axe_y + nb_merging_axes))
+            # transposition to make to put back batch axe at the beginning
+            nb_axes_after_merge = len(x.shape) + len(y.shape) - 2 * nb_merging_axes
+            nb_axes_after_merge_from_x = len(x.shape) - nb_merging_axes
+            transpose_indices = (
+                (nb_axes_after_merge_from_x,)
+                + tuple(range(nb_axes_after_merge_from_x))
+                + tuple(range(nb_axes_after_merge_from_x + 1, nb_axes_after_merge))
+            )
+            return K.transpose(K.tensordot(x, y, axes=[merging_axes_x, merging_axes_y]), transpose_indices)
+        else:
+            new_x_shape = tuple(x.shape[1:-nb_merging_axes]) + (-1,)
+            new_y_shape = (-1,) + tuple(y.shape[nb_merging_axes + 1 :])
+            return Dot(axes=(-1, 1))([Reshape(new_x_shape)(x), Reshape(new_y_shape)(y)])
 
 
 class BatchedIdentityLike(keras.Operation):

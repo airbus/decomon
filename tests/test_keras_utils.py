@@ -11,6 +11,7 @@ from decomon.keras_utils import (
     is_a_merge_layer,
     share_layer_all_weights,
 )
+from decomon.types import BackendTensor
 
 
 class MyLayer(Layer):
@@ -123,6 +124,94 @@ def test_batch_multid_dot_default_nb_merging_axes(missing_batchsize, helpers):
     res_default = batch_multid_dot(x, y, missing_batchsize=missing_batchsize)
     res = batch_multid_dot(x, y, nb_merging_axes=nb_merging_axes, missing_batchsize=missing_batchsize)
     helpers.assert_almost_equal(res, res_default)
+
+
+def generate_tensor_full_n_diag(
+    batchsize: int,
+    diag_shape: tuple[int, ...],
+    other_shape: tuple[int, ...],
+    diag: bool,
+    missing_batchsize: bool,
+    left: bool,
+) -> tuple[BackendTensor, BackendTensor]:
+    batchshape = (batchsize,)
+    flatten_diag_shape = (int(np.prod(diag_shape)),)
+    full_shape = diag_shape + diag_shape
+
+    if diag:
+        if missing_batchsize:
+            x_diag_flatten = K.convert_to_tensor(np.random.random(flatten_diag_shape), dtype=float)
+            x_diag = K.reshape(x_diag_flatten, diag_shape)
+            x_full = K.reshape(K.diag(x_diag_flatten), full_shape)
+        else:
+            x_diag_flatten = K.convert_to_tensor(np.random.random(batchshape + flatten_diag_shape), dtype=float)
+            x_diag = K.reshape(x_diag_flatten, batchshape + diag_shape)
+            x_full = K.concatenate(
+                [K.reshape(K.diag(x_diag_flatten[i]), full_shape)[None] for i in range(batchsize)], axis=0
+            )
+    else:
+        if left:
+            x_shape = other_shape + diag_shape
+        else:
+            x_shape = diag_shape + other_shape
+        if not missing_batchsize:
+            x_shape = batchshape + x_shape
+        x = K.convert_to_tensor(np.random.random(x_shape), dtype=float)
+        x_full = x
+        x_diag = x
+
+    return x_full, x_diag
+
+
+@pytest.mark.parametrize("missing_batchsize", [(False, False), (True, False), (False, True)])
+@pytest.mark.parametrize("diagonal", [(True, True), (True, False), (False, True)])
+def test_batch_multi_dot_diag(missing_batchsize, diagonal, helpers):
+    batchsize = 10
+    diag_shape = (4, 5, 2)
+    other_shape = (3, 7)
+    nb_merging_axes = len(diag_shape)
+
+    diag_x, diag_y = diagonal
+    missing_batchsize_x, missing_batchsize_y = missing_batchsize
+
+    x_full, x_diag = generate_tensor_full_n_diag(
+        batchsize=batchsize,
+        diag_shape=diag_shape,
+        other_shape=other_shape,
+        diag=diag_x,
+        missing_batchsize=missing_batchsize_x,
+        left=True,
+    )
+    y_full, y_diag = generate_tensor_full_n_diag(
+        batchsize=batchsize,
+        diag_shape=diag_shape,
+        other_shape=other_shape,
+        diag=diag_y,
+        missing_batchsize=missing_batchsize_y,
+        left=False,
+    )
+
+    res_full = batch_multid_dot(x_full, y_full, nb_merging_axes=nb_merging_axes, missing_batchsize=missing_batchsize)
+    res_diag = batch_multid_dot(
+        x_diag, y_diag, nb_merging_axes=nb_merging_axes, missing_batchsize=missing_batchsize, diagonal=diagonal
+    )
+
+    if diag_x and diag_y:
+        # the result stayed diagonal, needs to be reworked to be compared with full result
+        assert res_diag.shape == (batchsize,) + diag_shape
+        res_diag = K.concatenate(
+            [K.reshape(K.diag(K.ravel(res_diag[i])), diag_shape + diag_shape)[None] for i in range(len(res_diag))],
+            axis=0,
+        )
+    elif diag_x:
+        assert res_diag.shape == (batchsize,) + diag_shape + other_shape
+    elif diag_y:
+        assert res_diag.shape == (batchsize,) + other_shape + diag_shape
+
+    helpers.assert_almost_equal(
+        res_full,
+        res_diag,
+    )
 
 
 def test_get_weight_index_from_name_nok_attribute():
