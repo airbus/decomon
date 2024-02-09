@@ -157,15 +157,20 @@ def generate_tensor_full_n_diag(
         if not missing_batchsize:
             x_shape = batchshape + x_shape
         x = K.convert_to_tensor(np.random.random(x_shape), dtype=float)
+
         x_full = x
         x_diag = x
+
+    if missing_batchsize:
+        # reconstruct a batch axis
+        x_full = K.repeat(x_full[None], batchsize, axis=0)
 
     return x_full, x_diag
 
 
-@pytest.mark.parametrize("missing_batchsize", [(False, False), (True, False), (False, True)])
-@pytest.mark.parametrize("diagonal", [(True, True), (True, False), (False, True)])
-def test_batch_multi_dot_diag(missing_batchsize, diagonal, helpers):
+@pytest.mark.parametrize("missing_batchsize", [(False, False), (True, False), (False, True), (True, True)])
+@pytest.mark.parametrize("diagonal", [(True, True), (True, False), (False, True), (False, False)])
+def test_batch_multi_dot_diag_missing_batchsize(missing_batchsize, diagonal, helpers):
     batchsize = 10
     diag_shape = (4, 5, 2)
     other_shape = (3, 7)
@@ -174,7 +179,7 @@ def test_batch_multi_dot_diag(missing_batchsize, diagonal, helpers):
     diag_x, diag_y = diagonal
     missing_batchsize_x, missing_batchsize_y = missing_batchsize
 
-    x_full, x_diag = generate_tensor_full_n_diag(
+    x_full, x_simplified = generate_tensor_full_n_diag(
         batchsize=batchsize,
         diag_shape=diag_shape,
         other_shape=other_shape,
@@ -182,7 +187,7 @@ def test_batch_multi_dot_diag(missing_batchsize, diagonal, helpers):
         missing_batchsize=missing_batchsize_x,
         left=True,
     )
-    y_full, y_diag = generate_tensor_full_n_diag(
+    y_full, y_simplified = generate_tensor_full_n_diag(
         batchsize=batchsize,
         diag_shape=diag_shape,
         other_shape=other_shape,
@@ -191,26 +196,37 @@ def test_batch_multi_dot_diag(missing_batchsize, diagonal, helpers):
         left=False,
     )
 
-    res_full = batch_multid_dot(x_full, y_full, nb_merging_axes=nb_merging_axes, missing_batchsize=missing_batchsize)
-    res_diag = batch_multid_dot(
-        x_diag, y_diag, nb_merging_axes=nb_merging_axes, missing_batchsize=missing_batchsize, diagonal=diagonal
+    res_full = batch_multid_dot(x_full, y_full, nb_merging_axes=nb_merging_axes)
+    res_simplified = batch_multid_dot(
+        x_simplified,
+        y_simplified,
+        nb_merging_axes=nb_merging_axes,
+        missing_batchsize=missing_batchsize,
+        diagonal=diagonal,
     )
+
+    if missing_batchsize_x and missing_batchsize_y:
+        # the result stayed w/o batch axis, needs to be added to be compared with full result
+        res_simplified = K.repeat(res_simplified[None], batchsize, axis=0)
 
     if diag_x and diag_y:
         # the result stayed diagonal, needs to be reworked to be compared with full result
-        assert res_diag.shape == (batchsize,) + diag_shape
-        res_diag = K.concatenate(
-            [K.reshape(K.diag(K.ravel(res_diag[i])), diag_shape + diag_shape)[None] for i in range(len(res_diag))],
+        assert res_simplified.shape == (batchsize,) + diag_shape
+        res_simplified = K.concatenate(
+            [
+                K.reshape(K.diag(K.ravel(res_simplified[i])), diag_shape + diag_shape)[None]
+                for i in range(len(res_simplified))
+            ],
             axis=0,
         )
     elif diag_x:
-        assert res_diag.shape == (batchsize,) + diag_shape + other_shape
+        assert res_simplified.shape == (batchsize,) + diag_shape + other_shape
     elif diag_y:
-        assert res_diag.shape == (batchsize,) + other_shape + diag_shape
+        assert res_simplified.shape == (batchsize,) + other_shape + diag_shape
 
     helpers.assert_almost_equal(
         res_full,
-        res_diag,
+        res_simplified,
     )
 
 

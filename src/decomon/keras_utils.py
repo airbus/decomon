@@ -74,7 +74,7 @@ def batch_multid_dot(
         return x * y
     elif diag_x:
         # reshape to make broadcast possible
-        nb_missing_batch_axe_x = 1 - nb_batch_axe_x
+        nb_missing_batch_axe_x = nb_batch_axe_y - nb_batch_axe_x
         nb_missing_axes_x_wo_batch = len(y.shape) - nb_batch_axe_y - len(x.shape) + nb_batch_axe_x
         new_shape = nb_missing_batch_axe_x * (1,) + x.shape + (1,) * nb_missing_axes_x_wo_batch
         return K.reshape(x, new_shape) * y
