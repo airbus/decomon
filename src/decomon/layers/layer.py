@@ -514,7 +514,9 @@ def combine_affine_bounds(
         w_l * x + b_l <= z <= w_u * x + b_u
 
 
-    Special case with linear layers:
+    Special cases
+
+    - with linear layers:
 
         If the affine bounds come from the affine representation of a linear layer (e.g. affine_bounds_1), then
           - lower and upper bounds are equal: affine_bounds_1 = [w_1, b_1, w_1, b_1]
@@ -522,9 +524,24 @@ def combine_affine_bounds(
 
         In the generic case, tensors in affine_bounds have their first axis corresponding to the batch size.
 
-    """
-    # Are weights in diagonal representation?
+    - diagonal representation:
 
+        If w.shape == b.shape, this means that w is represented by its "diagonal" (potentially a tensor-multid).
+
+    - empty affine bounds:
+
+        when one affine bounds is an empty list, this is actually a convention for identity bounds, i.e.
+          w = identity, b = 0
+        therefore we return the other affine_bounds, unchanged.
+
+    """
+    # special case: empty bounds <=> identity bounds
+    if len(affine_bounds_1) == 0:
+        return tuple(affine_bounds_2)
+    if len(affine_bounds_2) == 0:
+        return tuple(affine_bounds_1)
+
+    # Are weights in diagonal representation?
     diagonal = (
         affine_bounds_1[0].shape == affine_bounds_1[1].shape,
         affine_bounds_2[0].shape == affine_bounds_2[1].shape,
