@@ -60,11 +60,15 @@ class DecomonDense(DecomonLayer):
         w_l_1, b_l_1, w_u_1, b_u_1 = input_affine_bounds
         w_2, b_2 = self._get_pseudo_affine_representation()
         diagonal = (
-            w_l_1.shape == b_l_1.shape,
+            self.is_diagonal_bounds(input_affine_bounds),
             False,
         )
-        kwargs_dot_w = dict(nb_merging_axes=1, missing_batchsize=(False, True), diagonal=diagonal)
-        kwargs_dot_b = dict(nb_merging_axes=1, missing_batchsize=(False, True))
+        missing_batchsize = (
+            self.is_wo_batch_bounds(input_affine_bounds),
+            True,
+        )
+        kwargs_dot_w = dict(nb_merging_axes=1, missing_batchsize=missing_batchsize, diagonal=diagonal)
+        kwargs_dot_b = dict(nb_merging_axes=1, missing_batchsize=missing_batchsize)
 
         z_value = K.cast(0.0, dtype=w_2.dtype)
         w_2_pos = K.maximum(w_2, z_value)
@@ -84,25 +88,37 @@ class DecomonDense(DecomonLayer):
         w_l_2, b_l_2, w_u_2, b_u_2 = output_affine_bounds
 
         # affine bounds represented in diagonal mode?
-        diagonal_bounds = w_l_2.shape == b_l_2.shape
+        diagonal_bounds = self.is_diagonal_bounds(output_affine_bounds)
         if diagonal_bounds:
             raise NotImplementedError
+        # missing batch axis in affine bounds?
+        nb_batch_axis = 0 if self.is_wo_batch_bounds(output_affine_bounds) else 1
 
         nb_nonbatch_axes_keras_input = len(w_l_2.shape) - len(b_l_2.shape)
 
         # Merge weights on "units" axis and reorder axes
         transposed_axes = (
-            tuple(range(1, nb_nonbatch_axes_keras_input + 1))
+            tuple(range(1, nb_nonbatch_axes_keras_input + nb_batch_axis))
             + (0,)
-            + tuple(range(nb_nonbatch_axes_keras_input + 1, len(w_l_2.shape)))
+            + tuple(range(nb_nonbatch_axes_keras_input + nb_batch_axis, len(w_l_2.shape)))
         )
-        w_l = K.transpose(K.tensordot(w_1, w_l_2, axes=[[-1], [nb_nonbatch_axes_keras_input]]), axes=transposed_axes)
-        w_u = K.transpose(K.tensordot(w_1, w_u_2, axes=[[-1], [nb_nonbatch_axes_keras_input]]), axes=transposed_axes)
+        w_l = K.transpose(
+            K.tensordot(w_1, w_l_2, axes=[[-1], [nb_nonbatch_axes_keras_input - 1 + nb_batch_axis]]),
+            axes=transposed_axes,
+        )
+        w_u = K.transpose(
+            K.tensordot(w_1, w_u_2, axes=[[-1], [nb_nonbatch_axes_keras_input - 1 + nb_batch_axis]]),
+            axes=transposed_axes,
+        )
 
         # Merge layer bias with backward weights on "units" axe and reduce on other input axes
-        reduced_axes = list(range(1, nb_nonbatch_axes_keras_input))
-        b_l = K.sum(K.tensordot(b_1, w_l_2, axes=[[-1], [nb_nonbatch_axes_keras_input]]), axis=reduced_axes)
-        b_u = K.sum(K.tensordot(b_1, w_u_2, axes=[[-1], [nb_nonbatch_axes_keras_input]]), axis=reduced_axes)
+        reduced_axes = list(range(1, nb_nonbatch_axes_keras_input - 1 + nb_batch_axis))
+        b_l = K.sum(
+            K.tensordot(b_1, w_l_2, axes=[[-1], [nb_nonbatch_axes_keras_input - 1 + nb_batch_axis]]), axis=reduced_axes
+        )
+        b_u = K.sum(
+            K.tensordot(b_1, w_u_2, axes=[[-1], [nb_nonbatch_axes_keras_input - 1 + nb_batch_axis]]), axis=reduced_axes
+        )
 
         # Add bias from current backward bounds
         b_l += b_l_2
