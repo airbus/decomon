@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from keras import KerasTensor, Model
 from keras.layers import Input
-from pytest_cases import param_fixture, param_fixtures
+from pytest_cases import fixture, fixture_union, param_fixture, param_fixtures
 
 from decomon.core import BoxDomain, Propagation, Slope
 from decomon.keras_utils import (
@@ -20,6 +20,17 @@ from decomon.keras_utils import (
 from decomon.models.utils import ConvertMethod
 from decomon.types import BackendTensor, Tensor
 
+empty, diag, nobatch = param_fixtures(
+    "empty, diag, nobatch",
+    [
+        (True, True, True),
+        (False, True, True),
+        (False, True, False),
+        (False, False, True),
+        (False, False, False),
+    ],
+    ids=["identity", "diagonal-nobatch", "diagonal", "nobatch", "generic"],
+)
 ibp, affine, propagation = param_fixtures(
     "ibp, affine, propagation",
     [
@@ -38,6 +49,7 @@ padding = param_fixture("padding", ["same", "valid"])
 activation = param_fixture("activation", [None, "relu"])
 data_format = param_fixture("data_format", ["channels_last", "channels_first"])
 method = param_fixture("method", [m.value for m in ConvertMethod])
+input_shape = param_fixture("input_shape", [(1,), (3,), (5, 2, 3)], ids=["0d", "1d", "multid"])
 
 
 @pytest.fixture
@@ -376,3 +388,47 @@ class Helpers:
 @pytest.fixture
 def helpers():
     return Helpers
+
+
+@fixture
+def simple_layer_input_functions(
+    ibp, affine, propagation, perturbation_domain, batchsize, input_shape, empty, diag, nobatch, helpers
+):
+    keras_symbolic_input_fn = lambda: Input(input_shape)
+
+    decomon_symbolic_input_fn = lambda output_shape: helpers.get_decomon_symbolic_inputs(
+        model_input_shape=input_shape,
+        model_output_shape=output_shape,
+        layer_input_shape=input_shape,
+        layer_output_shape=output_shape,
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        perturbation_domain=perturbation_domain,
+        empty=empty,
+        diag=diag,
+        nobatch=nobatch,
+    )
+
+    keras_input_fn = lambda: helpers.generate_random_tensor(input_shape, batchsize=batchsize)
+
+    decomon_input_fn = lambda keras_input, output_shape: helpers.generate_simple_decomon_layer_inputs_from_keras_input(
+        keras_input=keras_input,
+        layer_output_shape=output_shape,
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        perturbation_domain=perturbation_domain,
+        empty=empty,
+        diag=diag,
+        nobatch=nobatch,
+    )
+
+    return keras_symbolic_input_fn, decomon_symbolic_input_fn, keras_input_fn, decomon_input_fn
+
+
+layer_input_functions = fixture_union(
+    "layer_input_functions",
+    [simple_layer_input_functions],
+    unpack_into="keras_symbolic_input_fn, decomon_symbolic_input_fn, keras_input_fn, decomon_input_fn",
+)
