@@ -5,7 +5,7 @@ import keras
 import keras.ops as K
 from keras.layers import Layer, Wrapper
 
-from decomon.core import BoxDomain, PerturbationDomain, Propagation
+from decomon.core import BoxDomain, InputsOutputsSpec, PerturbationDomain, Propagation
 from decomon.keras_utils import batch_multid_dot
 from decomon.types import Tensor
 
@@ -72,7 +72,8 @@ class DecomonLayer(Wrapper):
         ibp: bool = True,
         affine: bool = True,
         propagation: Propagation = Propagation.FORWARD,
-        model_output_shape_length: int = 0,
+        model_input_shape: Optional[tuple[int, ...]] = None,
+        model_output_shape: Optional[tuple[int, ...]] = None,
         **kwargs: Any,
     ):
         """
@@ -84,10 +85,9 @@ class DecomonLayer(Wrapper):
             propagation: direction of bounds propagation
               - forward: from input to output
               - backward: from output to input
-            model_output_shape_length: length of the shape of the model output (omitting batch axis)
-               w.r.t which backward affine bounds will be computed.
+            model_output_shape: shape of the underlying model output (omitting batch axis).
                It allows determining if the backward bounds are with a bacth axis or not.
-               This has no meaning in forward propagation.
+            model_input_shape: shape of the underlying keras model input (omitting batch axis).
             **kwargs:
 
         """
@@ -108,15 +108,23 @@ class DecomonLayer(Wrapper):
             raise ValueError(f"The underlying keras layer {layer.name} is not built.")
         if not ibp and not affine:
             raise ValueError("ibp and affine cannot be both False.")
-        if propagation == Propagation.BACKWARD and model_output_shape_length == 0:
-            raise ValueError("model_output_shape_length must be positive in backward propagation.")
 
         # attributes
         self.ibp = ibp
         self.affine = affine
         self.perturbation_domain = perturbation_domain
         self.propagation = propagation
-        self.model_output_shape_length = model_output_shape_length
+
+        # input-output-manager
+        self.inputs_outputs_spec = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            perturbation_domain=perturbation_domain,
+            layer_input_shape=layer.input.shape[1:],
+            model_input_shape=model_input_shape,
+            model_output_shape=model_output_shape,
+        )
 
     def get_config(self) -> dict[str, Any]:
         config = super().get_config()
@@ -302,7 +310,7 @@ class DecomonLayer(Wrapper):
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
             layer_affine_bounds = [w_l, b_l, w_u, b_u]
 
-        from_linear_layer = (self.is_wo_batch_bounds(input_affine_bounds), self.linear)
+        from_linear_layer = (self.inputs_outputs_spec.is_wo_batch_bounds(input_affine_bounds), self.linear)
 
         return combine_affine_bounds(
             affine_bounds_1=input_affine_bounds,
@@ -356,7 +364,7 @@ class DecomonLayer(Wrapper):
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
             layer_affine_bounds = [w_l, b_l, w_u, b_u]
 
-        from_linear_layer = (self.linear, self.is_wo_batch_bounds((output_affine_bounds)))
+        from_linear_layer = (self.linear, self.inputs_outputs_spec.is_wo_batch_bounds((output_affine_bounds)))
 
         return combine_affine_bounds(
             affine_bounds_1=layer_affine_bounds,
@@ -365,14 +373,14 @@ class DecomonLayer(Wrapper):
         )
 
     def get_forward_oracle(
-        self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor], x: Tensor
+        self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor], model_inputs: list[Tensor]
     ) -> list[Tensor]:
         """Get constant oracle bounds on underlying keras layer input from forward input bounds.
 
         Args:
             input_affine_bounds: affine bounds on keras layer input w.r.t model input . Can be empty if not in affine mode.
             input_constant_bounds: ibp constant bounds on keras layer input. Can be empty if not in ibp mode.
-            x: model input. Necessary only in affine mode.
+            model_inputs: underlying keras model input, wrapped in a list. Necessary only in affine mode, else empty.
 
         Returns:
             constant bounds on keras layer input deduced from forward input bounds
@@ -391,6 +399,9 @@ class DecomonLayer(Wrapper):
             return input_constant_bounds
 
         elif self.affine:
+            if len(model_inputs) == 0:
+                raise RuntimeError("keras model input is necessary for get_forward_oracle() in affine mode.")
+            x = model_inputs[0]
             if len(input_affine_bounds) == 0:
                 # special case: empty affine bounds => identity bounds
                 l_affine = self.perturbation_domain.get_lower_x(x)
@@ -405,7 +416,10 @@ class DecomonLayer(Wrapper):
             raise RuntimeError("self.ibp and self.affine cannot be both False")
 
     def call_forward(
-        self, affine_bounds_to_propagate: list[Tensor], input_bounds_to_propagate: list[Tensor], x: Tensor
+        self,
+        affine_bounds_to_propagate: list[Tensor],
+        input_bounds_to_propagate: list[Tensor],
+        model_inputs: list[Tensor],
     ) -> tuple[list[Tensor], list[Tensor]]:
         """Propagate forward affine and constant bounds through the layer.
 
@@ -414,7 +428,7 @@ class DecomonLayer(Wrapper):
               Can be empty if not in affine mode.
               Can also be empty in case of identity affine bounds => we simply return layer affine bounds.
             input_bounds_to_propagate: ibp constant bounds on keras layer input. Can be empty if not in ibp mode.
-            x: model input. Necessary only in affine mode.
+            model_inputs: underlying keras model input, wrapped in a list. Necessary only in affine mode, else empty.
 
         Returns:
             output_affine_bounds, output_constant_bounds: affine and constant bounds on the underlying keras layer output
@@ -439,7 +453,9 @@ class DecomonLayer(Wrapper):
             if not self.linear:
                 # get oracle input bounds (because input_bounds_to_propagate could be empty at this point)
                 input_constant_bounds = self.get_forward_oracle(
-                    input_affine_bounds=affine_bounds_to_propagate, input_constant_bounds=input_bounds_to_propagate, x=x
+                    input_affine_bounds=affine_bounds_to_propagate,
+                    input_constant_bounds=input_bounds_to_propagate,
+                    model_inputs=model_inputs,
                 )
             else:
                 input_constant_bounds = []
@@ -454,6 +470,9 @@ class DecomonLayer(Wrapper):
 
         # Tighten constant bounds in hybrid mode (ibp+affine)
         if self.ibp and self.affine:
+            if len(model_inputs) == 0:
+                raise RuntimeError("keras model input is necessary for get_forward_oracle() in affine mode.")
+            x = model_inputs[0]
             l_ibp, u_ibp = output_constant_bounds
             w_l, b_l, w_u, b_u = output_affine_bounds
             l_affine = self.perturbation_domain.get_lower(x, w_l, b_l)
@@ -473,48 +492,57 @@ class DecomonLayer(Wrapper):
             )
         )
 
-    def call(
-        self, affine_bounds_to_propagate: list[Tensor], constant_oracle_bounds: list[Tensor], x: Tensor
-    ) -> list[list[Tensor]]:
+    def call(self, inputs: list[Tensor]) -> list[Tensor]:
         """Propagate bounds in the specified direction `self.propagation`.
 
         Args:
-            affine_bounds_to_propagate: affine bounds to propagate.
-              Can be empty in forward direction if self.affine is False.
-              Can also be empty in case of identity affine bounds => we simply return layer affine bounds.
-            constant_oracle_bounds:  in forward direction, the ibp bounds (empty if self.ibp is False); in backward direction, the oracle constant bounds on keras inputs
-            x: the model input. Necessary only in forward direction when self.affine is True.
+            inputs: concatenation of affine_bounds_to_propagate + constant_oracle_bounds + keras_model_inputs with
+                - affine_bounds_to_propagate: affine bounds to propagate.
+                    Can be empty in forward direction if self.affine is False.
+                    Can also be empty in case of identity affine bounds => we simply return layer affine bounds.
+                - constant_oracle_bounds:
+                    - in forward direction, the ibp bounds (empty if self.ibp is False);
+                    - in backward direction, the oracle constant bounds on keras inputs (never empty)
+                - keras_model_inputs: the tensors defining the underlying keras model input perturbation.
+                    - in forward direction when self.affine is True: one tensor x whose shape is given by `self.perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)`
+                      with `model_input_shape=model.input.shape[1:]` if `model` is the underlying keras model to analyse
+                    - else: empty list
 
         Returns:
             the propagated bounds.
-            forward: [affine_bounds_propagated, constant_bounds_propagated], each one being empty if self.affine or self.ibp is False
-            backward: [affine_bounds_propagated]
-
+            - in forward direction: affine_bounds_propagated + constant_bounds_propagated, each one being empty if self.affine or self.ibp is False
+            - in backward direction: affine_bounds_propagated
 
         """
+        affine_bounds_to_propagate, constant_oracle_bounds, model_inputs = self.inputs_outputs_spec.split_inputs(
+            inputs=inputs
+        )
         if self.propagation == Propagation.FORWARD:  # forward
             affine_bounds_propagated, constant_bounds_propagated = self.call_forward(
                 affine_bounds_to_propagate=affine_bounds_to_propagate,
                 input_bounds_to_propagate=constant_oracle_bounds,
-                x=x,
+                model_inputs=model_inputs,
             )
-            return [affine_bounds_propagated, constant_bounds_propagated]
+            return self.inputs_outputs_spec.flatten_outputs(affine_bounds_propagated, constant_bounds_propagated)
 
         else:  # backward
             affine_bounds_propagated = self.call_backward(
                 affine_bounds_to_propagate=affine_bounds_to_propagate, constant_oracle_bounds=constant_oracle_bounds
             )
-            return [affine_bounds_propagated]
+            return self.inputs_outputs_spec.flatten_outputs(affine_bounds_propagated)
 
-    def build(self, affine_bounds_to_propagate_shape, constant_oracle_bounds_shape, x_shape):
+    def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
         self.built = True
 
     def compute_output_shape(
         self,
-        affine_bounds_to_propagate_shape: list[tuple[Optional[int], ...]],
-        constant_oracle_bounds_shape: list[tuple[Optional[int], ...]],
-        x_shape: tuple[Optional[int], ...],
-    ):
+        input_shape: list[tuple[Optional[int], ...]],
+    ) -> list[tuple[Optional[int], ...]]:
+        (
+            affine_bounds_to_propagate_shape,
+            constant_oracle_bounds_shape,
+            model_inputs_shape,
+        ) = self.inputs_outputs_spec.split_input_shape(input_shape=input_shape)
         if self.propagation == Propagation.FORWARD:
             if self.ibp:
                 constant_bounds_propagated_shape = [self.layer.output.shape] * 2
@@ -525,23 +553,25 @@ class DecomonLayer(Wrapper):
                 keras_layer_output_shape_wo_batchsize = self.layer.output.shape[1:]
 
                 # inputs are in diagonal representation? without batch axis?
-                if self.is_diagonal_bounds_shape(affine_bounds_to_propagate_shape):
+                if self.inputs_outputs_spec.is_diagonal_bounds_shape(affine_bounds_to_propagate_shape):
                     model_input_shape_wo_batchsize = keras_layer_input_shape_wo_batchsize
                 else:
                     w_in_shape = affine_bounds_to_propagate_shape[0]
-                    if self.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
+                    if self.inputs_outputs_spec.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
                         model_input_shape_wo_batchsize = w_in_shape[: -len(keras_layer_input_shape_wo_batchsize)]
                     else:
                         model_input_shape_wo_batchsize = w_in_shape[1 : -len(keras_layer_input_shape_wo_batchsize)]
 
                 # outputs shape depends if layer and inputs are diagonal / linear (w/o batch)
                 b_out_shape_wo_batchsize = keras_layer_output_shape_wo_batchsize
-                if self.diagonal and self.is_diagonal_bounds_shape(affine_bounds_to_propagate_shape):
+                if self.diagonal and self.inputs_outputs_spec.is_diagonal_bounds_shape(
+                    affine_bounds_to_propagate_shape
+                ):
                     # propagated bounds still diagonal
                     w_out_shape_wo_batchsize = b_out_shape_wo_batchsize
                 else:
                     w_out_shape_wo_batchsize = model_input_shape_wo_batchsize + keras_layer_output_shape_wo_batchsize
-                if self.linear and self.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
+                if self.linear and self.inputs_outputs_spec.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
                     # no batch in propagated bounds
                     w_out_shape = w_out_shape_wo_batchsize
                     b_out_shape = b_out_shape_wo_batchsize
@@ -552,25 +582,25 @@ class DecomonLayer(Wrapper):
             else:
                 affine_bounds_propagated_shape = []
 
-            return [affine_bounds_propagated_shape, constant_bounds_propagated_shape]
+            return affine_bounds_propagated_shape + constant_bounds_propagated_shape
 
         else:  # backward
             # find model output shape
-            if self.is_identity_bounds_shape(affine_bounds_to_propagate_shape):
+            if self.inputs_outputs_spec.is_identity_bounds_shape(affine_bounds_to_propagate_shape):
                 model_output_shape_wo_batchsize = self.layer.output.shape[1:]
             else:
                 b_shape = affine_bounds_to_propagate_shape[1]
-                if self.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
+                if self.inputs_outputs_spec.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
                     model_output_shape_wo_batchsize = b_shape
                 else:
                     model_output_shape_wo_batchsize = b_shape[1:]
             # outputs shape depends if layer and inputs are diagonal / linear (w/o batch)
             b_shape_wo_batchisze = model_output_shape_wo_batchsize
-            if self.diagonal and self.is_diagonal_bounds_shape(affine_bounds_to_propagate_shape):
+            if self.diagonal and self.inputs_outputs_spec.is_diagonal_bounds_shape(affine_bounds_to_propagate_shape):
                 w_shape_wo_batchsize = model_output_shape_wo_batchsize
             else:
                 w_shape_wo_batchsize = self.layer.input.shape[1:] + model_output_shape_wo_batchsize
-            if self.linear and self.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
+            if self.linear and self.inputs_outputs_spec.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
                 b_new_shape = b_shape_wo_batchisze
                 w_shape = w_shape_wo_batchsize
             else:
@@ -579,56 +609,7 @@ class DecomonLayer(Wrapper):
 
             affine_bounds_propagated_shape = [w_shape, b_new_shape, w_shape, b_new_shape]
 
-            return [affine_bounds_propagated_shape]
-
-    def compute_output_spec(self, *args: Any, **kwargs: Any) -> list[list[keras.KerasTensor]]:
-        """Compute output spec from output shape in case of symbolic call."""
-        output_spec = Layer.compute_output_spec(self, *args, **kwargs)
-
-        # fix empty list: Layer.compute_output_spec() transform them as empty tensors
-        def replace_empty_tensor(l: Union[keras.KerasTensor, list[keras.KerasTensor]]):
-            if isinstance(l, keras.KerasTensor) and len(l.shape) == 0:
-                return []
-            else:
-                return l
-
-        return [replace_empty_tensor(l) for l in output_spec]
-
-    def is_identity_bounds(self, affine_bounds: list[Tensor]) -> bool:
-        return len(affine_bounds) == 0
-
-    def is_identity_bounds_shape(self, affine_bounds_shape: list[tuple[Optional[int], ...]]) -> bool:
-        return len(affine_bounds_shape) == 0
-
-    def is_diagonal_bounds(self, affine_bounds: list[Tensor]) -> bool:
-        if self.is_identity_bounds(affine_bounds):
-            return True
-        w, b = affine_bounds[:2]
-        return w.shape == b.shape
-
-    def is_diagonal_bounds_shape(self, affine_bounds_shape: list[tuple[Optional[int], ...]]) -> bool:
-        if self.is_identity_bounds_shape(affine_bounds_shape):
-            return True
-        w_shape, b_shape = affine_bounds_shape[:2]
-        return w_shape == b_shape
-
-    def is_wo_batch_bounds(self, affine_bounds: list[Tensor]) -> bool:
-        if self.is_identity_bounds(affine_bounds):
-            return True
-        b = affine_bounds[1]
-        if self.propagation == Propagation.FORWARD:
-            return len(b.shape) == len(self.layer.input.shape) - 1
-        else:
-            return len(b.shape) == self.model_output_shape_length
-
-    def is_wo_batch_bounds_shape(self, affine_bounds_shape: list[tuple[Optional[int], ...]]) -> bool:
-        if self.is_identity_bounds_shape(affine_bounds_shape):
-            return True
-        b_shape = affine_bounds_shape[1]
-        if self.propagation == Propagation.FORWARD:
-            return len(b_shape) == len(self.layer.input.shape) - 1
-        else:
-            return len(b_shape) == self.model_output_shape_length
+            return affine_bounds_propagated_shape
 
 
 def combine_affine_bounds(

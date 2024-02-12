@@ -22,6 +22,8 @@ class DecomonBaseActivation(DecomonLayer):
         ibp: bool = True,
         affine: bool = True,
         propagation: Propagation = Propagation.FORWARD,
+        model_input_shape: Optional[tuple[int, ...]] = None,
+        model_output_shape: Optional[tuple[int, ...]] = None,
         slope: Slope = Slope.V_SLOPE,
         **kwargs: Any,
     ):
@@ -31,6 +33,8 @@ class DecomonBaseActivation(DecomonLayer):
             ibp=ibp,
             affine=affine,
             propagation=propagation,
+            model_input_shape=model_input_shape,
+            model_output_shape=model_output_shape,
             **kwargs,
         )
         self.slope = slope
@@ -71,6 +75,8 @@ class DecomonActivation(DecomonBaseActivation):
         ibp: bool = True,
         affine: bool = True,
         propagation: Propagation = Propagation.FORWARD,
+        model_input_shape: Optional[tuple[int, ...]] = None,
+        model_output_shape: Optional[tuple[int, ...]] = None,
         slope: Slope = Slope.V_SLOPE,
         **kwargs: Any,
     ):
@@ -80,6 +86,8 @@ class DecomonActivation(DecomonBaseActivation):
             ibp=ibp,
             affine=affine,
             propagation=propagation,
+            model_input_shape=model_input_shape,
+            model_output_shape=model_output_shape,
             slope=slope,
             **kwargs,
         )
@@ -91,6 +99,8 @@ class DecomonActivation(DecomonBaseActivation):
             ibp=ibp,
             affine=affine,
             propagation=propagation,
+            model_input_shape=model_input_shape,
+            model_output_shape=model_output_shape,
             slope=slope,
             **kwargs,
         )
@@ -118,29 +128,24 @@ class DecomonActivation(DecomonBaseActivation):
     def forward_ibp_propagate(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor]:
         return self.decomon_activation.forward_ibp_propagate(lower=lower, upper=upper)
 
-    def build(self, affine_bounds_to_propagate_shape, constant_oracle_bounds_shape, x_shape):
-        self.decomon_activation.build(
-            affine_bounds_to_propagate_shape=affine_bounds_to_propagate_shape,
-            constant_oracle_bounds_shape=constant_oracle_bounds_shape,
-            x_shape=x_shape,
-        )
+    def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
+        self.decomon_activation.build(input_shape=input_shape)
+        super().build(input_shape=input_shape)
 
-    def call(
-        self, affine_bounds_to_propagate: list[Tensor], constant_oracle_bounds: list[Tensor], x: Tensor
-    ) -> list[list[Tensor]]:
-        return self.decomon_activation.call(affine_bounds_to_propagate, constant_oracle_bounds, x)
+    def call(self, inputs: list[Tensor]) -> list[Tensor]:
+        return self.decomon_activation.call(inputs=inputs)
 
 
 class DecomonLinear(DecomonBaseActivation):
     linear = True
 
-    def call(
-        self, affine_bounds_to_propagate: list[Tensor], constant_oracle_bounds: list[Tensor], x: Tensor
-    ) -> list[list[Tensor]]:
-        if self.propagation == Propagation.FORWARD:
-            return [affine_bounds_to_propagate, constant_oracle_bounds]
-        else:
-            return [affine_bounds_to_propagate]
+    def call(self, inputs: list[Tensor]) -> list[Tensor]:
+        affine_bounds_to_propagate, constant_oracle_bounds, model_inputs = self.inputs_outputs_spec.split_inputs(
+            inputs=inputs
+        )
+        return self.inputs_outputs_spec.flatten_outputs(
+            affine_bounds_propagated=affine_bounds_to_propagate, constant_bounds_propagated=constant_oracle_bounds
+        )
 
 
 class DecomonReLU(DecomonBaseActivation):

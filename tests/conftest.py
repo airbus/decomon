@@ -9,7 +9,7 @@ from keras import KerasTensor, Model
 from keras.layers import Input
 from pytest_cases import fixture, fixture_union, param_fixture, param_fixtures
 
-from decomon.core import BoxDomain, Propagation, Slope
+from decomon.core import BoxDomain, InputsOutputsSpec, Propagation, Slope
 from decomon.keras_utils import (
     BACKEND_JAX,
     BACKEND_NUMPY,
@@ -142,7 +142,10 @@ class Helpers:
         diag=False,
         nobatch=False,
     ):
-        x_shape = perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)
+        if affine and propagation == Propagation.FORWARD:
+            model_inputs_shape = [perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)]
+        else:
+            model_inputs_shape = []
         if affine and not empty:
             if propagation == Propagation.FORWARD:
                 b_in_shape = layer_input_shape
@@ -161,7 +164,7 @@ class Helpers:
         else:
             constant_oracle_bounds_shape = []
 
-        return [affine_bounds_to_propagate_shape, constant_oracle_bounds_shape, x_shape]
+        return affine_bounds_to_propagate_shape, constant_oracle_bounds_shape, model_inputs_shape
 
     @staticmethod
     def get_decomon_symbolic_inputs(
@@ -194,7 +197,11 @@ class Helpers:
         Returns:
 
         """
-        decomon_input_shape = Helpers.get_decomon_input_shapes(
+        (
+            affine_bounds_to_propagate_shape,
+            constant_oracle_bounds_shape,
+            model_inputs_shape,
+        ) = Helpers.get_decomon_input_shapes(
             model_input_shape,
             model_output_shape,
             layer_input_shape,
@@ -207,14 +214,26 @@ class Helpers:
             diag=diag,
             nobatch=nobatch,
         )
-        affine_bounds_to_propagate_shape, constant_oracle_bounds_shape, x_shape = decomon_input_shape
-        x = Input(x_shape)
+        model_inputs = [Input(shape) for shape in model_inputs_shape]
         constant_oracle_bounds = [Input(shape) for shape in constant_oracle_bounds_shape]
         if nobatch:
             affine_bounds_to_propagate = [Input(batch_shape=shape) for shape in affine_bounds_to_propagate_shape]
         else:
             affine_bounds_to_propagate = [Input(shape=shape) for shape in affine_bounds_to_propagate_shape]
-        return [affine_bounds_to_propagate, constant_oracle_bounds, x]
+        inputs_outputs_spec = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            perturbation_domain=perturbation_domain,
+            layer_input_shape=layer_input_shape,
+            model_input_shape=model_input_shape,
+            model_output_shape=model_output_shape,
+        )
+        return inputs_outputs_spec.flatten_inputs(
+            affine_bounds_to_propagate=affine_bounds_to_propagate,
+            constant_oracle_bounds=constant_oracle_bounds,
+            model_inputs=model_inputs,
+        )
 
     @staticmethod
     def generate_simple_decomon_layer_inputs_from_keras_input(
@@ -251,15 +270,22 @@ class Helpers:
         Returns:
 
         """
-        if isinstance(perturbation_domain, BoxDomain):
-            x = K.repeat(keras_input[:, None], 2, axis=1)
+        layer_input_shape = keras_input.shape[1:]
+        model_input_shape = layer_input_shape
+        model_output_shape = layer_output_shape
+        if affine and propagation == Propagation.FORWARD:
+            if isinstance(perturbation_domain, BoxDomain):
+                x = K.repeat(keras_input[:, None], 2, axis=1)
+            else:
+                raise NotImplementedError
+            model_inputs = [x]
         else:
-            raise NotImplementedError
+            model_inputs = []
 
         if affine and not empty:
             batchsize = keras_input.shape[0]
             if propagation == Propagation.FORWARD:
-                bias_shape = keras_input.shape[1:]
+                bias_shape = layer_input_shape
             else:
                 bias_shape = layer_output_shape
             flatten_bias_dim = int(np.prod(bias_shape))
@@ -288,23 +314,30 @@ class Helpers:
         else:
             constant_oracle_bounds = []
 
-        return [affine_bounds_to_propagate, constant_oracle_bounds, x]
+        inputs_outputs_spec = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            perturbation_domain=perturbation_domain,
+            layer_input_shape=layer_input_shape,
+            model_input_shape=model_input_shape,
+            model_output_shape=model_output_shape,
+        )
+        return inputs_outputs_spec.flatten_inputs(
+            affine_bounds_to_propagate=affine_bounds_to_propagate,
+            constant_oracle_bounds=constant_oracle_bounds,
+            model_inputs=model_inputs,
+        )
 
     @staticmethod
     def assert_decomon_outputs_equal(output_1, output_2, decimal=5):
-        names = [["w_l", "b_l", "w_u", "b_u"], ["l_c", "u_c"]]
         assert len(output_1) == len(output_2)
         for i in range(len(output_1)):
-            sub_output_1 = output_1[i]
-            sub_output_2 = output_2[i]
-            assert len(sub_output_1) == len(sub_output_2)
-            for j in range(len(sub_output_1)):
-                Helpers.assert_almost_equal(
-                    sub_output_1[j],
-                    sub_output_2[j],
-                    decimal=decimal,
-                    err_msg=names[i][j],
-                )
+            Helpers.assert_almost_equal(
+                output_1[i],
+                output_2[i],
+                decimal=decimal,
+            )
 
     @staticmethod
     def assert_ordered(lower: BackendTensor, upper: BackendTensor, decimal: int = 5, err_msg: str = ""):
@@ -328,35 +361,44 @@ class Helpers:
 
     @staticmethod
     def assert_decomon_output_compare_with_keras_input_output_single_layer(
-        decomon_output, keras_output, keras_input, decimal=5
+        decomon_output, keras_output, keras_input, ibp, affine, propagation, decimal=5
     ):
-        affine = len(decomon_output[0]) > 0
-        ibp = len(decomon_output) > 1 and len(decomon_output[1]) > 0
+        inputs_outputs_spec = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            layer_input_shape=keras_input.shape[1:],
+            model_output_shape=keras_output.shape[1:],
+        )
+        affine_bounds_propagated, constant_bounds_propagated = inputs_outputs_spec.split_outputs(outputs=decomon_output)
 
-        if affine:
-            w_l, b_l, w_u, b_u = decomon_output[0]
+        if affine or propagation == Propagation.BACKWARD:
+            w_l, b_l, w_u, b_u = affine_bounds_propagated
             lower_affine = batch_multid_dot(keras_input, w_l) + b_l
             upper_affine = batch_multid_dot(keras_input, w_u) + b_u
             Helpers.assert_ordered(lower_affine, keras_output, decimal=decimal, err_msg="lower_affine not ok")
             Helpers.assert_ordered(keras_output, upper_affine, decimal=decimal, err_msg="upper_affine not ok")
 
-        if ibp:
-            lower_ibp, upper_ibp = decomon_output[1]
+        if ibp and propagation == Propagation.FORWARD:
+            lower_ibp, upper_ibp = constant_bounds_propagated
             Helpers.assert_ordered(lower_ibp, keras_output, decimal=decimal, err_msg="lower_ibp not ok")
             Helpers.assert_ordered(keras_output, upper_ibp, decimal=decimal, err_msg="upper_ibp not ok")
 
     @staticmethod
-    def assert_decomon_output_lower_equal_upper(decomon_output, decimal=5):
-        affine = len(decomon_output[0]) > 0
-        ibp = len(decomon_output) > 1 and len(decomon_output[1]) > 0
-
-        if affine:
-            w_l, b_l, w_u, b_u = decomon_output[0]
+    def assert_decomon_output_lower_equal_upper(decomon_output, ibp, affine, propagation, decimal=5):
+        inputs_outputs_specs = InputsOutputsSpec(
+            ibp=ibp, affine=affine, propagation=propagation, layer_input_shape=tuple(), model_output_shape=tuple()
+        )
+        affine_bounds_propagated, constant_bounds_propagated = inputs_outputs_specs.split_outputs(
+            outputs=decomon_output
+        )
+        if propagation == Propagation.BACKWARD or affine:
+            w_l, b_l, w_u, b_u = affine_bounds_propagated
             Helpers.assert_almost_equal(w_l, w_u, decimal=decimal)
             Helpers.assert_almost_equal(b_l, b_u, decimal=decimal)
 
-        if ibp:
-            lower_ibp, upper_ibp = decomon_output[1]
+        if propagation == Propagation.FORWARD and ibp:
+            lower_ibp, upper_ibp = constant_bounds_propagated
             Helpers.assert_almost_equal(lower_ibp, upper_ibp, decimal=decimal)
 
     @staticmethod

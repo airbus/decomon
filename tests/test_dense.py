@@ -24,7 +24,6 @@ def test_decomon_dense(
     decimal = 5
     units = 7
     output_shape = input_shape[:-1] + (units,)
-    model_output_shape_length = len(output_shape)
     keras_symbolic_input = Input(input_shape)
     decomon_symbolic_inputs = helpers.get_decomon_symbolic_inputs(
         model_input_shape=input_shape,
@@ -51,9 +50,9 @@ def test_decomon_dense(
         affine=affine,
         propagation=propagation,
         perturbation_domain=perturbation_domain,
-        model_output_shape_length=model_output_shape_length,
+        model_output_shape=output_shape,
     )
-    decomon_layer(*decomon_symbolic_inputs)
+    decomon_layer(decomon_symbolic_inputs)
 
     keras_input = helpers.generate_random_tensor(input_shape, batchsize=batchsize)
     decomon_inputs = helpers.generate_simple_decomon_layer_inputs_from_keras_input(
@@ -78,12 +77,19 @@ def test_decomon_dense(
             err_msg="wrong affine representation",
         )
 
-    decomon_output = decomon_layer(*decomon_inputs)
+    decomon_output = decomon_layer(decomon_inputs)
 
     # check ibp and affine bounds well ordered w.r.t. keras output
     helpers.assert_decomon_output_compare_with_keras_input_output_single_layer(
-        decomon_output=decomon_output, keras_output=keras_output, keras_input=keras_input
+        decomon_output=decomon_output,
+        keras_output=keras_output,
+        keras_input=keras_input,
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
     )
 
     # before propagation through linear layer lower == upper => lower == upper after propagation
-    helpers.assert_decomon_output_lower_equal_upper(decomon_output, decimal=decimal)
+    helpers.assert_decomon_output_lower_equal_upper(
+        decomon_output, ibp=ibp, affine=affine, propagation=propagation, decimal=decimal
+    )

@@ -171,54 +171,145 @@ def get_affine(mode: Union[str, ForwardMode] = ForwardMode.HYBRID) -> bool:
 class InputsOutputsSpec:
     """Storing specifications for inputs and outputs of decomon/backward layer/model."""
 
+    layer_input_shape: tuple[int, ...]
+    model_input_shape: tuple[int, ...]
+    model_output_shape: tuple[int, ...]
+
     def __init__(
         self,
-        dc_decomp: bool = False,
-        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
+        ibp: bool = True,
+        affine: bool = True,
+        propagation: Propagation = Propagation.FORWARD,
         perturbation_domain: Optional[PerturbationDomain] = None,
-        model_input_dim: int = -1,
+        layer_input_shape: Optional[tuple[int, ...]] = None,
+        model_input_shape: Optional[tuple[int, ...]] = None,
+        model_output_shape: Optional[tuple[int, ...]] = None,
     ):
         """
         Args:
-            dc_decomp: boolean that indicates whether we return a
-                difference of convex decomposition of our layer
-            mode: type of Forward propagation (ibp, affine, or hybrid)
-            perturbation_domain: type of perturbation domain (box, ball, ...)
+            perturbation_domain: type of perturbation domain (box, ball, ...). Default to a box domain
+            ibp: if True, forward propagate constant bounds
+            affine: if True, forward propagate affine bounds
+            propagation: direction of bounds propagation
+              - forward: from input to output
+              - backward: from output to input
+            layer_input_shape: shape of the underlying keras layer input (w/o the batch axis)
+            model_input_shape: shape of the underlying keras model input (w/o the batch axis)
+            model_output_shape: shape of the underlying keras model output (w/o the batch axis)
 
         """
+        # checks
+        if propagation == Propagation.BACKWARD and model_output_shape is None:
+            raise ValueError("model_output_shape must be set in backward propagation.")
+        if propagation == Propagation.FORWARD and layer_input_shape is None:
+            raise ValueError("layer_input_shape must be set in forward propagation.")
 
-        self.model_input_dim = model_input_dim
-        self.mode = ForwardMode(mode)
-        self.dc_decomp = dc_decomp
+        self.propagation = propagation
+        self.affine = affine
+        self.ibp = ibp
         self.perturbation_domain: PerturbationDomain
         if perturbation_domain is None:
             self.perturbation_domain = BoxDomain()
         else:
             self.perturbation_domain = perturbation_domain
-
-    @property
-    def nb_tensors(self) -> int:
-        if self.mode == ForwardMode.HYBRID:
-            nb_tensors = 7
-        elif self.mode == ForwardMode.IBP:
-            nb_tensors = 2
-        elif self.mode == ForwardMode.AFFINE:
-            nb_tensors = 5
+        if model_output_shape is None:
+            self.model_output_shape = tuple()
         else:
-            raise NotImplementedError(f"unknown forward mode {self.mode}")
+            self.model_output_shape = model_output_shape
+        if model_input_shape is None:
+            self.model_input_shape = tuple()
+        else:
+            self.model_input_shape = model_input_shape
+        if layer_input_shape is None:
+            self.layer_input_shape = tuple()
+        else:
+            self.layer_input_shape = layer_input_shape
 
-        if self.dc_decomp:
-            nb_tensors += 2
+    def split_inputs(self, inputs: list[Tensor]) -> tuple[list[Tensor], list[Tensor], list[Tensor]]:
+        # Remove keras model input
+        if self.propagation == Propagation.FORWARD and self.affine:
+            x = inputs[-1]
+            inputs = inputs[:-1]
+            model_inputs = [x]
+        else:
+            model_inputs = []
+        # Remove constant bounds
+        if self.propagation == Propagation.BACKWARD or self.ibp:
+            constant_oracle_bounds = inputs[-2:]
+            inputs = inputs[:-2]
+        else:
+            constant_oracle_bounds = []
+        # The remaining tensors are affine bounds
+        # (potentially empty if: not backward or not affine or identity affine bounds)
+        affine_bounds_to_propagate = inputs
 
-        return nb_tensors
+        return affine_bounds_to_propagate, constant_oracle_bounds, model_inputs
 
-    @property
-    def ibp(self) -> bool:
-        return get_ibp(self.mode)
+    def split_input_shape(
+        self, input_shape: list[tuple[Optional[int], ...]]
+    ) -> tuple[list[tuple[Optional[int], ...]], list[tuple[Optional[int], ...]], list[tuple[Optional[int], ...]]]:
+        return self.split_inputs(inputs=input_shape)  # type: ignore
 
-    @property
-    def affine(self) -> bool:
-        return get_affine(self.mode)
+    def flatten_inputs(
+        self, affine_bounds_to_propagate: list[Tensor], constant_oracle_bounds: list[Tensor], model_inputs: list[Tensor]
+    ) -> list[Tensor]:
+        return affine_bounds_to_propagate + constant_oracle_bounds + model_inputs
+
+    def split_outputs(self, outputs: list[Tensor]) -> tuple[list[Tensor], list[Tensor]]:
+        # Remove constant bounds
+        if self.propagation == Propagation.FORWARD and self.ibp:
+            constant_bounds_propagated = outputs[-2:]
+            outputs = outputs[:-2]
+        else:
+            constant_bounds_propagated = []
+        # It remains affine bounds (can be empty if forward + not affine, or identity layer (e.g. DecomonLinear) on identity bounds
+        affine_bounds_propagated = outputs
+
+        return affine_bounds_propagated, constant_bounds_propagated
+
+    def flatten_outputs(
+        self, affine_bounds_propagated: list[Tensor], constant_bounds_propagated: Optional[list[Tensor]] = None
+    ) -> list[Tensor]:
+        if constant_bounds_propagated is None or self.propagation == Propagation.BACKWARD:
+            return affine_bounds_propagated
+        else:
+            return affine_bounds_propagated + constant_bounds_propagated
+
+    def is_identity_bounds(self, affine_bounds: list[Tensor]) -> bool:
+        return len(affine_bounds) == 0
+
+    def is_identity_bounds_shape(self, affine_bounds_shape: list[tuple[Optional[int], ...]]) -> bool:
+        return len(affine_bounds_shape) == 0
+
+    def is_diagonal_bounds(self, affine_bounds: list[Tensor]) -> bool:
+        if self.is_identity_bounds(affine_bounds):
+            return True
+        w, b = affine_bounds[:2]
+        return w.shape == b.shape
+
+    def is_diagonal_bounds_shape(self, affine_bounds_shape: list[tuple[Optional[int], ...]]) -> bool:
+        if self.is_identity_bounds_shape(affine_bounds_shape):
+            return True
+        w_shape, b_shape = affine_bounds_shape[:2]
+        return w_shape == b_shape
+
+    def is_wo_batch_bounds(self, affine_bounds: list[Tensor]) -> bool:
+        if self.is_identity_bounds(affine_bounds):
+            return True
+        b = affine_bounds[1]
+        if self.propagation == Propagation.FORWARD:
+            return len(b.shape) == len(self.layer_input_shape)
+        else:
+            return len(b.shape) == len(self.model_output_shape)
+
+    def is_wo_batch_bounds_shape(self, affine_bounds_shape: list[tuple[Optional[int], ...]]) -> bool:
+        if self.is_identity_bounds_shape(affine_bounds_shape):
+            return True
+        b_shape = affine_bounds_shape[1]
+        if self.propagation == Propagation.FORWARD:
+            return len(b_shape) == len(self.layer_input_shape)
+        else:
+            return len(b_shape) == len(self.model_output_shape)
 
     def get_kerasinputshape(self, inputsformode: list[Tensor]) -> tuple[Optional[int], ...]:
         return inputsformode[-1].shape

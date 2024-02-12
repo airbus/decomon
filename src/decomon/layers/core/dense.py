@@ -60,11 +60,11 @@ class DecomonDense(DecomonLayer):
         w_l_1, b_l_1, w_u_1, b_u_1 = input_affine_bounds
         w_2, b_2 = self._get_pseudo_affine_representation()
         diagonal = (
-            self.is_diagonal_bounds(input_affine_bounds),
+            self.inputs_outputs_spec.is_diagonal_bounds(input_affine_bounds),
             False,
         )
         missing_batchsize = (
-            self.is_wo_batch_bounds(input_affine_bounds),
+            self.inputs_outputs_spec.is_wo_batch_bounds(input_affine_bounds),
             True,
         )
         kwargs_dot_w = dict(nb_merging_axes=1, missing_batchsize=missing_batchsize, diagonal=diagonal)
@@ -88,11 +88,11 @@ class DecomonDense(DecomonLayer):
         w_l_2, b_l_2, w_u_2, b_u_2 = output_affine_bounds
 
         # affine bounds represented in diagonal mode?
-        diagonal_bounds = self.is_diagonal_bounds(output_affine_bounds)
+        diagonal_bounds = self.inputs_outputs_spec.is_diagonal_bounds(output_affine_bounds)
         if diagonal_bounds:
             raise NotImplementedError
         # missing batch axis in affine bounds?
-        nb_batch_axis = 0 if self.is_wo_batch_bounds(output_affine_bounds) else 1
+        nb_batch_axis = 0 if self.inputs_outputs_spec.is_wo_batch_bounds(output_affine_bounds) else 1
 
         nb_nonbatch_axes_keras_input = len(w_l_2.shape) - len(b_l_2.shape)
 

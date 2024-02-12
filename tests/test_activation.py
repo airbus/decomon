@@ -19,14 +19,12 @@ def test_decomon_activation(
     batchsize,
     helpers,
 ):
-    decimal = 5
     decomon_layer_class = DecomonActivation
 
     keras_symbolic_input = Input(input_shape)
     layer = Activation(activation=activation)
     layer(keras_symbolic_input)
     output_shape = layer.output.shape[1:]
-    model_output_shape_length = len(output_shape)
 
     decomon_symbolic_inputs = helpers.get_decomon_symbolic_inputs(
         model_input_shape=input_shape,
@@ -44,10 +42,10 @@ def test_decomon_activation(
         affine=affine,
         propagation=propagation,
         perturbation_domain=perturbation_domain,
-        model_output_shape_length=model_output_shape_length,
+        model_output_shape=output_shape,
         slope=slope,
     )
-    decomon_layer(*decomon_symbolic_inputs)
+    decomon_layer(decomon_symbolic_inputs)
 
     keras_input = helpers.generate_random_tensor(input_shape, batchsize=batchsize)
     decomon_inputs = helpers.generate_simple_decomon_layer_inputs_from_keras_input(
@@ -61,9 +59,14 @@ def test_decomon_activation(
 
     keras_output = layer(keras_input)
 
-    decomon_output = decomon_layer(*decomon_inputs)
+    decomon_output = decomon_layer(decomon_inputs)
 
     # check ibp and affine bounds well ordered w.r.t. keras output
     helpers.assert_decomon_output_compare_with_keras_input_output_single_layer(
-        decomon_output=decomon_output, keras_output=keras_output, keras_input=keras_input
+        decomon_output=decomon_output,
+        keras_output=keras_output,
+        keras_input=keras_input,
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
     )
