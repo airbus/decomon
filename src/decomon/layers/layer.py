@@ -302,10 +302,12 @@ class DecomonLayer(Wrapper):
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
             layer_affine_bounds = [w_l, b_l, w_u, b_u]
 
+        from_linear_layer = (self.is_wo_batch_bounds(input_affine_bounds), self.linear)
+
         return combine_affine_bounds(
             affine_bounds_1=input_affine_bounds,
             affine_bounds_2=layer_affine_bounds,
-            from_linear_layer=(False, self.linear),
+            from_linear_layer=from_linear_layer,
         )
 
     def backward_affine_propagate(
@@ -354,10 +356,12 @@ class DecomonLayer(Wrapper):
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
             layer_affine_bounds = [w_l, b_l, w_u, b_u]
 
+        from_linear_layer = (self.linear, self.is_wo_batch_bounds((output_affine_bounds)))
+
         return combine_affine_bounds(
             affine_bounds_1=layer_affine_bounds,
             affine_bounds_2=output_affine_bounds,
-            from_linear_layer=(self.linear, False),
+            from_linear_layer=from_linear_layer,
         )
 
     def get_forward_oracle(
@@ -387,9 +391,14 @@ class DecomonLayer(Wrapper):
             return input_constant_bounds
 
         elif self.affine:
-            w_l, b_l, w_u, b_u = input_affine_bounds
-            l_affine = self.perturbation_domain.get_lower(x, w_l, b_l)
-            u_affine = self.perturbation_domain.get_upper(x, w_u, b_u)
+            if len(input_affine_bounds) == 0:
+                # special case: empty affine bounds => identity bounds
+                l_affine = self.perturbation_domain.get_lower_x(x)
+                u_affine = self.perturbation_domain.get_upper_x(x)
+            else:
+                w_l, b_l, w_u, b_u = input_affine_bounds
+                l_affine = self.perturbation_domain.get_lower(x, w_l, b_l)
+                u_affine = self.perturbation_domain.get_upper(x, w_u, b_u)
             return [l_affine, u_affine]
 
         else:
@@ -401,7 +410,9 @@ class DecomonLayer(Wrapper):
         """Propagate forward affine and constant bounds through the layer.
 
         Args:
-            affine_bounds_to_propagate: affine bounds on keras layer input w.r.t model input . Can be empty if not in affine mode.
+            affine_bounds_to_propagate: affine bounds on keras layer input w.r.t model input.
+              Can be empty if not in affine mode.
+              Can also be empty in case of identity affine bounds => we simply return layer affine bounds.
             input_bounds_to_propagate: ibp constant bounds on keras layer input. Can be empty if not in ibp mode.
             x: model input. Necessary only in affine mode.
 
@@ -468,7 +479,9 @@ class DecomonLayer(Wrapper):
         """Propagate bounds in the specified direction `self.propagation`.
 
         Args:
-            affine_bounds_to_propagate: affine bounds to propagate. Can be empty in forward direction if self.affine is False.
+            affine_bounds_to_propagate: affine bounds to propagate.
+              Can be empty in forward direction if self.affine is False.
+              Can also be empty in case of identity affine bounds => we simply return layer affine bounds.
             constant_oracle_bounds:  in forward direction, the ibp bounds (empty if self.ibp is False); in backward direction, the oracle constant bounds on keras inputs
             x: the model input. Necessary only in forward direction when self.affine is True.
 
@@ -687,7 +700,9 @@ def combine_affine_bounds(
             affine_bounds_1=affine_bounds_1, affine_bounds_2=affine_bounds_2, diagonal=diagonal
         )
     else:
-        raise NotImplementedError()
+        return _combine_affine_bounds_both_from_linear(
+            affine_bounds_1=affine_bounds_1, affine_bounds_2=affine_bounds_2, diagonal=diagonal
+        )
 
 
 def _combine_affine_bounds_generic(
@@ -843,3 +858,49 @@ def _combine_affine_bounds_left_from_linear(
     b_u = batch_multid_dot(b_1, w_u_2, **kwargs_dot_b) + b_u_2
 
     return w_l, b_l, w_u, b_u
+
+
+def _combine_affine_bounds_both_from_linear(
+    affine_bounds_1: list[Tensor],
+    affine_bounds_2: list[Tensor],
+    diagonal: tuple[bool, bool],
+) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    """Combine affine bounds
+
+    Args:
+        affine_bounds_1: [w_1, b_1, w_1, b_1] first affine bounds, with lower=upper + no batchsize
+        affine_bounds_2: [w_2, b_2, w_2, b_2] second affine bounds, with lower=upper + no batchsize
+        diagonal: specify if weights of each affine bounds are in diagonal representation or not
+
+    Returns:
+        w, b, w, b: combined affine bounds
+
+    If x, y, z satisfy
+        y = w_1 * x + b_1
+        z = w_2 * x + b_2
+
+    Then
+        z = w * x + b
+
+    """
+    w_1, b_1 = affine_bounds_1[:2]
+    w_2, b_2 = affine_bounds_2[:2]
+    nb_axes_wo_batchsize_y = len(b_1.shape)
+    missing_batchsize = (True, True)
+
+    #   NB: bias is never a diagonal representation! => we split kwargs_dot_w and kwargs_dot_b
+    kwargs_dot_w = dict(
+        nb_merging_axes=nb_axes_wo_batchsize_y,
+        missing_batchsize=missing_batchsize,
+        diagonal=diagonal,
+    )
+    kwargs_dot_b = dict(
+        nb_merging_axes=nb_axes_wo_batchsize_y,
+        missing_batchsize=missing_batchsize,
+        diagonal=(False, diagonal[1]),
+    )
+
+    w = batch_multid_dot(w_1, w_2, **kwargs_dot_w)
+    b = batch_multid_dot(b_1, w_2, **kwargs_dot_b) + b_2
+
+    return w, b, w, b
