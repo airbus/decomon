@@ -373,9 +373,20 @@ class Helpers:
         affine_bounds_propagated, constant_bounds_propagated = inputs_outputs_spec.split_outputs(outputs=decomon_output)
 
         if affine or propagation == Propagation.BACKWARD:
-            w_l, b_l, w_u, b_u = affine_bounds_propagated
-            lower_affine = batch_multid_dot(keras_input, w_l) + b_l
-            upper_affine = batch_multid_dot(keras_input, w_u) + b_u
+            if len(affine_bounds_propagated) == 0:
+                # identity case
+                lower_affine = keras_input
+                upper_affine = keras_input
+            else:
+                w_l, b_l, w_u, b_u = affine_bounds_propagated
+                diagonal = (False, w_l.shape == b_l.shape)
+                missing_batchsize = (False, len(b_l.shape) < len(keras_output.shape))
+                lower_affine = (
+                    batch_multid_dot(keras_input, w_l, diagonal=diagonal, missing_batchsize=missing_batchsize) + b_l
+                )
+                upper_affine = (
+                    batch_multid_dot(keras_input, w_u, diagonal=diagonal, missing_batchsize=missing_batchsize) + b_u
+                )
             Helpers.assert_ordered(lower_affine, keras_output, decimal=decimal, err_msg="lower_affine not ok")
             Helpers.assert_ordered(keras_output, upper_affine, decimal=decimal, err_msg="upper_affine not ok")
 
