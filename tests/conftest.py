@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional, Union
 
 import keras
 import keras.config as keras_config
@@ -400,6 +400,10 @@ class Helpers:
         if propagation == Propagation.FORWARD and ibp:
             lower_ibp, upper_ibp = constant_bounds_propagated
             Helpers.assert_almost_equal(lower_ibp, upper_ibp, decimal=decimal)
+
+    @staticmethod
+    def replace_none_by_batchsize(shapes: list[tuple[Optional[int], ...]], batchsize: int) -> list[tuple[int]]:
+        return [tuple(dim if dim is not None else batchsize for dim in shape) for shape in shapes]
 
     @staticmethod
     def predict_on_small_numpy(

@@ -61,6 +61,13 @@ def test_decomon_activation(
 
     decomon_output = decomon_layer(decomon_inputs)
 
+    # check output shapes
+    input_shape = [t.shape for t in decomon_inputs]
+    output_shape = [t.shape for t in decomon_output]
+    expected_output_shape = decomon_layer.compute_output_shape(input_shape)
+    expected_output_shape = helpers.replace_none_by_batchsize(shapes=expected_output_shape, batchsize=batchsize)
+    assert output_shape == expected_output_shape
+
     # check ibp and affine bounds well ordered w.r.t. keras output
     helpers.assert_decomon_output_compare_with_keras_input_output_single_layer(
         decomon_output=decomon_output,
