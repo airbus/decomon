@@ -126,15 +126,20 @@ class Helpers:
         affine,
         propagation,
         perturbation_domain,
+        empty=False,
+        diag=False,
+        nobatch=False,
     ):
         x_shape = perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)
-        if affine:
+        if affine and not empty:
             if propagation == Propagation.FORWARD:
                 b_in_shape = layer_input_shape
                 w_in_shape = model_input_shape + layer_input_shape
             else:
                 b_in_shape = model_output_shape
                 w_in_shape = layer_output_shape + model_output_shape
+            if diag:
+                w_in_shape = b_in_shape
 
             affine_bounds_to_propagate_shape = [w_in_shape, b_in_shape, w_in_shape, b_in_shape]
         else:
@@ -156,6 +161,9 @@ class Helpers:
         affine,
         propagation,
         perturbation_domain,
+        empty=False,
+        diag=False,
+        nobatch=False,
     ):
         """Generate decomon symbolic inputs for a decomon layer
 
@@ -183,16 +191,30 @@ class Helpers:
             affine,
             propagation,
             perturbation_domain,
+            empty=empty,
+            diag=diag,
+            nobatch=nobatch,
         )
         affine_bounds_to_propagate_shape, constant_oracle_bounds_shape, x_shape = decomon_input_shape
         x = Input(x_shape)
-        affine_bounds_to_propagate = [Input(shape) for shape in affine_bounds_to_propagate_shape]
         constant_oracle_bounds = [Input(shape) for shape in constant_oracle_bounds_shape]
+        if nobatch:
+            affine_bounds_to_propagate = [Input(batch_shape=shape) for shape in affine_bounds_to_propagate_shape]
+        else:
+            affine_bounds_to_propagate = [Input(shape=shape) for shape in affine_bounds_to_propagate_shape]
         return [affine_bounds_to_propagate, constant_oracle_bounds, x]
 
     @staticmethod
     def generate_simple_decomon_layer_inputs_from_keras_input(
-        keras_input, layer_output_shape, ibp, affine, propagation, perturbation_domain
+        keras_input,
+        layer_output_shape,
+        ibp,
+        affine,
+        propagation,
+        perturbation_domain,
+        empty=False,
+        diag=False,
+        nobatch=False,
     ):
         """Generate simple decomon inputs for a layer from the corresponding keras input
 
@@ -210,6 +232,9 @@ class Helpers:
             affine:
             propagation:
             perturbation_domain:
+            empty:
+            diag:
+            nobatch:
 
         Returns:
 
@@ -219,19 +244,29 @@ class Helpers:
         else:
             raise NotImplementedError
 
-        if affine:
+        if affine and not empty:
             batchsize = keras_input.shape[0]
             if propagation == Propagation.FORWARD:
                 bias_shape = keras_input.shape[1:]
             else:
                 bias_shape = layer_output_shape
             flatten_bias_dim = int(np.prod(bias_shape))
-            w_in = K.repeat(
-                K.reshape(K.eye(flatten_bias_dim), bias_shape + bias_shape)[None],
-                batchsize,
-                axis=0,
-            )
-            b_in = K.zeros((batchsize,) + bias_shape)
+            if diag:
+                w_in = K.ones(bias_shape)
+            else:
+                w_in = K.reshape(K.eye(flatten_bias_dim), bias_shape + bias_shape)
+            b_in = K.zeros(bias_shape)
+            if not nobatch:
+                w_in = K.repeat(
+                    w_in[None],
+                    batchsize,
+                    axis=0,
+                )
+                b_in = K.repeat(
+                    b_in[None],
+                    batchsize,
+                    axis=0,
+                )
             affine_bounds_to_propagate = [w_in, b_in, w_in, b_in]
         else:
             affine_bounds_to_propagate = []
