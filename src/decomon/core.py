@@ -30,6 +30,14 @@ class PerturbationDomain(ABC):
         self.opt_option = Option(opt_option)
 
     @abstractmethod
+    def get_upper_x(self, x: Tensor) -> Tensor:
+        ...
+
+    @abstractmethod
+    def get_lower_x(self, x: Tensor) -> Tensor:
+        ...
+
+    @abstractmethod
     def get_upper(self, x: Tensor, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
         ...
 
@@ -64,6 +72,12 @@ class BoxDomain(PerturbationDomain):
         x_min = x[:, 0]
         x_max = x[:, 1]
         return get_lower_box(x_min=x_min, x_max=x_max, w=w, b=b, **kwargs)
+
+    def get_upper_x(self, x: Tensor) -> Tensor:
+        return x[:, 1]
+
+    def get_lower_x(self, x: Tensor) -> Tensor:
+        return x[:, 0]
 
     def get_nb_x_components(self) -> int:
         return 2
@@ -484,16 +498,26 @@ def get_upper_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, **kwargs: 
 
     Returns:
         max_(x >= x_min, x<=x_max) w*x + b
+
+    Note:
+        We can have w, b in diagonal representation and/or without a batch axis.
+        We assume that x_min, x_max have always its batch axis.
+
     """
-
-    if len(w.shape) == len(b.shape):
-        raise NotImplementedError
-
     z_value = K.cast(0.0, dtype=x_min.dtype)
     w_pos = K.maximum(w, z_value)
     w_neg = K.minimum(w, z_value)
 
-    return batch_multid_dot(x_max, w_pos) + batch_multid_dot(x_min, w_neg) + b
+    is_diag = w.shape == b.shape
+    is_wo_batch = len(b.shape) < len(x_min.shape)
+    diagonal = (False, is_diag)
+    missing_batchsize = (False, is_wo_batch)
+
+    return (
+        batch_multid_dot(x_max, w_pos, diagonal=diagonal, missing_batchsize=missing_batchsize)
+        + batch_multid_dot(x_min, w_neg, diagonal=diagonal, missing_batchsize=missing_batchsize)
+        + b
+    )
 
 
 def get_lower_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
@@ -506,16 +530,13 @@ def get_lower_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, **kwargs: 
 
     Returns:
         min_(x >= x_min, x<=x_max) w*x + b
+
+    Note:
+        We can have w, b in diagonal representation and/or without a batch axis.
+        We assume that x_min, x_max have always its batch axis.
+
     """
-
-    if len(w.shape) == len(b.shape):
-        raise NotImplementedError
-
-    z_value = K.cast(0.0, dtype=x_min.dtype)
-    w_pos = K.maximum(w, z_value)
-    w_neg = K.minimum(w, z_value)
-
-    return batch_multid_dot(x_min, w_pos) + batch_multid_dot(x_max, w_neg) + b
+    return get_upper_box(x_min=x_max, x_max=x_min, w=w, b=b, **kwargs)
 
 
 def get_lq_norm(x: Tensor, p: float, axis: int = -1) -> Tensor:
