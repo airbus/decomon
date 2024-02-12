@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from typing import Any, Optional
 
+import keras
 from keras import Layer
 from keras.activations import linear, relu
 from keras.layers import Activation
@@ -132,6 +133,9 @@ class DecomonActivation(DecomonBaseActivation):
         self.decomon_activation.build(input_shape=input_shape)
         super().build(input_shape=input_shape)
 
+    def compute_output_shape(self, input_shape: list[tuple[Optional[int], ...]]) -> list[tuple[Optional[int], ...]]:
+        return self.decomon_activation.compute_output_shape(input_shape)
+
     def call(self, inputs: list[Tensor]) -> list[Tensor]:
         return self.decomon_activation.call(inputs=inputs)
 
@@ -145,6 +149,23 @@ class DecomonLinear(DecomonBaseActivation):
         )
         return self.inputs_outputs_spec.flatten_outputs(
             affine_bounds_propagated=affine_bounds_to_propagate, constant_bounds_propagated=constant_oracle_bounds
+        )
+
+    def compute_output_spec(self, inputs: list[keras.KerasTensor]) -> list[keras.KerasTensor]:
+        return self.call(inputs=inputs)
+
+    def compute_output_shape(
+        self,
+        input_shape: list[tuple[Optional[int], ...]],
+    ) -> list[tuple[Optional[int], ...]]:
+        (
+            affine_bounds_to_propagate_shape,
+            constant_oracle_bounds_shape,
+            model_inputs_shape,
+        ) = self.inputs_outputs_spec.split_input_shape(input_shape=input_shape)
+        return self.inputs_outputs_spec.flatten_outputs_shape(
+            affine_bounds_propagated_shape=affine_bounds_to_propagate_shape,
+            constant_bounds_propagated_shape=constant_oracle_bounds_shape,
         )
 
 

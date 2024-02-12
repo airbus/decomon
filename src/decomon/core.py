@@ -275,6 +275,13 @@ class InputsOutputsSpec:
         else:
             return affine_bounds_propagated + constant_bounds_propagated
 
+    def flatten_outputs_shape(
+        self,
+        affine_bounds_propagated_shape: list[tuple[Optional[int], ...]],
+        constant_bounds_propagated_shape: Optional[list[tuple[Optional[int], ...]]] = None,
+    ) -> list[tuple[Optional[int], ...]]:
+        return self.flatten_outputs(affine_bounds_propagated=affine_bounds_propagated_shape, constant_bounds_propagated=constant_bounds_propagated_shape)  # type: ignore
+
     def is_identity_bounds(self, affine_bounds: list[Tensor]) -> bool:
         return len(affine_bounds) == 0
 
