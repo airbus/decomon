@@ -210,3 +210,59 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
             decomon_output=linear_decomon_output_val, keras_output=keras_output_val, keras_input=keras_input_val
         )
         helpers.assert_decomon_outputs_equal(linear_decomon_output_val, non_linear_decomon_output_val)
+
+
+def test_check_affine_bounds_characteristics(
+    ibp,
+    affine,
+    propagation,
+    perturbation_domain,
+    empty,
+    diag,
+    nobatch,
+    keras_symbolic_input_fn,
+    decomon_symbolic_input_fn,
+    keras_input_fn,
+    decomon_input_fn,
+    helpers,
+):
+    units = 7
+
+    keras_symbolic_input = keras_symbolic_input_fn()
+    input_shape = keras_symbolic_input.shape[1:]
+    output_shape = input_shape[:-1] + (units,)
+    model_output_shape_length = len(output_shape)
+    decomon_symbolic_input = decomon_symbolic_input_fn(output_shape=output_shape)
+    keras_input = keras_input_fn()
+    decomon_input = decomon_input_fn(keras_input=keras_input, output_shape=output_shape)
+
+    layer = Dense(units=units)
+    layer(keras_symbolic_input)
+
+    decomon_layer = DecomonLayer(
+        layer=layer,
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        perturbation_domain=perturbation_domain,
+        model_output_shape_length=model_output_shape_length,
+    )
+
+    if affine:
+        affine_bounds = decomon_symbolic_input[0]
+        affine_bounds_shape = [t.shape for t in affine_bounds]
+        assert decomon_layer.is_identity_bounds(affine_bounds) is empty
+        assert decomon_layer.is_diagonal_bounds(affine_bounds) is diag
+        assert decomon_layer.is_wo_batch_bounds(affine_bounds) is nobatch
+        assert decomon_layer.is_identity_bounds_shape(affine_bounds_shape) is empty
+        assert decomon_layer.is_diagonal_bounds_shape(affine_bounds_shape) is diag
+        assert decomon_layer.is_wo_batch_bounds_shape(affine_bounds_shape) is nobatch
+
+        affine_bounds = decomon_input[0]
+        affine_bounds_shape = [t.shape for t in affine_bounds]
+        assert decomon_layer.is_identity_bounds(affine_bounds) is empty
+        assert decomon_layer.is_diagonal_bounds(affine_bounds) is diag
+        assert decomon_layer.is_wo_batch_bounds(affine_bounds) is nobatch
+        assert decomon_layer.is_identity_bounds_shape(affine_bounds_shape) is empty
+        assert decomon_layer.is_diagonal_bounds_shape(affine_bounds_shape) is diag
+        assert decomon_layer.is_wo_batch_bounds_shape(affine_bounds_shape) is nobatch
