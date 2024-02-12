@@ -259,7 +259,7 @@ class DecomonLayer(Wrapper):
         if self.linear:
             w, b = self.get_affine_representation()
             is_diag = w.shape == b.shape
-            kwargs_dot = dict(missing_batchsize=(False, True), diagonal=(False, is_diag))
+            kwargs_dot: dict[str, Any] = dict(missing_batchsize=(False, True), diagonal=(False, is_diag))
 
             z_value = K.cast(0.0, dtype=w.dtype)
             w_pos = K.maximum(w, z_value)
@@ -275,7 +275,7 @@ class DecomonLayer(Wrapper):
             )
 
     def forward_affine_propagate(
-        self, input_affine_bounds, input_constant_bounds
+        self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Propagate model affine bounds in forward direction.
 
@@ -319,7 +319,7 @@ class DecomonLayer(Wrapper):
         )
 
     def backward_affine_propagate(
-        self, output_affine_bounds, input_constant_bounds
+        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Propagate model affine bounds in backward direction.
 
@@ -714,11 +714,11 @@ def _combine_affine_bounds_generic(
     nb_axes_wo_batchsize_y = len(b_l_1.shape) - 1
 
     #  NB: bias is never a diagonal representation! => we split kwargs_dot_w and kwargs_dot_b
-    kwargs_dot_w = dict(
+    kwargs_dot_w: dict[str, Any] = dict(
         nb_merging_axes=nb_axes_wo_batchsize_y,
         diagonal=diagonal,
     )
-    kwargs_dot_b = dict(
+    kwargs_dot_b: dict[str, Any] = dict(
         nb_merging_axes=nb_axes_wo_batchsize_y,
         diagonal=(False, diagonal[1]),
     )
@@ -770,12 +770,12 @@ def _combine_affine_bounds_right_from_linear(
     missing_batchsize = (False, True)
 
     #  NB: bias is never a diagonal representation! => we split kwargs_dot_w and kwargs_dot_b
-    kwargs_dot_w = dict(
+    kwargs_dot_w: dict[str, Any] = dict(
         nb_merging_axes=nb_axes_wo_batchsize_y,
         missing_batchsize=missing_batchsize,
         diagonal=diagonal,
     )
-    kwargs_dot_b = dict(
+    kwargs_dot_b: dict[str, Any] = dict(
         nb_merging_axes=nb_axes_wo_batchsize_y,
         missing_batchsize=missing_batchsize,
         diagonal=(False, diagonal[1]),
@@ -822,12 +822,12 @@ def _combine_affine_bounds_left_from_linear(
     missing_batchsize = (True, False)
 
     #   NB: bias is never a diagonal representation! => we split kwargs_dot_w and kwargs_dot_b
-    kwargs_dot_w = dict(
+    kwargs_dot_w: dict[str, Any] = dict(
         nb_merging_axes=nb_axes_wo_batchsize_y,
         missing_batchsize=missing_batchsize,
         diagonal=diagonal,
     )
-    kwargs_dot_b = dict(
+    kwargs_dot_b: dict[str, Any] = dict(
         nb_merging_axes=nb_axes_wo_batchsize_y,
         missing_batchsize=missing_batchsize,
         diagonal=(False, diagonal[1]),
@@ -870,12 +870,12 @@ def _combine_affine_bounds_both_from_linear(
     missing_batchsize = (True, True)
 
     #   NB: bias is never a diagonal representation! => we split kwargs_dot_w and kwargs_dot_b
-    kwargs_dot_w = dict(
+    kwargs_dot_w: dict[str, Any] = dict(
         nb_merging_axes=nb_axes_wo_batchsize_y,
         missing_batchsize=missing_batchsize,
         diagonal=diagonal,
     )
-    kwargs_dot_b = dict(
+    kwargs_dot_b: dict[str, Any] = dict(
         nb_merging_axes=nb_axes_wo_batchsize_y,
         missing_batchsize=missing_batchsize,
         diagonal=(False, diagonal[1]),

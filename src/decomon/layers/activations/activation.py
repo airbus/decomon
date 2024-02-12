@@ -113,14 +113,14 @@ class DecomonActivation(DecomonBaseActivation):
         return self.decomon_activation.get_affine_bounds(lower=lower, upper=upper)
 
     def forward_affine_propagate(
-        self, input_affine_bounds, input_constant_bounds
+        self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         return self.decomon_activation.forward_affine_propagate(
             input_affine_bounds=input_affine_bounds, input_constant_bounds=input_constant_bounds
         )
 
     def backward_affine_propagate(
-        self, output_affine_bounds, input_constant_bounds
+        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         return self.decomon_activation.backward_affine_propagate(
             output_affine_bounds=output_affine_bounds, input_constant_bounds=input_constant_bounds

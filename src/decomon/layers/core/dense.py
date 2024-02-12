@@ -10,7 +10,7 @@ class DecomonDense(DecomonLayer):
     layer: Dense
     linear = True
 
-    def get_affine_representation(self):
+    def get_affine_representation(self) -> tuple[Tensor, Tensor]:
         w = self.layer.kernel
         b = self.layer.bias if self.layer.use_bias else K.zeros((self.layer.units,))
 
