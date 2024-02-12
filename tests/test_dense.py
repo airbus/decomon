@@ -24,6 +24,7 @@ def test_decomon_dense(
     decimal = 5
     units = 7
     output_shape = input_shape[:-1] + (units,)
+    model_output_shape_length = len(output_shape)
     keras_symbolic_input = Input(input_shape)
     decomon_symbolic_inputs = helpers.get_decomon_symbolic_inputs(
         model_input_shape=input_shape,
@@ -45,7 +46,12 @@ def test_decomon_dense(
             w.assign(np.random.random(w.shape))
 
     decomon_layer = decomon_layer_class(
-        layer=layer, ibp=ibp, affine=affine, propagation=propagation, perturbation_domain=perturbation_domain
+        layer=layer,
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        perturbation_domain=perturbation_domain,
+        model_output_shape_length=model_output_shape_length,
     )
     decomon_layer(*decomon_symbolic_inputs)
 

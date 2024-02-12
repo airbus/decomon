@@ -21,6 +21,13 @@ def test_decomon_layer_nok_ibp_affine():
         DecomonLayer(layer=layer, ibp=False, affine=False)
 
 
+def test_decomon_layer_nok_backward_no_model_output_shape_length():
+    layer = Dense(3)
+    layer(Input((1,)))
+    with pytest.raises(ValueError):
+        DecomonLayer(layer=layer, propagation=Propagation.BACKWARD)
+
+
 def test_decomon_layer_extra_kwargs():
     layer = Dense(3)
     layer(Input((1,)))
@@ -75,7 +82,7 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
         model_output_shape = model_output_shape_if_no_singlelayer_model
 
     model_input_shape = (model_input_dim,)
-
+    model_output_shape_length = len(model_output_shape)
     x_shape = perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)
 
     # keras layer
@@ -84,10 +91,20 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
 
     # decomon layers
     linear_decomon_layer = MyLinearDecomonDense1d(
-        layer=layer, ibp=ibp, affine=affine, propagation=propagation, perturbation_domain=perturbation_domain
+        layer=layer,
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        perturbation_domain=perturbation_domain,
+        model_output_shape_length=model_output_shape_length,
     )
     non_linear_decomon_layer = MyNonLinearDecomonDense1d(
-        layer=layer, ibp=ibp, affine=affine, propagation=propagation, perturbation_domain=perturbation_domain
+        layer=layer,
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        perturbation_domain=perturbation_domain,
+        model_output_shape_length=model_output_shape_length,
     )
 
     # symbolic inputs

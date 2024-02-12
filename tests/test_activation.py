@@ -26,6 +26,7 @@ def test_decomon_activation(
     layer = Activation(activation=activation)
     layer(keras_symbolic_input)
     output_shape = layer.output.shape[1:]
+    model_output_shape_length = len(output_shape)
 
     decomon_symbolic_inputs = helpers.get_decomon_symbolic_inputs(
         model_input_shape=input_shape,
@@ -38,7 +39,13 @@ def test_decomon_activation(
         perturbation_domain=perturbation_domain,
     )
     decomon_layer = decomon_layer_class(
-        layer=layer, ibp=ibp, affine=affine, propagation=propagation, perturbation_domain=perturbation_domain, slope=slope
+        layer=layer,
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        perturbation_domain=perturbation_domain,
+        model_output_shape_length=model_output_shape_length,
+        slope=slope,
     )
     decomon_layer(*decomon_symbolic_inputs)
 
