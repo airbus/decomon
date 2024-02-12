@@ -8,7 +8,6 @@ from decomon.layers.core.dense import DecomonDense, DecomonNaiveDense
 
 
 @pytest.mark.parametrize("decomon_layer_class", [DecomonNaiveDense, DecomonDense])
-@pytest.mark.parametrize("input_shape", [(1,), (3,), (5, 2, 3)], ids=["0d", "1d", "multid"])
 def test_decomon_dense(
     decomon_layer_class,
     use_bias,
@@ -16,25 +15,24 @@ def test_decomon_dense(
     ibp,
     affine,
     propagation,
-    input_shape,
     perturbation_domain,
     batchsize,
+    keras_symbolic_input_fn,
+    decomon_symbolic_input_fn,
+    keras_input_fn,
+    decomon_input_fn,
     helpers,
 ):
     decimal = 5
     units = 7
+
+    keras_symbolic_input = keras_symbolic_input_fn()
+    input_shape = keras_symbolic_input.shape[1:]
     output_shape = input_shape[:-1] + (units,)
-    keras_symbolic_input = Input(input_shape)
-    decomon_symbolic_inputs = helpers.get_decomon_symbolic_inputs(
-        model_input_shape=input_shape,
-        model_output_shape=output_shape,
-        layer_input_shape=input_shape,
-        layer_output_shape=output_shape,
-        ibp=ibp,
-        affine=affine,
-        propagation=propagation,
-        perturbation_domain=perturbation_domain,
-    )
+    model_output_shape = output_shape
+    decomon_symbolic_inputs = decomon_symbolic_input_fn(output_shape=output_shape)
+    keras_input = keras_input_fn()
+    decomon_inputs = decomon_input_fn(keras_input=keras_input, output_shape=output_shape)
 
     layer = Dense(units=units)
     layer(keras_symbolic_input)
@@ -50,19 +48,9 @@ def test_decomon_dense(
         affine=affine,
         propagation=propagation,
         perturbation_domain=perturbation_domain,
-        model_output_shape=output_shape,
+        model_output_shape=model_output_shape,
     )
     decomon_layer(decomon_symbolic_inputs)
-
-    keras_input = helpers.generate_random_tensor(input_shape, batchsize=batchsize)
-    decomon_inputs = helpers.generate_simple_decomon_layer_inputs_from_keras_input(
-        keras_input=keras_input,
-        layer_output_shape=output_shape,
-        ibp=ibp,
-        affine=affine,
-        propagation=propagation,
-        perturbation_domain=perturbation_domain,
-    )
 
     keras_output = layer(keras_input)
 
