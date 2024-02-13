@@ -33,7 +33,7 @@ def test_decomon_dense(
     keras_input = keras_input_fn()
     decomon_inputs = decomon_input_fn(keras_input=keras_input, output_shape=output_shape)
 
-    layer = Dense(units=units)
+    layer = Dense(units=units, use_bias=use_bias)
     layer(keras_symbolic_input)
 
     if randomize:
