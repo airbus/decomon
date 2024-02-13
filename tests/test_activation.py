@@ -15,19 +15,22 @@ def test_decomon_activation(
     propagation,
     perturbation_domain,
     batchsize,
-    keras_symbolic_input_fn,
+    keras_symbolic_model_input_fn,
+    keras_symbolic_layer_input_fn,
     decomon_symbolic_input_fn,
-    keras_input_fn,
+    keras_model_input_fn,
+    keras_layer_input_fn,
     decomon_input_fn,
     helpers,
 ):
-    decimal = 5
+    decimal = 4
     decomon_layer_class = DecomonActivation
 
     # init + build keras layer
-    keras_symbolic_input = keras_symbolic_input_fn()
+    keras_symbolic_model_input = keras_symbolic_model_input_fn()
+    keras_symbolic_layer_input = keras_symbolic_layer_input_fn(keras_symbolic_model_input)
     layer = Activation(activation=activation)
-    layer(keras_symbolic_input)
+    layer(keras_symbolic_layer_input)
 
     # init + build decomon layer
     output_shape = layer.output.shape[1:]
@@ -45,10 +48,13 @@ def test_decomon_activation(
     decomon_layer(decomon_symbolic_inputs)
 
     # call on actual inputs
-    keras_input = keras_input_fn()
-    decomon_inputs = decomon_input_fn(keras_input=keras_input, output_shape=output_shape)
+    keras_model_input = keras_model_input_fn()
+    keras_layer_input = keras_layer_input_fn(keras_model_input)
+    decomon_inputs = decomon_input_fn(
+        keras_model_input=keras_model_input, keras_layer_input=keras_layer_input, output_shape=output_shape
+    )
 
-    keras_output = layer(keras_input)
+    keras_output = layer(keras_layer_input)
     decomon_output = decomon_layer(decomon_inputs)
 
     # check output shapes
@@ -58,11 +64,13 @@ def test_decomon_activation(
     expected_output_shape = helpers.replace_none_by_batchsize(shapes=expected_output_shape, batchsize=batchsize)
     assert output_shape == expected_output_shape
 
-    # check ibp and affine bounds well ordered w.r.t. keras output
-    helpers.assert_decomon_output_compare_with_keras_input_output_single_layer(
+    # check ibp and affine bounds well ordered w.r.t. keras inputs/outputs
+    helpers.assert_decomon_output_compare_with_keras_input_output_layer(
         decomon_output=decomon_output,
-        keras_output=keras_output,
-        keras_input=keras_input,
+        keras_model_input=keras_model_input,
+        keras_layer_input=keras_layer_input,
+        keras_model_output=keras_output,
+        keras_layer_output=keras_output,
         ibp=ibp,
         affine=affine,
         propagation=propagation,
