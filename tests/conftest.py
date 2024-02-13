@@ -124,7 +124,7 @@ class Helpers:
             raise NotImplementedError(f"Not implemented for {backend} backend.")
 
     @staticmethod
-    def generate_random_tensor(shape_wo_batchsize, batchsize=10, dtype="float32"):
+    def generate_random_tensor(shape_wo_batchsize, batchsize=10, dtype=keras_config.floatx()):
         shape = (batchsize,) + shape_wo_batchsize
         return K.convert_to_tensor(np.random.random(shape), dtype=dtype)
 
@@ -179,6 +179,7 @@ class Helpers:
         empty=False,
         diag=False,
         nobatch=False,
+        dtype=keras_config.floatx(),
     ):
         """Generate decomon symbolic inputs for a decomon layer
 
@@ -214,12 +215,14 @@ class Helpers:
             diag=diag,
             nobatch=nobatch,
         )
-        model_inputs = [Input(shape) for shape in model_inputs_shape]
-        constant_oracle_bounds = [Input(shape) for shape in constant_oracle_bounds_shape]
+        model_inputs = [Input(shape, dtype=dtype) for shape in model_inputs_shape]
+        constant_oracle_bounds = [Input(shape, dtype=dtype) for shape in constant_oracle_bounds_shape]
         if nobatch:
-            affine_bounds_to_propagate = [Input(batch_shape=shape) for shape in affine_bounds_to_propagate_shape]
+            affine_bounds_to_propagate = [
+                Input(batch_shape=shape, dtype=dtype) for shape in affine_bounds_to_propagate_shape
+            ]
         else:
-            affine_bounds_to_propagate = [Input(shape=shape) for shape in affine_bounds_to_propagate_shape]
+            affine_bounds_to_propagate = [Input(shape=shape, dtype=dtype) for shape in affine_bounds_to_propagate_shape]
         inputs_outputs_spec = InputsOutputsSpec(
             ibp=ibp,
             affine=affine,
@@ -246,6 +249,7 @@ class Helpers:
         empty=False,
         diag=False,
         nobatch=False,
+        dtype=keras_config.floatx(),
     ):
         """Generate simple decomon inputs for a layer from the corresponding keras input
 
@@ -290,10 +294,10 @@ class Helpers:
                 bias_shape = layer_output_shape
             flatten_bias_dim = int(np.prod(bias_shape))
             if diag:
-                w_in = K.ones(bias_shape)
+                w_in = K.ones(bias_shape, dtype=dtype)
             else:
-                w_in = K.reshape(K.eye(flatten_bias_dim), bias_shape + bias_shape)
-            b_in = K.zeros(bias_shape)
+                w_in = K.reshape(K.eye(flatten_bias_dim, dtype=dtype), bias_shape + bias_shape)
+            b_in = K.zeros(bias_shape, dtype=dtype)
             if not nobatch:
                 w_in = K.repeat(
                     w_in[None],
