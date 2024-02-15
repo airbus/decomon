@@ -149,10 +149,20 @@ class Helpers:
         diag=False,
         nobatch=False,
     ):
-        if affine and propagation == Propagation.FORWARD:
+        inputs_outputs_spec = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            perturbation_domain=perturbation_domain,
+            layer_input_shape=layer_input_shape,
+            model_input_shape=model_input_shape,
+            model_output_shape=model_output_shape,
+        )
+        if inputs_outputs_spec.needs_keras_model_inputs():
             model_inputs_shape = [perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)]
         else:
             model_inputs_shape = []
+
         if affine and not empty:
             if propagation == Propagation.FORWARD:
                 b_in_shape = layer_input_shape
@@ -166,6 +176,7 @@ class Helpers:
             affine_bounds_to_propagate_shape = [w_in_shape, b_in_shape, w_in_shape, b_in_shape]
         else:
             affine_bounds_to_propagate_shape = []
+
         if ibp:
             constant_oracle_bounds_shape = [layer_input_shape, layer_input_shape]
         else:
@@ -284,7 +295,17 @@ class Helpers:
         layer_input_shape = keras_input.shape[1:]
         model_input_shape = layer_input_shape
         model_output_shape = layer_output_shape
-        if affine and propagation == Propagation.FORWARD:
+        inputs_outputs_spec = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            perturbation_domain=perturbation_domain,
+            layer_input_shape=layer_input_shape,
+            model_input_shape=model_input_shape,
+            model_output_shape=model_output_shape,
+        )
+
+        if inputs_outputs_spec.needs_keras_model_inputs():
             if isinstance(perturbation_domain, BoxDomain):
                 x = K.repeat(keras_input[:, None], 2, axis=1)
             else:
@@ -325,15 +346,6 @@ class Helpers:
         else:
             constant_oracle_bounds = []
 
-        inputs_outputs_spec = InputsOutputsSpec(
-            ibp=ibp,
-            affine=affine,
-            propagation=propagation,
-            perturbation_domain=perturbation_domain,
-            layer_input_shape=layer_input_shape,
-            model_input_shape=model_input_shape,
-            model_output_shape=model_output_shape,
-        )
         return inputs_outputs_spec.flatten_inputs(
             affine_bounds_to_propagate=affine_bounds_to_propagate,
             constant_oracle_bounds=constant_oracle_bounds,
@@ -926,13 +938,6 @@ def convert_standard_input_functions_for_single_layer(
             layer_input_shape = y.shape[1:]
             model_input_shape = x.shape[1:]
 
-            affine_bounds_to_propagate = [w_l, b_l, w_u, b_u]
-            constant_oracle_bounds = [l_c, u_c]
-            if isinstance(perturbation_domain, BoxDomain):
-                model_inputs = [z]
-            else:
-                raise NotImplementedError
-
             inputs_outputs_spec = InputsOutputsSpec(
                 ibp=ibp,
                 affine=affine,
@@ -942,6 +947,25 @@ def convert_standard_input_functions_for_single_layer(
                 model_input_shape=model_input_shape,
                 model_output_shape=output_shape,
             )
+
+            if affine:
+                affine_bounds_to_propagate = [w_l, b_l, w_u, b_u]
+            else:
+                affine_bounds_to_propagate = []
+
+            if ibp:
+                constant_oracle_bounds = [l_c, u_c]
+            else:
+                constant_oracle_bounds = []
+
+            if inputs_outputs_spec.needs_keras_model_inputs():
+                if isinstance(perturbation_domain, BoxDomain):
+                    model_inputs = [z]
+                else:
+                    raise NotImplementedError
+            else:
+                model_inputs = []
+
             return inputs_outputs_spec.flatten_inputs(
                 affine_bounds_to_propagate=affine_bounds_to_propagate,
                 constant_oracle_bounds=constant_oracle_bounds,
@@ -953,22 +977,6 @@ def convert_standard_input_functions_for_single_layer(
             layer_input_shape = y.shape[1:]
             model_input_shape = x.shape[1:]
 
-            if affine:
-                affine_bounds_to_propagate = [K.convert_to_tensor(a) for a in (w_l, b_l, w_u, b_u)]
-            else:
-                affine_bounds_to_propagate = []
-            if ibp:
-                constant_oracle_bounds = [K.convert_to_tensor(a) for a in (l_c, u_c)]
-            else:
-                constant_oracle_bounds = []
-            if propagation == Propagation.FORWARD and affine:
-                if isinstance(perturbation_domain, BoxDomain):
-                    model_inputs = [K.convert_to_tensor(z)]
-                else:
-                    raise NotImplementedError
-            else:
-                model_inputs = []
-
             inputs_outputs_spec = InputsOutputsSpec(
                 ibp=ibp,
                 affine=affine,
@@ -978,6 +986,25 @@ def convert_standard_input_functions_for_single_layer(
                 model_input_shape=model_input_shape,
                 model_output_shape=output_shape,
             )
+
+            if affine:
+                affine_bounds_to_propagate = [K.convert_to_tensor(a) for a in (w_l, b_l, w_u, b_u)]
+            else:
+                affine_bounds_to_propagate = []
+
+            if ibp:
+                constant_oracle_bounds = [K.convert_to_tensor(a) for a in (l_c, u_c)]
+            else:
+                constant_oracle_bounds = []
+
+            if inputs_outputs_spec.needs_keras_model_inputs():
+                if isinstance(perturbation_domain, BoxDomain):
+                    model_inputs = [K.convert_to_tensor(z)]
+                else:
+                    raise NotImplementedError
+            else:
+                model_inputs = []
+
             return inputs_outputs_spec.flatten_inputs(
                 affine_bounds_to_propagate=affine_bounds_to_propagate,
                 constant_oracle_bounds=constant_oracle_bounds,
@@ -991,18 +1018,6 @@ def convert_standard_input_functions_for_single_layer(
             layer_input_shape = y.shape[1:]
             model_input_shape = x.shape[1:]
 
-            if ibp:
-                constant_oracle_bounds = [l_c, u_c]
-            else:
-                constant_oracle_bounds = []
-            if propagation == Propagation.FORWARD and affine:
-                if isinstance(perturbation_domain, BoxDomain):
-                    model_inputs = [z]
-                else:
-                    raise NotImplementedError
-            else:
-                model_inputs = []
-
             inputs_outputs_spec = InputsOutputsSpec(
                 ibp=ibp,
                 affine=affine,
@@ -1012,6 +1027,19 @@ def convert_standard_input_functions_for_single_layer(
                 model_input_shape=model_input_shape,
                 model_output_shape=output_shape,
             )
+
+            if ibp:
+                constant_oracle_bounds = [l_c, u_c]
+            else:
+                constant_oracle_bounds = []
+
+            if inputs_outputs_spec.needs_keras_model_inputs():
+                if isinstance(perturbation_domain, BoxDomain):
+                    model_inputs = [z]
+                else:
+                    raise NotImplementedError
+            else:
+                model_inputs = []
 
             # take identity affine bounds
             if affine:
@@ -1043,18 +1071,6 @@ def convert_standard_input_functions_for_single_layer(
             layer_input_shape = y.shape[1:]
             model_input_shape = x.shape[1:]
 
-            if ibp:
-                constant_oracle_bounds = [K.convert_to_tensor(a) for a in (l_c, u_c)]
-            else:
-                constant_oracle_bounds = []
-            if propagation == Propagation.FORWARD and affine:
-                if isinstance(perturbation_domain, BoxDomain):
-                    model_inputs = [K.convert_to_tensor(z)]
-                else:
-                    raise NotImplementedError
-            else:
-                model_inputs = []
-
             inputs_outputs_spec = InputsOutputsSpec(
                 ibp=ibp,
                 affine=affine,
@@ -1064,6 +1080,19 @@ def convert_standard_input_functions_for_single_layer(
                 model_input_shape=model_input_shape,
                 model_output_shape=output_shape,
             )
+
+            if ibp:
+                constant_oracle_bounds = [K.convert_to_tensor(a) for a in (l_c, u_c)]
+            else:
+                constant_oracle_bounds = []
+
+            if inputs_outputs_spec.needs_keras_model_inputs():
+                if isinstance(perturbation_domain, BoxDomain):
+                    model_inputs = [K.convert_to_tensor(z)]
+                else:
+                    raise NotImplementedError
+            else:
+                model_inputs = []
 
             #  take identity affine bounds
             if affine:

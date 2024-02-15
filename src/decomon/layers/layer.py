@@ -471,7 +471,7 @@ class DecomonLayer(Wrapper):
         # Tighten constant bounds in hybrid mode (ibp+affine)
         if self.ibp and self.affine:
             if len(model_inputs) == 0:
-                raise RuntimeError("keras model input is necessary for get_forward_oracle() in affine mode.")
+                raise RuntimeError("keras model input is necessary for call_forward() in affine mode.")
             x = model_inputs[0]
             l_ibp, u_ibp = output_constant_bounds
             w_l, b_l, w_u, b_u = output_affine_bounds

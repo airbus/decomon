@@ -225,9 +225,16 @@ class InputsOutputsSpec:
         else:
             self.layer_input_shape = layer_input_shape
 
+    def needs_keras_model_inputs(self) -> bool:
+        return self.propagation == Propagation.FORWARD and self.affine
+
+    @property
+    def nb_input_tensors(self):
+        ...
+
     def split_inputs(self, inputs: list[Tensor]) -> tuple[list[Tensor], list[Tensor], list[Tensor]]:
         # Remove keras model input
-        if self.propagation == Propagation.FORWARD and self.affine:
+        if self.needs_keras_model_inputs():
             x = inputs[-1]
             inputs = inputs[:-1]
             model_inputs = [x]
