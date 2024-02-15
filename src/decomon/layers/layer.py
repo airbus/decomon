@@ -65,6 +65,8 @@ class DecomonLayer(Wrapper):
 
     """
 
+    _is_merging: bool = False  # set to True in child class DecomonMerge
+
     def __init__(
         self,
         layer: Layer,
@@ -116,14 +118,23 @@ class DecomonLayer(Wrapper):
         self.propagation = propagation
 
         # input-output-manager
+        if self._is_merging:
+            if isinstance(layer.input, keras.KerasTensor):
+                # special case: merging a single input -> self.layer.input is already flattened
+                layer_input_shape = [layer.input.shape[1:]]
+            else:
+                layer_input_shape = [t.shape[1:] for t in layer.input]
+        else:
+            layer_input_shape = layer.input.shape[1:]
         self.inputs_outputs_spec = InputsOutputsSpec(
             ibp=ibp,
             affine=affine,
             propagation=propagation,
             perturbation_domain=perturbation_domain,
-            layer_input_shape=layer.input.shape[1:],
+            layer_input_shape=layer_input_shape,
             model_input_shape=model_input_shape,
             model_output_shape=model_output_shape,
+            is_merging_layer=self._is_merging,
         )
 
     def get_config(self) -> dict[str, Any]:
@@ -306,16 +317,20 @@ class DecomonLayer(Wrapper):
             w, b = self.get_affine_representation()
             layer_affine_bounds = [w, b, w, b]
         else:
-            lower, upper = input_constant_bounds
+            lower, upper = self.inputs_outputs_spec.split_constant_bounds(constant_bounds=input_constant_bounds)
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
             layer_affine_bounds = [w_l, b_l, w_u, b_u]
 
         from_linear_layer = (self.inputs_outputs_spec.is_wo_batch_bounds(input_affine_bounds), self.linear)
-
+        diagonal = (
+            self.inputs_outputs_spec.is_diagonal_bounds(input_affine_bounds),
+            self.inputs_outputs_spec.is_diagonal_bounds(layer_affine_bounds),
+        )
         return combine_affine_bounds(
             affine_bounds_1=input_affine_bounds,
             affine_bounds_2=layer_affine_bounds,
             from_linear_layer=from_linear_layer,
+            diagonal=diagonal,
         )
 
     def backward_affine_propagate(
@@ -360,16 +375,20 @@ class DecomonLayer(Wrapper):
             w, b = self.get_affine_representation()
             layer_affine_bounds = [w, b, w, b]
         else:
-            lower, upper = input_constant_bounds
+            lower, upper = self.inputs_outputs_spec.split_constant_bounds(constant_bounds=input_constant_bounds)
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
             layer_affine_bounds = [w_l, b_l, w_u, b_u]
 
         from_linear_layer = (self.linear, self.inputs_outputs_spec.is_wo_batch_bounds((output_affine_bounds)))
-
+        diagonal = (
+            self.inputs_outputs_spec.is_diagonal_bounds(layer_affine_bounds),
+            self.inputs_outputs_spec.is_diagonal_bounds(output_affine_bounds),
+        )
         return combine_affine_bounds(
             affine_bounds_1=layer_affine_bounds,
             affine_bounds_2=output_affine_bounds,
             from_linear_layer=from_linear_layer,
+            diagonal=diagonal,
         )
 
     def get_forward_oracle(
@@ -443,7 +462,7 @@ class DecomonLayer(Wrapper):
         """
         # IBP: interval bounds propragation
         if self.ibp:
-            lower, upper = input_bounds_to_propagate
+            lower, upper = self.inputs_outputs_spec.split_constant_bounds(constant_bounds=input_bounds_to_propagate)
             output_constant_bounds = list(self.forward_ibp_propagate(lower=lower, upper=upper))
         else:
             output_constant_bounds = []
@@ -549,20 +568,14 @@ class DecomonLayer(Wrapper):
             else:
                 constant_bounds_propagated_shape = []
             if self.affine:
-                keras_layer_input_shape_wo_batchsize = self.layer.input.shape[1:]
+                # layer output shape
                 keras_layer_output_shape_wo_batchsize = self.layer.output.shape[1:]
+                # model input shape
+                model_input_shape_wo_batchsize = (
+                    self.inputs_outputs_spec.model_input_shape
+                )  # should be set to get accurate compute_output_shape()
 
-                # inputs are in diagonal representation? without batch axis?
-                if self.inputs_outputs_spec.is_diagonal_bounds_shape(affine_bounds_to_propagate_shape):
-                    model_input_shape_wo_batchsize = keras_layer_input_shape_wo_batchsize
-                else:
-                    w_in_shape = affine_bounds_to_propagate_shape[0]
-                    if self.inputs_outputs_spec.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
-                        model_input_shape_wo_batchsize = w_in_shape[: -len(keras_layer_input_shape_wo_batchsize)]
-                    else:
-                        model_input_shape_wo_batchsize = w_in_shape[1 : -len(keras_layer_input_shape_wo_batchsize)]
-
-                # outputs shape depends if layer and inputs are diagonal / linear (w/o batch)
+                # outputs shape depends on layer and inputs being diagonal / linear (w/o batch)
                 b_out_shape_wo_batchsize = keras_layer_output_shape_wo_batchsize
                 if self.diagonal and self.inputs_outputs_spec.is_diagonal_bounds_shape(
                     affine_bounds_to_propagate_shape
@@ -582,40 +595,61 @@ class DecomonLayer(Wrapper):
             else:
                 affine_bounds_propagated_shape = []
 
-            return affine_bounds_propagated_shape + constant_bounds_propagated_shape
+            return self.inputs_outputs_spec.flatten_outputs_shape(
+                affine_bounds_propagated_shape=affine_bounds_propagated_shape,
+                constant_bounds_propagated_shape=constant_bounds_propagated_shape,
+            )
 
         else:  # backward
-            # find model output shape
-            if self.inputs_outputs_spec.is_identity_bounds_shape(affine_bounds_to_propagate_shape):
-                model_output_shape_wo_batchsize = self.layer.output.shape[1:]
-            else:
-                b_shape = affine_bounds_to_propagate_shape[1]
-                if self.inputs_outputs_spec.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
-                    model_output_shape_wo_batchsize = b_shape
-                else:
-                    model_output_shape_wo_batchsize = b_shape[1:]
+            # model output shape
+            model_output_shape_wo_batchsize = self.inputs_outputs_spec.model_output_shape
             # outputs shape depends if layer and inputs are diagonal / linear (w/o batch)
             b_shape_wo_batchisze = model_output_shape_wo_batchsize
             if self.diagonal and self.inputs_outputs_spec.is_diagonal_bounds_shape(affine_bounds_to_propagate_shape):
-                w_shape_wo_batchsize = model_output_shape_wo_batchsize
+                if self._is_merging:
+                    w_shape_wo_batchsize = [model_output_shape_wo_batchsize] * self.inputs_outputs_spec.nb_keras_inputs
+                else:
+                    w_shape_wo_batchsize = model_output_shape_wo_batchsize
             else:
-                w_shape_wo_batchsize = self.layer.input.shape[1:] + model_output_shape_wo_batchsize
+                if self._is_merging:
+                    w_shape_wo_batchsize = [
+                        self.layer.input[i].shape[1:] + model_output_shape_wo_batchsize
+                        for i in range(self.inputs_outputs_spec.nb_keras_inputs)
+                    ]
+                else:
+                    w_shape_wo_batchsize = self.layer.input.shape[1:] + model_output_shape_wo_batchsize
             if self.linear and self.inputs_outputs_spec.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
-                b_new_shape = b_shape_wo_batchisze
+                b_shape = b_shape_wo_batchisze
                 w_shape = w_shape_wo_batchsize
             else:
-                b_new_shape = (None,) + b_shape_wo_batchisze
-                w_shape = (None,) + w_shape_wo_batchsize
+                b_shape = (None,) + b_shape_wo_batchisze
+                if self._is_merging:
+                    w_shape = [(None,) + sub_w_shape_wo_batchsize for sub_w_shape_wo_batchsize in w_shape_wo_batchsize]
+                else:
+                    w_shape = (None,) + w_shape_wo_batchsize
+            if self._is_merging:
+                affine_bounds_propagated_shape = [
+                    [
+                        w_shape_i,
+                        b_shape,
+                        w_shape_i,
+                        b_shape,
+                    ]
+                    for w_shape_i in w_shape
+                ]
+            else:
+                affine_bounds_propagated_shape = [w_shape, b_shape, w_shape, b_shape]
 
-            affine_bounds_propagated_shape = [w_shape, b_new_shape, w_shape, b_new_shape]
-
-            return affine_bounds_propagated_shape
+            return self.inputs_outputs_spec.flatten_outputs_shape(
+                affine_bounds_propagated_shape=affine_bounds_propagated_shape
+            )
 
 
 def combine_affine_bounds(
     affine_bounds_1: list[Tensor],
     affine_bounds_2: list[Tensor],
     from_linear_layer: tuple[bool, bool] = (False, False),
+    diagonal: tuple[bool, bool] = (False, False),
 ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
     """Combine affine bounds
 
@@ -624,6 +658,8 @@ def combine_affine_bounds(
         affine_bounds_2: [w_l_2, b_l_2, w_u_2, b_u_2] second affine bounds
         from_linear_layer: specify if affine_bounds_1 or affine_bounds_2
           come from the affine representation of a linear layer
+        diagonal: specify if affine_bounds_1 or affine_bounds_2
+          are in diagonal representation
 
     Returns:
         w_l, b_l, w_u, b_u: combined affine bounds
@@ -663,11 +699,6 @@ def combine_affine_bounds(
     if len(affine_bounds_2) == 0:
         return tuple(affine_bounds_1)
 
-    # Are weights in diagonal representation?
-    diagonal = (
-        affine_bounds_1[0].shape == affine_bounds_1[1].shape,
-        affine_bounds_2[0].shape == affine_bounds_2[1].shape,
-    )
     if from_linear_layer == (False, False):
         return _combine_affine_bounds_generic(
             affine_bounds_1=affine_bounds_1, affine_bounds_2=affine_bounds_2, diagonal=diagonal

@@ -109,6 +109,99 @@ def batch_multid_dot(
             return Dot(axes=(-1, 1))([Reshape(new_x_shape)(x), Reshape(new_y_shape)(y)])
 
 
+def add_tensors(
+    x: Tensor,
+    y: Tensor,
+    missing_batchsize: tuple[bool, bool] = (False, False),
+    diagonal: tuple[bool, bool] = (False, False),
+) -> Tensor:
+    """Sum tensors in a compatible way.
+
+    Generate broadcastable versions of the tensors before summing them,
+    depending on 2 characteristics:
+
+    - missing batchsize?
+    - diagonal representation?
+
+    We only have to modify the tensors if a characteristic differ between them.
+    More precisely:
+    - missing batchsize: we add a batch axis (of dimension 1)
+    - diagonal representation: we make a full representation of the tensor
+
+    Args:
+        x:
+        y:
+        missing_batchsize:
+        diagonal:
+
+    Returns:
+
+    """
+    # get broadcastable version of the tensors
+    x_broadcastable, y_broadcastable = _convert_to_broacastable_tensors(
+        x=x, y=y, missing_batchsize=missing_batchsize, diagonal=diagonal
+    )
+    # operate on broadcastable tensors
+    return x_broadcastable + y_broadcastable
+
+
+def _convert_to_broacastable_tensors(
+    x: Tensor,
+    y: Tensor,
+    missing_batchsize: tuple[bool, bool],
+    diagonal: tuple[bool, bool],
+) -> tuple[Tensor, Tensor]:
+    x_broadcastable = x
+    y_broadcastable = y
+    x_full_shape = x.shape
+    y_full_shape = y.shape
+    if missing_batchsize == (True, False):
+        batchsize = y_full_shape[0]
+        x_full_shape = (batchsize,) + x_full_shape
+        x_broadcastable = x_broadcastable[None]
+    elif missing_batchsize == (False, True):
+        batchsize = x_full_shape[0]
+        y_full_shape = (batchsize,) + y_full_shape
+        y_broadcastable = y_broadcastable[None]
+    if diagonal == (True, False):
+        x_broadcastable, x_full_shape = _convert_from_diag_to_generic(
+            x_broadcastable=x_broadcastable, x_full_shape=x_full_shape, missing_batchsize=all(missing_batchsize)
+        )
+    elif diagonal == (False, True):
+        y_broadcastable, y_full_shape = _convert_from_diag_to_generic(
+            x_broadcastable=y_broadcastable, x_full_shape=y_full_shape, missing_batchsize=all(missing_batchsize)
+        )
+    # check shapes
+    if x_full_shape != y_full_shape:
+        raise ValueError(
+            f"Incompatible shapes: {x.shape} and {y.shape}, "
+            f"with missing_batchsize={missing_batchsize} and diagonal={diagonal}."
+        )
+
+    return x_broadcastable, y_broadcastable
+
+
+def _convert_from_diag_to_generic(
+    x_broadcastable: Tensor, x_full_shape: tuple[int, ...], missing_batchsize: bool = False
+) -> tuple[Tensor, tuple[int, ...]]:
+    if missing_batchsize:
+        x_full_shape = x_full_shape + x_full_shape
+        new_shape = x_broadcastable.shape + x_broadcastable.shape
+        x_broadcastable = K.reshape(K.diag(K.ravel(x_broadcastable)), new_shape)
+    else:
+        x_full_shape = x_full_shape[:1] + x_full_shape[1:] + x_full_shape[1:]
+        partial_new_shape = x_broadcastable.shape[1:] + x_broadcastable.shape[1:]
+        x_broadcastable = K.concatenate(
+            [
+                K.reshape(K.diag(K.ravel(x_broadcastable[i])), partial_new_shape)[None]
+                for i in range(len(x_broadcastable))
+            ],
+            axis=0,
+        )
+
+    return x_broadcastable, x_full_shape
+
+
 class BatchedIdentityLike(keras.Operation):
     """Keras Operation creating an identity tensor with shape (including batch_size) based on input.
 

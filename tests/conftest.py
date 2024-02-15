@@ -292,7 +292,7 @@ class Helpers:
         Returns:
 
         """
-        layer_input_shape = keras_input.shape[1:]
+        layer_input_shape = tuple(keras_input.shape[1:])
         model_input_shape = layer_input_shape
         model_output_shape = layer_output_shape
         inputs_outputs_spec = InputsOutputsSpec(
@@ -347,6 +347,47 @@ class Helpers:
             constant_oracle_bounds = []
 
         return inputs_outputs_spec.flatten_inputs(
+            affine_bounds_to_propagate=affine_bounds_to_propagate,
+            constant_oracle_bounds=constant_oracle_bounds,
+            model_inputs=model_inputs,
+        )
+
+    @staticmethod
+    def generate_merging_decomon_input_from_single_decomon_inputs(
+        decomon_inputs: list[list[Tensor]], ibp: bool, affine: bool, propagation: Propagation
+    ) -> list[Tensor]:
+        inputs_outputs_spec_single = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            layer_input_shape=tuple(),
+            model_input_shape=tuple(),
+            model_output_shape=tuple(),
+        )
+        affine_bounds_to_propagate, constant_oracle_bounds, model_inputs = [], [], []
+        for decomon_input in decomon_inputs:
+            (
+                affine_bounds_to_propagate_i,
+                constant_oracle_bounds_i,
+                model_inputs_i,
+            ) = inputs_outputs_spec_single.split_inputs(decomon_input)
+            model_inputs = model_inputs_i
+            if propagation == Propagation.FORWARD:
+                affine_bounds_to_propagate.append(affine_bounds_to_propagate_i)
+            else:
+                affine_bounds_to_propagate = affine_bounds_to_propagate_i
+            constant_oracle_bounds.append(constant_oracle_bounds_i)
+
+        inputs_outputs_spec_merging = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            layer_input_shape=[tuple()],
+            model_input_shape=tuple(),
+            model_output_shape=tuple(),
+            is_merging_layer=True,
+        )
+        return inputs_outputs_spec_merging.flatten_inputs(
             affine_bounds_to_propagate=affine_bounds_to_propagate,
             constant_oracle_bounds=constant_oracle_bounds,
             model_inputs=model_inputs,
@@ -784,13 +825,20 @@ class Helpers:
         affine,
         propagation,
         decimal=5,
+        is_merging_layer=False,
     ):
+        if is_merging_layer and not isinstance(keras_layer_input, KerasTensor):
+            # merging layer, except degenerated case with a single input
+            layer_input_shape = [tuple(t.shape[1:]) for t in keras_layer_input]
+        else:
+            layer_input_shape = tuple(keras_layer_input.shape[1:])
         inputs_outputs_spec = InputsOutputsSpec(
             ibp=ibp,
             affine=affine,
             propagation=propagation,
-            layer_input_shape=keras_layer_input.shape[1:],
-            model_output_shape=keras_model_output.shape[1:],
+            layer_input_shape=layer_input_shape,
+            model_output_shape=tuple(keras_model_output.shape[1:]),
+            is_merging_layer=is_merging_layer,
         )
         affine_bounds_propagated, constant_bounds_propagated = inputs_outputs_spec.split_outputs(outputs=decomon_output)
 
@@ -802,22 +850,48 @@ class Helpers:
             keras_output = keras_model_output
 
         if affine or propagation == Propagation.BACKWARD:
-            if len(affine_bounds_propagated) == 0:
-                # identity case
-                lower_affine = keras_input
-                upper_affine = keras_input
+            if is_merging_layer and propagation == Propagation.BACKWARD:
+                # one list of affine bounds by keras (layer) input
+                lower_affine = 0.0
+                upper_affine = 0.0
+                for keras_input_i, affine_bounds_propagated_i in zip(keras_input, affine_bounds_propagated):
+                    if len(affine_bounds_propagated_i) == 0:
+                        # identity case
+                        lower_affine += keras_input_i
+                        upper_affine += keras_input_i
+                    else:
+                        w_l, b_l, w_u, b_u = affine_bounds_propagated_i
+                        diagonal = (False, w_l.shape == b_l.shape)
+                        missing_batchsize = (False, len(b_l.shape) < len(keras_output.shape))
+                        lower_affine += (
+                            batch_multid_dot(keras_input_i, w_l, diagonal=diagonal, missing_batchsize=missing_batchsize)
+                            + b_l
+                        )
+                        upper_affine += (
+                            batch_multid_dot(keras_input_i, w_u, diagonal=diagonal, missing_batchsize=missing_batchsize)
+                            + b_u
+                        )
+                Helpers.assert_ordered(lower_affine, keras_output, decimal=decimal, err_msg="lower_affine not ok")
+                Helpers.assert_ordered(keras_output, upper_affine, decimal=decimal, err_msg="upper_affine not ok")
+
             else:
-                w_l, b_l, w_u, b_u = affine_bounds_propagated
-                diagonal = (False, w_l.shape == b_l.shape)
-                missing_batchsize = (False, len(b_l.shape) < len(keras_output.shape))
-                lower_affine = (
-                    batch_multid_dot(keras_input, w_l, diagonal=diagonal, missing_batchsize=missing_batchsize) + b_l
-                )
-                upper_affine = (
-                    batch_multid_dot(keras_input, w_u, diagonal=diagonal, missing_batchsize=missing_batchsize) + b_u
-                )
-            Helpers.assert_ordered(lower_affine, keras_output, decimal=decimal, err_msg="lower_affine not ok")
-            Helpers.assert_ordered(keras_output, upper_affine, decimal=decimal, err_msg="upper_affine not ok")
+                # generic case: one single list of affine bounds and single one keras input (layer or model input according to propagation)
+                if len(affine_bounds_propagated) == 0:
+                    # identity case
+                    lower_affine = keras_input
+                    upper_affine = keras_input
+                else:
+                    w_l, b_l, w_u, b_u = affine_bounds_propagated
+                    diagonal = (False, w_l.shape == b_l.shape)
+                    missing_batchsize = (False, len(b_l.shape) < len(keras_output.shape))
+                    lower_affine = (
+                        batch_multid_dot(keras_input, w_l, diagonal=diagonal, missing_batchsize=missing_batchsize) + b_l
+                    )
+                    upper_affine = (
+                        batch_multid_dot(keras_input, w_u, diagonal=diagonal, missing_batchsize=missing_batchsize) + b_u
+                    )
+                Helpers.assert_ordered(lower_affine, keras_output, decimal=decimal, err_msg="lower_affine not ok")
+                Helpers.assert_ordered(keras_output, upper_affine, decimal=decimal, err_msg="upper_affine not ok")
 
         if ibp and propagation == Propagation.FORWARD:
             lower_ibp, upper_ibp = constant_bounds_propagated
@@ -974,8 +1048,8 @@ def convert_standard_input_functions_for_single_layer(
 
         def decomon_input_fn(keras_model_input, keras_layer_input, output_shape):
             x, y, z, u_c, w_u, b_u, l_c, w_l, b_l = get_standard_values_fn()
-            layer_input_shape = y.shape[1:]
-            model_input_shape = x.shape[1:]
+            layer_input_shape = tuple(y.shape[1:])
+            model_input_shape = tuple(x.shape[1:])
 
             inputs_outputs_spec = InputsOutputsSpec(
                 ibp=ibp,
@@ -1068,8 +1142,8 @@ def convert_standard_input_functions_for_single_layer(
 
         def decomon_input_fn(keras_model_input, keras_layer_input, output_shape):
             x, y, z, u_c, w_u, b_u, l_c, w_l, b_l = get_standard_values_fn()
-            layer_input_shape = y.shape[1:]
-            model_input_shape = x.shape[1:]
+            layer_input_shape = tuple(y.shape[1:])
+            model_input_shape = tuple(x.shape[1:])
 
             inputs_outputs_spec = InputsOutputsSpec(
                 ibp=ibp,

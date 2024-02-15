@@ -96,6 +96,7 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
         propagation=propagation,
         perturbation_domain=perturbation_domain,
         model_output_shape=model_output_shape,
+        model_input_shape=model_input_shape,
     )
     non_linear_decomon_layer = MyNonLinearDecomonDense1d(
         layer=layer,
@@ -104,6 +105,7 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
         propagation=propagation,
         perturbation_domain=perturbation_domain,
         model_output_shape=model_output_shape,
+        model_input_shape=model_input_shape,
     )
 
     # symbolic inputs

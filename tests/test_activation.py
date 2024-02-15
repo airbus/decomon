@@ -35,6 +35,7 @@ def test_decomon_activation(
     # init + build decomon layer
     output_shape = layer.output.shape[1:]
     model_output_shape = output_shape
+    model_input_shape = keras_symbolic_model_input.shape[1:]
     decomon_symbolic_inputs = decomon_symbolic_input_fn(output_shape=output_shape)
     decomon_layer = decomon_layer_class(
         layer=layer,
@@ -43,6 +44,7 @@ def test_decomon_activation(
         propagation=propagation,
         perturbation_domain=perturbation_domain,
         model_output_shape=model_output_shape,
+        model_input_shape=model_input_shape,
         slope=slope,
     )
     decomon_layer(decomon_symbolic_inputs)

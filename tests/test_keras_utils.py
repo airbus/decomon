@@ -6,6 +6,7 @@ from keras.layers import Dense, Input, Layer
 from numpy.testing import assert_almost_equal
 
 from decomon.keras_utils import (
+    add_tensors,
     batch_multid_dot,
     get_weight_index_from_name,
     is_a_merge_layer,
@@ -223,6 +224,77 @@ def test_batch_multi_dot_diag_missing_batchsize(missing_batchsize, diagonal, hel
         assert res_simplified.shape == (batchsize,) + diag_shape + other_shape
     elif diag_y:
         assert res_simplified.shape == (batchsize,) + other_shape + diag_shape
+
+    helpers.assert_almost_equal(
+        res_full,
+        res_simplified,
+    )
+
+
+@pytest.mark.parametrize(
+    "x_shape, y_shape, missing_batchsize, diagonal",
+    [
+        ((4, 6), (6,), (True, True), (False, False)),
+        ((4, 6), (6,), (False, False), (False, False)),
+        ((4, 6), (6, 6), (False, False), (True, False)),
+    ],
+)
+def test_add_tensors_nok_incompatible_shapes(x_shape, y_shape, missing_batchsize, diagonal):
+    x = K.ones(x_shape)
+    y = K.ones(y_shape)
+    with pytest.raises(ValueError):
+        add_tensors(x, y, missing_batchsize=missing_batchsize, diagonal=diagonal)
+
+
+@pytest.mark.parametrize("missing_batchsize", [(False, False), (True, False), (False, True), (True, True)])
+@pytest.mark.parametrize("diagonal", [(True, True), (True, False), (False, True), (False, False)])
+def test_add_tensors_ok(missing_batchsize, diagonal, helpers):
+    batchsize = 10
+    diag_shape = (4, 5, 2)
+    other_shape = diag_shape
+
+    diag_x, diag_y = diagonal
+    missing_batchsize_x, missing_batchsize_y = missing_batchsize
+
+    x_full, x_simplified = generate_tensor_full_n_diag(
+        batchsize=batchsize,
+        diag_shape=diag_shape,
+        other_shape=other_shape,
+        diag=diag_x,
+        missing_batchsize=missing_batchsize_x,
+        left=True,
+    )
+    y_full, y_simplified = generate_tensor_full_n_diag(
+        batchsize=batchsize,
+        diag_shape=diag_shape,
+        other_shape=other_shape,
+        diag=diag_y,
+        missing_batchsize=missing_batchsize_y,
+        left=True,
+    )
+
+    res_full = x_full + y_full
+    res_simplified = add_tensors(
+        x_simplified,
+        y_simplified,
+        missing_batchsize=missing_batchsize,
+        diagonal=diagonal,
+    )
+
+    if missing_batchsize_x and missing_batchsize_y:
+        # the result stayed w/o batch axis, needs to be added to be compared with full result
+        res_simplified = K.repeat(res_simplified[None], batchsize, axis=0)
+
+    if diag_x and diag_y:
+        # the result stayed diagonal, needs to be reworked to be compared with full result
+        assert res_simplified.shape == (batchsize,) + diag_shape
+        res_simplified = K.concatenate(
+            [
+                K.reshape(K.diag(K.ravel(res_simplified[i])), diag_shape + diag_shape)[None]
+                for i in range(len(res_simplified))
+            ],
+            axis=0,
+        )
 
     helpers.assert_almost_equal(
         res_full,
