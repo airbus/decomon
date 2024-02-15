@@ -86,7 +86,7 @@ class DecomonLayer(Wrapper):
               - forward: from input to output
               - backward: from output to input
             model_output_shape: shape of the underlying model output (omitting batch axis).
-               It allows determining if the backward bounds are with a bacth axis or not.
+               It allows determining if the backward bounds are with a batch axis or not.
             model_input_shape: shape of the underlying keras model input (omitting batch axis).
             **kwargs:
 
