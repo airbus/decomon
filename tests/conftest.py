@@ -899,17 +899,41 @@ class Helpers:
             Helpers.assert_ordered(keras_output, upper_ibp, decimal=decimal, err_msg="upper_ibp not ok")
 
     @staticmethod
-    def assert_decomon_output_lower_equal_upper(decomon_output, ibp, affine, propagation, decimal=5):
+    def assert_decomon_output_lower_equal_upper(
+        decomon_output,
+        ibp,
+        affine,
+        propagation,
+        decimal=5,
+        is_merging_layer=False,
+    ):
+        if is_merging_layer:
+            layer_input_shape = [tuple()]
+        else:
+            layer_input_shape = tuple()
         inputs_outputs_specs = InputsOutputsSpec(
-            ibp=ibp, affine=affine, propagation=propagation, layer_input_shape=tuple(), model_output_shape=tuple()
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            layer_input_shape=layer_input_shape,
+            model_output_shape=tuple(),
+            is_merging_layer=is_merging_layer,
         )
         affine_bounds_propagated, constant_bounds_propagated = inputs_outputs_specs.split_outputs(
             outputs=decomon_output
         )
         if propagation == Propagation.BACKWARD or affine:
-            w_l, b_l, w_u, b_u = affine_bounds_propagated
-            Helpers.assert_almost_equal(w_l, w_u, decimal=decimal)
-            Helpers.assert_almost_equal(b_l, b_u, decimal=decimal)
+            if is_merging_layer and propagation == Propagation.BACKWARD:
+                # one list of affine bounds by keras layer input
+                for affine_bounds_propagated_i in affine_bounds_propagated:
+                    w_l, b_l, w_u, b_u = affine_bounds_propagated_i
+                    Helpers.assert_almost_equal(w_l, w_u, decimal=decimal)
+                    Helpers.assert_almost_equal(b_l, b_u, decimal=decimal)
+            else:
+                # generic case: one single list of affine bounds
+                w_l, b_l, w_u, b_u = affine_bounds_propagated
+                Helpers.assert_almost_equal(w_l, w_u, decimal=decimal)
+                Helpers.assert_almost_equal(b_l, b_u, decimal=decimal)
 
         if propagation == Propagation.FORWARD and ibp:
             lower_ibp, upper_ibp = constant_bounds_propagated
