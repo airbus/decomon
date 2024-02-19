@@ -54,6 +54,21 @@ class PerturbationDomain(ABC):
             "opt_option": self.opt_option,
         }
 
+    def get_kerasinputlike_from_x(self, x: Tensor) -> Tensor:
+        """Get tensor of same shape as keras model input, from perturbation domain input x
+
+        Args:
+            x: perturbation domain input
+
+        Returns:
+            tensor of same shape as keras model input
+
+        """
+        if self.get_nb_x_components() == 1:
+            return x
+        else:
+            return x[:, 0]
+
     def get_x_input_shape_wo_batchsize(self, original_input_shape: tuple[int, ...]) -> tuple[int, ...]:
         n_comp_x = self.get_nb_x_components()
         if n_comp_x == 1:
