@@ -137,6 +137,14 @@ class DecomonLayer(Wrapper):
             is_merging_layer=self._is_merging,
         )
 
+    @property
+    def model_input_shape(self) -> tuple[int, ...]:
+        return self.inputs_outputs_spec.model_input_shape
+
+    @property
+    def model_output_shape(self) -> tuple[int, ...]:
+        return self.inputs_outputs_spec.model_output_shape
+
     def get_config(self) -> dict[str, Any]:
         config = super().get_config()
         config.update(
