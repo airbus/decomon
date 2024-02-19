@@ -88,6 +88,17 @@ def check_model2convert_inputs(model: Model) -> None:
         raise ValueError("The model must have a flattened input to be converted.")
 
 
+def generate_perturbation_domain_input(
+    model: Model,
+    perturbation_domain: PerturbationDomain,
+) -> keras.KerasTensor:
+    model_input_shape = model.input.shape[1:]
+    dtype = model.input.dtype
+
+    input_shape_x = perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)
+    return Input(shape=input_shape_x, dtype=dtype)
+
+
 def get_input_tensors(
     model: Model,
     perturbation_domain: PerturbationDomain,
@@ -178,6 +189,17 @@ def prepare_inputs_for_layer(
 def wrap_outputs_from_layer_in_list(
     outputs: Union[tuple[keras.KerasTensor, ...], list[keras.KerasTensor], keras.KerasTensor]
 ) -> list[keras.KerasTensor]:
+    """Normalizes a list/tensor into a list.
+
+    If a tensor is passed, we return
+    a list of size 1 containing the tensor.
+
+    Args:
+        x: target object to be normalized.
+
+    Returns:
+        A list.
+    """
     if not isinstance(outputs, list):
         if isinstance(outputs, tuple):
             return list(outputs)
@@ -227,6 +249,19 @@ def preprocess_layer(layer: Layer) -> list[Layer]:
 
 def is_input_node(node: Node) -> bool:
     return len(node.input_tensors) == 0
+
+
+def get_output_nodes(model: Model) -> list[Node]:
+    """Get list of output nodes ordered as model.outputs
+
+    Args:
+        model:
+
+    Returns:
+
+    """
+    nodes_by_operation = {n.operation: n for subnodes in model._nodes_by_depth.values() for n in subnodes}
+    return [nodes_by_operation[output._keras_history.operation] for output in model.outputs]
 
 
 def get_depth_dict(model: Model) -> dict[int, list[Node]]:

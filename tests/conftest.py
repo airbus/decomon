@@ -306,10 +306,9 @@ class Helpers:
         )
 
         if inputs_outputs_spec.needs_perturbation_domain_inputs():
-            if isinstance(perturbation_domain, BoxDomain):
-                x = K.repeat(keras_input[:, None], 2, axis=1)
-            else:
-                raise NotImplementedError
+            x = Helpers.generate_simple_perturbation_domain_inputs_from_keras_input(
+                keras_input=keras_input, perturbation_domain=perturbation_domain
+            )
             perturbation_domain_inputs = [x]
         else:
             perturbation_domain_inputs = []
@@ -351,6 +350,15 @@ class Helpers:
             constant_oracle_bounds=constant_oracle_bounds,
             perturbation_domain_inputs=perturbation_domain_inputs,
         )
+
+    @staticmethod
+    def generate_simple_perturbation_domain_inputs_from_keras_input(keras_input, perturbation_domain):
+        if isinstance(perturbation_domain, BoxDomain):
+            return K.concatenate(
+                [keras_input[:, None] - keras.config.epsilon(), keras_input[:, None] + keras.config.epsilon()], axis=1
+            )
+        else:
+            raise NotImplementedError
 
     @staticmethod
     def generate_merging_decomon_input_from_single_decomon_inputs(
@@ -892,6 +900,51 @@ class Helpers:
                     )
                 Helpers.assert_ordered(lower_affine, keras_output, decimal=decimal, err_msg="lower_affine not ok")
                 Helpers.assert_ordered(keras_output, upper_affine, decimal=decimal, err_msg="upper_affine not ok")
+
+        if ibp and propagation == Propagation.FORWARD:
+            lower_ibp, upper_ibp = constant_bounds_propagated
+            Helpers.assert_ordered(lower_ibp, keras_output, decimal=decimal, err_msg="lower_ibp not ok")
+            Helpers.assert_ordered(keras_output, upper_ibp, decimal=decimal, err_msg="upper_ibp not ok")
+
+    @staticmethod
+    def assert_decomon_output_compare_with_keras_input_output_model(
+        decomon_output,
+        keras_input,
+        keras_output,
+        ibp,
+        affine,
+        propagation,
+        decimal=5,
+    ):
+        keras_input_shape = tuple(keras_input.shape[1:])
+        keras_output_shape = tuple(keras_output.shape[1:])
+        inputs_outputs_spec = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            layer_input_shape=keras_input_shape,
+            model_input_shape=keras_input_shape,
+            model_output_shape=keras_output_shape,
+        )
+        affine_bounds_propagated, constant_bounds_propagated = inputs_outputs_spec.split_outputs(outputs=decomon_output)
+
+        if affine or propagation == Propagation.BACKWARD:
+            if len(affine_bounds_propagated) == 0:
+                # identity case
+                lower_affine = keras_input
+                upper_affine = keras_input
+            else:
+                w_l, b_l, w_u, b_u = affine_bounds_propagated
+                diagonal = (False, w_l.shape == b_l.shape)
+                missing_batchsize = (False, len(b_l.shape) < len(keras_output.shape))
+                lower_affine = (
+                    batch_multid_dot(keras_input, w_l, diagonal=diagonal, missing_batchsize=missing_batchsize) + b_l
+                )
+                upper_affine = (
+                    batch_multid_dot(keras_input, w_u, diagonal=diagonal, missing_batchsize=missing_batchsize) + b_u
+                )
+            Helpers.assert_ordered(lower_affine, keras_output, decimal=decimal, err_msg="lower_affine not ok")
+            Helpers.assert_ordered(keras_output, upper_affine, decimal=decimal, err_msg="upper_affine not ok")
 
         if ibp and propagation == Propagation.FORWARD:
             lower_ibp, upper_ibp = constant_bounds_propagated
@@ -1558,6 +1611,37 @@ layer_input_functions = fixture_union(
     "simple_keras_symbolic_model_input_fn, simple_keras_symbolic_layer_input_fn, simple_decomon_symbolic_input_fn, simple_keras_model_input_fn, simple_keras_layer_input_fn, simple_decomon_input_fn, simple_equal_bounds",
     simple_layer_input_functions,
 )
+
+
+# keras/decomon model inputs
+@fixture
+def simple_model_input_functions(perturbation_domain, batchsize, helpers):
+    decomon_symbolic_input_fn = lambda keras_symbolic_input: Input(
+        perturbation_domain.get_x_input_shape_wo_batchsize(keras_symbolic_input.shape[1:])
+    )
+    keras_input_fn = lambda keras_symbolic_input: helpers.generate_random_tensor(
+        keras_symbolic_input.shape[1:], batchsize=batchsize
+    )
+    decomon_input_fn = lambda keras_input: helpers.generate_simple_perturbation_domain_inputs_from_keras_input(
+        keras_input=keras_input, perturbation_domain=perturbation_domain
+    )
+
+    return (
+        decomon_symbolic_input_fn,
+        keras_input_fn,
+        decomon_input_fn,
+    )
+
+
+(
+    simple_model_decomon_symbolic_input_fn,
+    simple_model_keras_input_fn,
+    simple_model_decomon_input_fn,
+) = unpack_fixture(
+    "simple_model_decomon_symbolic_input_fn, simple_model_keras_input_fn, simple_model_decomon_input_fn",
+    simple_model_input_functions,
+)
+
 
 # keras toy models
 toy_model_name = param_fixture(
