@@ -144,9 +144,11 @@ class DecomonLinear(DecomonBaseActivation):
     linear = True
 
     def call(self, inputs: list[Tensor]) -> list[Tensor]:
-        affine_bounds_to_propagate, constant_oracle_bounds, model_inputs = self.inputs_outputs_spec.split_inputs(
-            inputs=inputs
-        )
+        (
+            affine_bounds_to_propagate,
+            constant_oracle_bounds,
+            perturbation_domain_inputs,
+        ) = self.inputs_outputs_spec.split_inputs(inputs=inputs)
         return self.inputs_outputs_spec.flatten_outputs(
             affine_bounds_propagated=affine_bounds_to_propagate, constant_bounds_propagated=constant_oracle_bounds
         )
@@ -161,7 +163,7 @@ class DecomonLinear(DecomonBaseActivation):
         (
             affine_bounds_to_propagate_shape,
             constant_oracle_bounds_shape,
-            model_inputs_shape,
+            perturbation_domain_inputs_shape,
         ) = self.inputs_outputs_spec.split_input_shape(input_shape=input_shape)
         return self.inputs_outputs_spec.flatten_outputs_shape(
             affine_bounds_propagated_shape=affine_bounds_to_propagate_shape,

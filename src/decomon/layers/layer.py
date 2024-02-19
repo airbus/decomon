@@ -400,14 +400,17 @@ class DecomonLayer(Wrapper):
         )
 
     def get_forward_oracle(
-        self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor], model_inputs: list[Tensor]
+        self,
+        input_affine_bounds: list[Tensor],
+        input_constant_bounds: list[Tensor],
+        perturbation_domain_inputs: list[Tensor],
     ) -> list[Tensor]:
         """Get constant oracle bounds on underlying keras layer input from forward input bounds.
 
         Args:
             input_affine_bounds: affine bounds on keras layer input w.r.t model input . Can be empty if not in affine mode.
             input_constant_bounds: ibp constant bounds on keras layer input. Can be empty if not in ibp mode.
-            model_inputs: underlying keras model input, wrapped in a list. Necessary only in affine mode, else empty.
+            perturbation_domain_inputs: perturbation domain input, wrapped in a list. Necessary only in affine mode, else empty.
 
         Returns:
             constant bounds on keras layer input deduced from forward input bounds
@@ -426,9 +429,9 @@ class DecomonLayer(Wrapper):
             return input_constant_bounds
 
         elif self.affine:
-            if len(model_inputs) == 0:
+            if len(perturbation_domain_inputs) == 0:
                 raise RuntimeError("keras model input is necessary for get_forward_oracle() in affine mode.")
-            x = model_inputs[0]
+            x = perturbation_domain_inputs[0]
             if len(input_affine_bounds) == 0:
                 # special case: empty affine bounds => identity bounds
                 l_affine = self.perturbation_domain.get_lower_x(x)
@@ -446,7 +449,7 @@ class DecomonLayer(Wrapper):
         self,
         affine_bounds_to_propagate: list[Tensor],
         input_bounds_to_propagate: list[Tensor],
-        model_inputs: list[Tensor],
+        perturbation_domain_inputs: list[Tensor],
     ) -> tuple[list[Tensor], list[Tensor]]:
         """Propagate forward affine and constant bounds through the layer.
 
@@ -455,7 +458,7 @@ class DecomonLayer(Wrapper):
               Can be empty if not in affine mode.
               Can also be empty in case of identity affine bounds => we simply return layer affine bounds.
             input_bounds_to_propagate: ibp constant bounds on keras layer input. Can be empty if not in ibp mode.
-            model_inputs: underlying keras model input, wrapped in a list. Necessary only in affine mode, else empty.
+            perturbation_domain_inputs: perturbation domain input, wrapped in a list. Necessary only in affine mode, else empty.
 
         Returns:
             output_affine_bounds, output_constant_bounds: affine and constant bounds on the underlying keras layer output
@@ -482,7 +485,7 @@ class DecomonLayer(Wrapper):
                 input_constant_bounds = self.get_forward_oracle(
                     input_affine_bounds=affine_bounds_to_propagate,
                     input_constant_bounds=input_bounds_to_propagate,
-                    model_inputs=model_inputs,
+                    perturbation_domain_inputs=perturbation_domain_inputs,
                 )
             else:
                 input_constant_bounds = []
@@ -497,9 +500,9 @@ class DecomonLayer(Wrapper):
 
         # Tighten constant bounds in hybrid mode (ibp+affine)
         if self.ibp and self.affine:
-            if len(model_inputs) == 0:
+            if len(perturbation_domain_inputs) == 0:
                 raise RuntimeError("keras model input is necessary for call_forward() in affine mode.")
-            x = model_inputs[0]
+            x = perturbation_domain_inputs[0]
             l_ibp, u_ibp = output_constant_bounds
             w_l, b_l, w_u, b_u = output_affine_bounds
             l_affine = self.perturbation_domain.get_lower(x, w_l, b_l)
@@ -523,15 +526,15 @@ class DecomonLayer(Wrapper):
         """Propagate bounds in the specified direction `self.propagation`.
 
         Args:
-            inputs: concatenation of affine_bounds_to_propagate + constant_oracle_bounds + keras_model_inputs with
+            inputs: concatenation of affine_bounds_to_propagate + constant_oracle_bounds + perturbation_domain_inputs with
                 - affine_bounds_to_propagate: affine bounds to propagate.
                     Can be empty in forward direction if self.affine is False.
                     Can also be empty in case of identity affine bounds => we simply return layer affine bounds.
                 - constant_oracle_bounds:
                     - in forward direction, the ibp bounds (empty if self.ibp is False);
                     - in backward direction, the oracle constant bounds on keras inputs (never empty)
-                - keras_model_inputs: the tensors defining the underlying keras model input perturbation.
-                    - in forward direction when self.affine is True: one tensor x whose shape is given by `self.perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)`
+                - perturbation_domain_inputs: the tensor defining the underlying keras model input perturbation, wrapped in a list.
+                    - in forward direction when self.affine is True: a list with a single tensor x whose shape is given by `self.perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)`
                       with `model_input_shape=model.input.shape[1:]` if `model` is the underlying keras model to analyse
                     - else: empty list
 
@@ -541,14 +544,16 @@ class DecomonLayer(Wrapper):
             - in backward direction: affine_bounds_propagated
 
         """
-        affine_bounds_to_propagate, constant_oracle_bounds, model_inputs = self.inputs_outputs_spec.split_inputs(
-            inputs=inputs
-        )
+        (
+            affine_bounds_to_propagate,
+            constant_oracle_bounds,
+            perturbation_domain_inputs,
+        ) = self.inputs_outputs_spec.split_inputs(inputs=inputs)
         if self.propagation == Propagation.FORWARD:  # forward
             affine_bounds_propagated, constant_bounds_propagated = self.call_forward(
                 affine_bounds_to_propagate=affine_bounds_to_propagate,
                 input_bounds_to_propagate=constant_oracle_bounds,
-                model_inputs=model_inputs,
+                perturbation_domain_inputs=perturbation_domain_inputs,
             )
             return self.inputs_outputs_spec.flatten_outputs(affine_bounds_propagated, constant_bounds_propagated)
 
@@ -568,7 +573,7 @@ class DecomonLayer(Wrapper):
         (
             affine_bounds_to_propagate_shape,
             constant_oracle_bounds_shape,
-            model_inputs_shape,
+            perturbation_domain_inputs_shape,
         ) = self.inputs_outputs_spec.split_input_shape(input_shape=input_shape)
         if self.propagation == Propagation.FORWARD:
             if self.ibp:

@@ -243,7 +243,7 @@ class InputsOutputsSpec:
         else:
             self.layer_input_shape = layer_input_shape
 
-    def needs_keras_model_inputs(self) -> bool:
+    def needs_perturbation_domain_inputs(self) -> bool:
         """Specify if decomon inputs should integrate keras model inputs."""
         return self.propagation == Propagation.FORWARD and self.affine
 
@@ -271,7 +271,7 @@ class InputsOutputsSpec:
             # affine
             nb += 4
             # model inputs
-            if self.needs_keras_model_inputs():
+            if self.needs_perturbation_domain_inputs():
                 nb += 1
         else:  # forward
             # ibp
@@ -281,7 +281,7 @@ class InputsOutputsSpec:
             if self.affine:
                 nb += 4 * self.nb_keras_inputs
             # model inputs
-            if self.needs_keras_model_inputs():
+            if self.needs_perturbation_domain_inputs():
                 nb += 1
         return nb
 
@@ -344,14 +344,14 @@ class InputsOutputsSpec:
             inputs: flattened decomon inputs, as seen by `DecomonLayer.call()`.
 
         Returns:
-            affine_bounds_to_propagate, constant_oracle_bounds, model_inputs:
+            affine_bounds_to_propagate, constant_oracle_bounds, perturbation_domain_inputs:
                 each one can be empty if not relevant, and according to propagation mode and merging status,
                 it will be list of tensors or list of list of tensors.
 
         More details:
 
         - non-merging case:
-            inputs = affine_bounds_to_propagate +  constant_oracle_bounds + model_inputs
+            inputs = affine_bounds_to_propagate +  constant_oracle_bounds + perturbation_domain_inputs
 
         - merging case:
             - forward: k affine bounds to propagate w.r.t. each keras layer input + k constant bounds
@@ -359,7 +359,7 @@ class InputsOutputsSpec:
                 inputs = (
                     affine_bounds_to_propagate_0 +  constant_oracle_bounds_0 + ...
                     + affine_bounds_to_propagate_k +  constant_oracle_bounds_k
-                    + model_inputs
+                    + perturbation_domain_inputs
                 )
 
             - backward: only 1 affine bounds to propagate w.r.t keras layer output
@@ -368,7 +368,7 @@ class InputsOutputsSpec:
                 inputs = (
                     affine_bounds_to_propagate
                     + constant_oracle_bounds_0 + ... +  constant_oracle_bounds_k
-                    + model_inputs
+                    + perturbation_domain_inputs
                 )
 
         Note: in case of merging layer + forward, we should not have empty affine bounds
@@ -376,12 +376,12 @@ class InputsOutputsSpec:
 
         """
         # Remove keras model input
-        if self.needs_keras_model_inputs():
+        if self.needs_perturbation_domain_inputs():
             x = inputs[-1]
             inputs = inputs[:-1]
-            model_inputs = [x]
+            perturbation_domain_inputs = [x]
         else:
-            model_inputs = []
+            perturbation_domain_inputs = []
         if self.is_merging_layer:
             if self.propagation == Propagation.BACKWARD:
                 # expected number of constant bounds
@@ -421,7 +421,7 @@ class InputsOutputsSpec:
             # (potentially empty if: not backward or not affine or identity affine bounds)
             affine_bounds_to_propagate = inputs
 
-        return affine_bounds_to_propagate, constant_oracle_bounds, model_inputs
+        return affine_bounds_to_propagate, constant_oracle_bounds, perturbation_domain_inputs
 
     def split_input_shape(
         self, input_shape: list[tuple[Optional[int], ...]]
@@ -442,7 +442,7 @@ class InputsOutputsSpec:
             input_shape: flattened decomon inputs, as seen by `DecomonLayer.call()`.
 
         Returns:
-            affine_bounds_to_propagate_shape, constant_oracle_bounds_shape, model_inputs_shape:
+            affine_bounds_to_propagate_shape, constant_oracle_bounds_shape, perturbation_domain_inputs_shape:
                 each one can be empty if not relevant, and according to propagation mode and merging status,
                 it will be list of shapes or list of list of shapes.
 
@@ -453,7 +453,7 @@ class InputsOutputsSpec:
         self,
         affine_bounds_to_propagate: Union[list[Tensor], list[list[Tensor]]],
         constant_oracle_bounds: Union[list[Tensor], list[list[Tensor]]],
-        model_inputs: list[Tensor],
+        perturbation_domain_inputs: list[Tensor],
     ) -> list[Tensor]:
         """Flatten decomon inputs.
 
@@ -473,7 +473,7 @@ class InputsOutputsSpec:
         Returns:
             flattened inputs
             - non-merging case:
-                inputs = affine_bounds_to_propagate +  constant_oracle_bounds + model_inputs
+                inputs = affine_bounds_to_propagate +  constant_oracle_bounds + perturbation_domain_inputs
 
             - merging case:
                 - forward: k affine bounds to propagate w.r.t. each keras layer input + k constant bounds
@@ -481,7 +481,7 @@ class InputsOutputsSpec:
                     inputs = (
                         affine_bounds_to_propagate_0 +  constant_oracle_bounds_0 + ...
                         + affine_bounds_to_propagate_k +  constant_oracle_bounds_k
-                        + model_inputs
+                        + perturbation_domain_inputs
                     )
 
                 - backward: only 1 affine bounds to propagate w.r.t keras layer output
@@ -490,7 +490,7 @@ class InputsOutputsSpec:
                     inputs = (
                         affine_bounds_to_propagate
                         + constant_oracle_bounds_0 + ... +  constant_oracle_bounds_k
-                        + model_inputs
+                        + perturbation_domain_inputs
                     )
 
         """
@@ -499,7 +499,7 @@ class InputsOutputsSpec:
                 flattened_constant_oracle_bounds = [
                     t for constant_oracle_bounds_i in constant_oracle_bounds for t in constant_oracle_bounds_i
                 ]
-                return affine_bounds_to_propagate + flattened_constant_oracle_bounds + model_inputs
+                return affine_bounds_to_propagate + flattened_constant_oracle_bounds + perturbation_domain_inputs
             else:  # forward
                 bounds_by_keras_input = [
                     affine_bounds_to_propagate_i + constant_oracle_bounds_i
@@ -510,9 +510,9 @@ class InputsOutputsSpec:
                 flattened_bounds_by_keras_input = [
                     t for bounds_by_keras_input_i in bounds_by_keras_input for t in bounds_by_keras_input_i
                 ]
-                return flattened_bounds_by_keras_input + model_inputs
+                return flattened_bounds_by_keras_input + perturbation_domain_inputs
         else:
-            return affine_bounds_to_propagate + constant_oracle_bounds + model_inputs
+            return affine_bounds_to_propagate + constant_oracle_bounds + perturbation_domain_inputs
 
     def split_outputs(self, outputs: list[Tensor]) -> tuple[Union[list[Tensor], list[list[Tensor]]], list[Tensor]]:
         """Split decomon inputs.

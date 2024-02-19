@@ -158,10 +158,10 @@ class Helpers:
             model_input_shape=model_input_shape,
             model_output_shape=model_output_shape,
         )
-        if inputs_outputs_spec.needs_keras_model_inputs():
-            model_inputs_shape = [perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)]
+        if inputs_outputs_spec.needs_perturbation_domain_inputs():
+            perturbation_domain_inputs_shape = [perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)]
         else:
-            model_inputs_shape = []
+            perturbation_domain_inputs_shape = []
 
         if affine and not empty:
             if propagation == Propagation.FORWARD:
@@ -182,7 +182,7 @@ class Helpers:
         else:
             constant_oracle_bounds_shape = []
 
-        return affine_bounds_to_propagate_shape, constant_oracle_bounds_shape, model_inputs_shape
+        return affine_bounds_to_propagate_shape, constant_oracle_bounds_shape, perturbation_domain_inputs_shape
 
     @staticmethod
     def get_decomon_symbolic_inputs(
@@ -219,7 +219,7 @@ class Helpers:
         (
             affine_bounds_to_propagate_shape,
             constant_oracle_bounds_shape,
-            model_inputs_shape,
+            perturbation_domain_inputs_shape,
         ) = Helpers.get_decomon_input_shapes(
             model_input_shape,
             model_output_shape,
@@ -233,7 +233,7 @@ class Helpers:
             diag=diag,
             nobatch=nobatch,
         )
-        model_inputs = [Input(shape, dtype=dtype) for shape in model_inputs_shape]
+        perturbation_domain_inputs = [Input(shape, dtype=dtype) for shape in perturbation_domain_inputs_shape]
         constant_oracle_bounds = [Input(shape, dtype=dtype) for shape in constant_oracle_bounds_shape]
         if nobatch:
             affine_bounds_to_propagate = [
@@ -253,7 +253,7 @@ class Helpers:
         return inputs_outputs_spec.flatten_inputs(
             affine_bounds_to_propagate=affine_bounds_to_propagate,
             constant_oracle_bounds=constant_oracle_bounds,
-            model_inputs=model_inputs,
+            perturbation_domain_inputs=perturbation_domain_inputs,
         )
 
     @staticmethod
@@ -305,14 +305,14 @@ class Helpers:
             model_output_shape=model_output_shape,
         )
 
-        if inputs_outputs_spec.needs_keras_model_inputs():
+        if inputs_outputs_spec.needs_perturbation_domain_inputs():
             if isinstance(perturbation_domain, BoxDomain):
                 x = K.repeat(keras_input[:, None], 2, axis=1)
             else:
                 raise NotImplementedError
-            model_inputs = [x]
+            perturbation_domain_inputs = [x]
         else:
-            model_inputs = []
+            perturbation_domain_inputs = []
 
         if affine and not empty:
             batchsize = keras_input.shape[0]
@@ -349,7 +349,7 @@ class Helpers:
         return inputs_outputs_spec.flatten_inputs(
             affine_bounds_to_propagate=affine_bounds_to_propagate,
             constant_oracle_bounds=constant_oracle_bounds,
-            model_inputs=model_inputs,
+            perturbation_domain_inputs=perturbation_domain_inputs,
         )
 
     @staticmethod
@@ -364,14 +364,14 @@ class Helpers:
             model_input_shape=tuple(),
             model_output_shape=tuple(),
         )
-        affine_bounds_to_propagate, constant_oracle_bounds, model_inputs = [], [], []
+        affine_bounds_to_propagate, constant_oracle_bounds, perturbation_domain_inputs = [], [], []
         for decomon_input in decomon_inputs:
             (
                 affine_bounds_to_propagate_i,
                 constant_oracle_bounds_i,
-                model_inputs_i,
+                perturbation_domain_inputs_i,
             ) = inputs_outputs_spec_single.split_inputs(decomon_input)
-            model_inputs = model_inputs_i
+            perturbation_domain_inputs = perturbation_domain_inputs_i
             if propagation == Propagation.FORWARD:
                 affine_bounds_to_propagate.append(affine_bounds_to_propagate_i)
             else:
@@ -390,7 +390,7 @@ class Helpers:
         return inputs_outputs_spec_merging.flatten_inputs(
             affine_bounds_to_propagate=affine_bounds_to_propagate,
             constant_oracle_bounds=constant_oracle_bounds,
-            model_inputs=model_inputs,
+            perturbation_domain_inputs=perturbation_domain_inputs,
         )
 
     @staticmethod
@@ -1056,18 +1056,18 @@ def convert_standard_input_functions_for_single_layer(
             else:
                 constant_oracle_bounds = []
 
-            if inputs_outputs_spec.needs_keras_model_inputs():
+            if inputs_outputs_spec.needs_perturbation_domain_inputs():
                 if isinstance(perturbation_domain, BoxDomain):
-                    model_inputs = [z]
+                    perturbation_domain_inputs = [z]
                 else:
                     raise NotImplementedError
             else:
-                model_inputs = []
+                perturbation_domain_inputs = []
 
             return inputs_outputs_spec.flatten_inputs(
                 affine_bounds_to_propagate=affine_bounds_to_propagate,
                 constant_oracle_bounds=constant_oracle_bounds,
-                model_inputs=model_inputs,
+                perturbation_domain_inputs=perturbation_domain_inputs,
             )
 
         def decomon_input_fn(keras_model_input, keras_layer_input, output_shape):
@@ -1095,18 +1095,18 @@ def convert_standard_input_functions_for_single_layer(
             else:
                 constant_oracle_bounds = []
 
-            if inputs_outputs_spec.needs_keras_model_inputs():
+            if inputs_outputs_spec.needs_perturbation_domain_inputs():
                 if isinstance(perturbation_domain, BoxDomain):
-                    model_inputs = [K.convert_to_tensor(z)]
+                    perturbation_domain_inputs = [K.convert_to_tensor(z)]
                 else:
                     raise NotImplementedError
             else:
-                model_inputs = []
+                perturbation_domain_inputs = []
 
             return inputs_outputs_spec.flatten_inputs(
                 affine_bounds_to_propagate=affine_bounds_to_propagate,
                 constant_oracle_bounds=constant_oracle_bounds,
-                model_inputs=model_inputs,
+                perturbation_domain_inputs=perturbation_domain_inputs,
             )
 
     else:  # backward
@@ -1131,13 +1131,13 @@ def convert_standard_input_functions_for_single_layer(
             else:
                 constant_oracle_bounds = []
 
-            if inputs_outputs_spec.needs_keras_model_inputs():
+            if inputs_outputs_spec.needs_perturbation_domain_inputs():
                 if isinstance(perturbation_domain, BoxDomain):
-                    model_inputs = [z]
+                    perturbation_domain_inputs = [z]
                 else:
                     raise NotImplementedError
             else:
-                model_inputs = []
+                perturbation_domain_inputs = []
 
             # take identity affine bounds
             if affine:
@@ -1161,7 +1161,7 @@ def convert_standard_input_functions_for_single_layer(
             return inputs_outputs_spec.flatten_inputs(
                 affine_bounds_to_propagate=affine_bounds_to_propagate,
                 constant_oracle_bounds=constant_oracle_bounds,
-                model_inputs=model_inputs,
+                perturbation_domain_inputs=perturbation_domain_inputs,
             )
 
         def decomon_input_fn(keras_model_input, keras_layer_input, output_shape):
@@ -1184,13 +1184,13 @@ def convert_standard_input_functions_for_single_layer(
             else:
                 constant_oracle_bounds = []
 
-            if inputs_outputs_spec.needs_keras_model_inputs():
+            if inputs_outputs_spec.needs_perturbation_domain_inputs():
                 if isinstance(perturbation_domain, BoxDomain):
-                    model_inputs = [K.convert_to_tensor(z)]
+                    perturbation_domain_inputs = [K.convert_to_tensor(z)]
                 else:
                     raise NotImplementedError
             else:
-                model_inputs = []
+                perturbation_domain_inputs = []
 
             #  take identity affine bounds
             if affine:
@@ -1212,7 +1212,7 @@ def convert_standard_input_functions_for_single_layer(
             return inputs_outputs_spec.flatten_inputs(
                 affine_bounds_to_propagate=affine_bounds_to_propagate,
                 constant_oracle_bounds=constant_oracle_bounds,
-                model_inputs=model_inputs,
+                perturbation_domain_inputs=perturbation_domain_inputs,
             )
 
     return (

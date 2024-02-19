@@ -122,11 +122,13 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
     (
         affine_bounds_to_propagate,
         constant_oracle_bounds,
-        model_inputs,
+        perturbation_domain_inputs,
     ) = linear_decomon_layer.inputs_outputs_spec.split_inputs(decomon_inputs)
 
     # actual (random) tensors + expected output shapes
-    model_inputs_val = [helpers.generate_random_tensor(x.shape[1:], batchsize=batchsize) for x in model_inputs]
+    perturbation_domain_inputs_val = [
+        helpers.generate_random_tensor(x.shape[1:], batchsize=batchsize) for x in perturbation_domain_inputs
+    ]
 
     if affine:
         if propagation == Propagation.FORWARD:
@@ -156,7 +158,7 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
     decomon_inputs_val = linear_decomon_layer.inputs_outputs_spec.flatten_inputs(
         affine_bounds_to_propagate=affine_bounds_to_propagate_val,
         constant_oracle_bounds=constant_oracle_bounds_val,
-        model_inputs=model_inputs_val,
+        perturbation_domain_inputs=perturbation_domain_inputs_val,
     )
 
     if propagation == Propagation.FORWARD:

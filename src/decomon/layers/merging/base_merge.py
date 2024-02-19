@@ -357,14 +357,14 @@ class DecomonMerge(DecomonLayer):
         self,
         input_affine_bounds: list[list[Tensor]],
         input_constant_bounds: list[list[Tensor]],
-        model_inputs: list[Tensor],
+        perturbation_domain_inputs: list[Tensor],
     ) -> list[list[Tensor]]:
         """Get constant oracle bounds on underlying keras layer input from forward input bounds.
 
         Args:
             input_affine_bounds: affine bounds on each keras layer input w.r.t model input . Can be empty if not in affine mode.
             input_constant_bounds: ibp constant bounds on each keras layer input. Can be empty if not in ibp mode.
-            model_inputs: underlying keras model input, wrapped in a list. Necessary only in affine mode, else empty.
+            perturbation_domain_inputs: perturbation domain input, wrapped in a list. Necessary only in affine mode, else empty.
 
         Returns:
             constant bounds on each keras layer input deduced from forward input bounds
@@ -383,9 +383,9 @@ class DecomonMerge(DecomonLayer):
             return input_constant_bounds
 
         elif self.affine:
-            if len(model_inputs) == 0:
+            if len(perturbation_domain_inputs) == 0:
                 raise RuntimeError("keras model input is necessary for get_forward_oracle() in affine mode.")
-            x = model_inputs[0]
+            x = perturbation_domain_inputs[0]
             constant_bounds = []
             for input_affine_bounds_i in input_affine_bounds:
                 if len(input_affine_bounds_i) == 0:
@@ -442,14 +442,14 @@ class DecomonMerge(DecomonLayer):
                     inputs = (
                         affine_bounds_to_propagate_0 +  constant_oracle_bounds_0 + ...
                         + affine_bounds_to_propagate_k +  constant_oracle_bounds_k
-                        + model_inputs
+                        + perturbation_domain_inputs
                     )
 
                     with
                     - affine_bounds_to_propagate_* empty when affine is False;
                       (never to express identity bounds, as it would be impossible to separate bounds in flattened inputs)
                     - constant_oracle_bounds_* empty when ibp is False;
-                    - model_inputs:
+                    - perturbation_domain_inputs:
                         - if affine: the tensor defining the underlying keras model input perturbation, wrapped in a list;
                         - else: empty
 
