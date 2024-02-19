@@ -161,11 +161,16 @@ class DecomonMerge(DecomonLayer):
                 w_i_pos = K.maximum(w_i, z_value)
                 w_i_neg = K.minimum(w_i, z_value)
 
-                l_c += batch_multid_dot(lower_i, w_i_pos, **kwargs_dot) + batch_multid_dot(
-                    upper_i, w_i_neg, **kwargs_dot
+                # NB: += does not work well with broadcasting on pytorch backend => we use l_c = l_c + ...
+                l_c = (
+                    l_c
+                    + batch_multid_dot(lower_i, w_i_pos, **kwargs_dot)
+                    + batch_multid_dot(upper_i, w_i_neg, **kwargs_dot)
                 )
-                u_c += batch_multid_dot(upper_i, w_i_pos, **kwargs_dot) + batch_multid_dot(
-                    lower_i, w_i_neg, **kwargs_dot
+                u_c = (
+                    u_c
+                    + batch_multid_dot(upper_i, w_i_pos, **kwargs_dot)
+                    + batch_multid_dot(lower_i, w_i_neg, **kwargs_dot)
                 )
 
             return l_c, u_c

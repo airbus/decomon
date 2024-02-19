@@ -172,9 +172,9 @@ def test_decomon_merge(
         for w_i, keras_layer_input_i in zip(w, keras_layer_input):
             diagonal = (False, w_i.shape == b.shape)
             missing_batchsize = (False, True)
-            keras_output_2 += batch_multid_dot(
+            keras_output_2 = keras_output_2 + batch_multid_dot(
                 keras_layer_input_i, w_i, missing_batchsize=missing_batchsize, diagonal=diagonal
-            )
+            )  # += does not work well with broadcasting on pytorch backend
         np.testing.assert_almost_equal(
             K.convert_to_numpy(keras_output),
             K.convert_to_numpy(keras_output_2),
