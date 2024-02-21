@@ -118,6 +118,26 @@ class DecomonLayer(Wrapper):
         self.propagation = propagation
 
         # input-output-manager
+        self.inputs_outputs_spec = self.create_inputs_outputs_spec(
+            layer=layer,
+            perturbation_domain=perturbation_domain,
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            model_input_shape=model_input_shape,
+            model_output_shape=model_output_shape,
+        )
+
+    def create_inputs_outputs_spec(
+        self,
+        layer: Layer,
+        perturbation_domain: PerturbationDomain,
+        ibp: bool,
+        affine: bool,
+        propagation: Propagation,
+        model_input_shape: Optional[tuple[int, ...]],
+        model_output_shape: Optional[tuple[int, ...]],
+    ) -> InputsOutputsSpec:
         if self._is_merging:
             if isinstance(layer.input, keras.KerasTensor):
                 # special case: merging a single input -> self.layer.input is already flattened
@@ -126,7 +146,7 @@ class DecomonLayer(Wrapper):
                 layer_input_shape = [t.shape[1:] for t in layer.input]
         else:
             layer_input_shape = layer.input.shape[1:]
-        self.inputs_outputs_spec = InputsOutputsSpec(
+        return InputsOutputsSpec(
             ibp=ibp,
             affine=affine,
             propagation=propagation,
@@ -404,6 +424,8 @@ class DecomonLayer(Wrapper):
         input_affine_bounds: list[Tensor],
         input_constant_bounds: list[Tensor],
         perturbation_domain_inputs: list[Tensor],
+        ibp: Optional[bool] = None,
+        affine: Optional[bool] = None,
     ) -> list[Tensor]:
         """Get constant oracle bounds on underlying keras layer input from forward input bounds.
 
@@ -411,6 +433,8 @@ class DecomonLayer(Wrapper):
             input_affine_bounds: affine bounds on keras layer input w.r.t model input . Can be empty if not in affine mode.
             input_constant_bounds: ibp constant bounds on keras layer input. Can be empty if not in ibp mode.
             perturbation_domain_inputs: perturbation domain input, wrapped in a list. Necessary only in affine mode, else empty.
+            ibp: if set, overrides temporarily `self.ibp` (used by `call_oracle()`)
+            affine: if set, overrides temporarily `self.affine` (used by `call_oracle()`)
 
         Returns:
             constant bounds on keras layer input deduced from forward input bounds
@@ -423,12 +447,17 @@ class DecomonLayer(Wrapper):
         from the affine bounds given the considered perturbation domain.
 
         """
-        if self.ibp:
+        if ibp is None:
+            ibp = self.ibp
+        if affine is None:
+            affine = self.affine
+
+        if ibp:
             # Hyp: in hybrid mode, the constant bounds are already tight
             # (affine and ibp mixed in forward layer output to get the tightest constant bounds)
             return input_constant_bounds
 
-        elif self.affine:
+        elif affine:
             if len(perturbation_domain_inputs) == 0:
                 raise RuntimeError("keras model input is necessary for get_forward_oracle() in affine mode.")
             x = perturbation_domain_inputs[0]
@@ -444,6 +473,59 @@ class DecomonLayer(Wrapper):
 
         else:
             raise RuntimeError("self.ibp and self.affine cannot be both False")
+
+    def call_oracle(self, inputs: list[Tensor]) -> list[Tensor]:
+        """Compute oracle constant bounds on keras inputs from flatten decomon inputs.
+
+        - forward: this is `self.get_forward_oracle()` after a split of inputs
+        - backward: this is a crown oracle.
+            The inputs are then equivalent to inputs for forward propagation + ibp=False + affine=True,
+            i.e. affine bounds (a priori coming from crowns) on each keras input + perturbation_domain_inputs
+            The computation is  also equivalent to the one done in `self.get_forward_oracle()` with ibp=False, affine=True
+
+        Args:
+            inputs: affine bounds on keras layer input + perturbation_domain_inputs
+
+        Returns:
+            constant bounds on keras layer input deduced from affine bounds
+
+        """
+        (
+            affine_bounds_to_propagate,
+            constant_oracle_bounds,
+            perturbation_domain_inputs,
+        ) = self.inputs_outputs_spec.split_inputs(inputs=inputs)
+        if self.propagation == Propagation.FORWARD:  # forward
+            return self.get_forward_oracle(
+                input_affine_bounds=affine_bounds_to_propagate,
+                input_constant_bounds=constant_oracle_bounds,
+                perturbation_domain_inputs=perturbation_domain_inputs,
+            )
+        else:  # backward
+            ibp = False
+            affine = True
+            propagation = Propagation.FORWARD
+            inputs_outputs_spec = self.create_inputs_outputs_spec(
+                ibp=ibp,
+                affine=affine,
+                propagation=propagation,
+                perturbation_domain=self.perturbation_domain,
+                layer=self.layer,
+                model_input_shape=self.model_input_shape,
+                model_output_shape=self.model_output_shape,
+            )
+            (
+                affine_bounds_to_propagate,
+                constant_oracle_bounds,
+                perturbation_domain_inputs,
+            ) = inputs_outputs_spec.split_inputs(inputs=inputs)
+            return self.get_forward_oracle(
+                input_affine_bounds=affine_bounds_to_propagate,
+                input_constant_bounds=constant_oracle_bounds,
+                perturbation_domain_inputs=perturbation_domain_inputs,
+                ibp=ibp,
+                affine=affine,
+            )
 
     def call_forward(
         self,

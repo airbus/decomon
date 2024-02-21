@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import keras.ops as K
 
@@ -358,6 +358,8 @@ class DecomonMerge(DecomonLayer):
         input_affine_bounds: list[list[Tensor]],
         input_constant_bounds: list[list[Tensor]],
         perturbation_domain_inputs: list[Tensor],
+        ibp: Optional[bool] = None,
+        affine: Optional[bool] = None,
     ) -> list[list[Tensor]]:
         """Get constant oracle bounds on underlying keras layer input from forward input bounds.
 
@@ -365,6 +367,8 @@ class DecomonMerge(DecomonLayer):
             input_affine_bounds: affine bounds on each keras layer input w.r.t model input . Can be empty if not in affine mode.
             input_constant_bounds: ibp constant bounds on each keras layer input. Can be empty if not in ibp mode.
             perturbation_domain_inputs: perturbation domain input, wrapped in a list. Necessary only in affine mode, else empty.
+            ibp: if set, overrides temporarily `self.ibp` (used by `call_oracle()`)
+            affine: if set, overrides temporarily `self.affine` (used by `call_oracle()`)
 
         Returns:
             constant bounds on each keras layer input deduced from forward input bounds
@@ -377,12 +381,17 @@ class DecomonMerge(DecomonLayer):
         from the affine bounds given the considered perturbation domain.
 
         """
-        if self.ibp:
+        if ibp is None:
+            ibp = self.ibp
+        if affine is None:
+            affine = self.affine
+
+        if ibp:
             # Hyp: in hybrid mode, the constant bounds are already tight
             # (affine and ibp mixed in forward layer output to get the tightest constant bounds)
             return input_constant_bounds
 
-        elif self.affine:
+        elif affine:
             if len(perturbation_domain_inputs) == 0:
                 raise RuntimeError("keras model input is necessary for get_forward_oracle() in affine mode.")
             x = perturbation_domain_inputs[0]
@@ -401,6 +410,24 @@ class DecomonMerge(DecomonLayer):
 
         else:
             raise RuntimeError("self.ibp and self.affine cannot be both False")
+
+    def call_oracle(self, inputs: list[Tensor]) -> list[list[Tensor]]:
+        """Compute oracle constant bounds on keras inputs from flatten decomon inputs.
+
+        - forward: this is `self.get_forward_oracle()` after a split of inputs
+        - backward: this is a crown oracle.
+            The inputs are then equivalent to inputs for forward propagation + ibp=False + affine=True,
+            i.e. affine bounds (a priori coming from crowns) on each keras input.
+            The computation is  also equivalent to the one done in `self.get_forward_oracle()` with ibp=False, affine=True
+
+        Args:
+            inputs: concatenated affine bounds on each keras layer input + perturbation_domain_inputs
+
+        Returns:
+            constant bounds on each keras layer input deduced from affine bounds
+
+        """
+        return super().call_oracle(inputs)
 
     def call_forward(
         self,
