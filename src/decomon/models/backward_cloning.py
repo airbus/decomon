@@ -1,463 +1,488 @@
-from collections.abc import Callable
 from copy import deepcopy
+from collections.abc import Callable
 from typing import Any, Optional, Union
 
 import keras
 import keras.ops as K
 from keras.config import floatx
-from keras.layers import Concatenate, Lambda, Layer
+from keras.layers import Lambda, Layer
 from keras.models import Model
 from keras.src.ops.node import Node
 from keras.src.utils.python_utils import to_list
 
-from decomon.backward_layers.backward_merge import BackwardMerge
-from decomon.backward_layers.convert import to_backward
-from decomon.backward_layers.core import BackwardLayer
 from decomon.core import (
     BoxDomain,
     ForwardMode,
     InputsOutputsSpec,
     PerturbationDomain,
+    Propagation,
     Slope,
     get_affine,
     get_mode,
 )
-from decomon.keras_utils import BatchedIdentityLike
-from decomon.layers.utils import softmax_to_linear as softmax_2_linear
+from decomon.layers import DecomonLayer
+from decomon.layers.convert import to_decomon
+from decomon.layers.merging.base_merge import DecomonMerge
 from decomon.models.crown import Convert2BackwardMode, Fuse, MergeWithPrevious
-from decomon.models.forward_cloning import OutputMapDict
 from decomon.models.utils import (
-    Convert2Mode,
     ensure_functional_model,
     get_depth_dict,
-    get_input_dim,
+    get_output_nodes,
 )
-from decomon.types import BackendTensor, Tensor
+from decomon.types import Tensor
 
 
-def get_disconnected_input(
-    mode: Union[str, ForwardMode],
-    perturbation_domain: PerturbationDomain,
-    dtype: Optional[str] = None,
-) -> Layer:
-    mode = ForwardMode(mode)
-    dc_decomp = False
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
-    affine = get_affine(mode)
-    if dtype is None:
-        dtype = floatx()
-
-    def disco_priv(inputs: list[Tensor]) -> list[Tensor]:
-        x, u_c, w_f_u, b_f_u, l_c, w_f_l, b_f_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
-        dtype = x.dtype
-        empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
-
-        if affine:
-            x = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
-            w_u = BatchedIdentityLike()(u_c)
-            b_u = K.zeros_like(u_c)
-        else:
-            w_u, b_u = empty_tensor, empty_tensor
-
-        return inputs_outputs_spec.extract_outputsformode_from_fulloutputs([x, u_c, w_u, b_u, l_c, w_u, b_u])
-
-    return Lambda(disco_priv, dtype=dtype)
-
-
-def retrieve_layer(
+def crown(
     node: Node,
-    layer_fn: Callable[[Layer], BackwardLayer],
-    backward_map: dict[int, BackwardLayer],
-    joint: bool = True,
-) -> BackwardLayer:
-    if id(node) in backward_map:
-        backward_layer = backward_map[id(node)]
-    else:
-        backward_layer = layer_fn(node.operation)
-        if joint:
-            backward_map[id(node)] = backward_layer
-    return backward_layer
-
-
-def crown_(
-    node: Node,
-    ibp: bool,
-    affine: bool,
-    perturbation_domain: PerturbationDomain,
-    input_map: dict[int, list[keras.KerasTensor]],
-    layer_fn: Callable[[Layer], BackwardLayer],
+    layer_fn: Callable[[Layer, tuple[int, ...]], DecomonLayer],
+    model_output_shape: tuple[int, ...],
     backward_bounds: list[keras.KerasTensor],
-    backward_map: Optional[dict[int, BackwardLayer]] = None,
-    joint: bool = True,
-    fuse: bool = True,
-    output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
-    merge_layers: Optional[Layer] = None,
-    fuse_layer: Optional[Layer] = None,
-    **kwargs: Any,
-) -> tuple[list[keras.KerasTensor], Optional[Layer]]:
+    backward_map: dict[int, DecomonLayer],
+    oracle_map: dict[int, Union[list[keras.KerasTensor], list[list[keras.KerasTensor]]]],
+    forward_output_map: dict[int, list[keras.KerasTensor]],
+    forward_layer_map: dict[int, DecomonLayer],
+    crown_output_map: dict[int, list[keras.KerasTensor]],
+    perturbation_domain_input: keras.KerasTensor,
+    perturbation_domain: PerturbationDomain,
+) -> list[keras.KerasTensor]:
     """
 
+    Args:
+        node: node of the model until which the backward bounds have been propagated
+        layer_fn: function converting a keras layer into its backward version,
+            according to the proper (sub)model output shape
+            Will be passed to `get_oracle()` for crown oracle deriving from sub-crowns
+        model_output_shape: model_output_shape of the current crown,
+            to be passed to `crown_model()` on embedded submodels.
+        backward_bounds: backward bounds to propagate
+        oracle_map: oracle bounds on inputs of each keras layer, stored by layers id
+        oracle_map: already registered oracle bounds per node
+            To be used by `get_oracle()`.
+        forward_output_map: forward outputs per node from a previously performed forward conversion.
+            To be used by `get_oracle()`.
+        forward_layer_map: forward decomon layer per node from a previously performed forward conversion.
+            To be used by `get_oracle()`.
+        crown_output_map: output of subcrowns per output node.
+            Avoids relaunching a crown if several nodes share parents.
+            To be used by `get_oracle()`.
+        backward_map: stores converted layer by node for the current crown
+          (should depend on the proper model output and thus change for each sub-crown)
 
-    :param node:
-    :param ibp:
-    :param affine:
-    :param input_map:
-    :param layer_fn:
-    :param backward_bounds:
-    :param backward_map:
-    :param joint:
-    :param fuse:
-    :return: list of 4 tensors affine upper and lower bounds
+    Returns:
+        propagated backward bounds until model input for the proper output node
+
     """
-    if backward_map is None:
-        backward_map = {}
-
-    if output_map is None:
-        output_map = {}
-
-    inputs = input_map[id(node)]
-
-    if perturbation_domain is None:
-        perturbation_domain = BoxDomain()
-
-    if isinstance(node.operation, Model):
-        inputs_tensors = get_disconnected_input(get_mode(ibp, affine), perturbation_domain, dtype=inputs[0].dtype)(
-            inputs
-        )
-        _, backward_bounds, _, _ = crown_model(
-            model=node.operation,
-            input_tensors=inputs_tensors,
-            backward_bounds=backward_bounds,
-            ibp=ibp,
-            affine=affine,
-            perturbation_domain=None,
-            finetune=False,
-            joint=joint,
-            fuse=False,
-            **kwargs,
-        )
-
-    else:
-        backward_layer = retrieve_layer(node=node, layer_fn=layer_fn, backward_map=backward_map, joint=joint)
-
-        if id(node) not in output_map:
-            backward_bounds_new = backward_layer(inputs)
-            output_map[id(node)] = backward_bounds_new
-        else:
-            backward_bounds_new = output_map[id(node)]
-
-            # import pdb; pdb.set_trace()
-        if len(backward_bounds):
-            if merge_layers is None:
-                merge_layers = MergeWithPrevious(backward_bounds_new[0].shape, backward_bounds[0].shape)
-            backward_bounds = merge_layers(backward_bounds_new + backward_bounds)
-        else:
-            backward_bounds = backward_bounds_new
-
     parents = node.parent_nodes
+    if len(parents) == 0:
+        # Input layer => no conversion, propagate output unchanged
+        return backward_bounds
+    else:
+        if isinstance(node.operation, Model):
+            # TO CHECK perturbation input submodel ?
+            # forward oracle:
+            #  - ibp (+-affine): not needed
+            #  - affine (w/o ibp): forward_output give affine bounds on outer model input => perturbation_domain
+            # crown oracle:
+            #  - see where stop subcrowns, maybe to submodel inputs,
+            #    in which case we need to construct perturbation_domain_input_submodel from get_oracle(node)
+            perturbation_domain_input_submodel = perturbation_domain_input
+            backward_bounds = crown_model(
+                model=node.operation,
+                layer_fn=layer_fn,
+                backward_bounds=[backward_bounds],
+                perturbation_domain_input=perturbation_domain_input_submodel,
+                perturbation_domain=perturbation_domain,
+                oracle_map=oracle_map,
+                forward_output_map=forward_output_map,
+                forward_layer_map=forward_layer_map,
+                crown_output_map=crown_output_map,
+                is_submodel=True,
+                backward_map=backward_map,
+                model_output_shape=model_output_shape,
+            )
+        else:
+            if id(node) in backward_map:
+                backward_layer = backward_map[id(node)]
+            else:
+                backward_layer = layer_fn(node.operation, model_output_shape)
+                backward_map[id(node)] = backward_layer
 
-    if len(parents):
-        if len(parents) > 1:
-            if isinstance(backward_layer, BackwardMerge):
-                raise NotImplementedError()
-                crown_bound_list = []
-                for backward_bound, parent in zip(backward_bounds, parents):
-                    crown_bound_i, _ = crown_(
-                        node=parent,
-                        ibp=ibp,
-                        affine=affine,
-                        perturbation_domain=perturbation_domain,
-                        input_map=input_map,
-                        layer_fn=layer_fn,
-                        backward_bounds=backward_bound,
-                        backward_map=backward_map,
-                        joint=joint,
-                        fuse=fuse,
-                    )
-
-                    crown_bound_list.append(crown_bound_i)
-
-                # avg_layer = Average(dtype=node.outbound_layer.dtype)
-                # crown_bound = [avg_layer([e[i] for e in crown_bound_list]) for i in range(4)]
-                crown_bound = crown_bound_list[0]
+            # get oracle bounds if needed
+            if backward_layer.inputs_outputs_spec.needs_oracle_bounds():
+                constant_oracle_bounds = get_oracle(
+                    node=node,
+                    perturbation_domain_input=perturbation_domain_input,
+                    perturbation_domain=perturbation_domain,
+                    oracle_map=oracle_map,
+                    forward_output_map=forward_output_map,
+                    forward_layer_map=forward_layer_map,
+                    backward_layer=backward_layer,
+                    crown_output_map=crown_output_map,
+                    layer_fn=layer_fn,
+                )
 
             else:
-                raise NotImplementedError()
+                constant_oracle_bounds = []
+
+            # propagate backward bounds through the decomon layer
+            backward_layer_inputs = backward_layer.inputs_outputs_spec.flatten_inputs(
+                affine_bounds_to_propagate=backward_bounds,
+                constant_oracle_bounds=constant_oracle_bounds,
+                perturbation_domain_inputs=[],
+            )
+            backward_layer_outputs = backward_layer(backward_layer_inputs)
+            backward_bounds, _ = backward_layer.inputs_outputs_spec.split_outputs(backward_layer_outputs)
+
+        # Call crown recursively on parent nodes
+        if isinstance(backward_layer, DecomonMerge):
+            # merging layer
+            crown_bounds_list: list[list[Tensor]] = []
+            for backward_bounds_i, parent in zip(backward_bounds, parents):
+                crown_bounds_list.append(
+                    crown(
+                        node=parent,
+                        layer_fn=layer_fn,
+                        model_output_shape=model_output_shape,
+                        backward_bounds=backward_bounds_i,
+                        backward_map=backward_map,
+                        oracle_map=oracle_map,
+                        forward_output_map=forward_output_map,
+                        forward_layer_map=forward_layer_map,
+                        crown_output_map=crown_output_map,
+                        perturbation_domain_input=perturbation_domain_input,
+                        perturbation_domain=perturbation_domain,
+                    )
+                )
+            # reduce by summing all bounds together
+            # (indeed all bounds are partial affine bounds on model output w.r.t the same model input
+            #  under the hypotheses of a single model input)
+            crown_bounds = backward_layer.inputs_outputs_spec.sum_backward_bounds(crown_bounds_list)
+
+        elif len(parents) > 1:
+            raise RuntimeError("Node with multiple parents should have been converted to a DecomonMerge layer.")
         else:
-            crown_bound, fuse_layer_new = crown_(
+            # unary layer
+            crown_bounds = crown(
                 node=parents[0],
-                ibp=ibp,
-                affine=affine,
-                perturbation_domain=perturbation_domain,
-                input_map=input_map,
                 layer_fn=layer_fn,
+                model_output_shape=model_output_shape,
                 backward_bounds=backward_bounds,
                 backward_map=backward_map,
-                joint=joint,
-                fuse=fuse,
-                output_map=output_map,
-                merge_layers=None,  # AKA merge_layers
-                fuse_layer=fuse_layer,
+                oracle_map=oracle_map,
+                forward_output_map=forward_output_map,
+                forward_layer_map=forward_layer_map,
+                crown_output_map=crown_output_map,
+                perturbation_domain_input=perturbation_domain_input,
+                perturbation_domain=perturbation_domain,
             )
-            if fuse_layer is None:
-                fuse_layer = fuse_layer_new
-        return crown_bound, fuse_layer
+        return crown_bounds
+
+
+def get_oracle(
+    node: Node,
+    perturbation_domain_input: keras.KerasTensor,
+    perturbation_domain: PerturbationDomain,
+    oracle_map: dict[int, Union[list[keras.KerasTensor], list[list[keras.KerasTensor]]]],
+    forward_output_map: dict[int, list[keras.KerasTensor]],
+    forward_layer_map: dict[int, DecomonLayer],
+    backward_layer: DecomonLayer,
+    crown_output_map: dict[int, list[keras.KerasTensor]],
+    layer_fn: Callable[[Layer, tuple[int, ...]], DecomonLayer],
+) -> Union[list[keras.KerasTensor], list[list[keras.KerasTensor]]]:
+    """Get oracle bounds "on demand".
+
+    When needed by a node, get oracle constant bounds on keras layer inputs either:
+    - from `oracle_map`, if already computed
+    - from forward oracle, when a first forward conversion has been done
+    - from crown oracle, by launching sub-crowns on parent nodes
+
+    Args:
+        node: considered node whose operation (keras layer) needs oracle bounds
+        perturbation_domain_input: perturbation domain input
+        perturbation_domain: perturbation domain type on keras model input
+        oracle_map: already registered oracle bounds per node
+        forward_output_map: forward outputs per node from a previously performed forward conversion.
+            To be used for forward oracle.
+        forward_layer_map: forward decomon layer per node from a previously performed forward conversion.
+            To be used for forward oracle.
+        backward_layer: converted backward decomon layer for this node.
+            To be used for crown oracle.
+        crown_output_map: output of subcrowns per output node.
+            Avoids relaunching a crown if several nodes share parents.
+            To be used for crown oracle.
+        layer_fn: callable converting a layer and a model_output_shape into a (backward) decomon layer.
+            To be used for crown oracle.
+
+    Returns:
+        oracle bounds on node inputs
+
+    """
+    # Do not recompute if already existing
+    if id(node) in oracle_map:
+        return oracle_map[id(node)]
+
+    parents = node.parent_nodes
+    if not len(parents):
+        # input node: can be deduced directly from perturbation domain
+        oracle_bounds = [
+            perturbation_domain.get_lower_x(x=perturbation_domain_input),
+            perturbation_domain.get_upper_x(x=perturbation_domain_input),
+        ]
     else:
-        # do something
-        if fuse:
-            if fuse_layer is None:
-                fuse_layer = Fuse(get_mode(ibp=ibp, affine=affine))
-            result = fuse_layer(inputs + backward_bounds)
-
-            return result, fuse_layer
-
+        if id(node) in forward_layer_map:
+            # forward oracle
+            forward_layer = forward_layer_map[id(node)]
+            forward_input: list[keras.KerasTensor] = []
+            for parent in parents:
+                forward_input += forward_output_map[id(parent)]
+            if forward_layer.inputs_outputs_spec.needs_perturbation_domain_inputs():
+                forward_input += [perturbation_domain_input]
+            oracle_bounds = forward_layer.call_oracle(forward_input)
         else:
-            return backward_bounds, fuse_layer
+            # crown oracle
+            crown_bounds = []
+            for parent in parents:
+                if id(parent) in crown_output_map:
+                    # already computed sub-crown?
+                    crown_bounds_parent = crown_output_map[id(parent)]
+                else:
+                    submodel_output_shape = get_model_output_shape(node=parent, backward_bounds_node=[])
+                    crown_bounds_parent = crown(
+                        node=parent,
+                        layer_fn=layer_fn,
+                        model_output_shape=submodel_output_shape,
+                        backward_bounds=[],
+                        backward_map={},  # new output node, thus new backward_map
+                        oracle_map=oracle_map,
+                        forward_output_map=forward_output_map,
+                        forward_layer_map=forward_layer_map,
+                        crown_output_map=crown_output_map,
+                        perturbation_domain_input=perturbation_domain_input,
+                        perturbation_domain=perturbation_domain,
+                    )
+                    # store sub-crown output
+                    crown_output_map[id(parent)] = crown_bounds_parent
+                crown_bounds += crown_bounds_parent
 
+            # deduce oracle bounds from affine bounds on keras layer inputs
+            backward_oracle_inputs = crown_bounds + [perturbation_domain_input]
+            oracle_bounds = backward_layer.call_oracle(backward_oracle_inputs)
 
-def get_input_nodes(
-    model: Model,
-    dico_nodes: dict[int, list[Node]],
-    ibp: bool,
-    affine: bool,
-    input_tensors: list[keras.KerasTensor],
-    output_map: OutputMapDict,
-    layer_fn: Callable[[Layer], BackwardLayer],
-    joint: bool,
-    set_mode_layer: Layer,
-    perturbation_domain: Optional[PerturbationDomain] = None,
-    **kwargs: Any,
-) -> tuple[dict[int, list[keras.KerasTensor]], dict[int, BackwardLayer], dict[int, list[keras.KerasTensor]]]:
-    keys = [e for e in dico_nodes.keys()]
-    keys.sort(reverse=True)
-    fuse_layer = None
-    input_map: dict[int, list[keras.KerasTensor]] = {}
-    backward_map: dict[int, BackwardLayer] = {}
-    if perturbation_domain is None:
-        perturbation_domain = BoxDomain()
-    crown_map: dict[int, list[keras.KerasTensor]] = {}
-    for depth in keys:
-        nodes = dico_nodes[depth]
-        for node in nodes:
-            layer = node.operation
+    # store oracle
+    oracle_map[id(node)] = oracle_bounds
 
-            parents = node.parent_nodes
-            if not len(parents):
-                # if 'debug' in kwargs.keys():
-                #    import pdb; pdb.set_trace()
-                input_map[id(node)] = input_tensors
-            else:
-                output: list[keras.KerasTensor] = []
-                for parent in parents:
-                    # do something
-                    if id(parent) in output_map.keys():
-                        output += output_map[id(parent)]
-                    else:
-                        output_crown, fuse_layer_tmp = crown_(
-                            node=parent,
-                            ibp=ibp,
-                            affine=affine,
-                            input_map=input_map,
-                            layer_fn=layer_fn,
-                            backward_bounds=[],
-                            backward_map=backward_map,
-                            joint=joint,
-                            fuse=True,
-                            perturbation_domain=perturbation_domain,
-                            output_map=crown_map,
-                            merge_layers=None,  # AKA merge_layers
-                            fuse_layer=fuse_layer,
-                        )
-                        if fuse_layer is None:
-                            fuse_layer = fuse_layer_tmp
-
-                        # convert output_crown in the right mode
-                        if set_mode_layer is None:
-                            set_mode_layer = Convert2BackwardMode(get_mode(ibp, affine), perturbation_domain)
-                        output_crown = set_mode_layer(input_tensors + output_crown)
-                        output += to_list(output_crown)
-                        # crown_map[id(parent)]=output_crown_
-
-                input_map[id(node)] = output
-    return input_map, backward_map, crown_map
+    return oracle_bounds
 
 
 def crown_model(
     model: Model,
-    input_tensors: list[keras.KerasTensor],
-    back_bounds: Optional[list[keras.KerasTensor]] = None,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
-    ibp: bool = True,
-    affine: bool = True,
-    perturbation_domain: Optional[PerturbationDomain] = None,
-    finetune: bool = False,
-    forward_map: Optional[OutputMapDict] = None,
-    softmax_to_linear: bool = True,
-    joint: bool = True,
-    layer_fn: Callable[..., BackwardLayer] = to_backward,
-    fuse: bool = True,
-    **kwargs: Any,
-) -> tuple[list[keras.KerasTensor], list[keras.KerasTensor], dict[int, BackwardLayer], None]:
-    if back_bounds is None:
-        back_bounds = []
-    if forward_map is None:
-        forward_map = {}
-    if perturbation_domain is None:
-        perturbation_domain = BoxDomain()
-    if not isinstance(model, Model):
-        raise ValueError()
-    # import time
-    # zero_time = time.process_time()
-    has_softmax = False
-    if softmax_to_linear:
-        model, has_softmax = softmax_2_linear(model)  # do better because you modify the model eventually
+    layer_fn: Callable[[Layer, tuple[int, ...]], DecomonLayer],
+    backward_bounds: list[list[keras.KerasTensor]],
+    perturbation_domain_input: keras.KerasTensor,
+    perturbation_domain: PerturbationDomain,
+    oracle_map: Optional[dict[int, Union[list[keras.KerasTensor], list[list[keras.KerasTensor]]]]] = None,
+    forward_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
+    forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
+    crown_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
+    is_submodel: bool = False,
+    backward_map: Optional[dict[int, DecomonLayer]] = None,
+    model_output_shape: Optional[tuple[int, ...]] = None,
+) -> list[keras.KerasTensor]:
+    """Convert a functional keras model via crown algorithm (backward propagation)
 
-    # layer_fn
-    ##########
-    has_iter = False
-    if layer_fn is not None and len(layer_fn.__code__.co_varnames) == 1 and "layer" in layer_fn.__code__.co_varnames:
-        has_iter = True
+    Hypothesis: potential embedded submodels have only one input and one output.
 
-    if not has_iter:
-        layer_fn_copy = deepcopy(layer_fn)
+    Args:
+        model: keras model to convert
+        layer_fn: callable converting a layer and a model_output_shape into a (backward) decomon layer
+        perturbation_domain_input: perturbation domain input
+        perturbation_domain: perturbation domain type on keras model input
+        backward_bounds: should be of the same size as the number of model outputs
+            (each sublist potentially empty for starting with identity bounds)
+        oracle_map: already registered oracle bounds per node
+        forward_output_map: forward outputs per node from a previously performed forward conversion.
+            To be used for forward oracle.
+        forward_layer_map: forward decomon layer per node from a previously performed forward conversion.
+            To be used for forward oracle.
+        crown_output_map: output of subcrowns per output node.
+            Avoids relaunching a crown if several nodes share parents.
+            To be used for crown oracle.
+        is_submodel: specify if called from within a crown to propagate through an embedded submodel
+        backward_map: stores converted layer by node for the current crown
+          Should be set only if is_submodel is True.
+        model_output_shape: if submodel is True, must be set to the output_shape used in the current crown
 
-        def func(layer: Layer) -> Layer:
-            return layer_fn_copy(
-                layer,
-                mode=get_mode(ibp, affine),
-                finetune=finetune,
-                perturbation_domain=perturbation_domain,
-                slope=slope,
-            )
+    Returns:
+        concatenated propagated backward bounds corresponding to each output node of the keras model
 
-        layer_fn = func
+    """
+    if oracle_map is None:
+        oracle_map = {}
+    if forward_layer_map is None:
+        forward_layer_map = {}
+    if forward_output_map is None:
+        forward_output_map = {}
+    if crown_output_map is None:
+        crown_output_map = {}
 
-    if not callable(layer_fn):
-        raise ValueError("Expected `layer_fn` argument to be a callable.")
-    ###############
-
-    if len(back_bounds) and len(to_list(model.output)) > 1:
-        raise NotImplementedError()
-
-    # sort nodes from input to output
-    dico_nodes = get_depth_dict(model)
-    keys = [e for e in dico_nodes.keys()]
-    keys.sort(reverse=True)
-
-    # generate input_map
-    if not finetune:
-        joint = True
-    set_mode_layer = Convert2BackwardMode(get_mode(ibp, affine), perturbation_domain)
-
-    input_map, backward_map, crown_map = get_input_nodes(
-        model=model,
-        dico_nodes=dico_nodes,
-        ibp=ibp,
-        affine=affine,
-        input_tensors=input_tensors,
-        output_map=forward_map,
-        layer_fn=layer_fn,
-        joint=joint,
-        perturbation_domain=perturbation_domain,
-        set_mode_layer=set_mode_layer,
-        **kwargs,
-    )
-    # time_1 = time.process_time()
-    # print('step1', time_1-zero_time)
-    # retrieve output nodes
+    # Retrieve output nodes in same order as model.outputs
+    output_nodes = get_output_nodes(model)
+    if is_submodel and len(output_nodes) > 1:
+        raise NotImplementedError(
+            "crown_model() not yet implemented for model " "whose embedded submodels have multiple outputs."
+        )
+    # Apply crown on each output, with the appropriate backward_bounds and model_output_shape
     output = []
-    output_nodes = dico_nodes[0]
-    # the ordering may change
-    output_names = [tensor._keras_history.operation.name for tensor in to_list(model.output)]
-    fuse_layer = None
-    for output_name in output_names:
-        for node in output_nodes:
-            if node.operation.name == output_name:
-                # compute with crown
-                output_crown, fuse_layer = crown_(
-                    node=node,
-                    ibp=ibp,
-                    affine=affine,
-                    input_map=input_map,
-                    layer_fn=layer_fn,
-                    backward_bounds=back_bounds,
-                    backward_map=backward_map,
-                    joint=joint,
-                    fuse=fuse,
-                    perturbation_domain=perturbation_domain,
-                    output_map=crown_map,
-                    fuse_layer=fuse_layer,
-                )
-                # time_2 = time.process_time()
-                # print('step2', time_2-time_1)
-                if fuse:
-                    # import pdb; pdb.set_trace()
-                    output += to_list(set_mode_layer(input_tensors + output_crown))
-                else:
-                    output = output_crown
+    for node, backward_bounds_node in zip(output_nodes, backward_bounds):
+        if is_submodel:
+            # for embedded submodel, pass the frozen model_output_shape fixed and the current backward_map
+            backward_map_node = backward_map
+            if model_output_shape is None:
+                raise RuntimeError("`submodel_output_shape` must be set if `submodel` is True.")
+        else:
+            # new backward_map and new model_output_shape for each output node
+            model_output_shape = get_model_output_shape(node=node, backward_bounds_node=backward_bounds_node)
+            backward_map_node = {}
 
-    return input_tensors, output, backward_map, None
+        output_crown = crown(
+            node=node,
+            layer_fn=layer_fn,
+            model_output_shape=model_output_shape,
+            backward_bounds=backward_bounds_node,
+            backward_map=backward_map_node,
+            oracle_map=oracle_map,
+            forward_output_map=forward_output_map,
+            forward_layer_map=forward_layer_map,
+            crown_output_map=crown_output_map,
+            perturbation_domain_input=perturbation_domain_input,
+            perturbation_domain=perturbation_domain,
+        )
+        output += output_crown
+
+    return output
 
 
 def convert_backward(
     model: Model,
-    input_tensors: list[keras.KerasTensor],
-    back_bounds: Optional[list[keras.KerasTensor]] = None,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
-    ibp: bool = True,
-    affine: bool = True,
+    perturbation_domain_input: keras.KerasTensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
-    finetune: bool = False,
-    forward_map: Optional[OutputMapDict] = None,
-    softmax_to_linear: bool = True,
-    joint: bool = True,
-    layer_fn: Callable[..., BackwardLayer] = to_backward,
-    final_ibp: bool = True,
-    final_affine: bool = False,
-    input_dim: int = -1,
+    layer_fn: Callable[..., DecomonLayer] = to_decomon,
+    backward_bounds: Optional[list[list[keras.KerasTensor]]] = None,
+    slope: Union[str, Slope] = Slope.V_SLOPE,
+    forward_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
+    forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
     **kwargs: Any,
-) -> tuple[list[keras.KerasTensor], list[keras.KerasTensor], dict[int, BackwardLayer], None]:
-    model = ensure_functional_model(model)
-    if input_dim == -1:
-        input_dim = get_input_dim(model)
-    if back_bounds is None:
-        back_bounds = []
-    if forward_map is None:
-        forward_map = {}
+) -> list[keras.KerasTensor]:
+    """Convert keras model via backward propagation.
+
+    Prepare layer_fn by freezing all args except layer and model_output_shape.
+    Ensure that model is functional (transform sequential ones to functional equivalent ones).
+
+    Args:
+        model: keras model to convert
+        perturbation_domain_input: perturbation domain input
+        perturbation_domain: perturbation domain type on keras model input
+        layer_fn: callable converting a layer and a model_output_shape into a (backward) decomon layer
+        backward_bounds: if set, should be of the same size as the number of model outputs
+            (each sublist potentially empty for starting with identity bounds)
+        forward_output_map: forward outputs per node from a previously performed forward conversion.
+            To be used for forward oracle if not empty.
+        forward_layer_map: forward decomon layer per node from a previously performed forward conversion.
+            To be used for forward oracle if not empty.
+        slope: slope used by decomon activation layers
+        **kwargs: keyword arguments to pass to layer_fn
+
+    Returns:
+        propagated affine bounds (concatenated), output of the future decomon model
+
+    """
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    if len(back_bounds):
-        if len(back_bounds) == 1:
-            C = back_bounds[0]
-            bias = K.zeros_like(C[:, 0])
-            back_bounds = [C, bias] * 2
-    result = crown_model(
-        model=model,
-        input_tensors=input_tensors,
-        back_bounds=back_bounds,
+    if backward_bounds is None:
+        backward_bounds = [[]] * len(model.outputs)
+
+    model = ensure_functional_model(model)
+    propagation = Propagation.BACKWARD
+
+    layer_fn = include_kwargs_layer_fn(
+        layer_fn,
         slope=slope,
-        ibp=ibp,
-        affine=affine,
         perturbation_domain=perturbation_domain,
-        finetune=finetune,
-        forward_map=forward_map,
-        softmax_to_linear=softmax_to_linear,
-        joint=joint,
-        layer_fn=layer_fn,
-        fuse=True,
+        propagation=propagation,
         **kwargs,
     )
 
-    input_tensors, output, backward_map, toto = result
-    mode_from = get_mode(ibp, affine)
-    mode_to = get_mode(final_ibp, final_affine)
-    output = Convert2Mode(
-        mode_from=mode_from,
-        mode_to=mode_to,
+    output = crown_model(
+        model=model,
+        layer_fn=layer_fn,
+        backward_bounds=backward_bounds,
+        perturbation_domain_input=perturbation_domain_input,
         perturbation_domain=perturbation_domain,
-        input_dim=input_dim,
-    )(output)
-    if mode_to != mode_from and mode_from == ForwardMode.IBP:
-        f_input = Lambda(lambda z: Concatenate(1)([z[0][:, None], z[1][:, None]]))
-        output[0] = f_input([input_tensors[1], input_tensors[0]])
-    return input_tensors, output, backward_map, toto
+        forward_output_map=forward_output_map,
+        forward_layer_map=forward_layer_map,
+    )
+
+    return output
+
+
+def get_model_output_shape(node: Node, backward_bounds_node: list[Tensor]):
+    """Get outer model output shape w/o batchsize.
+
+    If any backward bounds are passed, we deduce the outer keras model output shape from it.
+    We assume for that:
+    - backward_bounds = [w_l, b_l, w_u, b_u]
+    - we can have w_l, w_u in diagonal representation (w_l.shape == b_l.shape)
+    - we have the batchsize included in the backward_bounds
+
+    => model_output_shape = backward_bounds[1].shape[1:]
+
+    If no backward bounds are given, we fall back to the output shape of the given output node.
+
+    Args:
+        node: current output node of the (potentially inner) keras model to convert
+        backward_bounds_node: backward bounds specified for this node
+
+    Returns:
+        outer keras model output shape, excluding batchsize
+
+    """
+    if len(backward_bounds_node) == 0:
+        return node.outputs[0].shape[1:]
+    else:
+        _, b, _, _ = backward_bounds_node
+        return b.shape[1:]
+
+
+def include_kwargs_layer_fn(
+    layer_fn: Callable[..., DecomonLayer],
+    perturbation_domain: PerturbationDomain,
+    propagation: Propagation,
+    slope: Slope,
+    **kwargs: Any,
+) -> Callable[[Layer, tuple[int, ...]], DecomonLayer]:
+    """Include external parameters in the function converting layers
+
+    In particular, include propagation=Propagation.BACKWARD.
+
+    Args:
+        layer_fn:
+        perturbation_domain:
+        propagation:
+        slope:
+        **kwargs:
+
+    Returns:
+
+    """
+
+    def func(layer: Layer, model_output_shape: tuple[int, ...]) -> DecomonLayer:
+        return layer_fn(
+            layer,
+            model_output_shape=model_output_shape,
+            slope=slope,
+            perturbation_domain=perturbation_domain,
+            propagation=propagation,
+            **kwargs,
+        )
+
+    return func
