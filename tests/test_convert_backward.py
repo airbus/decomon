@@ -15,8 +15,6 @@ def keras_model_fn(name, helpers):
         return lambda input_shape, dtype=None: helpers.toy_network_tutorial(
             input_shape=input_shape, dtype=dtype, activation=None
         )
-    elif name == "tutorial_activation_embedded":
-        return helpers.toy_network_tutorial_with_embedded_activation
     elif name == "add":
         return helpers.toy_network_add
     elif name == "add_linear":

@@ -42,6 +42,8 @@ def crown(
     forward_output_map: dict[int, list[keras.KerasTensor]],
     forward_layer_map: dict[int, DecomonLayer],
     crown_output_map: dict[int, list[keras.KerasTensor]],
+    submodels_stack: list[Node],
+    submodel_perturbation_domain_input_map: dict[int, keras.KerasTensor],
     perturbation_domain_input: keras.KerasTensor,
     perturbation_domain: PerturbationDomain,
 ) -> list[keras.KerasTensor]:
@@ -65,6 +67,14 @@ def crown(
         crown_output_map: output of subcrowns per output node.
             Avoids relaunching a crown if several nodes share parents.
             To be used by `get_oracle()`.
+        submodels_stack: not empty only if in a submodel.
+            A list of nodes corresponding to the successive embedded submodels,
+            from the outerest to the innerest submodel, the last one being the current submodel.
+            Will be used to get perturbation_domain_input for this submodel, to be used only by crown oracle.
+            (Forward oracle being precomputed from the full model, the original perturbation_domain_input is used for it)
+            To be used by `get_oracle()`.
+        submodel_perturbation_domain_input_map: stores already computed perturbation_domain_input for submodels.
+            To be used by `get_oracle()`.
         backward_map: stores converted layer by node for the current crown
           (should depend on the proper model output and thus change for each sub-crown)
 
@@ -78,25 +88,23 @@ def crown(
         return backward_bounds
     else:
         if isinstance(node.operation, Model):
-            # TO CHECK perturbation input submodel ?
-            # forward oracle:
-            #  - ibp (+-affine): not needed
-            #  - affine (w/o ibp): forward_output give affine bounds on outer model input => perturbation_domain
-            # crown oracle:
-            #  - see where stop subcrowns, maybe to submodel inputs,
-            #    in which case we need to construct perturbation_domain_input_submodel from get_oracle(node)
-            perturbation_domain_input_submodel = perturbation_domain_input
+            if len(parents) > 1:
+                raise NotImplementedError(
+                    "crown_model() not yet implemented for model whose embedded submodels have multiple inputs."
+                )
             backward_bounds = crown_model(
                 model=node.operation,
                 layer_fn=layer_fn,
                 backward_bounds=[backward_bounds],
-                perturbation_domain_input=perturbation_domain_input_submodel,
+                perturbation_domain_input=perturbation_domain_input,
                 perturbation_domain=perturbation_domain,
                 oracle_map=oracle_map,
                 forward_output_map=forward_output_map,
                 forward_layer_map=forward_layer_map,
                 crown_output_map=crown_output_map,
                 is_submodel=True,
+                submodels_stack=submodels_stack + [node],
+                submodel_perturbation_domain_input_map=submodel_perturbation_domain_input_map,
                 backward_map=backward_map,
                 model_output_shape=model_output_shape,
             )
@@ -118,6 +126,8 @@ def crown(
                     forward_layer_map=forward_layer_map,
                     backward_layer=backward_layer,
                     crown_output_map=crown_output_map,
+                    submodels_stack=submodels_stack,
+                    submodel_perturbation_domain_input_map=submodel_perturbation_domain_input_map,
                     layer_fn=layer_fn,
                 )
 
@@ -134,7 +144,7 @@ def crown(
             backward_bounds, _ = backward_layer.inputs_outputs_spec.split_outputs(backward_layer_outputs)
 
         # Call crown recursively on parent nodes
-        if isinstance(backward_layer, DecomonMerge):
+        if not isinstance(node.operation, Model) and isinstance(backward_layer, DecomonMerge):
             # merging layer
             crown_bounds_list: list[list[Tensor]] = []
             for backward_bounds_i, parent in zip(backward_bounds, parents):
@@ -149,6 +159,8 @@ def crown(
                         forward_output_map=forward_output_map,
                         forward_layer_map=forward_layer_map,
                         crown_output_map=crown_output_map,
+                        submodels_stack=submodels_stack,
+                        submodel_perturbation_domain_input_map=submodel_perturbation_domain_input_map,
                         perturbation_domain_input=perturbation_domain_input,
                         perturbation_domain=perturbation_domain,
                     )
@@ -172,6 +184,8 @@ def crown(
                 forward_output_map=forward_output_map,
                 forward_layer_map=forward_layer_map,
                 crown_output_map=crown_output_map,
+                submodels_stack=submodels_stack,
+                submodel_perturbation_domain_input_map=submodel_perturbation_domain_input_map,
                 perturbation_domain_input=perturbation_domain_input,
                 perturbation_domain=perturbation_domain,
             )
@@ -187,6 +201,8 @@ def get_oracle(
     forward_layer_map: dict[int, DecomonLayer],
     backward_layer: DecomonLayer,
     crown_output_map: dict[int, list[keras.KerasTensor]],
+    submodels_stack: list[Node],
+    submodel_perturbation_domain_input_map: dict[int, keras.KerasTensor],
     layer_fn: Callable[[Layer, tuple[int, ...]], DecomonLayer],
 ) -> Union[list[keras.KerasTensor], list[list[keras.KerasTensor]]]:
     """Get oracle bounds "on demand".
@@ -209,6 +225,14 @@ def get_oracle(
             To be used for crown oracle.
         crown_output_map: output of subcrowns per output node.
             Avoids relaunching a crown if several nodes share parents.
+            To be used for crown oracle.
+        submodels_stack: not empty only if in a submodel.
+            A list of nodes corresponding to the successive embedded submodels,
+            from the outerest to the innerest submodel, the last one being the current submodel.
+            Will be used to get perturbation_domain_input for this submodel, to be used only by crown oracle.
+            (Forward oracle being precomputed from the full model, the original perturbation_domain_input is used for it)
+            To be used for crown oracle.
+        submodel_perturbation_domain_input_map: stores already computed perturbation_domain_input for submodels.
             To be used for crown oracle.
         layer_fn: callable converting a layer and a model_output_shape into a (backward) decomon layer.
             To be used for crown oracle.
@@ -240,6 +264,39 @@ def get_oracle(
             oracle_bounds = forward_layer.call_oracle(forward_input)
         else:
             # crown oracle
+
+            # perturbation domain input for the (sub)model?
+            if len(submodels_stack) == 0:
+                # in outer model: we already got the proper pertubation domain input
+                perturbation_domain_input_submodel = perturbation_domain_input
+            else:
+                submodel_node = submodels_stack[-1]
+                if id(submodel_node) in submodel_perturbation_domain_input_map:
+                    # already computed for this submodel
+                    perturbation_domain_input_submodel = submodel_perturbation_domain_input_map[id(submodel_node)]
+                else:
+                    # reconstruct perturbation domain input if in a new submodel
+                    #  1. get oracle bounds for the current submodel node
+                    #  2. use perturbation domain to reconstruct its input from it for the submodel
+                    oracle_bounds_on_submodel_input = get_oracle(
+                        node=submodel_node,
+                        perturbation_domain_input=perturbation_domain_input,
+                        perturbation_domain=perturbation_domain,
+                        oracle_map=oracle_map,
+                        forward_output_map=forward_output_map,
+                        forward_layer_map=forward_layer_map,
+                        backward_layer=backward_layer,  # to replace by an "oracle" layer
+                        crown_output_map=crown_output_map,
+                        submodels_stack=submodels_stack[:-1],  # remaining submodels above the current one (if any)
+                        submodel_perturbation_domain_input_map=submodel_perturbation_domain_input_map,
+                        layer_fn=layer_fn,
+                    )
+                    perturbation_domain_input_submodel = perturbation_domain.get_input_from_constant_bounds(
+                        oracle_bounds_on_submodel_input
+                    )
+                    submodel_perturbation_domain_input_map[id(submodel_node)] = perturbation_domain_input_submodel
+
+            # affine bounds on parents from sub-crowns
             crown_bounds = []
             for parent in parents:
                 if id(parent) in crown_output_map:
@@ -257,6 +314,8 @@ def get_oracle(
                         forward_output_map=forward_output_map,
                         forward_layer_map=forward_layer_map,
                         crown_output_map=crown_output_map,
+                        submodels_stack=submodels_stack,
+                        submodel_perturbation_domain_input_map=submodel_perturbation_domain_input_map,
                         perturbation_domain_input=perturbation_domain_input,
                         perturbation_domain=perturbation_domain,
                     )
@@ -264,8 +323,8 @@ def get_oracle(
                     crown_output_map[id(parent)] = crown_bounds_parent
                 crown_bounds += crown_bounds_parent
 
-            # deduce oracle bounds from affine bounds on keras layer inputs
-            backward_oracle_inputs = crown_bounds + [perturbation_domain_input]
+            # deduce oracle bounds from affine bounds on keras (sub)model inputs and corresponding perturbation domain input
+            backward_oracle_inputs = crown_bounds + [perturbation_domain_input_submodel]
             oracle_bounds = backward_layer.call_oracle(backward_oracle_inputs)
 
     # store oracle
@@ -285,6 +344,8 @@ def crown_model(
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
     crown_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     is_submodel: bool = False,
+    submodels_stack: Optional[list[Node]] = None,
+    submodel_perturbation_domain_input_map: Optional[dict[int, keras.KerasTensor]] = None,
     backward_map: Optional[dict[int, DecomonLayer]] = None,
     model_output_shape: Optional[tuple[int, ...]] = None,
 ) -> list[keras.KerasTensor]:
@@ -308,6 +369,14 @@ def crown_model(
             Avoids relaunching a crown if several nodes share parents.
             To be used for crown oracle.
         is_submodel: specify if called from within a crown to propagate through an embedded submodel
+        submodels_stack: Not empty only if in a submodel.
+            A list of nodes corresponding to the successive embedded submodels,
+            from the outerest to the innerest submodel, the last one being the current submodel.
+            Will be used to get perturbation_domain_input for this submodel, to be used only by crown oracle.
+            (Forward oracle being precomputed from the full model, the original perturbation_domain_input is used for it)
+            To be used for crown oracle.
+        submodel_perturbation_domain_input_map: stores already computed perturbation_domain_input for submodels.
+            To be used for crown oracle.
         backward_map: stores converted layer by node for the current crown
           Should be set only if is_submodel is True.
         model_output_shape: if submodel is True, must be set to the output_shape used in the current crown
@@ -324,12 +393,19 @@ def crown_model(
         forward_output_map = {}
     if crown_output_map is None:
         crown_output_map = {}
+    if submodels_stack is None:
+        submodels_stack = []
+    if submodel_perturbation_domain_input_map is None:
+        submodel_perturbation_domain_input_map = {}
+
+    # ensure (sub)model is functional
+    model = ensure_functional_model(model)
 
     # Retrieve output nodes in same order as model.outputs
     output_nodes = get_output_nodes(model)
     if is_submodel and len(output_nodes) > 1:
         raise NotImplementedError(
-            "crown_model() not yet implemented for model " "whose embedded submodels have multiple outputs."
+            "crown_model() not yet implemented for model whose embedded submodels have multiple outputs."
         )
     # Apply crown on each output, with the appropriate backward_bounds and model_output_shape
     output = []
@@ -354,6 +430,8 @@ def crown_model(
             forward_output_map=forward_output_map,
             forward_layer_map=forward_layer_map,
             crown_output_map=crown_output_map,
+            submodels_stack=submodels_stack,
+            submodel_perturbation_domain_input_map=submodel_perturbation_domain_input_map,
             perturbation_domain_input=perturbation_domain_input,
             perturbation_domain=perturbation_domain,
         )
