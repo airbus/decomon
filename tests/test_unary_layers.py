@@ -5,6 +5,7 @@ from pytest_cases import fixture, fixture_ref, parametrize
 
 from decomon.keras_utils import batch_multid_dot
 from decomon.layers import DecomonActivation, DecomonDense
+from decomon.layers.activations.activation import DecomonLinear
 
 
 @fixture
@@ -67,7 +68,7 @@ def test_decomon_unary_layer(
     output_shape = layer.output.shape[1:]
     model_output_shape = output_shape
     model_input_shape = keras_symbolic_model_input.shape[1:]
-    decomon_symbolic_inputs = decomon_symbolic_input_fn(output_shape=output_shape)
+
     decomon_layer = decomon_layer_class(
         layer=layer,
         ibp=ibp,
@@ -78,20 +79,28 @@ def test_decomon_unary_layer(
         model_input_shape=model_input_shape,
         **decomon_layer_kwargs,
     )
+
+    decomon_symbolic_inputs = decomon_symbolic_input_fn(output_shape=output_shape, linear=decomon_layer.linear)
     decomon_layer(decomon_symbolic_inputs)
 
     # call on actual inputs
     keras_model_input = keras_model_input_fn()
     keras_layer_input = keras_layer_input_fn(keras_model_input)
     decomon_inputs = decomon_input_fn(
-        keras_model_input=keras_model_input, keras_layer_input=keras_layer_input, output_shape=output_shape
+        keras_model_input=keras_model_input,
+        keras_layer_input=keras_layer_input,
+        output_shape=output_shape,
+        linear=decomon_layer.linear,
     )
 
     keras_output = layer(keras_layer_input)
     decomon_output = decomon_layer(decomon_inputs)
 
-    # check affine representation is ok
-    if decomon_layer.linear:
+    # check affine representation is ok  (except for linear activation, undefined)
+    if decomon_layer.linear and not (
+        (isinstance(decomon_layer, DecomonActivation) and isinstance(decomon_layer.decomon_activation, DecomonLinear))
+        or isinstance(decomon_layer, DecomonLinear)
+    ):
         w, b = decomon_layer.get_affine_representation()
         diagonal = (False, w.shape == b.shape)
         missing_batchsize = (False, True)

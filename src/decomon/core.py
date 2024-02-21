@@ -200,6 +200,7 @@ class InputsOutputsSpec:
         model_input_shape: Optional[tuple[int, ...]] = None,
         model_output_shape: Optional[tuple[int, ...]] = None,
         is_merging_layer: bool = False,
+        linear: bool = False,
     ):
         """
         Args:
@@ -213,6 +214,7 @@ class InputsOutputsSpec:
             model_input_shape: shape of the underlying keras model input (w/o the batch axis)
             model_output_shape: shape of the underlying keras model output (w/o the batch axis)
             is_merging_layer: whether the underlying keras layer is a merging layer (i.e. with several inputs)
+            linear: whether the underlying keras layer is linear (thus do not need oracle bounds for instance)
 
         """
         # checks
@@ -237,6 +239,7 @@ class InputsOutputsSpec:
         self.affine = affine
         self.ibp = ibp
         self.is_merging_layer = is_merging_layer
+        self.linear = linear
         self.perturbation_domain: PerturbationDomain
         if perturbation_domain is None:
             self.perturbation_domain = BoxDomain()
@@ -262,6 +265,20 @@ class InputsOutputsSpec:
         """Specify if decomon inputs should integrate keras model inputs."""
         return self.propagation == Propagation.FORWARD and self.affine
 
+    def needs_oracle_bounds(self) -> bool:
+        """Specify if decomon layer needs oracle bounds on keras layer inputs."""
+        return not self.linear and (self.propagation == Propagation.BACKWARD or self.affine)
+
+    def needs_constant_bounds_inputs(self) -> bool:
+        """Specify if decomon inputs should integrate constant bounds."""
+        return (self.propagation == Propagation.FORWARD and self.ibp) or (
+            self.propagation == Propagation.BACKWARD and self.needs_oracle_bounds()
+        )
+
+    def needs_affine_bounds_inputs(self) -> bool:
+        """Specify if decomon inputs should integrate affine bounds."""
+        return (self.propagation == Propagation.FORWARD and self.affine) or (self.propagation == Propagation.BACKWARD)
+
     def cannot_have_empty_affine_inputs(self) -> bool:
         """Specify that it is not allowed to have empty affine bounds.
 
@@ -281,8 +298,9 @@ class InputsOutputsSpec:
     def nb_input_tensors(self) -> int:
         nb = 0
         if self.propagation == Propagation.BACKWARD:
-            # ibp
-            nb += 2 * self.nb_keras_inputs
+            # oracle bounds
+            if self.needs_oracle_bounds():
+                nb += 2 * self.nb_keras_inputs
             # affine
             nb += 4
             # model inputs
@@ -360,8 +378,9 @@ class InputsOutputsSpec:
 
         Returns:
             affine_bounds_to_propagate, constant_oracle_bounds, perturbation_domain_inputs:
-                each one can be empty if not relevant, and according to propagation mode and merging status,
-                it will be list of tensors or list of list of tensors.
+                each one can be empty if not relevant,
+                moreover, according to propagation mode and merging status,
+                it will be list of tensors or list of lists of tensors.
 
         More details:
 
@@ -378,14 +397,13 @@ class InputsOutputsSpec:
                 )
 
             - backward: only 1 affine bounds to propagate w.r.t keras layer output
-                + k constant bounds w.r.t each keras layer input
+                + k constant bounds w.r.t each keras layer input (empty if layer not linear)
 
-                inputs = (
-                    affine_bounds_to_propagate
-                    + constant_oracle_bounds_0 + ... +  constant_oracle_bounds_k
-                    + perturbation_domain_inputs
-                )
-
+                    inputs = (
+                        affine_bounds_to_propagate
+                        + constant_oracle_bounds_0 + ... +  constant_oracle_bounds_k
+                        + perturbation_domain_inputs
+                    )
         Note: in case of merging layer + forward, we should not have empty affine bounds
           as it will be impossible to split properly the inputs.
 
@@ -400,15 +418,18 @@ class InputsOutputsSpec:
         if self.is_merging_layer:
             if self.propagation == Propagation.BACKWARD:
                 # expected number of constant bounds
-                nb_constant_bounds_by_keras_input = 2
+                nb_constant_bounds_by_keras_input = 2 if self.needs_oracle_bounds() else 0
                 nb_constant_bounds = self.nb_keras_inputs * nb_constant_bounds_by_keras_input
                 # remove affine bounds (could be empty to express identity bounds)
                 affine_bounds_to_propagate = inputs[: len(inputs) - nb_constant_bounds]
                 inputs = inputs[len(inputs) - nb_constant_bounds :]
                 # split constant bounds by keras input
-                constant_oracle_bounds = [
-                    [inputs[i], inputs[i + 1]] for i in range(0, len(inputs), nb_constant_bounds_by_keras_input)
-                ]
+                if nb_constant_bounds > 0:
+                    constant_oracle_bounds = [
+                        [inputs[i], inputs[i + 1]] for i in range(0, len(inputs), nb_constant_bounds_by_keras_input)
+                    ]
+                else:
+                    constant_oracle_bounds = []
             else:  # forward
                 # split bounds by keras input
                 nb_affine_bounds_by_keras_input = 4 if self.affine else 0
@@ -427,7 +448,7 @@ class InputsOutputsSpec:
                 ]
         else:
             # Remove constant bounds
-            if self.propagation == Propagation.BACKWARD or self.ibp:
+            if self.needs_constant_bounds_inputs():
                 constant_oracle_bounds = inputs[-2:]
                 inputs = inputs[:-2]
             else:
@@ -459,7 +480,7 @@ class InputsOutputsSpec:
         Returns:
             affine_bounds_to_propagate_shape, constant_oracle_bounds_shape, perturbation_domain_inputs_shape:
                 each one can be empty if not relevant, and according to propagation mode and merging status,
-                it will be list of shapes or list of list of shapes.
+                it will be list of shapes or list of lists of shapes.
 
         """
         return self.split_inputs(inputs=input_shape)  # type: ignore
@@ -476,14 +497,19 @@ class InputsOutputsSpec:
 
         Args:
             affine_bounds_to_propagate:
-                - forward + affine: affine bounds on keras layer outputs w.r.t. model input
-                - backward: affine bounds on model output w.r.t each keras layer input
-                  -> list of list of tensor in merging case;
-                  -> list of tensor else.
+                - forward + affine: affine bounds on each keras layer input w.r.t. model input
+                    -> list of lists of tensors in merging case;
+                    -> list of tensors else.
+                - backward: affine bounds on model output w.r.t keras layer output
+                    -> list of tensors
                 - else: empty
-            constant_bounds_propagated:
-                - forward + ibp: ibp bounds on keras layer outputs
-                - else: empty or None
+            constant_oracle_bounds:
+                - forward + ibp: ibp bounds on keras layer inputs
+                - backward + not linear: oracle bounds on keras layer inputs
+                - else: empty
+            perturbation_domain_inputs:
+                - forward + affine: perturbation domain input wrapped in a list
+                - else: empty
 
         Returns:
             flattened inputs
@@ -500,7 +526,7 @@ class InputsOutputsSpec:
                     )
 
                 - backward: only 1 affine bounds to propagate w.r.t keras layer output
-                    + k constant bounds w.r.t each keras layer input
+                    + k constant bounds w.r.t each keras layer input  (empty of linear layer)
 
                     inputs = (
                         affine_bounds_to_propagate
@@ -511,9 +537,12 @@ class InputsOutputsSpec:
         """
         if self.is_merging_layer:
             if self.propagation == Propagation.BACKWARD:
-                flattened_constant_oracle_bounds = [
-                    t for constant_oracle_bounds_i in constant_oracle_bounds for t in constant_oracle_bounds_i
-                ]
+                if self.needs_oracle_bounds():
+                    flattened_constant_oracle_bounds = [
+                        t for constant_oracle_bounds_i in constant_oracle_bounds for t in constant_oracle_bounds_i
+                    ]
+                else:
+                    flattened_constant_oracle_bounds = []
                 return affine_bounds_to_propagate + flattened_constant_oracle_bounds + perturbation_domain_inputs
             else:  # forward
                 bounds_by_keras_input = [
@@ -539,7 +568,7 @@ class InputsOutputsSpec:
 
         Returns:
             affine_bounds_propagated, constant_bounds_propagated:
-                each one can be empty if not relevant and can be list of tensors or a list of list of tensors
+                each one can be empty if not relevant and can be list of tensors or a list of lists of tensors
                 according to propagation and merging status.
 
         More details:
@@ -547,7 +576,7 @@ class InputsOutputsSpec:
             - forward: affine_bounds_propagated, constant_bounds_propagated: both simple lists of tensors corresponding to
                 affine and constant bounds on keras layer output.
             - backward: constant_bounds_propagated is empty (not relevant) and
-                - merging layer: affine_bounds_propagated is a list of list of tensors corresponding
+                - merging layer: affine_bounds_propagated is a list of lists of tensors corresponding
                     to partial affine bounds on model output w.r.t each keras input
                 - else: affine_bounds_propagated is a simple list of tensors
 
@@ -578,13 +607,13 @@ class InputsOutputsSpec:
 
         Args:
             affine_bounds_propagated:
-                - forward + affine: affine bounds on keras layer outputs w.r.t. model input
+                - forward + affine: affine bounds on keras layer output w.r.t. model input
                 - backward: affine bounds on model output w.r.t each keras layer input
-                  -> list of list of tensor in merging case;
-                  -> list of tensor else.
+                  -> list of lists of tensors in merging case;
+                  -> list of tensors else.
                 - else: empty
             constant_bounds_propagated:
-                - forward + ibp: ibp bounds on keras layer outputs
+                - forward + ibp: ibp bounds on keras layer output
                 - else: empty or None
 
         Returns:

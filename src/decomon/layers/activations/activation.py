@@ -92,7 +92,6 @@ class DecomonActivation(DecomonBaseActivation):
             slope=slope,
             **kwargs,
         )
-        self.slope = slope
         decomon_activation_class = get(self.layer.activation)
         self.decomon_activation = decomon_activation_class(
             layer=layer,
@@ -105,6 +104,10 @@ class DecomonActivation(DecomonBaseActivation):
             slope=slope,
             **kwargs,
         )
+        # linearity of the wrapping activation layer is decided by the wrapped activation layer
+        self.linear = self.decomon_activation.linear
+        # so do the inputs/outputs format
+        self.inputs_outputs_spec = self.decomon_activation.inputs_outputs_spec
 
     def get_affine_representation(self) -> tuple[Tensor, Tensor]:
         return self.decomon_activation.get_affine_representation()

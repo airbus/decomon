@@ -148,6 +148,7 @@ class Helpers:
         empty=False,
         diag=False,
         nobatch=False,
+        for_linear_layer=False,
     ):
         inputs_outputs_spec = InputsOutputsSpec(
             ibp=ibp,
@@ -157,13 +158,14 @@ class Helpers:
             layer_input_shape=layer_input_shape,
             model_input_shape=model_input_shape,
             model_output_shape=model_output_shape,
+            linear=for_linear_layer,
         )
         if inputs_outputs_spec.needs_perturbation_domain_inputs():
             perturbation_domain_inputs_shape = [perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)]
         else:
             perturbation_domain_inputs_shape = []
 
-        if affine and not empty:
+        if inputs_outputs_spec.needs_affine_bounds_inputs() and not empty:
             if propagation == Propagation.FORWARD:
                 b_in_shape = layer_input_shape
                 w_in_shape = model_input_shape + layer_input_shape
@@ -177,7 +179,7 @@ class Helpers:
         else:
             affine_bounds_to_propagate_shape = []
 
-        if ibp:
+        if inputs_outputs_spec.needs_constant_bounds_inputs():
             constant_oracle_bounds_shape = [layer_input_shape, layer_input_shape]
         else:
             constant_oracle_bounds_shape = []
@@ -197,6 +199,7 @@ class Helpers:
         empty=False,
         diag=False,
         nobatch=False,
+        for_linear_layer=False,
         dtype=keras_config.floatx(),
     ):
         """Generate decomon symbolic inputs for a decomon layer
@@ -232,6 +235,7 @@ class Helpers:
             empty=empty,
             diag=diag,
             nobatch=nobatch,
+            for_linear_layer=for_linear_layer,
         )
         perturbation_domain_inputs = [Input(shape, dtype=dtype) for shape in perturbation_domain_inputs_shape]
         constant_oracle_bounds = [Input(shape, dtype=dtype) for shape in constant_oracle_bounds_shape]
@@ -267,6 +271,7 @@ class Helpers:
         empty=False,
         diag=False,
         nobatch=False,
+        for_linear_layer=False,
         dtype=keras_config.floatx(),
     ):
         """Generate simple decomon inputs for a layer from the corresponding keras input
@@ -303,6 +308,7 @@ class Helpers:
             layer_input_shape=layer_input_shape,
             model_input_shape=model_input_shape,
             model_output_shape=model_output_shape,
+            linear=for_linear_layer,
         )
 
         if inputs_outputs_spec.needs_perturbation_domain_inputs():
@@ -313,7 +319,7 @@ class Helpers:
         else:
             perturbation_domain_inputs = []
 
-        if affine and not empty:
+        if inputs_outputs_spec.needs_affine_bounds_inputs() and not empty:
             batchsize = keras_input.shape[0]
             if propagation == Propagation.FORWARD:
                 bias_shape = layer_input_shape
@@ -340,7 +346,7 @@ class Helpers:
         else:
             affine_bounds_to_propagate = []
 
-        if ibp:
+        if inputs_outputs_spec.needs_constant_bounds_inputs():
             constant_oracle_bounds = [keras_input, keras_input]
         else:
             constant_oracle_bounds = []
@@ -362,7 +368,7 @@ class Helpers:
 
     @staticmethod
     def generate_merging_decomon_input_from_single_decomon_inputs(
-        decomon_inputs: list[list[Tensor]], ibp: bool, affine: bool, propagation: Propagation
+        decomon_inputs: list[list[Tensor]], ibp: bool, affine: bool, propagation: Propagation, linear: bool
     ) -> list[Tensor]:
         inputs_outputs_spec_single = InputsOutputsSpec(
             ibp=ibp,
@@ -371,6 +377,7 @@ class Helpers:
             layer_input_shape=tuple(),
             model_input_shape=tuple(),
             model_output_shape=tuple(),
+            linear=linear,
         )
         affine_bounds_to_propagate, constant_oracle_bounds, perturbation_domain_inputs = [], [], []
         for decomon_input in decomon_inputs:
@@ -394,6 +401,7 @@ class Helpers:
             model_input_shape=tuple(),
             model_output_shape=tuple(),
             is_merging_layer=True,
+            linear=linear,
         )
         return inputs_outputs_spec_merging.flatten_inputs(
             affine_bounds_to_propagate=affine_bounds_to_propagate,
@@ -964,7 +972,7 @@ class Helpers:
             layer_input_shape = [tuple()]
         else:
             layer_input_shape = tuple()
-        inputs_outputs_specs = InputsOutputsSpec(
+        inputs_outputs_spec = InputsOutputsSpec(
             ibp=ibp,
             affine=affine,
             propagation=propagation,
@@ -972,9 +980,7 @@ class Helpers:
             model_output_shape=tuple(),
             is_merging_layer=is_merging_layer,
         )
-        affine_bounds_propagated, constant_bounds_propagated = inputs_outputs_specs.split_outputs(
-            outputs=decomon_output
-        )
+        affine_bounds_propagated, constant_bounds_propagated = inputs_outputs_spec.split_outputs(outputs=decomon_output)
         if propagation == Propagation.BACKWARD or affine:
             if is_merging_layer and propagation == Propagation.BACKWARD:
                 # one list of affine bounds by keras layer input
@@ -1310,7 +1316,7 @@ def simple_layer_input_functions(
     keras_symbolic_model_input_fn = lambda: Input(input_shape)
     keras_symbolic_layer_input_fn = lambda keras_symbolic_model_input: keras_symbolic_model_input
 
-    decomon_symbolic_input_fn = lambda output_shape: helpers.get_decomon_symbolic_inputs(
+    decomon_symbolic_input_fn = lambda output_shape, linear: helpers.get_decomon_symbolic_inputs(
         model_input_shape=input_shape,
         model_output_shape=output_shape,
         layer_input_shape=input_shape,
@@ -1322,12 +1328,13 @@ def simple_layer_input_functions(
         empty=empty,
         diag=diag,
         nobatch=nobatch,
+        for_linear_layer=linear,
     )
 
     keras_model_input_fn = lambda: helpers.generate_random_tensor(input_shape, batchsize=batchsize)
     keras_layer_input_fn = lambda keras_model_input: keras_model_input
 
-    decomon_input_fn = lambda keras_model_input, keras_layer_input, output_shape: helpers.generate_simple_decomon_layer_inputs_from_keras_input(
+    decomon_input_fn = lambda keras_model_input, keras_layer_input, output_shape, linear: helpers.generate_simple_decomon_layer_inputs_from_keras_input(
         keras_input=keras_layer_input,
         layer_output_shape=output_shape,
         ibp=ibp,
@@ -1337,6 +1344,7 @@ def simple_layer_input_functions(
         empty=empty,
         diag=diag,
         nobatch=nobatch,
+        for_linear_layer=linear,
     )
 
     return (
@@ -1360,7 +1368,7 @@ def convert_standard_input_functions_for_single_layer(
 
     if propagation == Propagation.FORWARD:
 
-        def decomon_symbolic_input_fn(output_shape):
+        def decomon_symbolic_input_fn(output_shape, linear):
             x, y, z, u_c, w_u, b_u, l_c, w_l, b_l = get_tensor_decomposition_fn()
             layer_input_shape = y.shape[1:]
             model_input_shape = x.shape[1:]
@@ -1373,6 +1381,7 @@ def convert_standard_input_functions_for_single_layer(
                 layer_input_shape=layer_input_shape,
                 model_input_shape=model_input_shape,
                 model_output_shape=output_shape,
+                linear=linear,
             )
 
             if affine:
@@ -1399,7 +1408,7 @@ def convert_standard_input_functions_for_single_layer(
                 perturbation_domain_inputs=perturbation_domain_inputs,
             )
 
-        def decomon_input_fn(keras_model_input, keras_layer_input, output_shape):
+        def decomon_input_fn(keras_model_input, keras_layer_input, output_shape, linear):
             x, y, z, u_c, w_u, b_u, l_c, w_l, b_l = get_standard_values_fn()
             layer_input_shape = tuple(y.shape[1:])
             model_input_shape = tuple(x.shape[1:])
@@ -1412,6 +1421,7 @@ def convert_standard_input_functions_for_single_layer(
                 layer_input_shape=layer_input_shape,
                 model_input_shape=model_input_shape,
                 model_output_shape=output_shape,
+                linear=linear,
             )
 
             if affine:
@@ -1440,7 +1450,7 @@ def convert_standard_input_functions_for_single_layer(
 
     else:  # backward
 
-        def decomon_symbolic_input_fn(output_shape):
+        def decomon_symbolic_input_fn(output_shape, linear):
             x, y, z, u_c, w_u, b_u, l_c, w_l, b_l = get_tensor_decomposition_fn()
             layer_input_shape = y.shape[1:]
             model_input_shape = x.shape[1:]
@@ -1453,9 +1463,10 @@ def convert_standard_input_functions_for_single_layer(
                 layer_input_shape=layer_input_shape,
                 model_input_shape=model_input_shape,
                 model_output_shape=output_shape,
+                linear=linear,
             )
 
-            if ibp:
+            if inputs_outputs_spec.needs_constant_bounds_inputs():
                 constant_oracle_bounds = [l_c, u_c]
             else:
                 constant_oracle_bounds = []
@@ -1469,7 +1480,7 @@ def convert_standard_input_functions_for_single_layer(
                 perturbation_domain_inputs = []
 
             # take identity affine bounds
-            if affine:
+            if inputs_outputs_spec.needs_affine_bounds_inputs():
                 simple_decomon_inputs = helpers.get_decomon_symbolic_inputs(
                     model_input_shape=model_input_shape,
                     model_output_shape=output_shape,
@@ -1493,7 +1504,7 @@ def convert_standard_input_functions_for_single_layer(
                 perturbation_domain_inputs=perturbation_domain_inputs,
             )
 
-        def decomon_input_fn(keras_model_input, keras_layer_input, output_shape):
+        def decomon_input_fn(keras_model_input, keras_layer_input, output_shape, linear):
             x, y, z, u_c, w_u, b_u, l_c, w_l, b_l = get_standard_values_fn()
             layer_input_shape = tuple(y.shape[1:])
             model_input_shape = tuple(x.shape[1:])
@@ -1506,9 +1517,10 @@ def convert_standard_input_functions_for_single_layer(
                 layer_input_shape=layer_input_shape,
                 model_input_shape=model_input_shape,
                 model_output_shape=output_shape,
+                linear=linear,
             )
 
-            if ibp:
+            if inputs_outputs_spec.needs_constant_bounds_inputs():
                 constant_oracle_bounds = [K.convert_to_tensor(a) for a in (l_c, u_c)]
             else:
                 constant_oracle_bounds = []
@@ -1522,7 +1534,7 @@ def convert_standard_input_functions_for_single_layer(
                 perturbation_domain_inputs = []
 
             #  take identity affine bounds
-            if affine:
+            if inputs_outputs_spec.needs_affine_bounds_inputs():
                 simple_decomon_inputs = helpers.generate_simple_decomon_layer_inputs_from_keras_input(
                     keras_input=keras_layer_input,
                     layer_output_shape=output_shape,
@@ -1533,6 +1545,7 @@ def convert_standard_input_functions_for_single_layer(
                     empty=empty,
                     diag=diag,
                     nobatch=nobatch,
+                    for_linear_layer=linear,
                 )
                 affine_bounds_to_propagate, _, _ = inputs_outputs_spec.split_inputs(simple_decomon_inputs)
             else:

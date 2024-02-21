@@ -82,7 +82,6 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
         model_output_shape = model_output_shape_if_no_singlelayer_model
 
     model_input_shape = (model_input_dim,)
-    x_shape = perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)
 
     # keras layer
     layer = Dense(units=layer_output_dim)
@@ -98,7 +97,7 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
         model_output_shape=model_output_shape,
         model_input_shape=model_input_shape,
     )
-    non_linear_decomon_layer = MyNonLinearDecomonDense1d(
+    nonlinear_decomon_layer = MyNonLinearDecomonDense1d(
         layer=layer,
         ibp=ibp,
         affine=affine,
@@ -109,7 +108,7 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
     )
 
     # symbolic inputs
-    decomon_inputs = helpers.get_decomon_symbolic_inputs(
+    decomon_inputs_linear = helpers.get_decomon_symbolic_inputs(
         model_input_shape=model_input_shape,
         model_output_shape=model_output_shape,
         layer_input_shape=layer_input_shape,
@@ -118,14 +117,26 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
         affine=affine,
         propagation=propagation,
         perturbation_domain=perturbation_domain,
+        for_linear_layer=True,
     )
+    decomon_inputs_nonlinear = helpers.get_decomon_symbolic_inputs(
+        model_input_shape=model_input_shape,
+        model_output_shape=model_output_shape,
+        layer_input_shape=layer_input_shape,
+        layer_output_shape=layer_output_shape,
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        perturbation_domain=perturbation_domain,
+        for_linear_layer=False,
+    )
+
+    # actual (random) tensors + expected output shapes
     (
         affine_bounds_to_propagate,
         constant_oracle_bounds,
         perturbation_domain_inputs,
-    ) = linear_decomon_layer.inputs_outputs_spec.split_inputs(decomon_inputs)
-
-    # actual (random) tensors + expected output shapes
+    ) = nonlinear_decomon_layer.inputs_outputs_spec.split_inputs(decomon_inputs_nonlinear)
     perturbation_domain_inputs_val = [
         helpers.generate_random_tensor(x.shape[1:], batchsize=batchsize) for x in perturbation_domain_inputs
     ]
@@ -155,7 +166,18 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
         propagated_ibp_bounds_expected_shape = []
         constant_oracle_bounds_val = []
 
-    decomon_inputs_val = linear_decomon_layer.inputs_outputs_spec.flatten_inputs(
+    # linear case only: no constant bounds in backward
+    if linear_decomon_layer.inputs_outputs_spec.needs_constant_bounds_inputs():
+        constant_oracle_bounds_val_linear = constant_oracle_bounds_val
+    else:
+        constant_oracle_bounds_val_linear = []
+
+    decomon_inputs_val_linear = linear_decomon_layer.inputs_outputs_spec.flatten_inputs(
+        affine_bounds_to_propagate=affine_bounds_to_propagate_val,
+        constant_oracle_bounds=constant_oracle_bounds_val_linear,
+        perturbation_domain_inputs=perturbation_domain_inputs_val,
+    )
+    decomon_inputs_val_nonlinear = nonlinear_decomon_layer.inputs_outputs_spec.flatten_inputs(
         affine_bounds_to_propagate=affine_bounds_to_propagate_val,
         constant_oracle_bounds=constant_oracle_bounds_val,
         perturbation_domain_inputs=perturbation_domain_inputs_val,
@@ -167,27 +189,27 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
         decomon_output_expected_shapes = propagated_affine_bounds_expected_shape
 
     # symbolic call
-    linear_decomon_output = linear_decomon_layer(decomon_inputs)
-    non_linear_decomon_output = non_linear_decomon_layer(decomon_inputs)
+    linear_decomon_output = linear_decomon_layer(decomon_inputs_linear)
+    nonlinear_decomon_output = nonlinear_decomon_layer(decomon_inputs_nonlinear)
 
     # shapes ok ?
     linear_decomon_output_shape_from_call = [tensor.shape[1:] for tensor in linear_decomon_output]
     assert linear_decomon_output_shape_from_call == decomon_output_expected_shapes
-    non_linear_decomon_output_shape_from_call = [tensor.shape[1:] for tensor in non_linear_decomon_output]
-    assert non_linear_decomon_output_shape_from_call == decomon_output_expected_shapes
+    nonlinear_decomon_output_shape_from_call = [tensor.shape[1:] for tensor in nonlinear_decomon_output]
+    assert nonlinear_decomon_output_shape_from_call == decomon_output_expected_shapes
 
     # actual call
-    linear_decomon_output_val = linear_decomon_layer(decomon_inputs_val)
-    non_linear_decomon_output_val = non_linear_decomon_layer(decomon_inputs_val)
+    linear_decomon_output_val = linear_decomon_layer(decomon_inputs_val_linear)
+    nonlinear_decomon_output_val = nonlinear_decomon_layer(decomon_inputs_val_nonlinear)
 
     # shapes ok ?
     linear_decomon_output_shape_from_call = [tensor.shape[1:] for tensor in linear_decomon_output_val]
     assert linear_decomon_output_shape_from_call == decomon_output_expected_shapes
-    non_linear_decomon_output_shape_from_call = [tensor.shape[1:] for tensor in linear_decomon_output_val]
-    assert non_linear_decomon_output_shape_from_call == decomon_output_expected_shapes
+    nonlinear_decomon_output_shape_from_call = [tensor.shape[1:] for tensor in linear_decomon_output_val]
+    assert nonlinear_decomon_output_shape_from_call == decomon_output_expected_shapes
 
     # same values ?
-    helpers.assert_decomon_outputs_equal(linear_decomon_output_val, non_linear_decomon_output_val)
+    helpers.assert_decomon_outputs_equal(linear_decomon_output_val, nonlinear_decomon_output_val)
 
     # inequalities hold ?
     # We only check it in case of a single-layer model => model shapes == layer shapes
@@ -204,11 +226,27 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
             affine=affine,
             propagation=propagation,
             perturbation_domain=perturbation_domain,
+            for_linear_layer=False,
         )
 
+        # linear case only: no constant bounds in backward
+        if linear_decomon_layer.inputs_outputs_spec.needs_constant_bounds_inputs():
+            decomon_inputs_val_linear = decomon_inputs_val
+        else:
+            (
+                affine_bounds_to_propagate_val,
+                constant_oracle_bounds_val,
+                perturbation_domain_inputs_val,
+            ) = nonlinear_decomon_layer.inputs_outputs_spec.split_inputs(decomon_inputs_val)
+            decomon_inputs_val_linear = linear_decomon_layer.inputs_outputs_spec.flatten_inputs(
+                affine_bounds_to_propagate=affine_bounds_to_propagate_val,
+                constant_oracle_bounds=[],
+                perturbation_domain_inputs=perturbation_domain_inputs_val,
+            )
+
         # decomon call
-        linear_decomon_output_val = linear_decomon_layer(decomon_inputs_val)
-        non_linear_decomon_output_val = non_linear_decomon_layer(decomon_inputs_val)
+        linear_decomon_output_val = linear_decomon_layer(decomon_inputs_val_linear)
+        nonlinear_decomon_output_val = nonlinear_decomon_layer(decomon_inputs_val)
 
         # keras call
         keras_output_val = layer(keras_input_val)
@@ -222,7 +260,7 @@ def test_my_decomon_dense_1d(singlelayer_model, ibp, affine, propagation, helper
             affine=affine,
             propagation=propagation,
         )
-        helpers.assert_decomon_outputs_equal(linear_decomon_output_val, non_linear_decomon_output_val)
+        helpers.assert_decomon_outputs_equal(linear_decomon_output_val, nonlinear_decomon_output_val)
 
 
 @pytest.mark.parametrize("affine", [True])
@@ -253,7 +291,7 @@ def test_check_affine_bounds_characteristics(
     # init + build decomon layer
     output_shape = layer.output.shape[1:]
     model_output_shape = output_shape
-    decomon_symbolic_inputs = simple_decomon_symbolic_input_fn(output_shape=output_shape)
+    decomon_symbolic_inputs = simple_decomon_symbolic_input_fn(output_shape=output_shape, linear=False)
     decomon_layer = DecomonLayer(
         layer=layer,
         ibp=ibp,
@@ -267,7 +305,10 @@ def test_check_affine_bounds_characteristics(
     keras_model_input = simple_keras_model_input_fn()
     keras_layer_input = simple_keras_layer_input_fn(keras_model_input)
     decomon_inputs = simple_decomon_input_fn(
-        keras_model_input=keras_model_input, keras_layer_input=keras_layer_input, output_shape=output_shape
+        keras_model_input=keras_model_input,
+        keras_layer_input=keras_layer_input,
+        output_shape=output_shape,
+        linear=False,
     )
 
     if affine:

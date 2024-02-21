@@ -155,6 +155,7 @@ class DecomonLayer(Wrapper):
             model_input_shape=model_input_shape,
             model_output_shape=model_output_shape,
             is_merging_layer=self._is_merging,
+            linear=self.linear,
         )
 
     @property

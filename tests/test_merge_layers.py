@@ -127,10 +127,6 @@ def test_decomon_merge(
     output_shape = layer.output.shape[1:]
     model_output_shape = output_shape
     model_input_shape = keras_symbolic_model_input.shape[1:]
-    decomon_symbolic_inputs_0 = decomon_symbolic_input_fn(output_shape=output_shape)
-    decomon_symbolic_inputs = helpers.generate_merging_decomon_input_from_single_decomon_inputs(
-        decomon_inputs=double_input(decomon_symbolic_inputs_0), ibp=ibp, affine=affine, propagation=propagation
-    )
 
     decomon_layer = decomon_layer_class(
         layer=layer,
@@ -142,6 +138,16 @@ def test_decomon_merge(
         model_input_shape=model_input_shape,
         **decomon_layer_kwargs,
     )
+
+    decomon_symbolic_inputs_0 = decomon_symbolic_input_fn(output_shape=output_shape, linear=decomon_layer.linear)
+    decomon_symbolic_inputs = helpers.generate_merging_decomon_input_from_single_decomon_inputs(
+        decomon_inputs=double_input(decomon_symbolic_inputs_0),
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        linear=decomon_layer.linear,
+    )
+
     # skip if empty affine bounds in forward propagation (it would generate issues to split inputs)
     if (
         decomon_layer.inputs_outputs_spec.cannot_have_empty_affine_inputs()
@@ -155,11 +161,18 @@ def test_decomon_merge(
     keras_model_input = keras_model_input_fn()
     keras_layer_input_0 = keras_layer_input_fn(keras_model_input)
     decomon_inputs_0 = decomon_input_fn(
-        keras_model_input=keras_model_input, keras_layer_input=keras_layer_input_0, output_shape=output_shape
+        keras_model_input=keras_model_input,
+        keras_layer_input=keras_layer_input_0,
+        output_shape=output_shape,
+        linear=decomon_layer.linear,
     )
     keras_layer_input = double_input(keras_layer_input_0)
     decomon_inputs = helpers.generate_merging_decomon_input_from_single_decomon_inputs(
-        decomon_inputs=double_input(decomon_inputs_0), ibp=ibp, affine=affine, propagation=propagation
+        decomon_inputs=double_input(decomon_inputs_0),
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        linear=decomon_layer.linear,
     )
 
     keras_output = layer(keras_layer_input)
