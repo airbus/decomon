@@ -56,7 +56,7 @@ padding = param_fixture("padding", ["same", "valid"])
 activation = param_fixture("activation", [None, "relu"])
 data_format = param_fixture("data_format", ["channels_last", "channels_first"])
 method = param_fixture("method", [m.value for m in ConvertMethod])
-input_shape = param_fixture("input_shape", [(1,), (3,), (5, 2, 3)], ids=["0d", "1d", "multid"])
+input_shape = param_fixture("input_shape", [(1,), (3,), (5, 6, 2)], ids=["0d", "1d", "multid"])
 
 
 @pytest.fixture
