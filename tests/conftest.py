@@ -5,8 +5,8 @@ import keras.config as keras_config
 import keras.ops as K
 import numpy as np
 import pytest
-from keras import KerasTensor, Model
-from keras.layers import Input
+from keras import KerasTensor, Model, Sequential
+from keras.layers import Activation, Add, Conv2D, Dense, Flatten, Input
 from pytest_cases import (
     fixture,
     fixture_union,
@@ -968,6 +968,282 @@ class Helpers:
         else:
             return K.convert_to_numpy(output_tensors)
 
+    @staticmethod
+    def toy_network_tutorial(
+        input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None, activation: Optional[str] = "relu"
+    ) -> Model:
+        if dtype is None:
+            dtype = keras_config.floatx()
+        layers = []
+        layers.append(Input(input_shape, dtype=dtype))
+        layers.append(Dense(100, dtype=dtype))
+        if activation is not None:
+            layers.append(Activation(activation, dtype=dtype))
+        layers.append(Dense(100, dtype=dtype))
+        layers.append(Dense(1, activation="linear", dtype=dtype))
+        model = Sequential(layers)
+        return model
+
+    @staticmethod
+    def toy_network_submodel(
+        input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None, activation: Optional[str] = "relu"
+    ) -> Model:
+        if dtype is None:
+            dtype = keras_config.floatx()
+        submodel_input_shape = input_shape[:-1] + (100,)
+        layers = []
+        layers.append(Input(input_shape, dtype=dtype))
+        layers.append(Dense(100, dtype=dtype))
+        if activation is not None:
+            layers.append(Activation(activation, dtype=dtype))
+        layers.append(Helpers.toy_network_tutorial(submodel_input_shape, dtype=dtype, activation=activation))
+        layers.append(Dense(100, dtype=dtype))
+        layers.append(Dense(1, activation="linear", dtype=dtype))
+        model = Sequential(layers)
+        return model
+
+    @staticmethod
+    def toy_network_add(
+        input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None, activation: Optional[str] = "relu"
+    ) -> Model:
+        if dtype is None:
+            dtype = keras_config.floatx()
+        input_tensor = Input(input_shape, dtype=dtype)
+        output = Dense(100, dtype=dtype)(input_tensor)
+        if activation is not None:
+            output = Activation(activation, dtype=dtype)(output)
+        output = Add()([output, output])
+        output = Dense(100, dtype=dtype)(output)
+        if activation is not None:
+            output = Activation(activation, dtype=dtype)(output)
+        model = Model(inputs=input_tensor, outputs=output)
+        return model
+
+    @staticmethod
+    def toy_network_add_monolayer(
+        input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None, activation: Optional[str] = "relu"
+    ) -> Model:
+        if dtype is None:
+            dtype = keras_config.floatx()
+        input_tensor = Input(input_shape, dtype=dtype)
+        output = Dense(100, dtype=dtype)(input_tensor)
+        if activation is not None:
+            output = Activation(activation, dtype=dtype)(output)
+        output = Add()([output])
+        output = Dense(100, dtype=dtype)(output)
+        if activation is not None:
+            output = Activation(activation, dtype=dtype)(output)
+        model = Model(inputs=input_tensor, outputs=output)
+        return model
+
+    @staticmethod
+    def toy_network_tutorial_with_embedded_activation(input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None):
+        if dtype is None:
+            dtype = keras_config.floatx()
+        layers = []
+        layers.append(Input(input_shape, dtype=dtype))
+        layers.append(Dense(100, activation="relu", dtype=dtype))
+        layers.append(Dense(100, dtype=dtype))
+        layers.append(Dense(1, activation="linear", dtype=dtype))
+        model = Sequential(layers)
+        return model
+
+    @staticmethod
+    def toy_embedded_sequential(input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None):
+        if dtype is None:
+            dtype = keras_config.floatx()
+        layers = []
+        units = 10
+        submodel_input_shape = input_shape[:-1] + (units,)
+        layers.append(Input(input_shape, dtype=dtype))
+        layers.append(Dense(units, activation="relu", dtype=dtype))
+        layers.append(
+            Helpers.dense_NN(
+                dtype=dtype,
+                archi=[2, 3, 2],
+                sequential=True,
+                input_shape=submodel_input_shape,
+                activation="relu",
+                use_bias=False,
+            )
+        )
+        layers.append(Dense(1, activation="linear", dtype=dtype))
+        model = Sequential(layers)
+        return model
+
+    @staticmethod
+    def dense_NN(
+        archi, sequential, activation, use_bias, input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None
+    ):
+        if dtype is None:
+            dtype = keras_config.floatx()
+        layers = [Input(input_shape, dtype=dtype)]
+        layers += [Dense(n_i, use_bias=use_bias, activation=activation, dtype=dtype) for n_i in archi]
+
+        if sequential:
+            return Sequential(layers)
+        else:
+            input = layers[0]
+            output = input
+            for layer_ in layers[1:]:
+                output = layer_(output)
+            return Model(input, output)
+
+    @staticmethod
+    def toy_struct_v0(
+        archi, activation, use_bias, merge_op=Add, input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None
+    ):
+        if dtype is None:
+            dtype = keras_config.floatx()
+        nnet_0 = Helpers.dense_NN(
+            input_shape=input_shape,
+            archi=archi,
+            sequential=False,
+            activation=activation,
+            use_bias=use_bias,
+            dtype=dtype,
+        )
+        nnet_1 = Dense(archi[-1], use_bias=use_bias, activation="linear", name="toto", dtype=dtype)
+
+        x = Input(input_shape, dtype=dtype)
+        h_0 = nnet_0(x)
+        h_1 = nnet_1(x)
+
+        y = merge_op(dtype=dtype)([h_0, h_1])
+
+        return Model(x, y)
+
+    @staticmethod
+    def toy_struct_v1(
+        archi,
+        sequential,
+        activation,
+        use_bias,
+        merge_op=Add,
+        input_shape: tuple[int, ...] = (1,),
+        dtype: Optional[str] = None,
+    ):
+        if dtype is None:
+            dtype = keras_config.floatx()
+        nnet_0 = Helpers.dense_NN(
+            input_shape=input_shape,
+            archi=archi,
+            sequential=sequential,
+            activation=activation,
+            use_bias=use_bias,
+            dtype=dtype,
+        )
+
+        x = Input(input_shape, dtype=dtype)
+        h_0 = nnet_0(x)
+        h_1 = nnet_0(x)
+        y = merge_op(dtype=dtype)([h_0, h_1])
+
+        return Model(x, y)
+
+    @staticmethod
+    def toy_struct_v2(
+        archi,
+        sequential,
+        activation,
+        use_bias,
+        merge_op=Add,
+        input_shape: tuple[int, ...] = (1,),
+        dtype: Optional[str] = None,
+    ):
+        if dtype is None:
+            dtype = keras_config.floatx()
+        nnet_0 = Helpers.dense_NN(
+            input_shape=input_shape,
+            archi=archi,
+            sequential=sequential,
+            activation=activation,
+            use_bias=use_bias,
+            dtype=dtype,
+        )
+        nnet_1 = Helpers.dense_NN(
+            input_shape=input_shape,
+            archi=archi,
+            sequential=sequential,
+            activation=activation,
+            use_bias=use_bias,
+            dtype=dtype,
+        )
+        nnet_2 = Dense(archi[-1], use_bias=use_bias, activation="linear", dtype=dtype)
+
+        x = Input(input_shape, dtype=dtype)
+        nnet_0(x)
+        nnet_1(x)
+        nnet_1.set_weights([-p for p in nnet_0.get_weights()])  # be sure that the produced output will differ
+        h_0 = nnet_2(nnet_0(x))
+        h_1 = nnet_2(nnet_1(x))
+        y = merge_op(dtype=dtype)([h_0, h_1])
+
+        return Model(x, y)
+
+    @staticmethod
+    def toy_struct_cnn(input_shape: tuple[int, ...] = (6, 6, 2), dtype: Optional[str] = None):
+        if dtype is None:
+            dtype = keras_config.floatx()
+        layers = [
+            Input(input_shape),
+            Conv2D(
+                10,
+                kernel_size=(3, 3),
+                activation="relu",
+                data_format="channels_last",
+                dtype=dtype,
+            ),
+            Flatten(dtype=dtype),
+            Dense(1, dtype=dtype),
+        ]
+        return Sequential(layers)
+
+    @staticmethod
+    def toy_model(model_name, input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None):
+        if dtype is None:
+            dtype = keras_config.floatx()
+        if model_name == "tutorial":
+            return Helpers.toy_network_tutorial(input_shape=input_shape, dtype=dtype)
+        elif model_name == "tutorial_activation_embedded":
+            return Helpers.toy_network_tutorial_with_embedded_activation(input_shape=input_shape, dtype=dtype)
+        elif model_name == "add":
+            return Helpers.toy_network_add(input_shape=input_shape, dtype=dtype)
+        elif model_name == "merge_v0":
+            return Helpers.toy_struct_v0(
+                dtype=dtype, input_shape=input_shape, archi=[2, 3, 2], activation="relu", use_bias=True
+            )
+        elif model_name == "merge_v1":
+            return Helpers.toy_struct_v1(
+                dtype=dtype,
+                input_shape=input_shape,
+                archi=[2, 3, 2],
+                activation="relu",
+                use_bias=True,
+                sequential=False,
+            )
+        elif model_name == "merge_v1_seq":
+            return Helpers.toy_struct_v1(
+                dtype=dtype, input_shape=input_shape, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=True
+            )
+        elif model_name == "merge_v2":
+            return Helpers.toy_struct_v2(
+                dtype=dtype,
+                input_shape=input_shape,
+                archi=[2, 3, 2],
+                activation="relu",
+                use_bias=True,
+                sequential=False,
+            )
+        elif model_name == "cnn":
+            return Helpers.toy_struct_cnn(input_shape=input_shape, dtype=dtype)
+        elif model_name == "embedded_model_v1":
+            return Helpers.toy_embedded_sequential(input_shape=input_shape, dtype=dtype)
+        elif model_name == "embedded_model_v2":
+            return Helpers.toy_network_submodel(input_shape=input_shape, dtype=dtype)
+        else:
+            raise ValueError(f"model_name {model_name} unknown")
+
 
 @pytest.fixture
 def helpers():
@@ -1282,3 +1558,65 @@ layer_input_functions = fixture_union(
     "simple_keras_symbolic_model_input_fn, simple_keras_symbolic_layer_input_fn, simple_decomon_symbolic_input_fn, simple_keras_model_input_fn, simple_keras_layer_input_fn, simple_decomon_input_fn, simple_equal_bounds",
     simple_layer_input_functions,
 )
+
+# keras toy models
+toy_model_name = param_fixture(
+    "toy_model_name",
+    [
+        "tutorial",
+        "tutorial_linear",
+        "tutorial_activation_embedded",
+        "add",
+        "add_linear",
+        "merge_v0",
+        "merge_v1",
+        "merge_v1_seq",
+        "merge_v2",
+        "cnn",
+        "embedded_model_v1",
+        "embedded_model_v2",
+    ],
+)
+
+
+@fixture
+def toy_model_fn(toy_model_name, helpers):
+    """Return a function generating a keras model from (input_shape, dtype)."""
+    if toy_model_name == "tutorial":
+        return Helpers.toy_network_tutorial
+    elif toy_model_name == "tutorial_linear":
+        return lambda input_shape, dtype=None: Helpers.toy_network_tutorial(
+            input_shape=input_shape, dtype=dtype, activation=None
+        )
+    elif toy_model_name == "tutorial_activation_embedded":
+        return Helpers.toy_network_tutorial_with_embedded_activation
+    elif toy_model_name == "add":
+        return Helpers.toy_network_add
+    elif toy_model_name == "add_linear":
+        return lambda input_shape, dtype=None: Helpers.toy_network_add(
+            input_shape=input_shape, dtype=dtype, activation=None
+        )
+    elif toy_model_name == "merge_v0":
+        return lambda input_shape, dtype=None: Helpers.toy_struct_v0(
+            dtype=dtype, input_shape=input_shape, archi=[2, 3, 2], activation="relu", use_bias=True
+        )
+    elif toy_model_name == "merge_v1":
+        return lambda input_shape, dtype=None: Helpers.toy_struct_v1(
+            dtype=dtype, input_shape=input_shape, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
+        )
+    elif toy_model_name == "merge_v1_seq":
+        return lambda input_shape, dtype=None: Helpers.toy_struct_v1(
+            dtype=dtype, input_shape=input_shape, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=True
+        )
+    elif toy_model_name == "merge_v2":
+        return lambda input_shape, dtype=None: Helpers.toy_struct_v2(
+            dtype=dtype, input_shape=input_shape, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
+        )
+    elif toy_model_name == "cnn":
+        return Helpers.toy_struct_cnn
+    elif toy_model_name == "embedded_model_v1":
+        return Helpers.toy_embedded_sequential
+    elif toy_model_name == "embedded_model_v2":
+        return Helpers.toy_network_submodel
+    else:
+        raise ValueError(f"model_name {toy_model_name} unknown")
