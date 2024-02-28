@@ -47,7 +47,8 @@ def test_decomon_unary_layer(
     keras_model_input_fn,
     keras_layer_input_fn,
     decomon_input_fn,
-    equal_bounds,
+    equal_ibp_bounds,
+    equal_affine_bounds,
     helpers,
 ):
     decimal = 4
@@ -135,7 +136,13 @@ def test_decomon_unary_layer(
     )
 
     # before propagation through linear layer lower == upper => lower == upper after propagation
-    if equal_bounds and is_actually_linear:
+    if is_actually_linear:
         helpers.assert_decomon_output_lower_equal_upper(
-            decomon_output, ibp=ibp, affine=affine, propagation=propagation, decimal=decimal
+            decomon_output,
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            decimal=decimal,
+            check_ibp=equal_ibp_bounds,
+            check_affine=equal_affine_bounds,
         )

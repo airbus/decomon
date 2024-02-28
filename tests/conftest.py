@@ -56,6 +56,7 @@ activation = param_fixture("activation", [None, "relu"])
 data_format = param_fixture("data_format", ["channels_last", "channels_first"])
 method = param_fixture("method", [m.value for m in ConvertMethod])
 input_shape = param_fixture("input_shape", [(1,), (3,), (5, 6, 2)], ids=["0d", "1d", "multid"])
+equal_ibp = param_fixture("equal_ibp", [True, False])
 
 
 @pytest.fixture
@@ -272,6 +273,7 @@ class Helpers:
         nobatch=False,
         for_linear_layer=False,
         dtype=keras_config.floatx(),
+        equal_ibp=True,
     ):
         """Generate simple decomon inputs for a layer from the corresponding keras input
 
@@ -346,7 +348,13 @@ class Helpers:
             affine_bounds_to_propagate = []
 
         if inputs_outputs_spec.needs_constant_bounds_inputs():
-            constant_oracle_bounds = [keras_input, keras_input]
+            if equal_ibp:
+                constant_oracle_bounds = [keras_input, keras_input]
+            else:
+                batchsize = keras_input.shape[0]
+                lower = K.repeat(K.min(keras_input, axis=0, keepdims=True), batchsize, axis=0)
+                upper = K.repeat(K.max(keras_input, axis=0, keepdims=True), batchsize, axis=0)
+                constant_oracle_bounds = [lower, upper]
         else:
             constant_oracle_bounds = []
 
@@ -357,11 +365,17 @@ class Helpers:
         )
 
     @staticmethod
-    def generate_simple_perturbation_domain_inputs_from_keras_input(keras_input, perturbation_domain):
+    def generate_simple_perturbation_domain_inputs_from_keras_input(
+        keras_input, perturbation_domain, equal_bounds=True
+    ):
         if isinstance(perturbation_domain, BoxDomain):
-            return K.concatenate(
-                [keras_input[:, None] - keras.config.epsilon(), keras_input[:, None] + keras.config.epsilon()], axis=1
-            )
+            if equal_bounds:
+                return K.concatenate([keras_input[:, None], keras_input[:, None]], axis=1)
+            else:
+                batchsize = keras_input.shape[0]
+                lower = K.repeat(K.min(keras_input, axis=0, keepdims=True), batchsize, axis=0)
+                upper = K.repeat(K.max(keras_input, axis=0, keepdims=True), batchsize, axis=0)
+                return K.concatenate([lower[:, None], upper[:, None]], axis=1)
         else:
             raise NotImplementedError
 
@@ -966,6 +980,8 @@ class Helpers:
         propagation,
         decimal=5,
         is_merging_layer=False,
+        check_ibp=True,
+        check_affine=True,
     ):
         if is_merging_layer:
             layer_input_shape = [tuple()]
@@ -980,7 +996,7 @@ class Helpers:
             is_merging_layer=is_merging_layer,
         )
         affine_bounds_propagated, constant_bounds_propagated = inputs_outputs_spec.split_outputs(outputs=decomon_output)
-        if propagation == Propagation.BACKWARD or affine:
+        if check_affine and (propagation == Propagation.BACKWARD or affine):
             if is_merging_layer and propagation == Propagation.BACKWARD:
                 # one list of affine bounds by keras layer input
                 for affine_bounds_propagated_i in affine_bounds_propagated:
@@ -993,7 +1009,7 @@ class Helpers:
                 Helpers.assert_almost_equal(w_l, w_u, decimal=decimal)
                 Helpers.assert_almost_equal(b_l, b_u, decimal=decimal)
 
-        if propagation == Propagation.FORWARD and ibp:
+        if check_ibp and propagation == Propagation.FORWARD and ibp:
             lower_ibp, upper_ibp = constant_bounds_propagated
             Helpers.assert_almost_equal(lower_ibp, upper_ibp, decimal=decimal)
 
@@ -1310,7 +1326,7 @@ def helpers():
 
 @fixture
 def simple_layer_input_functions(
-    ibp, affine, propagation, perturbation_domain, batchsize, input_shape, empty, diag, nobatch, helpers
+    ibp, affine, propagation, perturbation_domain, batchsize, input_shape, equal_ibp, empty, diag, nobatch, helpers
 ):
     keras_symbolic_model_input_fn = lambda: Input(input_shape)
     keras_symbolic_layer_input_fn = lambda keras_symbolic_model_input: keras_symbolic_model_input
@@ -1344,6 +1360,7 @@ def simple_layer_input_functions(
         diag=diag,
         nobatch=nobatch,
         for_linear_layer=linear,
+        equal_ibp=equal_ibp,
     )
 
     return (
@@ -1353,6 +1370,7 @@ def simple_layer_input_functions(
         keras_model_input_fn,
         keras_layer_input_fn,
         decomon_input_fn,
+        equal_ibp,
         True,
     )
 
@@ -1564,6 +1582,7 @@ def convert_standard_input_functions_for_single_layer(
         keras_layer_input_fn,
         decomon_input_fn,
         False,
+        False,
     )
 
 
@@ -1608,7 +1627,7 @@ layer_input_functions = fixture_union(
         standard_layer_input_functions_1d,
         standard_layer_input_functions_multid,
     ],
-    unpack_into="keras_symbolic_model_input_fn, keras_symbolic_layer_input_fn, decomon_symbolic_input_fn, keras_model_input_fn, keras_layer_input_fn, decomon_input_fn, equal_bounds",
+    unpack_into="keras_symbolic_model_input_fn, keras_symbolic_layer_input_fn, decomon_symbolic_input_fn, keras_model_input_fn, keras_layer_input_fn, decomon_input_fn, equal_ibp_bounds, equal_affine_bounds",
 )
 
 (
@@ -1618,16 +1637,17 @@ layer_input_functions = fixture_union(
     simple_keras_model_input_fn,
     simple_keras_layer_input_fn,
     simple_decomon_input_fn,
-    simple_equal_bounds,
+    simple_equal_ibp_bounds,
+    simple_equal_affine_bounds,
 ) = unpack_fixture(
-    "simple_keras_symbolic_model_input_fn, simple_keras_symbolic_layer_input_fn, simple_decomon_symbolic_input_fn, simple_keras_model_input_fn, simple_keras_layer_input_fn, simple_decomon_input_fn, simple_equal_bounds",
+    "simple_keras_symbolic_model_input_fn, simple_keras_symbolic_layer_input_fn, simple_decomon_symbolic_input_fn, simple_keras_model_input_fn, simple_keras_layer_input_fn, simple_decomon_input_fn, simple_equal_ibp_bounds, simple_equal_affine_bounds",
     simple_layer_input_functions,
 )
 
 
 # keras/decomon model inputs
 @fixture
-def simple_model_input_functions(perturbation_domain, batchsize, helpers):
+def simple_model_input_functions(perturbation_domain, equal_ibp, batchsize, helpers):
     decomon_symbolic_input_fn = lambda keras_symbolic_input: Input(
         perturbation_domain.get_x_input_shape_wo_batchsize(keras_symbolic_input.shape[1:])
     )
@@ -1635,7 +1655,7 @@ def simple_model_input_functions(perturbation_domain, batchsize, helpers):
         keras_symbolic_input.shape[1:], batchsize=batchsize
     )
     decomon_input_fn = lambda keras_input: helpers.generate_simple_perturbation_domain_inputs_from_keras_input(
-        keras_input=keras_input, perturbation_domain=perturbation_domain
+        keras_input=keras_input, perturbation_domain=perturbation_domain, equal_bounds=equal_ibp
     )
 
     return (
