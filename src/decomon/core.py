@@ -1305,3 +1305,29 @@ def get_upper_ball_finetune(x_0: Tensor, eps: float, p: float, w: Tensor, b: Ten
             return score_box + score_ball
 
     return get_upper_ball(x_0, eps, p, w, b)
+
+
+class ConvertMethod(str, Enum):
+    CROWN = "crown"
+    """Crown fully recursive: backward propagation using crown oracle.
+
+    (spawning subcrowns for each non-linear layer)
+
+    """
+    CROWN_FORWARD_IBP = "crown-forward-ibp"
+    """Crown + forward ibp: backward propagation using a forward-ibp oracle."""
+    CROWN_FORWARD_AFFINE = "crown-forward-affine"
+    """Crown + forward ibp: backward propagation using a forward-affine oracle."""
+    CROWN_FORWARD_HYBRID = "crown-forward-hybrid"
+    """Crown + forward ibp: backward propagation using a forward-hybrid oracle."""
+    FORWARD_IBP = "forward-ibp"
+    """Forward propagation of constant bounds."""
+    FORWARD_AFFINE = "forward-affine"
+    """Forward propagation of affine bounds."""
+    FORWARD_HYBRID = "forward-hybrid"
+    """Forward propagation of constant+affine bounds.
+
+    After each layer, the tightest constant bounds is keep between the ibp one
+    and the affine one combined with perturbation domain input.
+
+    """

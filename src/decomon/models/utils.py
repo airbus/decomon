@@ -1,29 +1,22 @@
-from enum import Enum
 from typing import Any, Optional, Union
 
 import keras
 import keras.ops as K
 import numpy as np
 from keras import Model, Sequential
-from keras.layers import (
-    Activation,
-    Concatenate,
-    Flatten,
-    Input,
-    Lambda,
-    Layer,
-    Maximum,
-    Minimum,
-)
+from keras import ops as K
+from keras.layers import Activation, Input, Lambda, Layer
 from keras.src import Functional
 from keras.src.ops.node import Node
 
 from decomon.core import (
     BallDomain,
     BoxDomain,
+    ConvertMethod,
     ForwardMode,
     InputsOutputsSpec,
     PerturbationDomain,
+    Propagation,
     get_mode,
 )
 from decomon.keras_utils import (
@@ -34,141 +27,15 @@ from decomon.keras_utils import (
 from decomon.types import BackendTensor
 
 
-class ConvertMethod(str, Enum):
-    CROWN = "crown"
-    CROWN_FORWARD_IBP = "crown-forward-ibp"
-    CROWN_FORWARD_AFFINE = "crown-forward-affine"
-    CROWN_FORWARD_HYBRID = "crown-forward-hybrid"
-    FORWARD_IBP = "forward-ibp"
-    FORWARD_AFFINE = "forward-affine"
-    FORWARD_HYBRID = "forward-hybrid"
-
-
-def get_ibp_affine_from_method(method: Union[str, ConvertMethod]) -> tuple[bool, bool]:
-    method = ConvertMethod(method)
-    if method in [ConvertMethod.FORWARD_IBP, ConvertMethod.CROWN_FORWARD_IBP]:
-        return True, False
-    if method in [ConvertMethod.FORWARD_AFFINE, ConvertMethod.CROWN_FORWARD_AFFINE]:
-        return False, True
-    if method in [ConvertMethod.FORWARD_HYBRID, ConvertMethod.CROWN_FORWARD_HYBRID]:
-        return True, True
-    if method == ConvertMethod.CROWN:
-        return True, False
-    return True, True
-
-
-class FeedDirection(str, Enum):
-    FORWARD = "feed_forward"
-    BACKWARD = "feed_backward"
-
-
-def get_direction(method: Union[str, ConvertMethod]) -> FeedDirection:
-    if ConvertMethod(method) in [ConvertMethod.FORWARD_IBP, ConvertMethod.FORWARD_AFFINE, ConvertMethod.FORWARD_HYBRID]:
-        return FeedDirection.FORWARD
-    else:
-        return FeedDirection.BACKWARD
-
-
-def has_merge_layers(model: Model) -> bool:
-    return any(is_a_merge_layer(layer) for layer in model.layers)
-
-
-def check_model2convert_inputs(model: Model) -> None:
-    """Check that the model to convert satisfy the hypotheses for decomon on inputs.
-
-    Which means:
-
-    - only one input
-    - the input must be flattened: only batchsize + another dimension
-
-    """
-    if len(model.inputs) > 1:
-        raise ValueError("The model must have only 1 input to be converted.")
-    if len(model.inputs[0].shape) > 2:
-        raise ValueError("The model must have a flattened input to be converted.")
-
-
 def generate_perturbation_domain_input(
     model: Model,
     perturbation_domain: PerturbationDomain,
 ) -> keras.KerasTensor:
-    model_input_shape = model.input.shape[1:]
-    dtype = model.input.dtype
+    model_input_shape = model.inputs[0].shape[1:]
+    dtype = model.inputs[0].dtype
 
     input_shape_x = perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)
     return Input(shape=input_shape_x, dtype=dtype)
-
-
-def get_input_tensors(
-    model: Model,
-    perturbation_domain: PerturbationDomain,
-    ibp: bool = True,
-    affine: bool = True,
-) -> tuple[keras.KerasTensor, list[keras.KerasTensor]]:
-    input_dim = get_input_dim(model)
-    mode = get_mode(ibp=ibp, affine=affine)
-    dc_decomp = False
-    inputs_outputs_spec = InputsOutputsSpec(dc_decomp=dc_decomp, mode=mode, perturbation_domain=perturbation_domain)
-    empty_tensor = inputs_outputs_spec.get_empty_tensor()
-
-    input_shape_x = perturbation_domain.get_x_input_shape_wo_batchsize((input_dim,))
-    z_tensor = Input(shape=input_shape_x, dtype=model.layers[0].dtype)
-    u_c_tensor, l_c_tensor, W, b, h, g = (
-        empty_tensor,
-        empty_tensor,
-        empty_tensor,
-        empty_tensor,
-        empty_tensor,
-        empty_tensor,
-    )
-
-    if isinstance(perturbation_domain, BoxDomain):
-        if ibp:
-            u_c_tensor = Lambda(lambda z: z[:, 1], dtype=z_tensor.dtype)(z_tensor)
-            l_c_tensor = Lambda(lambda z: z[:, 0], dtype=z_tensor.dtype)(z_tensor)
-
-        if affine:
-            W = BatchedIdentityLike()(z_tensor[:, 0])
-            b = K.zeros_like(z_tensor[:, 0])
-
-    elif isinstance(perturbation_domain, BallDomain):
-        if perturbation_domain.p == np.inf:
-            radius = perturbation_domain.eps
-            u_c_tensor = Lambda(
-                lambda var: var + K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
-            )(z_tensor)
-            if ibp:
-                l_c_tensor = Lambda(
-                    lambda var: var - K.cast(radius, dtype=model.layers[0].dtype), dtype=model.layers[0].dtype
-                )(z_tensor)
-            if affine:
-                W = BatchedIdentityLike()(u_c_tensor)
-                b = K.zeros_like(u_c_tensor)
-
-        else:
-            W = BatchedIdentityLike()(z_tensor)
-            b = K.zeros_like(z_tensor)
-            if ibp:
-                u_c_tensor = perturbation_domain.get_upper(z_tensor, W, b)
-                l_c_tensor = perturbation_domain.get_lower(z_tensor, W, b)
-
-    else:
-        raise NotImplementedError(f"Not implemented for perturbation domain type {type(perturbation_domain)}")
-
-    input_tensors = inputs_outputs_spec.extract_inputsformode_from_fullinputs(
-        [z_tensor, u_c_tensor, W, b, l_c_tensor, W, b, h, g]
-    )
-
-    return z_tensor, input_tensors
-
-
-def get_input_dim(layer: Layer) -> int:
-    if isinstance(layer.input, list):
-        if len(layer.input) == 0:
-            return 0
-        return int(np.prod(layer.input[0].shape[1:]))
-    else:
-        return int(np.prod(layer.input.shape[1:]))
 
 
 def prepare_inputs_for_layer(
@@ -402,3 +269,109 @@ def ensure_functional_model(model: Model) -> Functional:
         return model
     else:
         raise NotImplementedError("Decomon model available only for functional or sequential models.")
+
+
+def preprocess_backward_bounds(
+    backward_bounds: Optional[Union[keras.KerasTensor, list[keras.KerasTensor], list[list[keras.KerasTensor]]]],
+    nb_model_outputs: int,
+) -> Optional[list[list[keras.KerasTensor]]]:
+    """Preprocess backward bounds to be used by `convert()`.
+
+    Args:
+        backward_bounds: backward bounds to propagate
+        nb_model_outputs: number of outputs of the keras model to convert
+
+    Returns:
+        formatted backward bounds
+
+    Backward bounds can be given as
+    - None or empty list => backward bounds to propagate will be identity
+    - a single list (potentially partially filled) => same backward bounds on all model outputs (assuming that all outputs have same shape)
+    - a list of list : different backward bounds for each model output
+
+    Which leads to the following formatting:
+    - None, [], or [[]] -> None
+    - single keras tensor w -> [[w, 0, w, 0]] * nb_model_outputs
+    - [w] -> idem
+    - [w, b] -> [[w, b, w, b]] * nb_model_outputs
+    - [w_l, b_l, w_u, b_u] -> [[w_l, b_l, w_u, b_u]] * nb_model_outputs
+    - [[w_l, b_l, w_u, b_u]] -> [[w_l, b_l, w_u, b_u]] * nb_model_outputs
+    - list of lists of tensors [w_l[i], b_l[i], w_u[i], b_u[i]]_i -> we enforce each sublist to have 4 elements
+
+    """
+    if backward_bounds is None:
+        # None
+        return None
+    if isinstance(backward_bounds, keras.KerasTensor):
+        # single tensor w
+        w = backward_bounds
+        b = K.zeros_like(w[:, 0])
+        backward_bounds = [w, b, w, b]
+    if len(backward_bounds) == 0:
+        return None
+    else:
+        if isinstance(backward_bounds[0], keras.KerasTensor):
+            # list of tensors
+            if len(backward_bounds) == 1:
+                # single tensor w
+                return preprocess_backward_bounds(backward_bounds=backward_bounds[0], nb_model_outputs=nb_model_outputs)
+            elif len(backward_bounds) == 2:
+                # w, b
+                w, b = backward_bounds
+                return preprocess_backward_bounds(backward_bounds=[w, b, w, b], nb_model_outputs=nb_model_outputs)
+            elif len(backward_bounds) == 4:
+                return [backward_bounds] * nb_model_outputs
+            else:
+                raise ValueError(
+                    "If backward_bounds is given as a list of tensors, it should have 1, 2, or 4 elements."
+                )
+        else:
+            # list of list of tensors
+            if len(backward_bounds) == 1:
+                return [backward_bounds[0]] * nb_model_outputs
+            elif len(backward_bounds) != nb_model_outputs:
+                raise ValueError(
+                    "If backward_bounds is given as a list of tensors, it should have nb_model_ouptputs elements."
+                )
+            elif not all([len(backward_bounds_i) == 4 for backward_bounds_i in backward_bounds]):
+                raise ValueError(
+                    "If backward_bounds is given as a list of tensors, each sublist should have 4 elements (w_l_, b_l, w_u, b_u)."
+                )
+            else:
+                return backward_bounds
+
+
+def get_ibp_affine_from_method(method: ConvertMethod) -> tuple[bool, bool]:
+    method = ConvertMethod(method)
+    if method in [ConvertMethod.FORWARD_IBP, ConvertMethod.CROWN_FORWARD_IBP]:
+        return True, False
+    if method in [ConvertMethod.FORWARD_AFFINE, ConvertMethod.CROWN_FORWARD_AFFINE]:
+        return False, True
+    if method in [ConvertMethod.FORWARD_HYBRID, ConvertMethod.CROWN_FORWARD_HYBRID]:
+        return True, True
+    if method == ConvertMethod.CROWN:
+        return False, True
+    return True, True
+
+
+def get_final_ibp_affine_from_method(method: ConvertMethod) -> tuple[bool, bool]:
+    method = ConvertMethod(method)
+    if method in [ConvertMethod.FORWARD_IBP, ConvertMethod.FORWARD_HYBRID]:
+        final_ibp = True
+    else:
+        final_ibp = False
+    if method == ConvertMethod.FORWARD_IBP:
+        final_affine = False
+    else:
+        final_affine = True
+
+    return final_ibp, final_affine
+
+
+def method2propagation(method: ConvertMethod) -> list[Propagation]:
+    if method == ConvertMethod.CROWN:
+        return [Propagation.BACKWARD]
+    elif method in [ConvertMethod.FORWARD_IBP, ConvertMethod.FORWARD_AFFINE, ConvertMethod.FORWARD_HYBRID]:
+        return [Propagation.FORWARD]
+    else:
+        return [Propagation.FORWARD, Propagation.BACKWARD]

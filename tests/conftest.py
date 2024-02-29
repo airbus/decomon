@@ -15,7 +15,7 @@ from pytest_cases import (
     unpack_fixture,
 )
 
-from decomon.core import BoxDomain, InputsOutputsSpec, Propagation, Slope
+from decomon.core import BoxDomain, ConvertMethod, InputsOutputsSpec, Propagation, Slope
 from decomon.keras_utils import (
     BACKEND_JAX,
     BACKEND_NUMPY,
@@ -23,7 +23,6 @@ from decomon.keras_utils import (
     BACKEND_TENSORFLOW,
     batch_multid_dot,
 )
-from decomon.models.utils import ConvertMethod
 from decomon.types import BackendTensor, Tensor
 
 empty, diag, nobatch = param_fixtures(
@@ -921,7 +920,7 @@ class Helpers:
         keras_output,
         ibp,
         affine,
-        propagation,
+        propagation=Propagation.FORWARD,
         decimal=5,
     ):
         keras_input_shape = tuple(keras_input.shape[1:])
@@ -1653,6 +1652,81 @@ def simple_model_input_functions(perturbation_domain, batchsize, helpers):
 ) = unpack_fixture(
     "simple_model_decomon_symbolic_input_fn, simple_model_keras_input_fn, simple_model_decomon_input_fn",
     simple_model_input_functions,
+)
+
+
+@fixture
+def simple_model_inputs(simple_model_input_functions, input_shape):
+    (
+        decomon_symbolic_input_fn,
+        keras_input_fn,
+        decomon_input_fn,
+    ) = simple_model_input_functions
+
+    keras_symbolic_input = Input(input_shape)
+    decomon_symbolic_input = decomon_symbolic_input_fn(keras_symbolic_input)
+    keras_input = keras_input_fn(keras_symbolic_input)
+    decomon_input = decomon_input_fn(keras_input)
+
+    return keras_symbolic_input, decomon_symbolic_input, keras_input, decomon_input
+
+
+(
+    simple_model_keras_symbolic_input,
+    simple_model_decomon_symbolic_input,
+    simple_model_keras_input,
+    simple_model_decomon_input,
+) = unpack_fixture(
+    "simple_model_keras_symbolic_input, simple_model_decomon_symbolic_input, simple_model_keras_input, simple_model_decomon_input",
+    simple_model_inputs,
+)
+
+
+def convert_standard_inputs_for_model(get_tensor_decomposition_fn, get_standard_values_fn):
+    x, y, z, u_c, w_u, b_u, l_c, w_l, b_l = get_tensor_decomposition_fn()
+    x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = get_standard_values_fn()
+
+    keras_symbolic_input = y
+    keras_input = K.convert_to_tensor(y_)
+    decomon_symbolic_input = K.concatenate([l_c[:, None], u_c[:, None]], axis=1)
+    decomon_input = K.convert_to_tensor(np.concatenate((l_c_[:, None], u_c_[:, None]), axis=1))
+
+    return keras_symbolic_input, decomon_symbolic_input, keras_input, decomon_input
+
+
+@fixture
+def standard_model_inputs_0d(n, batchsize, helpers):
+    get_tensor_decomposition_fn = helpers.get_tensor_decomposition_0d_box
+    get_standard_values_fn = lambda: helpers.get_standard_values_0d_box(n=n, batchsize=batchsize)
+    return convert_standard_inputs_for_model(get_tensor_decomposition_fn, get_standard_values_fn)
+
+
+@fixture
+def standard_model_inputs_1d(odd, batchsize, helpers):
+    get_tensor_decomposition_fn = lambda: helpers.get_tensor_decomposition_1d_box(odd=odd)
+    get_standard_values_fn = lambda: helpers.get_standard_values_1d_box(odd=odd, batchsize=batchsize)
+    return convert_standard_inputs_for_model(get_tensor_decomposition_fn, get_standard_values_fn)
+
+
+@fixture
+def standard_model_inputs_multid(data_format, batchsize, helpers):
+    odd, m0, m1 = 0, 0, 1
+    get_tensor_decomposition_fn = lambda: helpers.get_tensor_decomposition_images_box(data_format=data_format, odd=odd)
+    get_standard_values_fn = lambda: helpers.get_standard_values_images_box(
+        data_format=data_format, odd=odd, m0=m0, m1=m1, batchsize=batchsize
+    )
+    return convert_standard_inputs_for_model(get_tensor_decomposition_fn, get_standard_values_fn)
+
+
+model_inputs = fixture_union(
+    "model_inputs",
+    [
+        simple_model_inputs,
+        standard_model_inputs_0d,
+        standard_model_inputs_1d,
+        standard_model_inputs_multid,
+    ],
+    unpack_into="model_keras_symbolic_input, model_decomon_symbolic_input, model_keras_input, model_decomon_input",
 )
 
 
