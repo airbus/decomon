@@ -61,9 +61,9 @@ def test_decomon_unary_layer(
     layer = keras_layer_class(**keras_layer_kwargs)
     layer(keras_symbolic_layer_input)
 
-    # randomize weights => non-zero biases
+    # randomize weights between -1 and 1 => non-zero biases
     for w in layer.weights:
-        w.assign(np.random.random(w.shape))
+        w.assign(2.0 * np.random.random(w.shape) - 1.0)
 
     # init + build decomon layer
     output_shape = layer.output.shape[1:]
