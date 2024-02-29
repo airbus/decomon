@@ -4,6 +4,7 @@ from keras.models import Model
 from pytest_cases import fixture, parametrize
 
 from decomon.core import ConvertMethod, Propagation, Slope
+from decomon.layers.utils.symbolify import LinkToPerturbationDomainInput
 from decomon.models.convert import clone
 
 
@@ -20,10 +21,10 @@ def test_clone_nok_several_inputs():
     "toy_model_name",
     [
         "tutorial",
-        # "tutorial_linear",
+        "tutorial_linear",
         "tutorial_activation_embedded",
         "add",
-        # "add_linear",
+        "add_linear",
         "merge_v0",
         "merge_v1",
         "merge_v1_seq",
@@ -85,3 +86,9 @@ def test_clone(
         ibp=ibp,
         affine=affine,
     )
+
+    # check that we added a layer to insert batch axis
+    if toy_model_name.endswith("_linear") and str(method).lower().startswith("crown"):
+        assert isinstance(decomon_model.layers[-1], LinkToPerturbationDomainInput)
+    else:
+        assert not isinstance(decomon_model.layers[-1], LinkToPerturbationDomainInput)

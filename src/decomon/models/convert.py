@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Callable
 from typing import Any, Optional, Union
 
@@ -14,6 +15,7 @@ from decomon.core import (
 )
 from decomon.layers import DecomonLayer
 from decomon.layers.convert import to_decomon
+from decomon.layers.utils.symbolify import LinkToPerturbationDomainInput
 from decomon.models.backward_cloning import convert_backward
 from decomon.models.forward_cloning import (
     convert_forward,
@@ -31,6 +33,8 @@ from decomon.models.utils import (
     preprocess_layer,
     split_activation,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _clone_keras_model(model: Model, layer_fn: Callable[[Layer], list[Layer]]) -> Model:
@@ -229,6 +233,16 @@ def clone(
         final_affine=final_affine,
         **kwargs,
     )
+
+    # full linear model? => batch independent output
+    if any([not isinstance(o, keras.KerasTensor) for o in output]):
+        logger.warning(
+            "Some propagated bounds have been eagerly computed, being independent from batch. "
+            "This should only be possible if the keras model is fully affine. -"
+            "We will make them artificially depend on perturbation input in order to create the DecomonModel."
+        )
+        # Insert batch axis and repeat it to get the correct batchsize
+        output = LinkToPerturbationDomainInput()([perturbation_domain_input] + output)
 
     return DecomonModel(
         inputs=[perturbation_domain_input],
