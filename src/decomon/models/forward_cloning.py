@@ -20,6 +20,7 @@ from decomon.core import (
 )
 from decomon.layers import DecomonLayer
 from decomon.layers.convert import to_decomon
+from decomon.layers.input import ForwardInput
 from decomon.models.utils import (
     ensure_functional_model,
     get_depth_dict,
@@ -27,42 +28,6 @@ from decomon.models.utils import (
     prepare_inputs_for_layer,
     wrap_outputs_from_layer_in_list,
 )
-
-
-def get_ibp_inputs(x: keras.KerasTensor, perturbation_domain: PerturbationDomain) -> list[keras.KerasTensor]:
-    """Get ibp inputs from perturbation domain input
-
-    Args:
-        x:  perturbation domain input
-        perturbation_domain: perturbation domain type
-
-    Returns:
-        [l_c, u_c] constant bounds on keras model input
-
-    """
-    return [perturbation_domain.get_lower_x(x=x), perturbation_domain.get_upper_x(x=x)]
-
-
-def get_affine_inputs(x: keras.KerasTensor, perturbation_domain: PerturbationDomain) -> list[keras.KerasTensor]:
-    """Get affine inputs from perturbation domain input
-
-    Args:
-        x:  perturbation domain input
-        perturbation_domain: perturbation domain type
-
-    Returns:
-        [w_l, b_l, w_u, b_u] identity affine bounds on keras model input
-
-    We start with identity bounds: w_l = w_u = Identity, b_l = b_u = 0
-    We need the perturbation domain input to get the proper shape, and to construct the inputs
-    from the future decomon model input x.
-
-    """
-    keras_input_like_tensor_wo_batchsize = perturbation_domain.get_kerasinputlike_from_x(x=x)[0]
-    # identity: diag representation + w/o batchisze
-    w = K.ones_like(keras_input_like_tensor_wo_batchsize)  # identity in diag
-    b = K.zeros_like(keras_input_like_tensor_wo_batchsize)
-    return [w, b, w, b]
 
 
 def convert_forward(
@@ -135,21 +100,8 @@ def convert_forward(
     )
 
     # generate input tensors
-    if affine:
-        affine_bounds_to_propagate = get_affine_inputs(
-            x=perturbation_domain_input, perturbation_domain=perturbation_domain
-        )
-    else:
-        affine_bounds_to_propagate = []
-    if ibp:
-        constant_oracle_bounds = get_ibp_inputs(x=perturbation_domain_input, perturbation_domain=perturbation_domain)
-    else:
-        constant_oracle_bounds = []
-    input_tensors_wo_pertubation_domain_inputs = inputs_outputs_spec.flatten_inputs(
-        affine_bounds_to_propagate=affine_bounds_to_propagate,
-        constant_oracle_bounds=constant_oracle_bounds,
-        perturbation_domain_inputs=[],
-    )
+    forward_input_layer = ForwardInput(perturbation_domain=perturbation_domain, ibp=ibp, affine=affine)
+    input_tensors_wo_pertubation_domain_inputs = forward_input_layer(perturbation_domain_input)
 
     output_map: dict[int, list[keras.KerasTensor]] = {}
     layer_list_map: dict[int, list[DecomonLayer]] = {}

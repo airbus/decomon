@@ -89,6 +89,13 @@ class PerturbationDomain(ABC):
         else:
             return (n_comp_x,) + original_input_shape
 
+    def get_keras_input_shape_wo_batchsize(self, x_shape: Tuple[int, ...]) -> Tuple[int, ...]:
+        n_comp_x = self.get_nb_x_components()
+        if n_comp_x == 1:
+            return x_shape
+        else:
+            return x_shape[1:]
+
 
 class BoxDomain(PerturbationDomain):
     def get_upper(self, x: Tensor, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
@@ -574,6 +581,30 @@ class InputsOutputsSpec:
                 return flattened_bounds_by_keras_input + perturbation_domain_inputs
         else:
             return affine_bounds_to_propagate + constant_oracle_bounds + perturbation_domain_inputs
+
+    def flatten_inputs_shape(
+        self,
+        affine_bounds_to_propagate_shape: Union[list[tuple[Optional[int], ...]], list[list[tuple[Optional[int], ...]]]],
+        constant_oracle_bounds_shape: Union[list[tuple[Optional[int], ...]], list[list[tuple[Optional[int], ...]]]],
+        perturbation_domain_inputs_shape: list[tuple[Optional[int], ...]],
+    ) -> list[tuple[Optional[int], ...]]:
+        """Flatten inputs shape
+
+        Same operation as `flatten_inputs` but on tensor shapes.
+
+        Args:
+            affine_bounds_to_propagate_shape:
+            constant_oracle_bounds_shape:
+            perturbation_domain_inputs_shape:
+
+        Returns:
+
+        """
+        return self.flatten_inputs(  # type: ignore
+            affine_bounds_to_propagate=affine_bounds_to_propagate_shape,
+            constant_oracle_bounds=constant_oracle_bounds_shape,
+            perturbation_domain_inputs=perturbation_domain_inputs_shape,
+        )  # type: ignore
 
     def split_outputs(self, outputs: list[Tensor]) -> tuple[Union[list[Tensor], list[list[Tensor]]], list[Tensor]]:
         """Split decomon inputs.
