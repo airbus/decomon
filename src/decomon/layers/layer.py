@@ -7,6 +7,7 @@ from keras.layers import Layer, Wrapper
 
 from decomon.core import BoxDomain, InputsOutputsSpec, PerturbationDomain, Propagation
 from decomon.keras_utils import batch_multid_dot
+from decomon.layers.oracle import get_forward_oracle
 from decomon.types import Tensor
 
 _keras_base_layer_keyword_parameters = [
@@ -65,7 +66,7 @@ class DecomonLayer(Wrapper):
 
     """
 
-    _is_merging: bool = False  # set to True in child class DecomonMerge
+    _is_merging_layer: bool = False  # set to True in child class DecomonMerge
 
     def __init__(
         self,
@@ -138,7 +139,7 @@ class DecomonLayer(Wrapper):
         model_input_shape: Optional[tuple[int, ...]],
         model_output_shape: Optional[tuple[int, ...]],
     ) -> InputsOutputsSpec:
-        if self._is_merging:
+        if self._is_merging_layer:
             if isinstance(layer.input, keras.KerasTensor):
                 # special case: merging a single input -> self.layer.input is already flattened
                 layer_input_shape = [layer.input.shape[1:]]
@@ -154,9 +155,18 @@ class DecomonLayer(Wrapper):
             layer_input_shape=layer_input_shape,
             model_input_shape=model_input_shape,
             model_output_shape=model_output_shape,
-            is_merging_layer=self._is_merging,
+            is_merging_layer=self._is_merging_layer,
             linear=self.linear,
         )
+
+    @property
+    def is_merging_layer(self) -> bool:
+        """Flag telling if the underlying keras layer is a merging layer or not (i.e. ~ with several inputs)."""
+        return self._is_merging_layer
+
+    @property
+    def layer_input_shape(self) -> tuple[int, ...]:
+        return self.inputs_outputs_spec.layer_input_shape
 
     @property
     def model_input_shape(self) -> tuple[int, ...]:
@@ -425,8 +435,6 @@ class DecomonLayer(Wrapper):
         input_affine_bounds: list[Tensor],
         input_constant_bounds: list[Tensor],
         perturbation_domain_inputs: list[Tensor],
-        ibp: Optional[bool] = None,
-        affine: Optional[bool] = None,
     ) -> list[Tensor]:
         """Get constant oracle bounds on underlying keras layer input from forward input bounds.
 
@@ -434,8 +442,6 @@ class DecomonLayer(Wrapper):
             input_affine_bounds: affine bounds on keras layer input w.r.t model input . Can be empty if not in affine mode.
             input_constant_bounds: ibp constant bounds on keras layer input. Can be empty if not in ibp mode.
             perturbation_domain_inputs: perturbation domain input, wrapped in a list. Necessary only in affine mode, else empty.
-            ibp: if set, overrides temporarily `self.ibp` (used by `call_oracle()`)
-            affine: if set, overrides temporarily `self.affine` (used by `call_oracle()`)
 
         Returns:
             constant bounds on keras layer input deduced from forward input bounds
@@ -448,85 +454,15 @@ class DecomonLayer(Wrapper):
         from the affine bounds given the considered perturbation domain.
 
         """
-        if ibp is None:
-            ibp = self.ibp
-        if affine is None:
-            affine = self.affine
-
-        if ibp:
-            # Hyp: in hybrid mode, the constant bounds are already tight
-            # (affine and ibp mixed in forward layer output to get the tightest constant bounds)
-            return input_constant_bounds
-
-        elif affine:
-            if len(perturbation_domain_inputs) == 0:
-                raise RuntimeError("keras model input is necessary for get_forward_oracle() in affine mode.")
-            x = perturbation_domain_inputs[0]
-            if len(input_affine_bounds) == 0:
-                # special case: empty affine bounds => identity bounds
-                l_affine = self.perturbation_domain.get_lower_x(x)
-                u_affine = self.perturbation_domain.get_upper_x(x)
-            else:
-                w_l, b_l, w_u, b_u = input_affine_bounds
-                l_affine = self.perturbation_domain.get_lower(x, w_l, b_l)
-                u_affine = self.perturbation_domain.get_upper(x, w_u, b_u)
-            return [l_affine, u_affine]
-
-        else:
-            raise RuntimeError("self.ibp and self.affine cannot be both False")
-
-    def call_oracle(self, inputs: list[Tensor]) -> list[Tensor]:
-        """Compute oracle constant bounds on keras inputs from flatten decomon inputs.
-
-        - forward: this is `self.get_forward_oracle()` after a split of inputs
-        - backward: this is a crown oracle.
-            The inputs are then equivalent to inputs for forward propagation + ibp=False + affine=True,
-            i.e. affine bounds (a priori coming from crowns) on each keras input + perturbation_domain_inputs
-            The computation is  also equivalent to the one done in `self.get_forward_oracle()` with ibp=False, affine=True
-
-        Args:
-            inputs: affine bounds on keras layer input + perturbation_domain_inputs
-
-        Returns:
-            constant bounds on keras layer input deduced from affine bounds
-
-        """
-        (
-            affine_bounds_to_propagate,
-            constant_oracle_bounds,
-            perturbation_domain_inputs,
-        ) = self.inputs_outputs_spec.split_inputs(inputs=inputs)
-        if self.propagation == Propagation.FORWARD:  # forward
-            return self.get_forward_oracle(
-                input_affine_bounds=affine_bounds_to_propagate,
-                input_constant_bounds=constant_oracle_bounds,
-                perturbation_domain_inputs=perturbation_domain_inputs,
-            )
-        else:  # backward
-            ibp = False
-            affine = True
-            propagation = Propagation.FORWARD
-            inputs_outputs_spec = self.create_inputs_outputs_spec(
-                ibp=ibp,
-                affine=affine,
-                propagation=propagation,
-                perturbation_domain=self.perturbation_domain,
-                layer=self.layer,
-                model_input_shape=self.model_input_shape,
-                model_output_shape=self.model_output_shape,
-            )
-            (
-                affine_bounds_to_propagate,
-                constant_oracle_bounds,
-                perturbation_domain_inputs,
-            ) = inputs_outputs_spec.split_inputs(inputs=inputs)
-            return self.get_forward_oracle(
-                input_affine_bounds=affine_bounds_to_propagate,
-                input_constant_bounds=constant_oracle_bounds,
-                perturbation_domain_inputs=perturbation_domain_inputs,
-                ibp=ibp,
-                affine=affine,
-            )
+        return get_forward_oracle(
+            affine_bounds=input_affine_bounds,
+            ibp_bounds=input_constant_bounds,
+            perturbation_domain_inputs=perturbation_domain_inputs,
+            perturbation_domain=self.perturbation_domain,
+            ibp=self.ibp,
+            affine=self.affine,
+            is_merging_layer=self.is_merging_layer,
+        )
 
     def call_forward(
         self,
@@ -702,12 +638,12 @@ class DecomonLayer(Wrapper):
             # outputs shape depends if layer and inputs are diagonal / linear (w/o batch)
             b_shape_wo_batchisze = model_output_shape_wo_batchsize
             if self.diagonal and self.inputs_outputs_spec.is_diagonal_bounds_shape(affine_bounds_to_propagate_shape):
-                if self._is_merging:
+                if self._is_merging_layer:
                     w_shape_wo_batchsize = [model_output_shape_wo_batchsize] * self.inputs_outputs_spec.nb_keras_inputs
                 else:
                     w_shape_wo_batchsize = model_output_shape_wo_batchsize
             else:
-                if self._is_merging:
+                if self._is_merging_layer:
                     w_shape_wo_batchsize = [
                         self.layer.input[i].shape[1:] + model_output_shape_wo_batchsize
                         for i in range(self.inputs_outputs_spec.nb_keras_inputs)
@@ -719,11 +655,11 @@ class DecomonLayer(Wrapper):
                 w_shape = w_shape_wo_batchsize
             else:
                 b_shape = (None,) + b_shape_wo_batchisze
-                if self._is_merging:
+                if self._is_merging_layer:
                     w_shape = [(None,) + sub_w_shape_wo_batchsize for sub_w_shape_wo_batchsize in w_shape_wo_batchsize]
                 else:
                     w_shape = (None,) + w_shape_wo_batchsize
-            if self._is_merging:
+            if self._is_merging_layer:
                 affine_bounds_propagated_shape = [
                     [
                         w_shape_i,

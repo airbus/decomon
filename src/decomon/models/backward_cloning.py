@@ -23,6 +23,7 @@ from decomon.core import (
 from decomon.layers import DecomonLayer
 from decomon.layers.convert import to_decomon
 from decomon.layers.merging.base_merge import DecomonMerge
+from decomon.layers.oracle import DecomonOracle
 from decomon.models.crown import Convert2BackwardMode, Fuse, MergeWithPrevious
 from decomon.models.utils import (
     ensure_functional_model,
@@ -274,12 +275,19 @@ def get_oracle(
         if id(node) in forward_layer_map:
             # forward oracle
             forward_layer = forward_layer_map[id(node)]
-            forward_input: list[keras.KerasTensor] = []
+            oracle_layer = DecomonOracle(
+                perturbation_domain=forward_layer.perturbation_domain,
+                ibp=forward_layer.ibp,
+                affine=forward_layer.affine,
+                layer_input_shape=forward_layer.layer_input_shape,
+                is_merging_layer=forward_layer.is_merging_layer,
+            )
+            oracle_input: list[keras.KerasTensor] = []
             for parent in parents:
-                forward_input += forward_output_map[id(parent)]
-            if forward_layer.inputs_outputs_spec.needs_perturbation_domain_inputs():
-                forward_input += [perturbation_domain_input]
-            oracle_bounds = forward_layer.call_oracle(forward_input)
+                oracle_input += forward_output_map[id(parent)]
+            if oracle_layer.inputs_outputs_spec.needs_perturbation_domain_inputs():
+                oracle_input += [perturbation_domain_input]
+            oracle_bounds = oracle_layer(oracle_input)
         else:
             # crown oracle
 
@@ -309,11 +317,15 @@ def get_oracle(
                     crown_output_map[id(parent)] = crown_bounds_parent
                 crown_bounds += crown_bounds_parent
 
-            # deduce oracle bounds from
-            #  - affine bounds on keras (sub)model inputs and
-            #  - corresponding perturbation domain input
-            backward_oracle_inputs = crown_bounds + [perturbation_domain_input]
-            oracle_bounds = backward_layer.call_oracle(backward_oracle_inputs)
+            oracle_input = crown_bounds + [perturbation_domain_input]
+            oracle_layer = DecomonOracle(
+                perturbation_domain=backward_layer.perturbation_domain,
+                ibp=False,
+                affine=True,
+                layer_input_shape=backward_layer.layer_input_shape,
+                is_merging_layer=backward_layer.is_merging_layer,
+            )  # crown bounds contains only affine bounds => ibp=False, affine=True
+            oracle_bounds = oracle_layer(oracle_input)
 
     # store oracle
     oracle_map[id(node)] = oracle_bounds
