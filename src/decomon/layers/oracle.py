@@ -113,7 +113,7 @@ class DecomonOracle(BaseOracle):
 
     def compute_output_shape(
         self,
-        input_shape: tuple[Optional[int], ...],
+        input_shape: list[tuple[Optional[int], ...]],
     ) -> Union[list[tuple[Optional[int], ...]], list[list[tuple[Optional[int], ...]]]]:
         """Compute output shape in case of symbolic call."""
         if self.is_merging_layer:

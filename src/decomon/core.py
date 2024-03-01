@@ -780,48 +780,6 @@ class InputsOutputsSpec:
             else:
                 return len(b_shape) == len(self.model_output_shape)
 
-    def sum_backward_bounds(self, affine_bounds_list: list[list[Tensor]]):
-        """Reduce a list of partial affine bounds on model output w.r.t a same model input by summing them.
-
-        The complication come from the fact that some bounds can be empty, diag or w/o batchsize.
-
-        Args:
-            affine_bounds_list:
-
-        Returns:
-
-        """
-        if self.propagation != Propagation.BACKWARD:
-            raise NotImplementedError()
-        if len(affine_bounds_list) == 0:
-            raise ValueError("affine_bounds_list should not be empty")
-
-        affine_bounds = affine_bounds_list[0]
-        for affine_bounds_i in affine_bounds_list[1:]:
-            # identity: put on diag + w/o batchsize form to be able to sum
-            missing_batchsize = (self.is_wo_batch_bounds(affine_bounds), self.is_wo_batch_bounds(affine_bounds_i))
-            diagonal = (self.is_diagonal_bounds(affine_bounds), self.is_diagonal_bounds(affine_bounds_i))
-            if len(affine_bounds) == 0:
-                w = K.ones(self.model_output_shape)
-                b = K.zeros(self.model_output_shape)
-                w_l, b_l, w_u, b_u = w, b, w, b
-            else:
-                w_l, b_l, w_u, b_u = affine_bounds
-            if len(affine_bounds_i) == 0:
-                w = K.ones(self.model_output_shape)
-                b = K.zeros(self.model_output_shape)
-                w_l_i, b_l_i, w_u_i, b_u_i = w, b, w, b
-            else:
-                w_l_i, b_l_i, w_u_i, b_u_i = affine_bounds_i
-            w_l = add_tensors(w_l, w_l_i, missing_batchsize=missing_batchsize, diagonal=diagonal)
-            w_u = add_tensors(w_u, w_u_i, missing_batchsize=missing_batchsize, diagonal=diagonal)
-            b_l = add_tensors(b_l, b_l_i, missing_batchsize=missing_batchsize)
-            b_u = add_tensors(b_u, b_u_i, missing_batchsize=missing_batchsize)
-
-            affine_bounds = w_l, b_l, w_u, b_u
-
-        return affine_bounds
-
     def get_kerasinputshape(self, inputsformode: list[Tensor]) -> tuple[Optional[int], ...]:
         return inputsformode[-1].shape
 

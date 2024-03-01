@@ -22,6 +22,7 @@ from decomon.core import (
 )
 from decomon.layers import DecomonLayer
 from decomon.layers.convert import to_decomon
+from decomon.layers.crown import ReduceCrownBounds
 from decomon.layers.merging.base_merge import DecomonMerge
 from decomon.layers.oracle import DecomonOracle
 from decomon.models.crown import Convert2BackwardMode, Fuse, MergeWithPrevious
@@ -191,7 +192,8 @@ def crown(
         # reduce by summing all bounds together
         # (indeed all bounds are partial affine bounds on model output w.r.t the same model input
         #  under the hypotheses of a single model input)
-        crown_bounds = backward_layer.inputs_outputs_spec.sum_backward_bounds(crown_bounds_list)
+        reducing_layer = ReduceCrownBounds(model_output_shape=model_output_shape)
+        crown_bounds = reducing_layer(crown_bounds_list)
 
     elif len(parents) > 1:
         raise RuntimeError("Node with multiple parents should have been converted to a DecomonMerge layer.")
