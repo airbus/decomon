@@ -197,6 +197,9 @@ def clone(
     Returns:
 
     """
+    # Store model name (before converting to functional)
+    model_name = model.name
+
     # Check hypotheses: functional model + 1 flattened input
     model = ensure_functional_model(model)
     if len(model.inputs) > 1:
@@ -217,7 +220,9 @@ def clone(
 
     backward_bounds = preprocess_backward_bounds(backward_bounds=backward_bounds, nb_model_outputs=len(model.outputs))
 
-    perturbation_domain_input = generate_perturbation_domain_input(model=model, perturbation_domain=perturbation_domain)
+    perturbation_domain_input = generate_perturbation_domain_input(
+        model=model, perturbation_domain=perturbation_domain, name=f"perturbation_domain_input_{model_name}"
+    )
 
     output = convert(
         model=model,

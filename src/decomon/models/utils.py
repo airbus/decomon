@@ -28,14 +28,13 @@ from decomon.types import BackendTensor
 
 
 def generate_perturbation_domain_input(
-    model: Model,
-    perturbation_domain: PerturbationDomain,
+    model: Model, perturbation_domain: PerturbationDomain, name: str = "perturbation_domain_input"
 ) -> keras.KerasTensor:
     model_input_shape = model.inputs[0].shape[1:]
     dtype = model.inputs[0].dtype
 
     input_shape_x = perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)
-    return Input(shape=input_shape_x, dtype=dtype)
+    return Input(shape=input_shape_x, dtype=dtype, name=name)
 
 
 def prepare_inputs_for_layer(
