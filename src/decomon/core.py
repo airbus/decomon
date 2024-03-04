@@ -162,6 +162,12 @@ class BallDomain(PerturbationDomain):
     def get_nb_x_components(self) -> int:
         return 1
 
+    def get_lower_x(self, x: Tensor) -> Tensor:
+        return x - self.eps
+
+    def get_upper_x(self, x: Tensor) -> Tensor:
+        return x + self.eps
+
 
 class ForwardMode(str, Enum):
     """The different forward (from input to output) linear based relaxation perturbation analysis."""
@@ -1099,7 +1105,7 @@ def get_lower_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, **kwargs: 
     return get_upper_box(x_min=x_max, x_max=x_min, w=w, b=b, **kwargs)
 
 
-def get_lq_norm(x: Tensor, p: float, axis: int = -1) -> Tensor:
+def get_lq_norm(x: Tensor, p: float, axis: Union[int, list[int]] = -1) -> Tensor:
     """compute Lp norm (p=1 or 2)
 
     Args:
@@ -1133,9 +1139,6 @@ def get_upper_ball(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kw
     Returns:
         max_(|x - x_0|_p<= eps) w*x + b
     """
-    if len(w.shape) == len(b.shape):
-        raise NotImplementedError
-
     if p == np.inf:
         # compute x_min and x_max according to eps
         x_min = x_0 - eps
@@ -1143,18 +1146,29 @@ def get_upper_ball(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kw
         return get_upper_box(x_min, x_max, w, b)
 
     else:
-        # use Holder's inequality p+q=1
-        # ||w||_q*eps + w*x_0 + b
-
         if len(kwargs):
             return get_upper_ball_finetune(x_0, eps, p, w, b, **kwargs)
 
-        upper = eps * get_lq_norm(w, p, axis=1) + b
+        # use Holder's inequality p+q=1
+        # ||w||_q*eps + w*x_0 + b
 
-        for _ in range(len(w.shape) - len(x_0.shape)):
-            x_0 = K.expand_dims(x_0, -1)
+        is_diag = w.shape == b.shape
+        is_wo_batch = len(b.shape) < len(x_0.shape)
 
-        return K.sum(w * x_0, 1) + upper
+        # lq-norm of w
+        if is_diag:
+            w_q = K.abs(w)
+        else:
+            nb_axes_wo_batchsize_x = len(x_0.shape) - 1
+            if is_wo_batch:
+                reduced_axes = list(range(nb_axes_wo_batchsize_x))
+            else:
+                reduced_axes = list(range(1, 1 + nb_axes_wo_batchsize_x))
+            w_q = get_lq_norm(w, p, axis=reduced_axes)
+
+        diagonal = (False, is_diag)
+        missing_batchsize = (False, is_wo_batch)
+        return batch_multid_dot(x_0, w, diagonal=diagonal, missing_batchsize=missing_batchsize) + b + w_q * eps
 
 
 def get_lower_ball(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
@@ -1170,9 +1184,6 @@ def get_lower_ball(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kw
     Returns:
         min_(|x - x_0|_p<= eps) w*x + b
     """
-    if len(w.shape) == len(b.shape):
-        return x_0 - eps
-
     if p == np.inf:
         # compute x_min and x_max according to eps
         x_min = x_0 - eps
@@ -1180,18 +1191,29 @@ def get_lower_ball(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kw
         return get_lower_box(x_min, x_max, w, b)
 
     else:
-        # use Holder's inequality p+q=1
-        # ||w||_q*eps + w*x_0 + b
-
         if len(kwargs):
             return get_lower_ball_finetune(x_0, eps, p, w, b, **kwargs)
 
-        lower = -eps * get_lq_norm(w, p, axis=1) + b
+        # use Holder's inequality p+q=1
+        # - ||w||_q*eps + w*x_0 + b
 
-        for _ in range(len(w.shape) - len(x_0.shape)):
-            x_0 = K.expand_dims(x_0, -1)
+        is_diag = w.shape == b.shape
+        is_wo_batch = len(b.shape) < len(x_0.shape)
 
-        return K.sum(w * x_0, 1) + lower
+        # lq-norm of w
+        if is_diag:
+            w_q = K.abs(w)
+        else:
+            nb_axes_wo_batchsize_x = len(x_0.shape) - 1
+            if is_wo_batch:
+                reduced_axes = list(range(nb_axes_wo_batchsize_x))
+            else:
+                reduced_axes = list(range(1, 1 + nb_axes_wo_batchsize_x))
+            w_q = get_lq_norm(w, p, axis=reduced_axes)
+
+        diagonal = (False, is_diag)
+        missing_batchsize = (False, is_wo_batch)
+        return batch_multid_dot(x_0, w, diagonal=diagonal, missing_batchsize=missing_batchsize) + b - w_q * eps
 
 
 def get_lower_ball_finetune(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
