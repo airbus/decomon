@@ -687,6 +687,14 @@ class InputsOutputsSpec:
 
         return affine_bounds_propagated, constant_bounds_propagated
 
+    def split_output_shape(
+        self, output_shape: list[tuple[Optional[int], ...]]
+    ) -> tuple[
+        Union[list[tuple[Optional[int], ...]], list[list[tuple[Optional[int], ...]]]], list[tuple[Optional[int], ...]]
+    ]:
+        """Split decomon output shape."""
+        return self.split_outputs(outputs=output_shape)  # type: ignore
+
     def flatten_outputs(
         self,
         affine_bounds_propagated: Union[list[Tensor], list[list[Tensor]]],

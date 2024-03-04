@@ -3,7 +3,8 @@ from typing import Any, Optional
 import keras.ops as K
 
 from decomon.keras_utils import add_tensors, batch_multid_dot
-from decomon.layers.layer import DecomonLayer, combine_affine_bounds
+from decomon.layers.fuse import combine_affine_bounds
+from decomon.layers.layer import DecomonLayer
 from decomon.types import Tensor
 
 

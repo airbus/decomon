@@ -1,12 +1,15 @@
 from inspect import Parameter, signature
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import keras
 import keras.ops as K
 from keras.layers import Layer, Wrapper
 
 from decomon.core import BoxDomain, InputsOutputsSpec, PerturbationDomain, Propagation
-from decomon.keras_utils import batch_multid_dot
+from decomon.layers.fuse import (
+    combine_affine_bound_with_constant_bound,
+    combine_affine_bounds,
+)
 from decomon.layers.oracle import get_forward_oracle
 from decomon.types import Tensor
 
@@ -308,17 +311,10 @@ class DecomonLayer(Wrapper):
         """
         if self.linear:
             w, b = self.get_affine_representation()
-            is_diag = w.shape == b.shape
-            kwargs_dot: dict[str, Any] = dict(missing_batchsize=(False, True), diagonal=(False, is_diag))
-
-            z_value = K.cast(0.0, dtype=w.dtype)
-            w_pos = K.maximum(w, z_value)
-            w_neg = K.minimum(w, z_value)
-
-            l_c = batch_multid_dot(lower, w_pos, **kwargs_dot) + batch_multid_dot(upper, w_neg, **kwargs_dot) + b
-            u_c = batch_multid_dot(upper, w_pos, **kwargs_dot) + batch_multid_dot(lower, w_neg, **kwargs_dot) + b
-
-            return l_c, u_c
+            affine_bounds = [w, b, w, b]
+            return combine_affine_bound_with_constant_bound(
+                lower=lower, upper=upper, affine_bounds=affine_bounds, missing_batchsize=self.linear
+            )
         else:
             raise NotImplementedError(
                 "`forward_ibp_propagate()` needs to be implemented to get the forward propagation of constant bounds."
@@ -454,6 +450,7 @@ class DecomonLayer(Wrapper):
         from the affine bounds given the considered perturbation domain.
 
         """
+        from_linear = self.inputs_outputs_spec.is_wo_batch_bounds_by_keras_input(input_affine_bounds)
         return get_forward_oracle(
             affine_bounds=input_affine_bounds,
             ibp_bounds=input_constant_bounds,
@@ -462,6 +459,7 @@ class DecomonLayer(Wrapper):
             ibp=self.ibp,
             affine=self.affine,
             is_merging_layer=self.is_merging_layer,
+            from_linear=from_linear,
         )
 
     def call_forward(
@@ -524,8 +522,11 @@ class DecomonLayer(Wrapper):
             x = perturbation_domain_inputs[0]
             l_ibp, u_ibp = output_constant_bounds
             w_l, b_l, w_u, b_u = output_affine_bounds
-            l_affine = self.perturbation_domain.get_lower(x, w_l, b_l)
-            u_affine = self.perturbation_domain.get_upper(x, w_u, b_u)
+            from_linear = self.linear and self.inputs_outputs_spec.is_wo_batch_bounds(
+                affine_bounds=affine_bounds_to_propagate
+            )
+            l_affine = self.perturbation_domain.get_lower(x, w_l, b_l, missing_batchsize=from_linear)
+            u_affine = self.perturbation_domain.get_upper(x, w_u, b_u, missing_batchsize=from_linear)
             u = K.minimum(u_ibp, u_affine)
             l = K.maximum(l_ibp, l_affine)
             output_constant_bounds = [l, u]
@@ -675,276 +676,3 @@ class DecomonLayer(Wrapper):
             return self.inputs_outputs_spec.flatten_outputs_shape(
                 affine_bounds_propagated_shape=affine_bounds_propagated_shape
             )
-
-
-def combine_affine_bounds(
-    affine_bounds_1: list[Tensor],
-    affine_bounds_2: list[Tensor],
-    from_linear_layer: tuple[bool, bool] = (False, False),
-    diagonal: tuple[bool, bool] = (False, False),
-) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-    """Combine affine bounds
-
-    Args:
-        affine_bounds_1: [w_l_1, b_l_1, w_u_1, b_u_1] first affine bounds
-        affine_bounds_2: [w_l_2, b_l_2, w_u_2, b_u_2] second affine bounds
-        from_linear_layer: specify if affine_bounds_1 or affine_bounds_2
-          come from the affine representation of a linear layer
-        diagonal: specify if affine_bounds_1 or affine_bounds_2
-          are in diagonal representation
-
-    Returns:
-        w_l, b_l, w_u, b_u: combined affine bounds
-
-    If x, y, z satisfy
-        w_l_1 * x + b_l_1 <= y <= w_u_1 * x + b_u_1
-        w_l_2 * y + b_l_2 <= z <= w_u_2 * y + b_u_2
-
-    Then
-        w_l * x + b_l <= z <= w_u * x + b_u
-
-
-    Special cases
-
-    - with linear layers:
-
-        If the affine bounds come from the affine representation of a linear layer (e.g. affine_bounds_1), then
-          - lower and upper bounds are equal: affine_bounds_1 = [w_1, b_1, w_1, b_1]
-          - the tensors are missing the batch dimension
-
-        In the generic case, tensors in affine_bounds have their first axis corresponding to the batch size.
-
-    - diagonal representation:
-
-        If w.shape == b.shape, this means that w is represented by its "diagonal" (potentially a tensor-multid).
-
-    - empty affine bounds:
-
-        when one affine bounds is an empty list, this is actually a convention for identity bounds, i.e.
-          w = identity, b = 0
-        therefore we return the other affine_bounds, unchanged.
-
-    """
-    # special case: empty bounds <=> identity bounds
-    if len(affine_bounds_1) == 0:
-        return tuple(affine_bounds_2)
-    if len(affine_bounds_2) == 0:
-        return tuple(affine_bounds_1)
-
-    if from_linear_layer == (False, False):
-        return _combine_affine_bounds_generic(
-            affine_bounds_1=affine_bounds_1, affine_bounds_2=affine_bounds_2, diagonal=diagonal
-        )
-    elif from_linear_layer == (True, False):
-        return _combine_affine_bounds_left_from_linear(
-            affine_bounds_1=affine_bounds_1, affine_bounds_2=affine_bounds_2, diagonal=diagonal
-        )
-    elif from_linear_layer == (False, True):
-        return _combine_affine_bounds_right_from_linear(
-            affine_bounds_1=affine_bounds_1, affine_bounds_2=affine_bounds_2, diagonal=diagonal
-        )
-    else:
-        return _combine_affine_bounds_both_from_linear(
-            affine_bounds_1=affine_bounds_1, affine_bounds_2=affine_bounds_2, diagonal=diagonal
-        )
-
-
-def _combine_affine_bounds_generic(
-    affine_bounds_1: list[Tensor],
-    affine_bounds_2: list[Tensor],
-    diagonal: tuple[bool, bool],
-) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-    """Combine affine bounds
-
-    Args:
-        affine_bounds_1: [w_l_1, b_l_1, w_u_1, b_u_1] first affine bounds
-        affine_bounds_2: [w_l_2, b_l_2, w_u_2, b_u_2] second affine bounds
-        diagonal: specify if weights of each affine bounds are in diagonal representation or not
-
-    Returns:
-        w_l, b_l, w_u, b_u: combined affine bounds
-
-    If x, y, z satisfy
-        w_l_1 * x + b_l_1 <= y <= w_u_1 * x + b_u_1
-        w_l_2 * y + b_l_2 <= z <= w_u_2 * x + b_u_2
-
-    Then
-        w_l * x + b_l <= z <= w_u * x + b_u
-
-    """
-    w_l_1, b_l_1, w_u_1, b_u_1 = affine_bounds_1
-    w_l_2, b_l_2, w_u_2, b_u_2 = affine_bounds_2
-    nb_axes_wo_batchsize_y = len(b_l_1.shape) - 1
-
-    #  NB: bias is never a diagonal representation! => we split kwargs_dot_w and kwargs_dot_b
-    kwargs_dot_w: dict[str, Any] = dict(
-        nb_merging_axes=nb_axes_wo_batchsize_y,
-        diagonal=diagonal,
-    )
-    kwargs_dot_b: dict[str, Any] = dict(
-        nb_merging_axes=nb_axes_wo_batchsize_y,
-        diagonal=(False, diagonal[1]),
-    )
-
-    z_value = K.cast(0.0, dtype=w_l_2.dtype)
-    w_l_2_pos = K.maximum(w_l_2, z_value)
-    w_u_2_pos = K.maximum(w_u_2, z_value)
-    w_l_2_neg = K.minimum(w_l_2, z_value)
-    w_u_2_neg = K.minimum(w_u_2, z_value)
-
-    w_l = batch_multid_dot(w_l_1, w_l_2_pos, **kwargs_dot_w) + batch_multid_dot(w_u_1, w_l_2_neg, **kwargs_dot_w)
-    w_u = batch_multid_dot(w_u_1, w_u_2_pos, **kwargs_dot_w) + batch_multid_dot(w_l_1, w_u_2_neg, **kwargs_dot_w)
-    b_l = (
-        batch_multid_dot(b_l_1, w_l_2_pos, **kwargs_dot_b) + batch_multid_dot(b_u_1, w_l_2_neg, **kwargs_dot_b) + b_l_2
-    )
-    b_u = (
-        batch_multid_dot(b_u_1, w_u_2_pos, **kwargs_dot_b) + batch_multid_dot(b_l_1, w_u_2_neg, **kwargs_dot_b) + b_u_2
-    )
-
-    return w_l, b_l, w_u, b_u
-
-
-def _combine_affine_bounds_right_from_linear(
-    affine_bounds_1: list[Tensor],
-    affine_bounds_2: list[Tensor],
-    diagonal: tuple[bool, bool],
-) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-    """Combine affine bounds
-
-    Args:
-        affine_bounds_1: [w_l_1, b_l_1, w_u_1, b_u_1] first affine bounds
-        affine_bounds_2: [w_2, b_2, w_2, b_2] second affine bounds, with lower=upper + no batchsize
-        diagonal: specify if weights of each affine bounds are in diagonal representation or not
-
-    Returns:
-        w_l, b_l, w_u, b_u: combined affine bounds
-
-    If x, y, z satisfy
-        w_l_1 * x + b_l_1 <= y <= w_u_1 * x + b_u_1
-        z = w_2 * y + b_2
-
-    Then
-        w_l * x + b_l <= z <= w_u * x + b_u
-
-    """
-    w_l_1, b_l_1, w_u_1, b_u_1 = affine_bounds_1
-    w_2, b_2 = affine_bounds_2[:2]
-    nb_axes_wo_batchsize_y = len(b_l_1.shape) - 1
-    missing_batchsize = (False, True)
-
-    #  NB: bias is never a diagonal representation! => we split kwargs_dot_w and kwargs_dot_b
-    kwargs_dot_w: dict[str, Any] = dict(
-        nb_merging_axes=nb_axes_wo_batchsize_y,
-        missing_batchsize=missing_batchsize,
-        diagonal=diagonal,
-    )
-    kwargs_dot_b: dict[str, Any] = dict(
-        nb_merging_axes=nb_axes_wo_batchsize_y,
-        missing_batchsize=missing_batchsize,
-        diagonal=(False, diagonal[1]),
-    )
-
-    z_value = K.cast(0.0, dtype=w_2.dtype)
-    w_2_pos = K.maximum(w_2, z_value)
-    w_2_neg = K.minimum(w_2, z_value)
-
-    w_l = batch_multid_dot(w_l_1, w_2_pos, **kwargs_dot_w) + batch_multid_dot(w_u_1, w_2_neg, **kwargs_dot_w)
-    w_u = batch_multid_dot(w_u_1, w_2_pos, **kwargs_dot_w) + batch_multid_dot(w_l_1, w_2_neg, **kwargs_dot_w)
-    b_l = batch_multid_dot(b_l_1, w_2_pos, **kwargs_dot_b) + batch_multid_dot(b_u_1, w_2_neg, **kwargs_dot_b) + b_2
-    b_u = batch_multid_dot(b_u_1, w_2_pos, **kwargs_dot_b) + batch_multid_dot(b_l_1, w_2_neg, **kwargs_dot_b) + b_2
-
-    return w_l, b_l, w_u, b_u
-
-
-def _combine_affine_bounds_left_from_linear(
-    affine_bounds_1: list[Tensor],
-    affine_bounds_2: list[Tensor],
-    diagonal: tuple[bool, bool],
-) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-    """Combine affine bounds
-
-    Args:
-        affine_bounds_1: [w_1, b_1, w_1, b_1] first affine bounds, with lower=upper + no batchsize
-        affine_bounds_2: [w_l_2, b_l_2, w_u_2, b_u_2] second affine bounds
-        diagonal: specify if weights of each affine bounds are in diagonal representation or not
-
-    Returns:
-        w_l, b_l, w_u, b_u: combined affine bounds
-
-    If x, y, z satisfy
-        y = w_1 * x + b_1
-        w_l_2 * y + b_l_2 <= z <= w_u_2 * x + b_u_2
-
-    Then
-        w_l * x + b_l <= z <= w_u * x + b_u
-
-    """
-    w_1, b_1 = affine_bounds_1[:2]
-    w_l_2, b_l_2, w_u_2, b_u_2 = affine_bounds_2
-    nb_axes_wo_batchsize_y = len(b_1.shape)
-    missing_batchsize = (True, False)
-
-    #   NB: bias is never a diagonal representation! => we split kwargs_dot_w and kwargs_dot_b
-    kwargs_dot_w: dict[str, Any] = dict(
-        nb_merging_axes=nb_axes_wo_batchsize_y,
-        missing_batchsize=missing_batchsize,
-        diagonal=diagonal,
-    )
-    kwargs_dot_b: dict[str, Any] = dict(
-        nb_merging_axes=nb_axes_wo_batchsize_y,
-        missing_batchsize=missing_batchsize,
-        diagonal=(False, diagonal[1]),
-    )
-
-    w_l = batch_multid_dot(w_1, w_l_2, **kwargs_dot_w)
-    w_u = batch_multid_dot(w_1, w_u_2, **kwargs_dot_w)
-    b_l = batch_multid_dot(b_1, w_l_2, **kwargs_dot_b) + b_l_2
-    b_u = batch_multid_dot(b_1, w_u_2, **kwargs_dot_b) + b_u_2
-
-    return w_l, b_l, w_u, b_u
-
-
-def _combine_affine_bounds_both_from_linear(
-    affine_bounds_1: list[Tensor],
-    affine_bounds_2: list[Tensor],
-    diagonal: tuple[bool, bool],
-) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-    """Combine affine bounds
-
-    Args:
-        affine_bounds_1: [w_1, b_1, w_1, b_1] first affine bounds, with lower=upper + no batchsize
-        affine_bounds_2: [w_2, b_2, w_2, b_2] second affine bounds, with lower=upper + no batchsize
-        diagonal: specify if weights of each affine bounds are in diagonal representation or not
-
-    Returns:
-        w, b, w, b: combined affine bounds
-
-    If x, y, z satisfy
-        y = w_1 * x + b_1
-        z = w_2 * x + b_2
-
-    Then
-        z = w * x + b
-
-    """
-    w_1, b_1 = affine_bounds_1[:2]
-    w_2, b_2 = affine_bounds_2[:2]
-    nb_axes_wo_batchsize_y = len(b_1.shape)
-    missing_batchsize = (True, True)
-
-    #   NB: bias is never a diagonal representation! => we split kwargs_dot_w and kwargs_dot_b
-    kwargs_dot_w: dict[str, Any] = dict(
-        nb_merging_axes=nb_axes_wo_batchsize_y,
-        missing_batchsize=missing_batchsize,
-        diagonal=diagonal,
-    )
-    kwargs_dot_b: dict[str, Any] = dict(
-        nb_merging_axes=nb_axes_wo_batchsize_y,
-        missing_batchsize=missing_batchsize,
-        diagonal=(False, diagonal[1]),
-    )
-
-    w = batch_multid_dot(w_1, w_2, **kwargs_dot_w)
-    b = batch_multid_dot(b_1, w_2, **kwargs_dot_b) + b_2
-
-    return w, b, w, b

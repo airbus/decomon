@@ -101,6 +101,8 @@ class DecomonOracle(BaseOracle):
             perturbation_domain_inputs,
         ) = self.inputs_outputs_spec.split_inputs(inputs=inputs)
 
+        from_linear = self.inputs_outputs_spec.is_wo_batch_bounds_by_keras_input(affine_bounds)
+
         return get_forward_oracle(
             affine_bounds=affine_bounds,
             ibp_bounds=ibp_bounds,
@@ -109,6 +111,7 @@ class DecomonOracle(BaseOracle):
             ibp=self.ibp,
             affine=self.affine,
             is_merging_layer=self.is_merging_layer,
+            from_linear=from_linear,
         )
 
     def compute_output_shape(
@@ -136,6 +139,7 @@ def get_forward_oracle(
     ibp: bool,
     affine: bool,
     is_merging_layer: bool,
+    from_linear: bool,
 ) -> list[BackendTensor]:
     """Get constant oracle bounds on keras layer inputs from forward input bounds.
 
@@ -154,6 +158,7 @@ def get_forward_oracle(
     ibp: bool,
     affine: bool,
     is_merging_layer: bool,
+    from_linear: list[bool],
 ) -> list[list[BackendTensor]]:
     """Get constant oracle bounds on keras layer inputs from forward input bounds.
 
@@ -171,17 +176,19 @@ def get_forward_oracle(
     ibp: bool,
     affine: bool,
     is_merging_layer: bool,
+    from_linear: Union[bool, list[bool]],
 ) -> Union[list[BackendTensor], list[list[BackendTensor]]]:
     """Get constant oracle bounds on keras layer inputs from forward input bounds.
 
     Args:
-        affine_bounds: affine bounds on keras layer input w.r.t model input . Can be empty if not in affine mode.
+        affine_bounds: affine bounds on keras layer inputs w.r.t model input . Can be empty if not in affine mode.
         ibp_bounds: ibp constant bounds on keras layer input. Can be empty if not in ibp mode.
         perturbation_domain_inputs: perturbation domain input, wrapped in a list. Necessary only in affine mode, else empty.
         perturbation_domain: perturbation domain spec.
         ibp: ibp bounds exist?
         affine: affine bounds exist?
         is_merging_layer: keras layer is a merging layer?
+        from_linear: affine bounds from linear layer/model? (ie no batchsize + upper affine bound==lower affine bound)
 
     Returns:
         constant bounds on keras layer input deduced from forward layer input bounds or crown output + perturbation_domain_input
@@ -202,15 +209,15 @@ def get_forward_oracle(
         x = perturbation_domain_inputs[0]
         if is_merging_layer:
             constant_bounds = []
-            for affine_bounds_i in affine_bounds:
+            for affine_bounds_i, from_linear_i in zip(affine_bounds, from_linear):
                 if len(affine_bounds_i) == 0:
                     # special case: empty affine bounds => identity bounds
                     l_affine = perturbation_domain.get_lower_x(x)
                     u_affine = perturbation_domain.get_upper_x(x)
                 else:
                     w_l, b_l, w_u, b_u = affine_bounds_i
-                    l_affine = perturbation_domain.get_lower(x, w_l, b_l)
-                    u_affine = perturbation_domain.get_upper(x, w_u, b_u)
+                    l_affine = perturbation_domain.get_lower(x, w_l, b_l, missing_batchsize=from_linear_i)
+                    u_affine = perturbation_domain.get_upper(x, w_u, b_u, missing_batchsize=from_linear_i)
                 constant_bounds.append([l_affine, u_affine])
             return constant_bounds
         else:
@@ -220,8 +227,8 @@ def get_forward_oracle(
                 u_affine = perturbation_domain.get_upper_x(x)
             else:
                 w_l, b_l, w_u, b_u = affine_bounds
-                l_affine = perturbation_domain.get_lower(x, w_l, b_l)
-                u_affine = perturbation_domain.get_upper(x, w_u, b_u)
+                l_affine = perturbation_domain.get_lower(x, w_l, b_l, missing_batchsize=from_linear)
+                u_affine = perturbation_domain.get_upper(x, w_u, b_u, missing_batchsize=from_linear)
             return [l_affine, u_affine]
 
     else:
