@@ -734,8 +734,8 @@ class InputsOutputsSpec:
         """Flatten decomon outputs shape."""
         return self.flatten_outputs(affine_bounds_propagated=affine_bounds_propagated_shape, constant_bounds_propagated=constant_bounds_propagated_shape)  # type: ignore
 
-    def has_multiple_affine_inputs(self) -> bool:
-        return self.propagation == Propagation.FORWARD and self.affine and self.is_merging_layer
+    def has_multiple_bounds_inputs(self) -> bool:
+        return self.propagation == Propagation.FORWARD and self.is_merging_layer
 
     @overload
     def extract_shapes_from_affine_bounds(
@@ -752,7 +752,7 @@ class InputsOutputsSpec:
     def extract_shapes_from_affine_bounds(
         self, affine_bounds: Union[list[Tensor], list[list[Tensor]]], i: int = -1
     ) -> Union[list[tuple[Optional[int], ...]], list[list[tuple[Optional[int], ...]]]]:
-        if self.has_multiple_affine_inputs() and i == -1:
+        if self.has_multiple_bounds_inputs() and i == -1:
             return [[t.shape for t in sub_bounds] for sub_bounds in affine_bounds]
         else:
             return [t.shape for t in affine_bounds]  # type: ignore
@@ -767,7 +767,7 @@ class InputsOutputsSpec:
         affine_bounds_shape: Union[list[tuple[Optional[int], ...]], list[list[tuple[Optional[int], ...]]]],
         i: int = -1,
     ) -> bool:
-        if self.has_multiple_affine_inputs() and i == -1:
+        if self.has_multiple_bounds_inputs() and i == -1:
             return all(
                 self.is_identity_bounds_shape(affine_bounds_shape=affine_bounds_shape[i], i=i)  # type: ignore
                 for i in range(self.nb_keras_inputs)
@@ -785,13 +785,13 @@ class InputsOutputsSpec:
         affine_bounds_shape: Union[list[tuple[Optional[int], ...]], list[list[tuple[Optional[int], ...]]]],
         i: int = -1,
     ) -> bool:
-        if self.has_multiple_affine_inputs() and i == -1:
+        if self.has_multiple_bounds_inputs() and i == -1:
             return all(
                 self.is_diagonal_bounds_shape(affine_bounds_shape=affine_bounds_shape[i], i=i)  # type: ignore
                 for i in range(self.nb_keras_inputs)
             )
         else:
-            if self.is_identity_bounds_shape(affine_bounds_shape):
+            if self.is_identity_bounds_shape(affine_bounds_shape, i=i):
                 return True
             w_shape, b_shape = affine_bounds_shape[:2]
             return w_shape == b_shape
@@ -806,13 +806,13 @@ class InputsOutputsSpec:
         affine_bounds_shape: Union[list[tuple[Optional[int], ...]], list[list[tuple[Optional[int], ...]]]],
         i: int = -1,
     ) -> bool:
-        if self.has_multiple_affine_inputs() and i == -1:
+        if self.has_multiple_bounds_inputs() and i == -1:
             return all(
                 self.is_wo_batch_bounds_shape(affine_bounds_shape=affine_bounds_shape[i], i=i)  # type: ignore
                 for i in range(self.nb_keras_inputs)
             )
         else:
-            if self.is_identity_bounds_shape(affine_bounds_shape):
+            if self.is_identity_bounds_shape(affine_bounds_shape, i=i):
                 return True
             b_shape = affine_bounds_shape[1]
             if self.propagation == Propagation.FORWARD:
@@ -841,7 +841,7 @@ class InputsOutputsSpec:
         self,
         affine_bounds: Union[list[Tensor], list[list[Tensor]]],
     ) -> Union[bool, list[bool]]:
-        if self.has_multiple_affine_inputs():
+        if self.has_multiple_bounds_inputs():
             return [self.is_wo_batch_bounds(affine_bounds_i, i=i) for i, affine_bounds_i in enumerate(affine_bounds)]
         else:
             return self.is_wo_batch_bounds(affine_bounds)
