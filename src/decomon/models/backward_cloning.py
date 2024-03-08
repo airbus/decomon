@@ -339,6 +339,7 @@ def crown_model(
     model: Model,
     layer_fn: Callable[[Layer, tuple[int, ...]], DecomonLayer],
     backward_bounds: list[list[keras.KerasTensor]],
+    from_linear_backward_bounds: list[bool],
     perturbation_domain_input: keras.KerasTensor,
     perturbation_domain: PerturbationDomain,
     oracle_map: Optional[dict[int, Union[list[keras.KerasTensor], list[list[keras.KerasTensor]]]]] = None,
@@ -357,6 +358,7 @@ def crown_model(
         perturbation_domain: perturbation domain type on keras model input
         backward_bounds: should be of the same size as the number of model outputs
             (each sublist potentially empty for starting with identity bounds)
+        from_linear_backward_bounds: specify if the backward_bounds come from a linear model (=> no batchsize + upper == lower)
         oracle_map: already registered oracle bounds per node
         forward_output_map: forward outputs per node from a previously performed forward conversion.
             To be used for forward oracle.
@@ -388,9 +390,11 @@ def crown_model(
 
     # Apply crown on each output, with the appropriate backward_bounds and model_output_shape
     output = []
-    for node, backward_bounds_node in zip(output_nodes, backward_bounds):
+    for node, backward_bounds_node, from_linear in zip(output_nodes, backward_bounds, from_linear_backward_bounds):
         # new backward_map and new model_output_shape for each output node
-        model_output_shape = get_model_output_shape(node=node, backward_bounds=backward_bounds_node)
+        model_output_shape = get_model_output_shape(
+            node=node, backward_bounds=backward_bounds_node, from_linear=from_linear
+        )
         backward_map_node = {}
 
         output_crown = crown(
@@ -417,7 +421,8 @@ def convert_backward(
     perturbation_domain_input: keras.KerasTensor,
     perturbation_domain: Optional[PerturbationDomain] = None,
     layer_fn: Callable[..., DecomonLayer] = to_decomon,
-    backward_bounds: Optional[list[list[keras.KerasTensor]]] = None,
+    backward_bounds: Optional[list[keras.KerasTensor]] = None,
+    from_linear_backward_bounds: Union[bool, list[bool]] = False,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     forward_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
@@ -433,8 +438,10 @@ def convert_backward(
         perturbation_domain_input: perturbation domain input
         perturbation_domain: perturbation domain type on keras model input
         layer_fn: callable converting a layer and a model_output_shape into a (backward) decomon layer
-        backward_bounds: if set, should be of the same size as the number of model outputs
-            (each sublist potentially empty for starting with identity bounds)
+        backward_bounds: if set, should be of the same size as the number of model outputs times 4,
+            being the concatenation of backward bounds for each keras model output
+        from_linear_backward_bounds: specify if backward_bounds come from a linear model (=> no batchsize + upper == lower)
+            if a boolean, flag for each backward bound, else a list of boolean, one per keras model output.
         forward_output_map: forward outputs per node from a previously performed forward conversion.
             To be used for forward oracle if not empty.
         forward_layer_map: forward decomon layer per node from a previously performed forward conversion.
@@ -449,7 +456,12 @@ def convert_backward(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     if backward_bounds is None:
-        backward_bounds = [[]] * len(model.outputs)
+        backward_bounds_for_crown_model = [[]] * len(model.outputs)
+    else:
+        # split backward bounds per model output
+        backward_bounds_for_crown_model = [backward_bounds[i : i + 4] for i in range(0, len(backward_bounds), 4)]
+    if isinstance(from_linear_backward_bounds, bool):
+        from_linear_backward_bounds = [from_linear_backward_bounds] * len(model.outputs)
 
     model = ensure_functional_model(model)
     propagation = Propagation.BACKWARD
@@ -465,7 +477,8 @@ def convert_backward(
     output = crown_model(
         model=model,
         layer_fn=layer_fn,
-        backward_bounds=backward_bounds,
+        backward_bounds=backward_bounds_for_crown_model,
+        from_linear_backward_bounds=from_linear_backward_bounds,
         perturbation_domain_input=perturbation_domain_input,
         perturbation_domain=perturbation_domain,
         forward_output_map=forward_output_map,
@@ -475,14 +488,14 @@ def convert_backward(
     return output
 
 
-def get_model_output_shape(node: Node, backward_bounds: list[Tensor]):
+def get_model_output_shape(node: Node, backward_bounds: list[Tensor], from_linear: bool = False):
     """Get outer model output shape w/o batchsize.
 
     If any backward bounds are passed, we deduce the outer keras model output shape from it.
     We assume for that:
     - backward_bounds = [w_l, b_l, w_u, b_u]
     - we can have w_l, w_u in diagonal representation (w_l.shape == b_l.shape)
-    - we have the batchsize included in the backward_bounds
+    - we have the batchsize included in the backward_bounds, except if from_linear is True
 
     => model_output_shape = backward_bounds[1].shape[1:]
 
@@ -491,6 +504,7 @@ def get_model_output_shape(node: Node, backward_bounds: list[Tensor]):
     Args:
         node: current output node of the (potentially inner) keras model to convert
         backward_bounds: backward bounds specified for this node
+        from_linear: flag telling if backward_bounds are from a linear model (and thus w/o batchsize + lower==upper)
 
     Returns:
         outer keras model output shape, excluding batchsize
@@ -500,7 +514,10 @@ def get_model_output_shape(node: Node, backward_bounds: list[Tensor]):
         return node.outputs[0].shape[1:]
     else:
         _, b, _, _ = backward_bounds
-        return b.shape[1:]
+        if from_linear:
+            return b.shape
+        else:
+            return b.shape[1:]
 
 
 def include_kwargs_layer_fn(

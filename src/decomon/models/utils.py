@@ -327,7 +327,11 @@ def preprocess_backward_bounds(
         else:
             # list of list of tensors
             if len(backward_bounds) == 1:
-                return [backward_bounds[0]] * nb_model_outputs
+                if len(backward_bounds[0]) == 0:
+                    # [[]]
+                    return None
+                else:
+                    return [backward_bounds[0]] * nb_model_outputs
             elif len(backward_bounds) != nb_model_outputs:
                 raise ValueError(
                     "If backward_bounds is given as a list of tensors, it should have nb_model_ouptputs elements."

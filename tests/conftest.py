@@ -134,8 +134,11 @@ class Helpers:
             raise NotImplementedError(f"Not implemented for {backend} backend.")
 
     @staticmethod
-    def generate_random_tensor(shape_wo_batchsize, batchsize=10, dtype=keras_config.floatx()):
-        shape = (batchsize,) + shape_wo_batchsize
+    def generate_random_tensor(shape_wo_batchsize, batchsize=10, dtype=keras_config.floatx(), nobatch=False):
+        if nobatch:
+            shape = shape_wo_batchsize
+        else:
+            shape = (batchsize,) + shape_wo_batchsize
         return K.convert_to_tensor(2.0 * np.random.random(shape) - 1.0, dtype=dtype)
 
     @staticmethod

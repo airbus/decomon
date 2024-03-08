@@ -1,9 +1,10 @@
+import keras.ops as K
 import pytest
 from keras.layers import Input
 from keras.models import Model
 from pytest_cases import parametrize
 
-from decomon.core import ConvertMethod, Slope
+from decomon.core import BoxDomain, ConvertMethod, Slope
 from decomon.layers.utils.symbolify import LinkToPerturbationDomainInput
 from decomon.models.convert import clone
 
@@ -150,4 +151,99 @@ def test_clone_final_mode(
         decimal=decimal,
         ibp=final_ibp,
         affine=final_affine,
+    )
+
+
+@parametrize(
+    "toy_model_name",
+    [
+        "tutorial",
+    ],
+)
+@parametrize("equal_ibp, input_shape", [(False, (5, 6, 2))], ids=["multid"])  # fix some parameters of inputs
+def test_clone_w_backwardbounds(
+    toy_model_name,
+    toy_model_fn,
+    method,
+    perturbation_domain,
+    equal_ibp,
+    input_shape,
+    simple_model_keras_symbolic_input,
+    simple_model_keras_input,
+    simple_model_decomon_input,
+    helpers,
+):
+    # input shape?
+    input_shape = simple_model_keras_symbolic_input.shape[1:]
+
+    slope = Slope.Z_SLOPE
+    decimal = 4
+
+    # keras model to convert: chaining 2 models
+    keras_model_1 = toy_model_fn(input_shape=input_shape)
+    output_shape_1 = keras_model_1.outputs[0].shape  # only 1 output
+
+    keras_model_2 = toy_model_fn(input_shape=output_shape_1[1:])
+
+    input_tot = keras_model_1.inputs[0]
+    output_tot = keras_model_2(keras_model_1(input_tot))
+    keras_model_tot = Model(input_tot, output_tot)
+
+    # perturbation domain for 2nd model: computed by foward conversion of first model
+    forward_model_1 = clone(
+        model=keras_model_1,
+        slope=slope,
+        perturbation_domain=perturbation_domain,
+        method=ConvertMethod.FORWARD_HYBRID,
+    )
+    decomon_input_1 = simple_model_decomon_input
+    decomon_output_1 = forward_model_1(decomon_input_1)
+    _, _, _, _, lower_ibp, upper_ibp = decomon_output_1
+    decomon_input_2 = K.concatenate([lower_ibp[:, None], upper_ibp[:, None]], axis=1)
+
+    # backward_bounds: crown on 2nd model
+    crown_model_2 = clone(
+        model=keras_model_2,
+        slope=slope,
+        perturbation_domain=BoxDomain(),
+        method=ConvertMethod.CROWN,
+    )
+    symbolic_backward_bounds = crown_model_2.outputs
+    backward_bounds = crown_model_2(decomon_input_2)
+
+    # conversion of first model with backward_bounds
+    decomon_model = clone(
+        model=keras_model_1,
+        slope=slope,
+        perturbation_domain=perturbation_domain,
+        method=method,
+        backward_bounds=symbolic_backward_bounds,
+    )
+
+    # call on actual outputs
+    keras_output = keras_model_tot(simple_model_keras_input)
+    decomon_output = decomon_model([simple_model_decomon_input] + backward_bounds)
+
+    # check output mode
+    ibp = decomon_model.ibp
+    affine = decomon_model.affine
+
+    if method in (ConvertMethod.FORWARD_IBP, ConvertMethod.FORWARD_HYBRID):
+        assert ibp
+    else:
+        assert not ibp
+
+    if method == ConvertMethod.FORWARD_IBP:
+        assert not affine
+    else:
+        assert affine
+
+    # check ibp and affine bounds well ordered w.r.t. keras inputs/outputs
+    helpers.assert_decomon_output_compare_with_keras_input_output_model(
+        decomon_output=decomon_output,
+        keras_input=simple_model_keras_input,
+        keras_output=keras_output,
+        decimal=decimal,
+        ibp=ibp,
+        affine=affine,
     )

@@ -16,6 +16,11 @@ from decomon.core import (
 from decomon.layers import DecomonLayer
 from decomon.layers.convert import to_decomon
 from decomon.layers.fuse import Fuse
+from decomon.layers.input import (
+    BackwardInput,
+    flatten_backward_bounds,
+    has_no_backward_bounds,
+)
 from decomon.layers.output import ConvertOutput
 from decomon.layers.utils.symbolify import LinkToPerturbationDomainInput
 from decomon.models.backward_cloning import convert_backward
@@ -86,14 +91,14 @@ def convert(
     perturbation_domain_input: keras.KerasTensor,
     perturbation_domain: PerturbationDomain,
     method: ConvertMethod = ConvertMethod.CROWN,
-    backward_bounds: Optional[list[list[keras.KerasTensor]]] = None,
+    backward_bounds: Optional[list[keras.KerasTensor]] = None,
+    from_linear_backward_bounds: Union[bool, list[bool]] = False,
     layer_fn: Callable[..., DecomonLayer] = to_decomon,
     slope: Slope = Slope.V_SLOPE,
     forward_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
     final_ibp: bool = False,
     final_affine: bool = True,
-    from_linear_backward_bounds: Union[bool, list[bool]] = False,
     **kwargs: Any,
 ) -> list[keras.KerasTensor]:
     """
@@ -103,7 +108,9 @@ def convert(
         perturbation_domain_input: perturbation domain input
         perturbation_domain: perturbation domain type on keras model input
         method: method used to convert the model to a decomon model. See `ConvertMethod`.
-        backward_bounds: backward bounds to propagate, see `preprocess_backward_bounds()` for conventions
+        backward_bounds: backward bounds to propagate, concatenation of backward bounds for each keras model output
+        from_linear_backward_bounds: specify if backward_bounds come from a linear model (=> no batchsize + upper == lower)
+            if a boolean, flag for each backward bound, else a list of boolean, one per keras model output.
         layer_fn: callable converting a layer and a model_output_shape into a decomon layer
         slope: slope used by decomon activation layers
         forward_output_map: forward outputs per node from a previously performed forward conversion.
@@ -125,6 +132,9 @@ def convert(
 
     if not final_ibp and not final_affine:
         raise ValueError("One of final_ibp and final_affine must be True.")
+
+    if isinstance(from_linear_backward_bounds, bool):
+        from_linear_backward_bounds = [from_linear_backward_bounds] * len(model.outputs)
 
     # prepare the Keras Model: split non-linear activation functions into separate Activation layers
     model = preprocess_keras_model(model)
@@ -153,6 +163,7 @@ def convert(
             perturbation_domain=perturbation_domain,
             layer_fn=layer_fn,
             backward_bounds=backward_bounds,
+            from_linear_backward_bounds=from_linear_backward_bounds,
             slope=slope,
             forward_output_map=forward_output_map,
             forward_layer_map=forward_layer_map,
@@ -164,9 +175,6 @@ def convert(
 
     elif backward_bounds is not None:
         # Fuse backward_bounds with forward bounds if method not using backward propagation
-        if isinstance(from_linear_backward_bounds, bool):
-            from_linear_backward_bounds = [from_linear_backward_bounds] * len(model.outputs)
-        backward_bounds_flatten = [t for backward_bound in backward_bounds for t in backward_bound]
         fuse_layer = Fuse(
             ibp_1=ibp,
             affine_1=affine,
@@ -176,7 +184,7 @@ def convert(
             m_1_output_shapes=[t.shape[1:] for t in model.outputs],
             from_linear_2=from_linear_backward_bounds,
         )
-        output = fuse_layer((output, backward_bounds_flatten))
+        output = fuse_layer((output, backward_bounds))
         # output updated mode
         affine = fuse_layer.affine_fused
         ibp = fuse_layer.ibp_fused
@@ -205,6 +213,7 @@ def clone(
     perturbation_domain: Optional[PerturbationDomain] = None,
     method: Union[str, ConvertMethod] = ConvertMethod.CROWN,
     backward_bounds: Optional[Union[keras.KerasTensor, list[keras.KerasTensor], list[list[keras.KerasTensor]]]] = None,
+    from_linear_backward_bounds: Union[bool, list[bool]] = False,
     final_ibp: Optional[bool] = None,
     final_affine: Optional[bool] = None,
     layer_fn: Callable[..., DecomonLayer] = to_decomon,
@@ -219,7 +228,10 @@ def clone(
         slope: slope used by decomon activation layers
         perturbation_domain: perturbation domain type on keras model input
         method: method used to convert the model to a decomon model. See `ConvertMethod`.
-        backward_bounds: backward bounds to propagate, see `preprocess_backward_bounds()` for conventions
+        backward_bounds: backward bounds to propagate, see `BackwardInput` for conventions
+            to be fused with ibp + affine bounds computed on the keras model outputs
+        from_linear_backward_bounds: specify if backward_bounds come from a linear model (=> no batchsize + upper == lower)
+            if a boolean, flag for each backward bound, else a list of boolean, one per keras model output.
         final_ibp: specify if final outputs should include constant bounds.
             Default to False except for forward-ibp and forward-hybrid.
         final_affine: specify if final outputs should include affine bounds.
@@ -234,6 +246,30 @@ def clone(
         **kwargs: keyword arguments to pass to layer_fn
 
     Returns:
+        decomon model mapping perturbation domain input and backward bounds
+        to ibp + affine bounds (according to final_ibp and final_affine) on model outputs
+        fused with the backward bounds
+
+    The resulting DecomonModel have flatten inputs and outputs:
+    - inputs: [perturbation_domain_input] + backward_bounds_flattened
+        where backward_bounds_flattened is computed from backward_bounds as follows:
+        - None -> []
+        - single tensor -> [backward_bounds]
+        - list of tensors -> backward_bounds
+        - list of list of tensors -> flatten: [t for sublist in backward_bounds for t in sublist]
+
+        - single tensor -> [backward_bounds, 0, backward_bounds, 0] * nb_model_outputs
+        - list of 2 tensors (upper = lower bounds, for all model outputs) ->  backward_bounds * 2 * nb_model_outputs
+        - list of 4 tensors -> backward_bounds * nb_model_outputs
+        - list of 4 * nb_model_outputs tensors -> backward_bounds
+        - list of list of tensors -> ensure having nb_model_outputs sublists -> flatten: [t for sublist in backward_bounds for t in sublist]
+
+    - outputs: sum_{i} (affine_bounds_from[i] + constant_bounds_from[i])
+        being the affine and constant bounds for each output of the keras model, with
+        - i: the indice of the model output considered
+        - sum_{i}: the concatenation of subsequent lists over i
+        - affine_bounds_from[i]: empty if `final_affine` is False
+        - constant_bounds_from[i]: empty if `final_ibp` is False
 
     """
     # Store model name (before converting to functional)
@@ -257,7 +293,21 @@ def clone(
     if isinstance(method, str):
         method = ConvertMethod(method.lower())
 
-    backward_bounds = preprocess_backward_bounds(backward_bounds=backward_bounds, nb_model_outputs=len(model.outputs))
+    # preprocess backward_bounds
+    backward_bounds_flattened: Optional[list[keras.KerasTensor]]
+    backward_bounds_for_convert: Optional[list[keras.KerasTensor]]
+    if has_no_backward_bounds(backward_bounds):
+        backward_bounds_flattened = None
+        backward_bounds_for_convert = None
+    else:
+        if isinstance(from_linear_backward_bounds, bool):
+            from_linear_backward_bounds = [from_linear_backward_bounds] * len(model.outputs)
+        # flatten backward bounds
+        backward_bounds_flattened = flatten_backward_bounds(backward_bounds)
+        # prepare for convert: ensure having 4 * nb_model_outputs tensors
+        backward_bounds_for_convert = BackwardInput(
+            model_output_shapes=[t.shape[1:] for t in model.outputs], from_linear=from_linear_backward_bounds
+        )(backward_bounds_flattened)
 
     perturbation_domain_input = generate_perturbation_domain_input(
         model=model, perturbation_domain=perturbation_domain, name=f"perturbation_domain_input_{model_name}"
@@ -268,7 +318,8 @@ def clone(
         perturbation_domain_input=perturbation_domain_input,
         perturbation_domain=perturbation_domain,
         method=method,
-        backward_bounds=backward_bounds,
+        backward_bounds=backward_bounds_for_convert,
+        from_linear_backward_bounds=from_linear_backward_bounds,
         layer_fn=layer_fn,
         slope=slope,
         forward_output_map=forward_output_map,
@@ -288,8 +339,12 @@ def clone(
         # Insert batch axis and repeat it to get the correct batchsize
         output = LinkToPerturbationDomainInput()([perturbation_domain_input] + output)
 
+    decomon_inputs = [perturbation_domain_input]
+    if backward_bounds_flattened is not None:
+        decomon_inputs += backward_bounds_flattened
+
     return DecomonModel(
-        inputs=[perturbation_domain_input],
+        inputs=decomon_inputs,
         outputs=output,
         perturbation_domain=perturbation_domain,
         method=method,
