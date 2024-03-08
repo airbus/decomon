@@ -31,22 +31,55 @@ class PerturbationDomain(ABC):
 
     @abstractmethod
     def get_upper_x(self, x: Tensor) -> Tensor:
+        """Get upper constant bound on perturbation domain input."""
         ...
 
     @abstractmethod
     def get_lower_x(self, x: Tensor) -> Tensor:
+        """Get lower constant bound on perturbation domain input."""
         ...
 
     @abstractmethod
-    def get_upper(self, x: Tensor, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
+    def get_upper(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
+        """Merge upper affine bounds with perturbation domain input to get upper constant bound.
+
+        Args:
+            x: perturbation domain input
+            w: weights of the affine bound
+            b: bias of the affine bound
+            missing_batchsize: whether w and b are missing batchsize
+            **kwargs:
+
+        Returns:
+
+        """
         ...
 
     @abstractmethod
-    def get_lower(self, x: Tensor, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
+    def get_lower(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
+        """Merge lower affine bounds with perturbation domain input to get lower constant bound.
+
+        Args:
+            x: perturbation domain input
+            w: weights of the affine bound
+            b: bias of the affine bound
+            missing_batchsize: whether w and b are missing batchsize
+            **kwargs:
+
+        Returns:
+
+        """
         ...
 
     @abstractmethod
     def get_nb_x_components(self) -> int:
+        """Get the number of components in perturabation domain input.
+
+        For instance:
+        - box domain: each corner of the box -> 2 components
+        - ball domain: center of the ball -> 1 component
+
+        """
         ...
 
     @abstractmethod
@@ -83,13 +116,15 @@ class PerturbationDomain(ABC):
             return x[:, 0]
 
     def get_x_input_shape_wo_batchsize(self, original_input_shape: tuple[int, ...]) -> tuple[int, ...]:
+        """Get expected perturbation domain input shape, excepting the batch axis."""
         n_comp_x = self.get_nb_x_components()
         if n_comp_x == 1:
             return original_input_shape
         else:
             return (n_comp_x,) + original_input_shape
 
-    def get_keras_input_shape_wo_batchsize(self, x_shape: Tuple[int, ...]) -> Tuple[int, ...]:
+    def get_keras_input_shape_wo_batchsize(self, x_shape: tuple[int, ...]) -> tuple[int, ...]:
+        """Deduce keras model input shape from perturbation domain input shape."""
         n_comp_x = self.get_nb_x_components()
         if n_comp_x == 1:
             return x_shape
@@ -98,15 +133,15 @@ class PerturbationDomain(ABC):
 
 
 class BoxDomain(PerturbationDomain):
-    def get_upper(self, x: Tensor, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
+    def get_upper(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
         x_min = x[:, 0]
         x_max = x[:, 1]
-        return get_upper_box(x_min=x_min, x_max=x_max, w=w, b=b, **kwargs)
+        return get_upper_box(x_min=x_min, x_max=x_max, w=w, b=b, missing_batchsize=missing_batchsize, **kwargs)
 
-    def get_lower(self, x: Tensor, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
+    def get_lower(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
         x_min = x[:, 0]
         x_max = x[:, 1]
-        return get_lower_box(x_min=x_min, x_max=x_max, w=w, b=b, **kwargs)
+        return get_lower_box(x_min=x_min, x_max=x_max, w=w, b=b, missing_batchsize=missing_batchsize, **kwargs)
 
     def get_upper_x(self, x: Tensor) -> Tensor:
         return x[:, 1]
@@ -153,11 +188,11 @@ class BallDomain(PerturbationDomain):
         )
         return config
 
-    def get_lower(self, x: Tensor, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
-        return get_lower_ball(x_0=x, eps=self.eps, p=self.p, w=w, b=b, **kwargs)
+    def get_lower(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
+        return get_lower_ball(x_0=x, eps=self.eps, p=self.p, w=w, b=b, missing_batchsize=missing_batchsize, **kwargs)
 
-    def get_upper(self, x: Tensor, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
-        return get_upper_ball(x_0=x, eps=self.eps, p=self.p, w=w, b=b, **kwargs)
+    def get_upper(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
+        return get_upper_ball(x_0=x, eps=self.eps, p=self.p, w=w, b=b, missing_batchsize=missing_batchsize, **kwargs)
 
     def get_nb_x_components(self) -> int:
         return 1
@@ -703,12 +738,14 @@ class InputsOutputsSpec:
         return self.propagation == Propagation.FORWARD and self.affine and self.is_merging_layer
 
     @overload
-    def extract_shapes_from_affine_bounds(self, affine_bounds: list[Tensor]) -> list[tuple[Optional[int], ...]]:
+    def extract_shapes_from_affine_bounds(
+        self, affine_bounds: list[Tensor], i: int = -1
+    ) -> list[tuple[Optional[int], ...]]:
         ...
 
     @overload
     def extract_shapes_from_affine_bounds(
-        self, affine_bounds: list[list[Tensor]]
+        self, affine_bounds: list[list[Tensor]], i: int = -1
     ) -> list[list[tuple[Optional[int], ...]]]:
         ...
 
@@ -785,6 +822,29 @@ class InputsOutputsSpec:
                     return len(b_shape) == len(self.layer_input_shape)
             else:
                 return len(b_shape) == len(self.model_output_shape)
+
+    @overload
+    def is_wo_batch_bounds_by_keras_input(
+        self,
+        affine_bounds: list[Tensor],
+    ) -> bool:
+        ...
+
+    @overload
+    def is_wo_batch_bounds_by_keras_input(
+        self,
+        affine_bounds: list[list[Tensor]],
+    ) -> list[bool]:
+        ...
+
+    def is_wo_batch_bounds_by_keras_input(
+        self,
+        affine_bounds: Union[list[Tensor], list[list[Tensor]]],
+    ) -> Union[bool, list[bool]]:
+        if self.has_multiple_affine_inputs():
+            return [self.is_wo_batch_bounds(affine_bounds_i, i=i) for i, affine_bounds_i in enumerate(affine_bounds)]
+        else:
+            return self.is_wo_batch_bounds(affine_bounds)
 
     def get_kerasinputshape(self, inputsformode: list[Tensor]) -> tuple[Optional[int], ...]:
         return inputsformode[-1].shape
@@ -1052,7 +1112,7 @@ class InputsOutputsSpec:
         return K.convert_to_tensor([], dtype=dtype)
 
 
-def get_upper_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
+def get_upper_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
     """Compute the max of an affine function
     within a box (hypercube) defined by its extremal corners
 
@@ -1061,6 +1121,7 @@ def get_upper_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, **kwargs: 
         x_max: upper bound of the box domain
         w: weights of the affine function
         b: bias of the affine function
+        missing_batchsize: whether w and b are missing the batchsize
 
     Returns:
         max_(x >= x_min, x<=x_max) w*x + b
@@ -1075,9 +1136,8 @@ def get_upper_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, **kwargs: 
     w_neg = K.minimum(w, z_value)
 
     is_diag = w.shape == b.shape
-    is_wo_batch = len(b.shape) < len(x_min.shape)
     diagonal = (False, is_diag)
-    missing_batchsize = (False, is_wo_batch)
+    missing_batchsize = (False, missing_batchsize)
 
     return (
         batch_multid_dot(x_max, w_pos, diagonal=diagonal, missing_batchsize=missing_batchsize)
@@ -1086,13 +1146,14 @@ def get_upper_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, **kwargs: 
     )
 
 
-def get_lower_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
+def get_lower_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
     """
     Args:
         x_min: lower bound of the box domain
         x_max: upper bound of the box domain
-        w_l: weights of the affine lower bound
-        b_l: bias of the affine lower bound
+        w: weights of the affine lower bound
+        b: bias of the affine lower bound
+        missing_batchsize: whether w and b are missing the batchsize
 
     Returns:
         min_(x >= x_min, x<=x_max) w*x + b
@@ -1102,7 +1163,7 @@ def get_lower_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, **kwargs: 
         We assume that x_min, x_max have always its batch axis.
 
     """
-    return get_upper_box(x_min=x_max, x_max=x_min, w=w, b=b, **kwargs)
+    return get_upper_box(x_min=x_max, x_max=x_min, w=w, b=b, missing_batchsize=missing_batchsize, **kwargs)
 
 
 def get_lq_norm(x: Tensor, p: float, axis: Union[int, list[int]] = -1) -> Tensor:
@@ -1126,7 +1187,9 @@ def get_lq_norm(x: Tensor, p: float, axis: Union[int, list[int]] = -1) -> Tensor
     return x_q
 
 
-def get_upper_ball(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
+def get_upper_ball(
+    x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, missing_batchsize: bool = False, **kwargs: Any
+) -> Tensor:
     """max of an affine function over an Lp ball
 
     Args:
@@ -1135,6 +1198,7 @@ def get_upper_ball(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kw
         p: the type of Lp norm considered
         w: weights of the affine function
         b: bias of the affine function
+        missing_batchsize: whether w and b are missing the batchsize
 
     Returns:
         max_(|x - x_0|_p<= eps) w*x + b
@@ -1143,35 +1207,36 @@ def get_upper_ball(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kw
         # compute x_min and x_max according to eps
         x_min = x_0 - eps
         x_max = x_0 + eps
-        return get_upper_box(x_min, x_max, w, b)
+        return get_upper_box(x_min, x_max, w, b, missing_batchsize=missing_batchsize)
 
     else:
         if len(kwargs):
-            return get_upper_ball_finetune(x_0, eps, p, w, b, **kwargs)
+            return get_upper_ball_finetune(x_0, eps, p, w, b, missing_batchsize=missing_batchsize, **kwargs)
 
         # use Holder's inequality p+q=1
         # ||w||_q*eps + w*x_0 + b
 
         is_diag = w.shape == b.shape
-        is_wo_batch = len(b.shape) < len(x_0.shape)
 
         # lq-norm of w
         if is_diag:
             w_q = K.abs(w)
         else:
             nb_axes_wo_batchsize_x = len(x_0.shape) - 1
-            if is_wo_batch:
+            if missing_batchsize:
                 reduced_axes = list(range(nb_axes_wo_batchsize_x))
             else:
                 reduced_axes = list(range(1, 1 + nb_axes_wo_batchsize_x))
             w_q = get_lq_norm(w, p, axis=reduced_axes)
 
         diagonal = (False, is_diag)
-        missing_batchsize = (False, is_wo_batch)
+        missing_batchsize = (False, missing_batchsize)
         return batch_multid_dot(x_0, w, diagonal=diagonal, missing_batchsize=missing_batchsize) + b + w_q * eps
 
 
-def get_lower_ball(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
+def get_lower_ball(
+    x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, missing_batchsize: bool = False, **kwargs: Any
+) -> Tensor:
     """min of an affine fucntion over an Lp ball
 
     Args:
@@ -1180,6 +1245,7 @@ def get_lower_ball(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kw
         p: the type of Lp norm considered
         w: weights of the affine function
         b: bias of the affine function
+        missing_batchsize: whether w and b are missing the batchsize
 
     Returns:
         min_(|x - x_0|_p<= eps) w*x + b
@@ -1188,35 +1254,39 @@ def get_lower_ball(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kw
         # compute x_min and x_max according to eps
         x_min = x_0 - eps
         x_max = x_0 + eps
-        return get_lower_box(x_min, x_max, w, b)
+        return get_lower_box(x_min, x_max, w, b, missing_batchsize=missing_batchsize)
 
     else:
         if len(kwargs):
-            return get_lower_ball_finetune(x_0, eps, p, w, b, **kwargs)
+            return get_lower_ball_finetune(x_0, eps, p, w, b, missing_batchsize=missing_batchsize, **kwargs)
 
         # use Holder's inequality p+q=1
         # - ||w||_q*eps + w*x_0 + b
 
         is_diag = w.shape == b.shape
-        is_wo_batch = len(b.shape) < len(x_0.shape)
 
         # lq-norm of w
         if is_diag:
             w_q = K.abs(w)
         else:
             nb_axes_wo_batchsize_x = len(x_0.shape) - 1
-            if is_wo_batch:
+            if missing_batchsize:
                 reduced_axes = list(range(nb_axes_wo_batchsize_x))
             else:
                 reduced_axes = list(range(1, 1 + nb_axes_wo_batchsize_x))
             w_q = get_lq_norm(w, p, axis=reduced_axes)
 
         diagonal = (False, is_diag)
-        missing_batchsize = (False, is_wo_batch)
+        missing_batchsize = (False, missing_batchsize)
         return batch_multid_dot(x_0, w, diagonal=diagonal, missing_batchsize=missing_batchsize) + b - w_q * eps
 
 
-def get_lower_ball_finetune(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
+def get_lower_ball_finetune(
+    x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, missing_batchsize: bool = False, **kwargs: Any
+) -> Tensor:
+    if missing_batchsize:
+        raise NotImplementedError()
+
     if "finetune_lower" in kwargs and "upper" in kwargs or "lower" in kwargs:
         alpha = kwargs["finetune_lower"]
         # assume alpha is the same shape as w, minus the batch dimension
@@ -1267,7 +1337,12 @@ def get_lower_ball_finetune(x_0: Tensor, eps: float, p: float, w: Tensor, b: Ten
     return get_lower_ball(x_0, eps, p, w, b)
 
 
-def get_upper_ball_finetune(x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, **kwargs: Any) -> Tensor:
+def get_upper_ball_finetune(
+    x_0: Tensor, eps: float, p: float, w: Tensor, b: Tensor, missing_batchsize: bool = False, **kwargs: Any
+) -> Tensor:
+    if missing_batchsize:
+        raise NotImplementedError()
+
     if "finetune_upper" in kwargs and "upper" in kwargs or "lower" in kwargs:
         alpha = kwargs["finetune_upper"]
         # assume alpha is the same shape as w, minus the batch dimension
