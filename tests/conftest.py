@@ -46,6 +46,9 @@ ibp, affine, propagation = param_fixtures(
     ],
     ids=["forward-hybrid", "forward-affine", "forward-ibp", "backward"],
 )
+final_ibp, final_affine = param_fixtures(
+    "final_ibp, final_affine", [(True, False), (False, True), (True, True)], ids=["ibp", "affine", "hybrid"]
+)
 slope = param_fixture("slope", [s.value for s in Slope])
 n = param_fixture("n", list(range(10)))
 odd = param_fixture("odd", list(range(2)))
@@ -150,6 +153,7 @@ class Helpers:
         nobatch=False,
         for_linear_layer=False,
         remove_perturbation_domain_inputs=False,
+        add_perturbation_domain_inputs=False,
     ):
         inputs_outputs_spec = InputsOutputsSpec(
             ibp=ibp,
@@ -161,7 +165,9 @@ class Helpers:
             model_output_shape=model_output_shape,
             linear=for_linear_layer,
         )
-        if inputs_outputs_spec.needs_perturbation_domain_inputs() and not remove_perturbation_domain_inputs:
+        if (
+            inputs_outputs_spec.needs_perturbation_domain_inputs() and not remove_perturbation_domain_inputs
+        ) or add_perturbation_domain_inputs:
             perturbation_domain_inputs_shape = [perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)]
         else:
             perturbation_domain_inputs_shape = []
@@ -202,6 +208,7 @@ class Helpers:
         nobatch=False,
         for_linear_layer=False,
         remove_perturbation_domain_inputs=False,
+        add_perturbation_domain_inputs=False,
         dtype=keras_config.floatx(),
     ):
         """Generate decomon symbolic inputs for a decomon layer
@@ -239,6 +246,7 @@ class Helpers:
             nobatch=nobatch,
             for_linear_layer=for_linear_layer,
             remove_perturbation_domain_inputs=remove_perturbation_domain_inputs,
+            add_perturbation_domain_inputs=add_perturbation_domain_inputs,
         )
         perturbation_domain_inputs = [Input(shape, dtype=dtype) for shape in perturbation_domain_inputs_shape]
         constant_oracle_bounds = [Input(shape, dtype=dtype) for shape in constant_oracle_bounds_shape]
@@ -278,6 +286,7 @@ class Helpers:
         dtype=keras_config.floatx(),
         equal_ibp=True,
         remove_perturbation_domain_inputs=False,
+        add_perturbation_domain_inputs=False,
     ):
         """Generate simple decomon inputs for a layer from the corresponding keras input
 
@@ -316,7 +325,9 @@ class Helpers:
             linear=for_linear_layer,
         )
 
-        if inputs_outputs_spec.needs_perturbation_domain_inputs() and not remove_perturbation_domain_inputs:
+        if (
+            inputs_outputs_spec.needs_perturbation_domain_inputs() and not remove_perturbation_domain_inputs
+        ) or add_perturbation_domain_inputs:
             x = Helpers.generate_simple_perturbation_domain_inputs_from_keras_input(
                 keras_input=keras_input, perturbation_domain=perturbation_domain
             )

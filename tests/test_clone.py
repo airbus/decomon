@@ -1,9 +1,9 @@
 import pytest
-from keras.layers import Dense, Input
+from keras.layers import Input
 from keras.models import Model
-from pytest_cases import fixture, parametrize
+from pytest_cases import parametrize
 
-from decomon.core import ConvertMethod, Propagation, Slope
+from decomon.core import ConvertMethod, Slope
 from decomon.layers.utils.symbolify import LinkToPerturbationDomainInput
 from decomon.models.convert import clone
 
@@ -92,3 +92,62 @@ def test_clone(
         assert isinstance(decomon_model.layers[-1], LinkToPerturbationDomainInput)
     else:
         assert not isinstance(decomon_model.layers[-1], LinkToPerturbationDomainInput)
+
+
+@parametrize(
+    "toy_model_name",
+    [
+        "tutorial",
+    ],
+)
+def test_clone_final_mode(
+    toy_model_name,
+    toy_model_fn,
+    method,
+    final_ibp,
+    final_affine,
+    perturbation_domain,
+    simple_model_keras_symbolic_input,
+    simple_model_keras_input,
+    simple_model_decomon_input,
+    helpers,
+):
+    # input shape?
+    input_shape = simple_model_keras_symbolic_input.shape[1:]
+
+    # skip cnn on 0d or 1d input_shape
+    if toy_model_name == "cnn" and len(input_shape) == 1:
+        pytest.skip("cnn not possible on 0d or 1d input.")
+
+    slope = Slope.Z_SLOPE
+    decimal = 4
+
+    # keras model to convert
+    keras_model = toy_model_fn(input_shape=input_shape)
+
+    # conversion
+    decomon_model = clone(
+        model=keras_model,
+        slope=slope,
+        perturbation_domain=perturbation_domain,
+        method=method,
+        final_ibp=final_ibp,
+        final_affine=final_affine,
+    )
+
+    # call on actual outputs
+    keras_output = keras_model(simple_model_keras_input)
+    decomon_output = decomon_model(simple_model_decomon_input)
+
+    assert final_ibp == decomon_model.ibp
+    assert final_affine == decomon_model.affine
+
+    # check ibp and affine bounds well ordered w.r.t. keras inputs/outputs
+    helpers.assert_decomon_output_compare_with_keras_input_output_model(
+        decomon_output=decomon_output,
+        keras_input=simple_model_keras_input,
+        keras_output=keras_output,
+        decimal=decimal,
+        ibp=final_ibp,
+        affine=final_affine,
+    )

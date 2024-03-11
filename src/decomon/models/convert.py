@@ -16,6 +16,7 @@ from decomon.core import (
 from decomon.layers import DecomonLayer
 from decomon.layers.convert import to_decomon
 from decomon.layers.fuse import Fuse
+from decomon.layers.output import ConvertOutput
 from decomon.layers.utils.symbolify import LinkToPerturbationDomainInput
 from decomon.models.backward_cloning import convert_backward
 from decomon.models.forward_cloning import (
@@ -122,6 +123,9 @@ def convert(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
 
+    if not final_ibp and not final_affine:
+        raise ValueError("One of final_ibp and final_affine must be True.")
+
     # prepare the Keras Model: split non-linear activation functions into separate Activation layers
     model = preprocess_keras_model(model)
 
@@ -154,6 +158,9 @@ def convert(
             forward_layer_map=forward_layer_map,
             **kwargs,
         )
+        # output updated mode
+        affine = True
+        ibp = False
 
     elif backward_bounds is not None:
         # Fuse backward_bounds with forward bounds if method not using backward propagation
@@ -170,9 +177,23 @@ def convert(
             from_linear_2=from_linear_backward_bounds,
         )
         output = fuse_layer((output, backward_bounds_flatten))
+        # output updated mode
+        affine = fuse_layer.affine_fused
+        ibp = fuse_layer.ibp_fused
 
     # Update output for final_ibp and final_affine
-    ...
+    if final_ibp != ibp or final_affine != affine:
+        convert_layer = ConvertOutput(
+            ibp_from=ibp,
+            affine_from=affine,
+            ibp_to=final_ibp,
+            affine_to=final_affine,
+            perturbation_domain=perturbation_domain,
+            model_output_shapes=[t.shape[1:] for t in model.outputs],
+        )
+        if convert_layer.needs_perturbation_domain_inputs():
+            output.append(perturbation_domain_input)
+        output = convert_layer(output)
 
     # build decomon model
     return output
