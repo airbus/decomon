@@ -15,6 +15,7 @@ from decomon.core import (
 )
 from decomon.layers import DecomonLayer
 from decomon.layers.convert import to_decomon
+from decomon.layers.fuse import Fuse
 from decomon.layers.utils.symbolify import LinkToPerturbationDomainInput
 from decomon.models.backward_cloning import convert_backward
 from decomon.models.forward_cloning import (
@@ -91,6 +92,7 @@ def convert(
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
     final_ibp: bool = False,
     final_affine: bool = True,
+    from_linear_backward_bounds: Union[bool, list[bool]] = False,
     **kwargs: Any,
 ) -> list[keras.KerasTensor]:
     """
@@ -152,6 +154,22 @@ def convert(
             forward_layer_map=forward_layer_map,
             **kwargs,
         )
+
+    elif backward_bounds is not None:
+        # Fuse backward_bounds with forward bounds if method not using backward propagation
+        if isinstance(from_linear_backward_bounds, bool):
+            from_linear_backward_bounds = [from_linear_backward_bounds] * len(model.outputs)
+        backward_bounds_flatten = [t for backward_bound in backward_bounds for t in backward_bound]
+        fuse_layer = Fuse(
+            ibp_1=ibp,
+            affine_1=affine,
+            ibp_2=False,
+            affine_2=True,
+            m1_input_shape=model.inputs[0].shape[1:],
+            m_1_output_shapes=[t.shape[1:] for t in model.outputs],
+            from_linear_2=from_linear_backward_bounds,
+        )
+        output = fuse_layer((output, backward_bounds_flatten))
 
     # Update output for final_ibp and final_affine
     ...
