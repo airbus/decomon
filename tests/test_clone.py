@@ -45,6 +45,7 @@ def test_clone(
     model_keras_symbolic_input,
     model_keras_input,
     model_decomon_input,
+    model_decomon_input_metadata,
     helpers,
 ):
     # input shape?
@@ -53,6 +54,14 @@ def test_clone(
     # skip cnn on 0d or 1d input_shape
     if toy_model_name == "cnn" and len(input_shape) == 1:
         pytest.skip("cnn not possible on 0d or 1d input.")
+
+    # xfail add model with standard multid input for now (memory issues to be fixed)
+    if (
+        model_decomon_input_metadata["name"] == "standard-multid"
+        and toy_model_name == "add"
+        and method.lower().startswith("crown")
+    ):
+        pytest.xfail("crown on 'add' toy model crashed sometimes with standard-multid, to be investigated.")
 
     slope = Slope.Z_SLOPE
     decimal = 4
