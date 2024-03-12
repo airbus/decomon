@@ -1,5 +1,39 @@
 from keras.src.utils.model_visualization import *
 
+from decomon.layers.crown import ReduceCrownBounds
+from decomon.layers.fuse import Fuse
+from decomon.layers.input import BackwardInput, ForwardInput, IdentityInput
+from decomon.layers.oracle import DecomonOracle
+from decomon.layers.output import ConvertOutput
+from decomon.layers.utils.batchsize import InsertBatchAxis
+from decomon.layers.utils.symbolify import LinkToPerturbationDomainInput
+
+decomon_utilitary_layers_default_style = dict(bgcolor="#82E0AA", color="black")
+decomon_utilitary_layers = [
+    LinkToPerturbationDomainInput,
+    InsertBatchAxis,
+    ReduceCrownBounds,
+    Fuse,
+    BackwardInput,
+    IdentityInput,
+    ForwardInput,
+    ConvertOutput,
+    DecomonOracle,
+]
+decomon_utilitary_layers_styles = {l: decomon_utilitary_layers_default_style for l in decomon_utilitary_layers}
+show_decomon_layer_attributes = {
+    "propagation": {
+        "forward": {
+            "bgcolor": "#b3e6ff",
+        },
+        "backward": {
+            "bgcolor": "#ffccdd",
+        },
+        None: {"color": "black"},
+    },
+    "layer.name": {},
+}
+
 
 def get_layer_attribute(layer, name):
     subnames = name.split(".")
@@ -16,10 +50,11 @@ def make_layer_label(layer, **kwargs):
 
     show_layer_names = kwargs.pop("show_layer_names")
     show_layer_activations = kwargs.pop("show_layer_activations")
-    show_layer_attributes = kwargs.pop("show_layer_attributes", [])
+    show_layer_attributes = kwargs.pop("show_layer_attributes", {})
     show_dtype = kwargs.pop("show_dtype")
     show_shapes = kwargs.pop("show_shapes")
     show_trainable = kwargs.pop("show_trainable")
+    layer_styles = kwargs.pop("layer_styles", {})
     if kwargs:
         raise ValueError(f"Invalid kwargs: {kwargs}")
 
@@ -27,17 +62,21 @@ def make_layer_label(layer, **kwargs):
 
     colspan = max(1, sum(int(x) for x in (show_dtype, show_shapes, show_trainable)))
 
+    # style for layer node, according to its class, as specified in layer_styles
+    layer_style_to_apply = {"color": "white", "bgcolor": "black"}  # default style
+    layer_style_to_apply.update(layer_styles.get(type(layer), {}))
+
     if show_layer_names:
         table += (
-            f'<tr><td colspan="{colspan}" bgcolor="black">'
-            '<font point-size="16" color="white">'
+            f'<tr><td colspan="{colspan}" bgcolor="{layer_style_to_apply["bgcolor"]}">'
+            f'<font point-size="16" color="{layer_style_to_apply["color"]}">'
             f"<b>{layer.name}</b> ({class_name})"
             "</font></td></tr>"
         )
     else:
         table += (
-            f'<tr><td colspan="{colspan}" bgcolor="black">'
-            '<font point-size="16" color="white">'
+            f'<tr><td colspan="{colspan}" bgcolor="{layer_style_to_apply["bgcolor"]}">'
+            f'<font point-size="16" color="{layer_style_to_apply["bgcolor"]}">'
             f"<b>{class_name}</b>"
             "</font></td></tr>"
         )
@@ -122,6 +161,7 @@ def model_to_dot(
     show_layer_activations=False,
     show_trainable=False,
     show_layer_attributes=None,
+    layer_styles=None,
     **kwargs,
 ):
     """Convert a Keras model to dot format.
@@ -187,6 +227,7 @@ def model_to_dot(
         "show_shapes": show_shapes,
         "show_trainable": show_trainable,
         "show_layer_attributes": show_layer_attributes,
+        "layer_styles": layer_styles,
     }
 
     if isinstance(model, sequential.Sequential):
@@ -217,6 +258,7 @@ def model_to_dot(
                 show_layer_activations=show_layer_activations,
                 show_trainable=show_trainable,
                 show_layer_attributes=show_layer_attributes,
+                layer_styles=layer_styles,
             )
             # sub_n : submodel
             sub_n_nodes = submodel.get_nodes()
@@ -288,6 +330,7 @@ def plot_model(
     show_layer_activations=False,
     show_trainable=False,
     show_layer_attributes=None,
+    layer_styles=None,
     **kwargs,
 ):
     """Converts a Keras model to dot format and save to a file.
@@ -359,18 +402,9 @@ def plot_model(
         raise ValueError(f"Unrecognized keyword arguments: {kwargs}")
 
     if show_layer_attributes is None:
-        show_layer_attributes = {
-            "propagation": {
-                "forward": {
-                    "bgcolor": "#b3e6ff",
-                },
-                "backward": {
-                    "bgcolor": "#ffccdd",
-                },
-                None: {"color": "black"},
-            },
-            "layer.name": {},
-        }
+        show_layer_attributes = show_decomon_layer_attributes
+    if layer_styles is None:
+        layer_styles = decomon_utilitary_layers_styles
 
     dot = model_to_dot(
         model,
@@ -383,6 +417,7 @@ def plot_model(
         show_layer_activations=show_layer_activations,
         show_trainable=show_trainable,
         show_layer_attributes=show_layer_attributes,
+        layer_styles=layer_styles,
     )
     to_file = str(to_file)
     if dot is None:
