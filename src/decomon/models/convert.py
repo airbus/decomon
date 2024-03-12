@@ -18,6 +18,7 @@ from decomon.layers.convert import to_decomon
 from decomon.layers.fuse import Fuse
 from decomon.layers.input import (
     BackwardInput,
+    IdentityInput,
     flatten_backward_bounds,
     has_no_backward_bounds,
 )
@@ -328,6 +329,10 @@ def clone(
         final_affine=final_affine,
         **kwargs,
     )
+
+    # model ~ identity: in backward propagation, output can still be empty => diag representation of identity
+    if len(output) == 0:  # identity bounds propagated as is (only if successive identity layers)
+        output = IdentityInput(perturbation_domain=perturbation_domain)(perturbation_domain_input)
 
     # full linear model? => batch independent output
     if any([not isinstance(o, keras.KerasTensor) for o in output]):

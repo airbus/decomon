@@ -1,11 +1,12 @@
 import keras.ops as K
 import numpy as np
 import pytest
-from keras.layers import Input
+from keras.layers import Activation, Input
 from keras.models import Model
 from pytest_cases import parametrize
 
-from decomon.core import BoxDomain, ConvertMethod, Slope
+from decomon.core import BoxDomain, ConvertMethod, Propagation, Slope
+from decomon.layers.input import IdentityInput
 from decomon.layers.utils.symbolify import LinkToPerturbationDomainInput
 from decomon.models.convert import clone
 
@@ -483,3 +484,67 @@ def test_clone_2outputs_with_backwardbounds_for_adv_box(
     decomon_output = decomon_model([simple_model_decomon_input, C])
 
     # todo: check to perform on bounds?
+
+
+def test_clone_identity_model(
+    method,
+    perturbation_domain,
+    model_keras_symbolic_input,
+    model_keras_input,
+    model_decomon_input,
+    helpers,
+):
+    slope = Slope.Z_SLOPE
+    decimal = 4
+
+    # identity model
+    output_tensor = Activation(activation=None)(model_keras_symbolic_input)
+    keras_model = Model(model_keras_symbolic_input, output_tensor)
+
+    # conversion
+    decomon_model = clone(model=keras_model, slope=slope, perturbation_domain=perturbation_domain, method=method)
+
+    # call on actual outputs
+    keras_output = keras_model(model_keras_input)
+    decomon_output = decomon_model(model_decomon_input)
+
+    ibp = decomon_model.ibp
+    affine = decomon_model.affine
+
+    if method in (ConvertMethod.FORWARD_IBP, ConvertMethod.FORWARD_HYBRID):
+        assert ibp
+    else:
+        assert not ibp
+
+    if method == ConvertMethod.FORWARD_IBP:
+        assert not affine
+    else:
+        assert affine
+
+    # check ibp and affine bounds well ordered w.r.t. keras inputs/outputs
+    helpers.assert_decomon_output_compare_with_keras_input_output_model(
+        decomon_output=decomon_output,
+        keras_input=model_keras_input,
+        keras_output=keras_output,
+        decimal=decimal,
+        ibp=ibp,
+        affine=affine,
+    )
+
+    # check exact bounds
+    if affine:
+        # identity
+        w_l, b_l, w_u, b_u = decomon_output[:4]
+        helpers.assert_almost_equal(b_l, 0.0)
+        helpers.assert_almost_equal(b_u, 0.0)
+        helpers.assert_almost_equal(w_l, 1.0)
+        helpers.assert_almost_equal(w_u, 1.0)
+    if ibp:
+        # perturbation domain bounds
+        lower, upper = decomon_output[-2:]
+        helpers.assert_almost_equal(lower, perturbation_domain.get_lower_x(model_decomon_input))
+        helpers.assert_almost_equal(upper, perturbation_domain.get_upper_x(model_decomon_input))
+
+    # check that we added a layer to insert batch axis
+    if method.lower().startswith("crown"):
+        assert isinstance(decomon_model.layers[-1], IdentityInput)

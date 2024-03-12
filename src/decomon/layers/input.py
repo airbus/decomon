@@ -105,6 +105,53 @@ class ForwardInput(Layer):
         )
 
 
+class IdentityInput(Layer):
+    """Layer generating identity affine bounds."""
+
+    def __init__(
+        self,
+        perturbation_domain: PerturbationDomain,
+        **kwargs: Any,
+    ):
+        """
+        Args:
+            perturbation_domain:
+            **kwargs:
+
+        """
+        super().__init__(**kwargs)
+
+        self.perturbation_domain = perturbation_domain
+
+    def call(self, inputs: BackendTensor) -> list[BackendTensor]:
+        """Generate ibp and affine bounds to propagate by the first forward layer.
+
+        Args:
+            inputs: the perturbation domain input
+
+        Returns:
+            affine_bounds: [w, 0, w, 0], with w the identity tensor of the proper shape
+                (without batchsize, in diagonal representation)
+
+        """
+        keras_input_like_tensor_wo_batchsize = self.perturbation_domain.get_kerasinputlike_from_x(x=inputs)[0]
+        w = K.ones_like(keras_input_like_tensor_wo_batchsize)
+        b = K.zeros_like(keras_input_like_tensor_wo_batchsize)
+        return [w, b, w, b]
+
+    def compute_output_shape(
+        self,
+        input_shape: tuple[Optional[int], ...],
+    ) -> list[tuple[Optional[int], ...]]:
+        perturbation_domain_input_shape_wo_batchsize = input_shape[1:]
+        keras_input_shape_wo_batchsize = self.perturbation_domain.get_keras_input_shape_wo_batchsize(
+            x_shape=perturbation_domain_input_shape_wo_batchsize
+        )
+        w_shape = keras_input_shape_wo_batchsize
+        b_shape = keras_input_shape_wo_batchsize
+        return [w_shape, b_shape, w_shape, b_shape]
+
+
 class BackwardInput(Layer):
     """Layer preprocessing backward bounds to be used as input of the first backward layer of a decomon model.
 
