@@ -424,3 +424,62 @@ def test_clone_w_backwardbounds_2outputs(
             ibp=ibp,
             affine=affine,
         )
+
+
+@parametrize("equal_ibp, input_shape", [(False, (5,))], ids=["1d"])  # fix some parameters of inputs
+def test_clone_2outputs_with_backwardbounds_for_adv_box(
+    method,
+    final_ibp,
+    final_affine,
+    perturbation_domain,
+    equal_ibp,
+    input_shape,
+    simple_model_keras_symbolic_input,
+    simple_model_keras_input,
+    simple_model_decomon_input,
+    helpers,
+):
+    # input shape?
+    input_shape = simple_model_keras_symbolic_input.shape[1:]
+
+    slope = Slope.Z_SLOPE
+    decimal = 4
+
+    # keras model to convert
+    keras_model = helpers.toy_network_2outputs(input_shape=input_shape, same_output_shape=True)
+    output_shape = keras_model.outputs[0].shape[1:]
+    output_dim = int(np.prod(output_shape))
+
+    # create C for adversarial robustnedd
+    symbolic_C = Input(output_shape + output_shape)
+    batchsize = simple_model_decomon_input.shape[0]
+    C = K.reshape(
+        K.eye(output_dim)[None] - K.eye(batchsize, output_dim)[:, :, None], (-1,) + output_shape + output_shape
+    )
+
+    # conversion
+    decomon_model = clone(
+        model=keras_model,
+        slope=slope,
+        perturbation_domain=perturbation_domain,
+        method=method,
+        final_ibp=final_ibp,
+        final_affine=final_affine,
+        backward_bounds=symbolic_C,
+    )
+
+    assert final_ibp == decomon_model.ibp
+    assert final_affine == decomon_model.affine
+
+    nb_decomon_output_tensor_per_keras_output = 0
+    if decomon_model.ibp:
+        nb_decomon_output_tensor_per_keras_output += 2
+    if decomon_model.affine:
+        nb_decomon_output_tensor_per_keras_output += 4
+    assert len(decomon_model.outputs) == len(keras_model.outputs) * nb_decomon_output_tensor_per_keras_output
+
+    # call on actual inputs
+    keras_output = keras_model(simple_model_keras_input)
+    decomon_output = decomon_model([simple_model_decomon_input, C])
+
+    # todo: check to perform on bounds?
