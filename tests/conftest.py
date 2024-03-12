@@ -1077,6 +1077,26 @@ class Helpers:
         return model
 
     @staticmethod
+    def toy_network_2outputs(
+        input_shape: tuple[int, ...] = (1,),
+        dtype: Optional[str] = None,
+        activation: Optional[str] = "relu",
+        same_output_shape=False,
+    ) -> Model:
+        if dtype is None:
+            dtype = keras_config.floatx()
+        if same_output_shape:
+            n1, n2, n3 = 10, 10, 10
+        else:
+            n1, n2, n3 = 10, 11, 12
+        input_tensor = Input(input_shape, dtype=dtype)
+        output_tensor = Dense(n1, dtype=dtype, activation=activation)(input_tensor)
+        output_tensor_1 = Dense(n2, dtype=dtype, activation=activation)(output_tensor)
+        output_tensor_2 = Dense(n3, dtype=dtype, activation=activation)(output_tensor)
+        model = Model(input_tensor, [output_tensor_1, output_tensor_2])
+        return model
+
+    @staticmethod
     def toy_network_submodel(
         input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None, activation: Optional[str] = "relu"
     ) -> Model:
