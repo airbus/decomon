@@ -15,18 +15,18 @@ jobs:
   linters:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: create requirements.txt so that pip cache with setup-python works
         run: echo "pre-commit" > requirements_precommit.txt
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: 3.8
+          python-version: 3.9
           cache: pip
           cache-dependency-path: requirements_precommit.txt
       - name: install pre-commit
         run: python -m pip install pre-commit
       - name: get cached pre-commit hooks
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pre-commit
           key: pre-commit|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
@@ -36,8 +36,8 @@ jobs:
   type-checking:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.9
           cache: pip
@@ -48,7 +48,7 @@ jobs:
           python -m pip install --upgrade tox setuptools
       - name: Restore cached .tox
         id: cache-tox
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .tox
           key:
@@ -70,8 +70,8 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -82,7 +82,7 @@ jobs:
           python -m pip install --upgrade tox setuptools
       - name: Restore cached .tox
         id: cache-tox
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .tox
           key:
@@ -123,7 +123,7 @@ jobs:
           echo "coverage_exists=${coverage_exists}" >> $GITHUB_OUTPUT
       - name: Export coverage report (if existing)
         if: steps.check-coverage-report.outputs.coverage_exists == 'true'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: |
