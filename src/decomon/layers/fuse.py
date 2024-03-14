@@ -1,21 +1,14 @@
 """Layers specifying constant oracle bounds on keras layer input."""
 
 
-from typing import Any, Optional, Union, overload
+from typing import Any, Optional
 
-import keras
 from keras import ops as K
 from keras.layers import Layer
 
-from decomon.constants import Propagation
-from decomon.keras_utils import add_tensors, batch_multid_dot
+from decomon.keras_utils import batch_multid_dot
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
-from decomon.perturbation_domain import (
-    BoxDomain,
-    PerturbationDomain,
-    get_lower_box,
-    get_upper_box,
-)
+from decomon.perturbation_domain import get_lower_box, get_upper_box
 from decomon.types import BackendTensor, Tensor
 
 

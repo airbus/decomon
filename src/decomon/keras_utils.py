@@ -1,8 +1,7 @@
-from typing import Any, Optional
+from typing import Optional
 
 import keras
 import keras.ops as K
-import numpy as np
 from keras.layers import Dot, Layer, Reshape
 
 from decomon.types import BackendTensor, Tensor

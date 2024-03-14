@@ -1,7 +1,6 @@
 import keras.ops as K
 from keras.layers import Dense
 
-from decomon.keras_utils import batch_multid_dot
 from decomon.layers.layer import DecomonLayer
 from decomon.types import Tensor
 

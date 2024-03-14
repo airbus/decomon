@@ -1,8 +1,7 @@
 """Converting backend tensors to symbolic tensors."""
 
-from typing import Any, Optional
+from typing import Optional
 
-import keras
 from keras.layers import Layer
 
 from decomon.types import BackendTensor

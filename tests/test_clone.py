@@ -5,7 +5,7 @@ from keras.layers import Activation, Input
 from keras.models import Model
 from pytest_cases import parametrize
 
-from decomon.constants import ConvertMethod, Propagation, Slope
+from decomon.constants import ConvertMethod, Slope
 from decomon.layers.input import IdentityInput
 from decomon.layers.utils.symbolify import LinkToPerturbationDomainInput
 from decomon.models.convert import clone

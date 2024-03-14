@@ -2,7 +2,7 @@ import keras
 import keras.ops as K
 import numpy as np
 import pytest
-from keras.layers import Dense, Input, Layer
+from keras.layers import Input, Layer
 from numpy.testing import assert_almost_equal
 
 from decomon.keras_utils import add_tensors, batch_multid_dot, is_a_merge_layer

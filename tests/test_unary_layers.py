@@ -1,7 +1,7 @@
 import keras.ops as K
 import numpy as np
 from keras.layers import Activation, Dense
-from pytest_cases import fixture, fixture_ref, parametrize
+from pytest_cases import fixture, parametrize
 
 from decomon.keras_utils import batch_multid_dot
 from decomon.layers import DecomonActivation, DecomonDense

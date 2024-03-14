@@ -1,17 +1,15 @@
 """Convert decomon outputs to the specified format."""
 
 
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
-import keras
 import keras.ops as K
 from keras.layers import Layer
 
-from decomon.constants import Propagation
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.layers.oracle import get_forward_oracle
 from decomon.perturbation_domain import PerturbationDomain
-from decomon.types import BackendTensor, Tensor
+from decomon.types import BackendTensor
 
 
 class ConvertOutput(Layer):

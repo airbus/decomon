@@ -1,4 +1,3 @@
-import keras
 import keras.ops as K
 import numpy as np
 import pytest
@@ -6,7 +5,6 @@ from keras import Input
 from keras.layers import Activation, Conv2D, Dense, Layer, Permute, PReLU
 from numpy.testing import assert_almost_equal
 
-from decomon.keras_utils import get_weight_index_from_name
 from decomon.models.utils import preprocess_layer, split_activation
 
 

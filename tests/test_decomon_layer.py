@@ -1,10 +1,8 @@
 import keras.ops as K
-import numpy as np
 import pytest
 from keras.layers import Dense, Input
 
 from decomon.constants import Propagation
-from decomon.keras_utils import batch_multid_dot
 from decomon.layers.layer import DecomonLayer
 from decomon.perturbation_domain import BoxDomain
 

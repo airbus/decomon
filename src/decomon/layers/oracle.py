@@ -3,7 +3,6 @@
 
 from typing import Any, Optional, Union, overload
 
-import keras
 from keras.layers import Layer
 
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec

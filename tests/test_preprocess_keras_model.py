@@ -1,7 +1,7 @@
 import keras.ops as K
 import numpy as np
 import pytest
-from keras.layers import Activation, Conv2D, Dense, Flatten, Input, PReLU
+from keras.layers import Activation, Conv2D, Dense, Input, PReLU
 from keras.models import Model, Sequential
 from numpy.testing import assert_almost_equal
 

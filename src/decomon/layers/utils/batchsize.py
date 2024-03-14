@@ -1,9 +1,8 @@
 """Adding batchsize to batch-independent outputs."""
 
 
-from typing import Any, Optional
+from typing import Optional
 
-import keras
 import keras.ops as K
 from keras.layers import Layer
 
