@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Optional, Union
 
 from decomon.core import BoxDomain, ForwardMode, PerturbationDomain
 from decomon.layers.utils import exp, expand_dims, log, sum
@@ -9,11 +9,11 @@ from decomon.utils import add, minus
 
 
 def categorical_cross_entropy(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     dc_decomp: bool = False,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     perturbation_domain: Optional[PerturbationDomain] = None,
-) -> List[Tensor]:
+) -> list[Tensor]:
     # step 1: exponential
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()

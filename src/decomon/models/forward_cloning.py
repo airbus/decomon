@@ -4,8 +4,9 @@ It inherits from keras Sequential class.
 
 """
 import inspect
+from collections.abc import Callable
 from copy import deepcopy
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import keras
 from keras.layers import InputLayer, Layer
@@ -26,11 +27,11 @@ from decomon.models.utils import (
 )
 
 OutputMapKey = Union[str, int]
-OutputMapVal = Union[List[keras.KerasTensor], "OutputMapDict"]
-OutputMapDict = Dict[OutputMapKey, OutputMapVal]
+OutputMapVal = Union[list[keras.KerasTensor], "OutputMapDict"]
+OutputMapDict = dict[OutputMapKey, OutputMapVal]
 
-LayerMapVal = Union[List[DecomonLayer], "LayerMapDict"]
-LayerMapDict = Dict[int, LayerMapVal]
+LayerMapVal = Union[list[DecomonLayer], "LayerMapDict"]
+LayerMapDict = dict[int, LayerMapVal]
 
 
 def include_dim_layer_fn(
@@ -43,7 +44,7 @@ def include_dim_layer_fn(
     affine: bool = True,
     finetune: bool = False,
     shared: bool = True,
-) -> Callable[[Layer], List[Layer]]:
+) -> Callable[[Layer], list[Layer]]:
     """include external parameters inside the translation of a layer to its decomon counterpart
 
     Args:
@@ -66,7 +67,7 @@ def include_dim_layer_fn(
 
     if "input_dim" in inspect.signature(layer_fn).parameters:
 
-        def func(layer: Layer) -> List[Layer]:
+        def func(layer: Layer) -> list[Layer]:
             return [
                 layer_fn_copy(
                     layer,
@@ -83,7 +84,7 @@ def include_dim_layer_fn(
 
     else:
 
-        def func(layer: Layer) -> List[Layer]:
+        def func(layer: Layer) -> list[Layer]:
             return [layer_fn_copy(layer)]
 
     return func
@@ -91,7 +92,7 @@ def include_dim_layer_fn(
 
 def convert_forward(
     model: Model,
-    input_tensors: List[keras.KerasTensor],
+    input_tensors: list[keras.KerasTensor],
     layer_fn: Callable[..., Layer] = to_decomon,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
@@ -103,7 +104,7 @@ def convert_forward(
     shared: bool = True,
     softmax_to_linear: bool = True,
     **kwargs: Any,
-) -> Tuple[List[keras.KerasTensor], List[keras.KerasTensor], LayerMapDict, OutputMapDict]:
+) -> tuple[list[keras.KerasTensor], list[keras.KerasTensor], LayerMapDict, OutputMapDict]:
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
 
@@ -138,14 +139,14 @@ def convert_forward(
 
 def convert_forward_functional_model(
     model: Model,
-    layer_fn: Callable[[Layer], List[Layer]],
-    input_tensors: List[keras.KerasTensor],
+    layer_fn: Callable[[Layer], list[Layer]],
+    input_tensors: list[keras.KerasTensor],
     softmax_to_linear: bool = True,
     count: int = 0,
     output_map: Optional[OutputMapDict] = None,
     layer_map: Optional[LayerMapDict] = None,
-    layer2layer_map: Optional[Dict[int, List[Layer]]] = None,
-) -> Tuple[List[keras.KerasTensor], List[keras.KerasTensor], LayerMapDict, OutputMapDict, Dict[int, List[Layer]]]:
+    layer2layer_map: Optional[dict[int, list[Layer]]] = None,
+) -> tuple[list[keras.KerasTensor], list[keras.KerasTensor], LayerMapDict, OutputMapDict, dict[int, list[Layer]]]:
     if softmax_to_linear:
         model, has_softmax = softmax_2_linear(model)
 
@@ -163,7 +164,7 @@ def convert_forward_functional_model(
         layer_map = {}
     if layer2layer_map is None:
         layer2layer_map = {}
-    output: List[keras.KerasTensor] = input_tensors
+    output: list[keras.KerasTensor] = input_tensors
     for depth in keys:
         nodes = dico_nodes[depth]
         for node in nodes:

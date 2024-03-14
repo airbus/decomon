@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import keras
 import numpy as np
@@ -20,7 +20,7 @@ from decomon.types import BackendTensor
 
 class BackwardLayer(ABC, Wrapper):
     layer: Layer
-    _trainable_weights: List[keras.Variable]
+    _trainable_weights: list[keras.Variable]
 
     def __init__(
         self,
@@ -58,7 +58,7 @@ class BackwardLayer(ABC, Wrapper):
     def affine(self) -> bool:
         return get_affine(self.mode)
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         config = super().get_config()
         config.update(
             {
@@ -71,7 +71,7 @@ class BackwardLayer(ABC, Wrapper):
         return config
 
     @abstractmethod
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> list[BackendTensor]:
         """
         Args:
             inputs
@@ -81,7 +81,7 @@ class BackwardLayer(ABC, Wrapper):
         """
         pass
 
-    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
+    def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
         """
         Args:
             input_shape
@@ -92,7 +92,7 @@ class BackwardLayer(ABC, Wrapper):
         # generic case: nothing to do before call
         pass
 
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int], ...]]) -> List[Tuple[Optional[int], ...]]:
+    def compute_output_shape(self, input_shape: list[tuple[Optional[int], ...]]) -> list[tuple[Optional[int], ...]]:
         """Compute expected output shape according to input shape
 
         Will be called by symbolic calls on Keras Tensors.

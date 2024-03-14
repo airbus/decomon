@@ -1,4 +1,5 @@
-from typing import Callable, List, Optional, Sequence, Tuple, Union
+from collections.abc import Callable, Sequence
+from typing import Optional, Union
 
 import keras
 import numpy as np
@@ -146,7 +147,7 @@ def get_adv_box(
         n_label = source_labels.shape[-1]
 
         # two possitible cases: the model improves the bound based on the knowledge of the labels
-        output: List[npt.NDArray[np.float_]]
+        output: list[npt.NDArray[np.float_]]
         if decomon_model.backward_bounds:
             C = np.diag([1] * n_label)[None] - source_labels[:, :, None]
             output = decomon_model.predict_on_single_batch_np([z, C])  # type: ignore
@@ -339,7 +340,7 @@ def check_adv_box(
         source_labels_list = [
             source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)
         ]
-        target_labels_list: List[Optional[npt.NDArray[np.int_]]]
+        target_labels_list: list[Optional[npt.NDArray[np.int_]]]
         if (
             (target_labels is not None)
             and (not isinstance(target_labels, int))
@@ -470,7 +471,7 @@ def get_range_box(
     x_max: npt.NDArray[np.float_],
     batch_size: int = -1,
     n_sub_boxes: int = 1,
-) -> Tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
+) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
     """bounding the outputs of a model in a given box
     if the constant is negative, then it is a formal guarantee that there is no adversarial examples
 
@@ -652,7 +653,7 @@ def get_range_noise(
     eps: float,
     p: float = np.inf,
     batch_size: int = -1,
-) -> Tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
+) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
     """Bounds the output of a model in an Lp Ball
 
     Args:
@@ -756,7 +757,7 @@ def get_range_noise(
 
 def refine_boxes(
     x_min: npt.NDArray[np.float_], x_max: npt.NDArray[np.float_], n_sub_boxes: int = 10
-) -> Tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
+) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
     # flatten x_min and x_max
     shape = list(x_min.shape[1:])
     output_dim = np.prod(shape)
@@ -771,7 +772,7 @@ def refine_boxes(
 
     def split(
         x_min: npt.NDArray[np.float_], x_max: npt.NDArray[np.float_], j: npt.NDArray[np.int_]
-    ) -> Tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
+    ) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
         n_0 = len(x_min)
         n_k = x_min.shape[1]
 
@@ -977,7 +978,7 @@ def get_adv_noise(
         source_labels_list = [
             source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)
         ]
-        target_labels_list: List[Optional[npt.NDArray[np.int_]]]
+        target_labels_list: list[Optional[npt.NDArray[np.int_]]]
         if (
             (target_labels is not None)
             and (not isinstance(target_labels, int))

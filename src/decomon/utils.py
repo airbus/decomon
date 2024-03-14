@@ -1,4 +1,5 @@
-from typing import Any, Callable, List, Optional, Tuple, Union
+from collections.abc import Callable
+from typing import Any, Optional, Union
 
 import keras.ops as K
 import numpy as np
@@ -91,7 +92,7 @@ def get_bound_grid(
     W_l: Tensor,
     b_l: Tensor,
     n: int,
-) -> Tuple[Tensor, Tensor]:
+) -> tuple[Tensor, Tensor]:
     upper = get_upper_bound_grid(x, W_u, b_u, n)
     lower = get_lower_bound_grid(x, W_l, b_l, n)
 
@@ -99,7 +100,7 @@ def get_bound_grid(
 
 
 # convert max Wx +b s.t Wx+b<=0 into a subset-sum problem with positive values
-def convert_lower_search_2_subset_sum(x: Tensor, W: Tensor, b: Tensor, n: int) -> Tuple[Tensor, Tensor]:
+def convert_lower_search_2_subset_sum(x: Tensor, W: Tensor, b: Tensor, n: int) -> tuple[Tensor, Tensor]:
     x_min = x[:, 0]
     x_max = x[:, 1]
 
@@ -131,7 +132,7 @@ def get_linear_hull_relu(
     upper_g: float = 0.0,
     lower_g: float = 0.0,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     slope = Slope(slope)
     # in case upper=lower, this cases are
     # considered with index_dead and index_linear
@@ -200,17 +201,17 @@ def get_linear_hull_relu(
     return [w_u, b_u, w_l, b_l]
 
 
-def get_linear_hull_sigmoid(upper: Tensor, lower: Tensor, slope: Union[str, Slope], **kwargs: Any) -> List[Tensor]:
+def get_linear_hull_sigmoid(upper: Tensor, lower: Tensor, slope: Union[str, Slope], **kwargs: Any) -> list[Tensor]:
     x = [upper, lower]
     return get_linear_hull_s_shape(x, func=K.sigmoid, f_prime=sigmoid_prime, mode=ForwardMode.IBP, **kwargs)
 
 
-def get_linear_hull_tanh(upper: Tensor, lower: Tensor, slope: Union[str, Slope], **kwargs: Any) -> List[Tensor]:
+def get_linear_hull_tanh(upper: Tensor, lower: Tensor, slope: Union[str, Slope], **kwargs: Any) -> list[Tensor]:
     x = [upper, lower]
     return get_linear_hull_s_shape(x, func=K.tanh, f_prime=tanh_prime, mode=ForwardMode.IBP, **kwargs)
 
 
-def get_linear_softplus_hull(upper: Tensor, lower: Tensor, slope: Union[str, Slope], **kwargs: Any) -> List[Tensor]:
+def get_linear_softplus_hull(upper: Tensor, lower: Tensor, slope: Union[str, Slope], **kwargs: Any) -> list[Tensor]:
     slope = Slope(slope)
     # in case upper=lower, this cases are
     # considered with index_dead and index_linear
@@ -265,12 +266,12 @@ def get_linear_softplus_hull(upper: Tensor, lower: Tensor, slope: Union[str, Slo
 
 
 def subtract(
-    inputs_0: List[Tensor],
-    inputs_1: List[Tensor],
+    inputs_0: list[Tensor],
+    inputs_1: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA implementation of inputs_0-inputs_1
 
     Args:
@@ -292,12 +293,12 @@ def subtract(
 
 
 def add(
-    inputs_0: List[Tensor],
-    inputs_1: List[Tensor],
+    inputs_0: list[Tensor],
+    inputs_1: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA implementation of inputs_0+inputs_1
 
     Args:
@@ -340,13 +341,13 @@ def add(
 
 
 def relu_(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
 
@@ -401,12 +402,12 @@ def relu_(
 
 
 def minus(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA implementation of minus(x)=-x.
 
     Args:
@@ -440,14 +441,14 @@ def minus(
 
 
 def maximum(
-    inputs_0: List[Tensor],
-    inputs_1: List[Tensor],
+    inputs_0: list[Tensor],
+    inputs_1: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     finetune: bool = False,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA implementation of element-wise max
 
     Args:
@@ -481,14 +482,14 @@ def maximum(
 
 
 def minimum(
-    inputs_0: List[Tensor],
-    inputs_1: List[Tensor],
+    inputs_0: list[Tensor],
+    inputs_1: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     finetune: bool = False,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA implementation of element-wise min
 
     Args:
@@ -521,7 +522,7 @@ def minimum(
 
 
 def get_linear_hull_s_shape(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     func: TensorFunction = K.sigmoid,
     f_prime: TensorFunction = sigmoid_prime,
     perturbation_domain: Optional[PerturbationDomain] = None,
@@ -529,7 +530,7 @@ def get_linear_hull_s_shape(
     slope: Union[str, Slope] = Slope.V_SLOPE,
     dc_decomp: bool = False,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """Computing the linear hull of shape functions  given the pre activation neurons
 
     Args:
@@ -612,7 +613,7 @@ def get_t_upper(
     s_l: Tensor,
     func: TensorFunction = K.sigmoid,
     f_prime: TensorFunction = sigmoid_prime,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """linear interpolation between lower and upper bounds on the function func to have a symbolic approximation of the best
     coefficient for the affine upper bound
 
@@ -670,7 +671,7 @@ def get_t_lower(
     s_u: Tensor,
     func: TensorFunction = K.sigmoid,
     f_prime: TensorFunction = sigmoid_prime,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """linear interpolation between lower and upper bounds on the function func to have a symbolic approximation of the best
     coefficient for the affine lower bound
 

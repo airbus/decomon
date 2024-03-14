@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import keras
 import keras.ops as K
@@ -41,7 +41,7 @@ class DecomonConv2D(DecomonLayer, Conv2D):
     def __init__(
         self,
         filters: int,
-        kernel_size: Union[int, Tuple[int, int]],
+        kernel_size: Union[int, tuple[int, int]],
         perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -88,7 +88,7 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         if self.dc_decomp:
             self.input_spec += [InputSpec(min_ndim=4), InputSpec(min_ndim=4)]
 
-    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
+    def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
         """
         Args:
             input_shape
@@ -136,7 +136,7 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         self.kernel = layer.kernel
         self.bias = layer.bias
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> list[BackendTensor]:
         """computing the perturbation analysis of the operator without the activation function
 
         Args:
@@ -218,10 +218,10 @@ class DecomonConv2D(DecomonLayer, Conv2D):
                 x_max = self.perturbation_domain.get_upper(x, w_u - w_l, b_u - b_l)
                 mask_b = o_value - K.sign(x_max)
 
-                def step_pos(x: BackendTensor, _: List[BackendTensor]) -> Tuple[BackendTensor, List[BackendTensor]]:
+                def step_pos(x: BackendTensor, _: list[BackendTensor]) -> tuple[BackendTensor, list[BackendTensor]]:
                     return conv_pos(x), []
 
-                def step_neg(x: BackendTensor, _: List[BackendTensor]) -> Tuple[BackendTensor, List[BackendTensor]]:
+                def step_neg(x: BackendTensor, _: list[BackendTensor]) -> tuple[BackendTensor, list[BackendTensor]]:
                     return conv_neg(x), []
 
                 b_u_out = conv_pos(b_u) + conv_neg(b_l)
@@ -261,7 +261,7 @@ class DecomonConv2D(DecomonLayer, Conv2D):
         )
 
     @property
-    def keras_weights_names(self) -> List[str]:
+    def keras_weights_names(self) -> list[str]:
         """Weights names of the corresponding Keras layer.
 
         Will be used to decide which weight to take from the keras layer in `reset_layer()`
@@ -317,10 +317,10 @@ class DecomonDense(DecomonLayer, Dense):
             **kwargs,
         )
         self.input_spec = [InputSpec(min_ndim=2) for _ in range(self.nb_tensors)]
-        self.input_shape_build: Optional[List[Tuple[Optional[int], ...]]] = None
+        self.input_shape_build: Optional[list[tuple[Optional[int], ...]]] = None
         self.op_dot = K.dot
 
-    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
+    def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
         """
         Args:
             input_shape: list of input shape
@@ -418,7 +418,7 @@ class DecomonDense(DecomonLayer, Dense):
             op = Dot(1)
             self.op_dot = lambda x, y: op([x, y])
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> list[BackendTensor]:
         """
         Args:
             inputs
@@ -511,7 +511,7 @@ class DecomonDense(DecomonLayer, Dense):
         )
 
     @property
-    def keras_weights_names(self) -> List[str]:
+    def keras_weights_names(self) -> list[str]:
         """Weights names of the corresponding Keras layer.
 
         Will be used to decide which weight to take from the keras layer in `reset_layer()`
@@ -570,7 +570,7 @@ class DecomonActivation(DecomonLayer, Activation):
         self.activation = activations.get(activation)
         self.activation_name = activation
 
-    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
+    def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
         if self.finetune and self.mode in [ForwardMode.HYBRID, ForwardMode.AFFINE]:
             shape = input_shape[-1][1:]
 
@@ -591,7 +591,7 @@ class DecomonActivation(DecomonLayer, Activation):
                     constraint=ClipAlpha(),
                 )
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> list[BackendTensor]:
         if self.finetune and self.mode in [ForwardMode.AFFINE, ForwardMode.HYBRID] and self.activation_name != "linear":
             if self.activation_name[:4] == "relu":
                 return self.activation(
@@ -707,7 +707,7 @@ class DecomonFlatten(DecomonLayer, Flatten):
         if self.dc_decomp:
             self.input_spec += [InputSpec(min_ndim=1), InputSpec(min_ndim=1)]
 
-    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
+    def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
         """
         Args:
             self
@@ -718,7 +718,7 @@ class DecomonFlatten(DecomonLayer, Flatten):
         """
         return None
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> list[BackendTensor]:
         def op(x: BackendTensor) -> BackendTensor:
             return Flatten.call(self, x)
 
@@ -808,11 +808,11 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
             **kwargs,
         )
 
-    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
+    def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
         super().build(input_shape)
         self.input_spec = [InputSpec(min_ndim=len(elem)) for elem in input_shape]
 
-    def call(self, inputs: List[BackendTensor], training: bool = False, **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], training: bool = False, **kwargs: Any) -> list[BackendTensor]:
         z_value = K.cast(0.0, self.dtype)
 
         if training:
@@ -879,7 +879,7 @@ class DecomonBatchNormalization(DecomonLayer, BatchNormalization):
         )
 
     @property
-    def keras_weights_names(self) -> List[str]:
+    def keras_weights_names(self) -> list[str]:
         """Weights names of the corresponding Keras layer.
 
         Will be used to decide which weight to take from the keras layer in `reset_layer()`
@@ -903,7 +903,7 @@ class DecomonDropout(DecomonLayer, Dropout):
     def __init__(
         self,
         rate: float,
-        noise_shape: Optional[Tuple[int, ...]] = None,
+        noise_shape: Optional[tuple[int, ...]] = None,
         seed: Optional[int] = None,
         perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
@@ -926,11 +926,11 @@ class DecomonDropout(DecomonLayer, Dropout):
             **kwargs,
         )
 
-    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
+    def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
         super().build(input_shape)
         self.input_spec = [InputSpec(min_ndim=len(elem)) for elem in input_shape]
 
-    def call(self, inputs: List[BackendTensor], training: bool = False, **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], training: bool = False, **kwargs: Any) -> list[BackendTensor]:
         if training:
             raise NotImplementedError("not working during training")
 
@@ -944,16 +944,16 @@ class DecomonInputLayer(DecomonLayer, InputLayer):
 
     original_keras_layer_class = InputLayer
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> list[BackendTensor]:
         return inputs
 
     def __init__(
         self,
-        shape: Optional[Tuple[int, ...]] = None,
+        shape: Optional[tuple[int, ...]] = None,
         batch_size: Optional[int] = None,
         dtype: Optional[str] = None,
         sparse: Optional[bool] = None,
-        batch_shape: Optional[Tuple[Optional[int], ...]] = None,
+        batch_shape: Optional[tuple[Optional[int], ...]] = None,
         input_tensor: Optional[keras.KerasTensor] = None,
         name: Optional[str] = None,
         perturbation_domain: Optional[PerturbationDomain] = None,

@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import keras.ops as K
 import numpy as np
@@ -22,8 +22,8 @@ from decomon.utils import maximum, minus, relu_, subtract
 
 
 def backward_add(
-    inputs_0: List[Tensor],
-    inputs_1: List[Tensor],
+    inputs_0: list[Tensor],
+    inputs_1: list[Tensor],
     w_u_out: Tensor,
     b_u_out: Tensor,
     w_l_out: Tensor,
@@ -31,7 +31,7 @@ def backward_add(
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
-) -> List[List[Tensor]]:
+) -> list[list[Tensor]]:
     """Backward  LiRPA of inputs_0+inputs_1
 
     Args:
@@ -84,10 +84,10 @@ def backward_add(
 
 def backward_linear_prod(
     x_0: Tensor,
-    bounds_x: List[Tensor],
-    back_bounds: List[Tensor],
+    bounds_x: list[Tensor],
+    back_bounds: list[Tensor],
     perturbation_domain: Optional[PerturbationDomain] = None,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """Backward  LiRPA of a subroutine prod
 
     Args:
@@ -158,8 +158,8 @@ def backward_linear_prod(
 
 
 def backward_maximum(
-    inputs_0: List[Tensor],
-    inputs_1: List[Tensor],
+    inputs_0: list[Tensor],
+    inputs_1: list[Tensor],
     w_u_out: Tensor,
     b_u_out: Tensor,
     w_l_out: Tensor,
@@ -168,7 +168,7 @@ def backward_maximum(
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
     **kwargs: Any,
-) -> List[List[Tensor]]:
+) -> list[list[Tensor]]:
     """Backward  LiRPA of maximum(inputs_0, inputs_1)
 
     Args:
@@ -228,7 +228,7 @@ def backward_maximum(
 
 # convex hull of the maximum between two functions
 def backward_max_(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     w_u_out: Tensor,
     b_u_out: Tensor,
     w_l_out: Tensor,
@@ -238,7 +238,7 @@ def backward_max_(
     axis: int = -1,
     dc_decomp: bool = False,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """Backward  LiRPA of max
 
     Args:
@@ -350,8 +350,8 @@ def backward_max_(
 
 
 def backward_minimum(
-    inputs_0: List[Tensor],
-    inputs_1: List[Tensor],
+    inputs_0: list[Tensor],
+    inputs_1: list[Tensor],
     w_u_out: Tensor,
     b_u_out: Tensor,
     w_l_out: Tensor,
@@ -360,7 +360,7 @@ def backward_minimum(
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
     **kwargs: Any,
-) -> List[List[Tensor]]:
+) -> list[list[Tensor]]:
     """Backward  LiRPA of minimum(inputs_0, inputs_1)
 
     Args:
@@ -407,7 +407,7 @@ def backward_minus(
     b_u_out: Tensor,
     w_l_out: Tensor,
     b_l_out: Tensor,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """Backward  LiRPA of -x
 
     Args:
@@ -430,7 +430,7 @@ def backward_scale(
     b_u_out: Tensor,
     w_l_out: Tensor,
     b_l_out: Tensor,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """Backward  LiRPA of scale_factor*x
 
     Args:
@@ -453,8 +453,8 @@ def backward_scale(
 
 
 def backward_subtract(
-    inputs_0: List[Tensor],
-    inputs_1: List[Tensor],
+    inputs_0: list[Tensor],
+    inputs_1: list[Tensor],
     w_u_out: Tensor,
     b_u_out: Tensor,
     w_l_out: Tensor,
@@ -462,7 +462,7 @@ def backward_subtract(
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
-) -> List[List[Tensor]]:
+) -> list[list[Tensor]]:
     """Backward  LiRPA of inputs_0 - inputs_1
 
     Args:
@@ -499,8 +499,8 @@ def backward_subtract(
 
 
 def backward_multiply(
-    inputs_0: List[Tensor],
-    inputs_1: List[Tensor],
+    inputs_0: list[Tensor],
+    inputs_1: list[Tensor],
     w_u_out: Tensor,
     b_u_out: Tensor,
     w_l_out: Tensor,
@@ -508,7 +508,7 @@ def backward_multiply(
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
-) -> List[List[Tensor]]:
+) -> list[list[Tensor]]:
     """Backward  LiRPA of element-wise multiply inputs_0*inputs_1
 
     Args:
@@ -582,7 +582,7 @@ def backward_multiply(
 
 
 def backward_sort(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     w_u_out: Tensor,
     b_u_out: Tensor,
     w_l_out: Tensor,
@@ -591,7 +591,7 @@ def backward_sort(
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     dc_decomp: bool = False,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """Backward  LiRPA of sort
 
     Args:
@@ -646,7 +646,7 @@ def backward_sort(
     return [w_u_out, b_u_out, w_l_out, b_l_out]
 
 
-def get_identity_lirpa(inputs: List[Tensor]) -> List[Tensor]:
+def get_identity_lirpa(inputs: list[Tensor]) -> list[Tensor]:
     y = inputs[-1]
     shape = int(np.prod(y.shape[1:]))
 
@@ -658,7 +658,7 @@ def get_identity_lirpa(inputs: List[Tensor]) -> List[Tensor]:
     return [w_u_out, b_u_out, w_l_out, b_l_out]
 
 
-def get_identity_lirpa_shapes(input_shapes: List[Tuple[Optional[int], ...]]) -> List[Tuple[Optional[int], ...]]:
+def get_identity_lirpa_shapes(input_shapes: list[tuple[Optional[int], ...]]) -> list[tuple[Optional[int], ...]]:
     y_shape = input_shapes[-1]
     batch_size = y_shape[0]
     flatten_dim = int(np.prod(y_shape[1:]))  # type: ignore

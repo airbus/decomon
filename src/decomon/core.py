@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import keras.ops as K
 import numpy as np
@@ -40,12 +40,12 @@ class PerturbationDomain(ABC):
     def get_nb_x_components(self) -> int:
         ...
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         return {
             "opt_option": self.opt_option,
         }
 
-    def get_x_input_shape_wo_batchsize(self, original_input_dim: int) -> Tuple[int, ...]:
+    def get_x_input_shape_wo_batchsize(self, original_input_dim: int) -> tuple[int, ...]:
         n_comp_x = self.get_nb_x_components()
         if n_comp_x == 1:
             return (original_input_dim,)
@@ -92,7 +92,7 @@ class BallDomain(PerturbationDomain):
             raise ValueError(p_error_msg)
         self.p = p
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         config = super().get_config()
         config.update(
             {
@@ -201,20 +201,20 @@ class InputsOutputsSpec:
     def affine(self) -> bool:
         return get_affine(self.mode)
 
-    def get_kerasinputshape(self, inputsformode: List[Tensor]) -> Tuple[Optional[int], ...]:
+    def get_kerasinputshape(self, inputsformode: list[Tensor]) -> tuple[Optional[int], ...]:
         return inputsformode[-1].shape
 
     def get_kerasinputshape_from_inputshapesformode(
-        self, inputshapesformode: List[Tuple[Optional[int], ...]]
-    ) -> Tuple[Optional[int], ...]:
+        self, inputshapesformode: list[tuple[Optional[int], ...]]
+    ) -> tuple[Optional[int], ...]:
         return inputshapesformode[-1]
 
     def get_fullinputshapes_from_inputshapesformode(
         self,
-        inputshapesformode: List[Tuple[Optional[int], ...]],
-    ) -> List[Tuple[Optional[int], ...]]:
+        inputshapesformode: list[tuple[Optional[int], ...]],
+    ) -> list[tuple[Optional[int], ...]]:
         nb_tensors = self.nb_tensors
-        empty_shape: Tuple[Optional[int], ...] = tuple()
+        empty_shape: tuple[Optional[int], ...] = tuple()
         if self.dc_decomp:
             if self.mode == ForwardMode.HYBRID:
                 (
@@ -276,8 +276,8 @@ class InputsOutputsSpec:
         return [x_shape, u_c_shape, w_u_shape, b_u_shape, l_c_shape, w_l_shape, b_l_shape, h_shape, g_shape]
 
     def get_fullinputs_from_inputsformode(
-        self, inputsformode: List[Tensor], compute_ibp_from_affine: bool = True, tight: bool = True
-    ) -> List[Tensor]:
+        self, inputsformode: list[Tensor], compute_ibp_from_affine: bool = True, tight: bool = True
+    ) -> list[Tensor]:
         """
 
         Args:
@@ -347,8 +347,8 @@ class InputsOutputsSpec:
         return [x, u_c, w_u, b_u, l_c, w_l, b_l, h, g]
 
     def get_fullinputs_by_type_from_inputsformode_to_merge(
-        self, inputsformode: List[Tensor], compute_ibp_from_affine: bool = False, tight: bool = True
-    ) -> List[List[Tensor]]:
+        self, inputsformode: list[Tensor], compute_ibp_from_affine: bool = False, tight: bool = True
+    ) -> list[list[Tensor]]:
         """
 
         Args:
@@ -419,11 +419,11 @@ class InputsOutputsSpec:
 
         return [inputs_x, inputs_u_c, inputs_w_u, inputs_b_u, inputs_l_c, inputs_w_l, inputs_b_l, inputs_h, inputs_g]
 
-    def split_inputsformode_to_merge(self, inputsformode: List[Any]) -> List[List[Any]]:
+    def split_inputsformode_to_merge(self, inputsformode: list[Any]) -> list[list[Any]]:
         n_comp = self.nb_tensors
         return [inputsformode[n_comp * i : n_comp * (i + 1)] for i in range(len(inputsformode) // n_comp)]
 
-    def extract_inputsformode_from_fullinputs(self, inputs: List[Tensor]) -> List[Tensor]:
+    def extract_inputsformode_from_fullinputs(self, inputs: list[Tensor]) -> list[Tensor]:
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputs
         if self.mode == ForwardMode.HYBRID:
             inputsformode = [x, u_c, w_u, b_u, l_c, w_l, b_l]
@@ -438,8 +438,8 @@ class InputsOutputsSpec:
         return inputsformode
 
     def extract_inputshapesformode_from_fullinputshapes(
-        self, inputshapes: List[Tuple[Optional[int], ...]]
-    ) -> List[Tuple[Optional[int], ...]]:
+        self, inputshapes: list[tuple[Optional[int], ...]]
+    ) -> list[tuple[Optional[int], ...]]:
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = inputshapes
         if self.mode == ForwardMode.HYBRID:
             inputshapesformode = [x, u_c, w_u, b_u, l_c, w_l, b_l]
@@ -453,7 +453,7 @@ class InputsOutputsSpec:
             inputshapesformode += [h, g]
         return inputshapesformode
 
-    def extract_outputsformode_from_fulloutputs(self, outputs: List[Tensor]) -> List[Tensor]:
+    def extract_outputsformode_from_fulloutputs(self, outputs: list[Tensor]) -> list[Tensor]:
         return self.extract_inputsformode_from_fullinputs(outputs)
 
     @staticmethod

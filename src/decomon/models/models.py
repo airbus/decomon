@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import keras
 import keras.ops as K
@@ -19,8 +19,8 @@ from decomon.models.utils import ConvertMethod
 class DecomonModel(keras.Model):
     def __init__(
         self,
-        inputs: Union[keras.KerasTensor, List[keras.KerasTensor]],
-        outputs: Union[keras.KerasTensor, List[keras.KerasTensor]],
+        inputs: Union[keras.KerasTensor, list[keras.KerasTensor]],
+        outputs: Union[keras.KerasTensor, list[keras.KerasTensor]],
         perturbation_domain: Optional[PerturbationDomain] = None,
         dc_decomp: bool = False,
         method: Union[str, ConvertMethod] = ConvertMethod.FORWARD_AFFINE,
@@ -43,7 +43,7 @@ class DecomonModel(keras.Model):
         self.backward_bounds = backward_bounds
         self.shared = shared
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         # force having functional config which is skipped by default
         # because DecomonModel.__init__() has not same signature as Functional.__init__()
         config = Model(self.inputs, self.outputs).get_config()
@@ -96,8 +96,8 @@ class DecomonModel(keras.Model):
                 layer.reset_finetuning()
 
     def predict_on_single_batch_np(
-        self, inputs: Union[np.ndarray, List[np.ndarray]]
-    ) -> Union[np.ndarray, List[np.ndarray]]:
+        self, inputs: Union[np.ndarray, list[np.ndarray]]
+    ) -> Union[np.ndarray, list[np.ndarray]]:
         """Make predictions on numpy arrays fitting in one batch
 
         Avoid using `self.predict()` known to be not designed for small arrays,
@@ -128,8 +128,8 @@ def _check_domain(
     return perturbation_domain
 
 
-def get_AB(model: DecomonModel) -> Dict[str, List[keras.Variable]]:
-    dico_AB: Dict[str, List[keras.Variable]] = {}
+def get_AB(model: DecomonModel) -> dict[str, list[keras.Variable]]:
+    dico_AB: dict[str, list[keras.Variable]] = {}
     perturbation_domain = model.perturbation_domain
     if not (isinstance(perturbation_domain, GridDomain) and perturbation_domain.opt_option == Option.milp):
         return dico_AB
@@ -144,8 +144,8 @@ def get_AB(model: DecomonModel) -> Dict[str, List[keras.Variable]]:
     return dico_AB
 
 
-def get_AB_finetune(model: DecomonModel) -> Dict[str, keras.Variable]:
-    dico_AB: Dict[str, keras.Variable] = {}
+def get_AB_finetune(model: DecomonModel) -> dict[str, keras.Variable]:
+    dico_AB: dict[str, keras.Variable] = {}
     perturbation_domain = model.perturbation_domain
     if not (isinstance(perturbation_domain, GridDomain) and perturbation_domain.opt_option == Option.milp):
         return dico_AB

@@ -1,5 +1,6 @@
 import warnings
-from typing import Any, Callable, Dict, List, Optional, Union
+from collections.abc import Callable
+from typing import Any, Optional, Union
 
 import keras.ops as K
 import numpy as np
@@ -40,7 +41,7 @@ GROUP_SORT_2 = "GroupSort2"
 
 
 def relu(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     alpha: float = 0.0,
@@ -49,7 +50,7 @@ def relu(
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """
     Args:
         inputs: list of input tensors
@@ -82,14 +83,14 @@ def relu(
 
 
 def linear_hull_s_shape(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     func: Callable[[Tensor], Tensor] = K.sigmoid,
     f_prime: Callable[[Tensor], Tensor] = sigmoid_prime,
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """Computing the linear hull of s-shape functions
 
     Args:
@@ -158,13 +159,13 @@ def linear_hull_s_shape(
 
 
 def sigmoid(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA for Sigmoid activation function .
     `1 / (1 + exp(-x))`.
 
@@ -190,13 +191,13 @@ def sigmoid(
 
 
 def tanh(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA for Hyperbolic activation function.
     `tanh(x)=2*sigmoid(2*x)+1`
 
@@ -223,13 +224,13 @@ def tanh(
 
 
 def hard_sigmoid(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA for Hard sigmoid activation function.
        Faster to compute than sigmoid activation.
 
@@ -255,13 +256,13 @@ def hard_sigmoid(
 
 
 def elu(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA for Exponential linear unit.
 
     Args:
@@ -286,13 +287,13 @@ def elu(
 
 
 def selu(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA for Scaled Exponential Linear Unit (SELU).
 
     SELU is equal to: `scale * elu(x, alpha)`, where alpha and scale
@@ -323,13 +324,13 @@ def selu(
 
 
 def linear(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA foe Linear (i.e. identity) activation function.
 
     Args:
@@ -348,13 +349,13 @@ def linear(
 
 
 def exponential(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA for Exponential activation function.
 
     Args:
@@ -376,13 +377,13 @@ def exponential(
 
 
 def softplus(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA for Softplus activation function `log(exp(x) + 1)`.
 
     Args:
@@ -406,13 +407,13 @@ def softplus(
 
 
 def softsign(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA for Softsign activation function `x / (abs(x) + 1)`.
 
     Args:
@@ -438,7 +439,7 @@ def softsign(
 
 
 def softmax(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
@@ -446,7 +447,7 @@ def softmax(
     clip: bool = True,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """LiRPA for Softmax activation function.
 
     Args:
@@ -501,21 +502,21 @@ def softmax(
 
 
 def group_sort_2(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     data_format: str = "channels_last",
     slope: Union[str, Slope] = Slope.V_SLOPE,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
     mode = ForwardMode(mode)
     raise NotImplementedError()
 
 
-def deserialize(name: str) -> Callable[..., List[Tensor]]:
+def deserialize(name: str) -> Callable[..., list[Tensor]]:
     """Get the activation from name.
 
     Args:
@@ -553,7 +554,7 @@ def deserialize(name: str) -> Callable[..., List[Tensor]]:
         raise ValueError(f"Could not interpret activation function identifier: {name}")
 
 
-def get(identifier: Any) -> Callable[..., List[Tensor]]:
+def get(identifier: Any) -> Callable[..., list[Tensor]]:
     """Get the `identifier` activation function.
 
     Args:

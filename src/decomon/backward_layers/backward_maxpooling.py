@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import keras.ops as K
 import numpy as np
@@ -14,8 +14,8 @@ from decomon.types import BackendTensor
 class BackwardMaxPooling2D(BackwardLayer):
     """Backward  LiRPA of MaxPooling2D"""
 
-    pool_size: Tuple[int, int]
-    strides: Tuple[int, int]
+    pool_size: tuple[int, int]
+    strides: tuple[int, int]
     padding: str
     data_format: str
     fast: bool
@@ -41,12 +41,12 @@ class BackwardMaxPooling2D(BackwardLayer):
 
     def _pooling_function_fast(
         self,
-        inputs: List[BackendTensor],
+        inputs: list[BackendTensor],
         w_u_out: BackendTensor,
         b_u_out: BackendTensor,
         w_l_out: BackendTensor,
         b_l_out: BackendTensor,
-    ) -> List[BackendTensor]:
+    ) -> list[BackendTensor]:
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
 
         op_flat = Flatten()
@@ -79,12 +79,12 @@ class BackwardMaxPooling2D(BackwardLayer):
 
     def _pooling_function_not_fast(
         self,
-        inputs: List[BackendTensor],
+        inputs: list[BackendTensor],
         w_u_out: BackendTensor,
         b_u_out: BackendTensor,
         w_l_out: BackendTensor,
         b_l_out: BackendTensor,
-    ) -> List[BackendTensor]:
+    ) -> list[BackendTensor]:
         """
         Args:
             inputs
@@ -184,7 +184,7 @@ class BackwardMaxPooling2D(BackwardLayer):
 
         return [w_u_out, b_u_out, w_l_out, b_l_out]
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> list[BackendTensor]:
         w_u_out, b_u_out, w_l_out, b_l_out = get_identity_lirpa(inputs)
         if self.fast:
             return self._pooling_function_fast(
