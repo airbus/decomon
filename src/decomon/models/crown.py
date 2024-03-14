@@ -1,5 +1,5 @@
 # extra layers necessary for backward LiRPA
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import keras.ops as K
 from keras.layers import InputSpec, Layer
@@ -15,7 +15,7 @@ class Fuse(Layer):
         super().__init__(**kwargs)
         self.mode = ForwardMode(mode)
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> list[BackendTensor]:
         inputs_wo_backward_bounds = inputs[:-4]
         backward_bounds = inputs[-4:]
 
@@ -28,7 +28,7 @@ class Fuse(Layer):
 
         return merge_with_previous([w_f_u, b_f_u, w_f_l, b_f_l] + backward_bounds)
 
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int], ...]]) -> List[Tuple[Optional[int], ...]]:
+    def compute_output_shape(self, input_shape: list[tuple[Optional[int], ...]]) -> list[tuple[Optional[int], ...]]:
         inputs_wo_backward_bounds_shapes = input_shape[:-4]
         backward_bounds_shapes = input_shape[-4:]
 
@@ -51,7 +51,7 @@ class Fuse(Layer):
             [w_f_u_shape, b_f_u_shape, w_f_l_shape, b_f_l_shape] + backward_bounds_shapes
         )
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         config = super().get_config()
         config.update({"mode": self.mode})
         return config
@@ -63,7 +63,7 @@ class Convert2BackwardMode(Layer):
         self.mode = ForwardMode(mode)
         self.perturbation_domain = perturbation_domain
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> list[BackendTensor]:
         inputs_wo_backward_bounds = inputs[:-4]
         backward_bounds = inputs[-4:]
         w_u_out, b_u_out, w_l_out, b_l_out = backward_bounds
@@ -91,7 +91,7 @@ class Convert2BackwardMode(Layer):
         else:
             raise ValueError(f"Unknwon mode {self.mode}")
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         config = super().get_config()
         config.update({"mode": self.mode, "perturbation_domain": self.perturbation_domain})
         return config
@@ -100,8 +100,8 @@ class Convert2BackwardMode(Layer):
 class MergeWithPrevious(Layer):
     def __init__(
         self,
-        input_shape_layer: Optional[Tuple[int, ...]] = None,
-        backward_shape_layer: Optional[Tuple[int, ...]] = None,
+        input_shape_layer: Optional[tuple[int, ...]] = None,
+        backward_shape_layer: Optional[tuple[int, ...]] = None,
         **kwargs: Any,
     ):
         super().__init__(**kwargs)
@@ -117,13 +117,13 @@ class MergeWithPrevious(Layer):
             b_b_spec = InputSpec(ndim=2, axes={-1: n_out})
             self.input_spec = [w_out_spec, b_out_spec] * 2 + [w_b_spec, b_b_spec] * 2  #
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> list[BackendTensor]:
         return merge_with_previous(inputs)
 
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int], ...]]) -> List[Tuple[Optional[int], ...]]:
+    def compute_output_shape(self, input_shape: list[tuple[Optional[int], ...]]) -> list[tuple[Optional[int], ...]]:
         return merge_with_previous_compute_output_shape(input_shape)
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         config = super().get_config()
         config.update(
             {
@@ -135,8 +135,8 @@ class MergeWithPrevious(Layer):
 
 
 def merge_with_previous_compute_output_shape(
-    input_shapes: List[Tuple[Optional[int], ...]]
-) -> List[Tuple[Optional[int], ...]]:
+    input_shapes: list[tuple[Optional[int], ...]]
+) -> list[tuple[Optional[int], ...]]:
     w_b_in_shape, b_b_in_shape = input_shapes[-2:]
     w_out_in_shape, b_out_in_shape = input_shapes[:2]
     batch_size, flattened_keras_input_shape, flattened_keras_output_shape = w_out_in_shape
@@ -146,7 +146,7 @@ def merge_with_previous_compute_output_shape(
     return [w_b_out_shape, b_b_out_shape] * 2
 
 
-def merge_with_previous(inputs: List[BackendTensor]) -> List[BackendTensor]:
+def merge_with_previous(inputs: list[BackendTensor]) -> list[BackendTensor]:
     w_u_out, b_u_out, w_l_out, b_l_out, w_b_u, b_b_u, w_b_l, b_b_l = inputs
 
     # w_u_out (None, n_h_in, n_h_out)

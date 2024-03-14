@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import keras
 import keras.config as keras_config
@@ -155,12 +155,12 @@ def method(request):
 
 
 class ModelNumpyFromKerasTensors:
-    def __init__(self, inputs: List[KerasTensor], outputs: List[KerasTensor]):
+    def __init__(self, inputs: list[KerasTensor], outputs: list[KerasTensor]):
         self.inputs = inputs
         self.outputs = outputs
         self._model = Model(inputs, outputs)
 
-    def __call__(self, inputs_: List[np.ndarray]):
+    def __call__(self, inputs_: list[np.ndarray]):
         output_tensors = self._model(inputs_)
         if isinstance(output_tensors, list):
             return [K.convert_to_numpy(output) for output in output_tensors]
@@ -200,8 +200,8 @@ class Helpers:
 
     @staticmethod
     def predict_on_small_numpy(
-        model: Model, x: Union[np.ndarray, List[np.ndarray]]
-    ) -> Union[np.ndarray, List[np.ndarray]]:
+        model: Model, x: Union[np.ndarray, list[np.ndarray]]
+    ) -> Union[np.ndarray, list[np.ndarray]]:
         """Make predictions for model directly on small numpy arrays
 
         Avoid using `model.predict()` known to be not designed for small arrays,
@@ -347,10 +347,10 @@ class Helpers:
 
     @staticmethod
     def get_inputs_for_mode_from_full_inputs(
-        inputs: Union[List[Tensor], List[npt.NDArray[np.float_]]],
+        inputs: Union[list[Tensor], list[npt.NDArray[np.float_]]],
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         dc_decomp: bool = True,
-    ) -> Union[List[Tensor], List[npt.NDArray[np.float_]]]:
+    ) -> Union[list[Tensor], list[npt.NDArray[np.float_]]]:
         """Extract from full inputs the ones corresponding to the selected mode.
 
         Args:
@@ -385,7 +385,7 @@ class Helpers:
 
     @staticmethod
     def get_inputs_np_for_decomon_model_from_full_inputs(
-        inputs: List[npt.NDArray[np.float_]],
+        inputs: list[npt.NDArray[np.float_]],
     ) -> npt.NDArray[np.float_]:
         """Extract from full numpy inputs the ones for a decomon model prediction.
 
@@ -400,8 +400,8 @@ class Helpers:
 
     @staticmethod
     def get_input_ref_bounds_from_full_inputs(
-        inputs: Union[List[Tensor], List[npt.NDArray[np.float_]]],
-    ) -> Union[List[Tensor], List[npt.NDArray[np.float_]]]:
+        inputs: Union[list[Tensor], list[npt.NDArray[np.float_]]],
+    ) -> Union[list[Tensor], list[npt.NDArray[np.float_]]]:
         """Extract lower and upper bound for input ref from full inputs
 
         Args:
@@ -415,9 +415,9 @@ class Helpers:
 
     @staticmethod
     def prepare_full_np_inputs_for_convert_model(
-        inputs: List[npt.NDArray[np.float_]],
+        inputs: list[npt.NDArray[np.float_]],
         dc_decomp: bool = True,
-    ) -> List[npt.NDArray[np.float_]]:
+    ) -> list[npt.NDArray[np.float_]]:
         """Prepare full numpy inputs for convert_forward or convert_backward.
 
         W_u and W_l will be idendity matrices, and b_u, b_l zeros vectors.
@@ -445,10 +445,10 @@ class Helpers:
 
     @staticmethod
     def get_input_tensors_for_decomon_convert_from_full_inputs(
-        inputs: List[Tensor],
+        inputs: list[Tensor],
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         dc_decomp: bool = True,
-    ) -> List[Tensor]:
+    ) -> list[Tensor]:
         """Extract from full tensor inputs the ones for a conversion to decomon model.
 
         Args:
@@ -485,7 +485,7 @@ class Helpers:
 
     @staticmethod
     def get_input_ref_from_full_inputs(
-        inputs: Union[List[Tensor], List[npt.NDArray[np.float_]]]
+        inputs: Union[list[Tensor], list[npt.NDArray[np.float_]]]
     ) -> Union[Tensor, npt.NDArray[np.float_]]:
         """Extract from full inputs the input of reference for the original Keras layer.
 
@@ -527,11 +527,11 @@ class Helpers:
 
     @staticmethod
     def get_full_outputs_from_outputs_for_mode(
-        outputs_for_mode: Union[List[Tensor], List[npt.NDArray[np.float_]]],
+        outputs_for_mode: Union[list[Tensor], list[npt.NDArray[np.float_]]],
         mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
         dc_decomp: bool = True,
-        full_inputs: Optional[Union[List[Tensor], List[npt.NDArray[np.float_]]]] = None,
-    ) -> Union[List[Tensor], List[npt.NDArray[np.float_]]]:
+        full_inputs: Optional[Union[list[Tensor], list[npt.NDArray[np.float_]]]] = None,
+    ) -> Union[list[Tensor], list[npt.NDArray[np.float_]]]:
         mode = ForwardMode(mode)
         if dc_decomp:
             if mode == ForwardMode.HYBRID:
@@ -577,7 +577,7 @@ class Helpers:
             return 6
 
     @staticmethod
-    def get_input_dim_from_full_inputs(inputs: Union[List[Tensor], List[npt.NDArray[np.float_]]]) -> int:
+    def get_input_dim_from_full_inputs(inputs: Union[list[Tensor], list[npt.NDArray[np.float_]]]) -> int:
         """Get input_dim for to_decomon or to_backward from full inputs
 
         Args:

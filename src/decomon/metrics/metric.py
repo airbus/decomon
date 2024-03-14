@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import keras
 import keras.ops as K
@@ -49,7 +49,7 @@ class MetricLayer(ABC, Layer):
         else:
             self.perturbation_domain = perturbation_domain
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         config = super().get_config()
         config.update(
             {
@@ -62,7 +62,7 @@ class MetricLayer(ABC, Layer):
         return config
 
     @abstractmethod
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> BackendTensor:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> BackendTensor:
         """
         Args:
             inputs
@@ -114,7 +114,7 @@ class AdversarialCheck(MetricLayer):
 
         return K.max(adv_score, -1)
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> BackendTensor:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> BackendTensor:
         """
         Args:
             inputs
@@ -186,7 +186,7 @@ class AdversarialScore(AdversarialCheck):
         """
         super().__init__(ibp=ibp, affine=affine, mode=mode, perturbation_domain=perturbation_domain, **kwargs)
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> BackendTensor:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> BackendTensor:
         """
         Args:
             inputs
@@ -318,7 +318,7 @@ class UpperScore(MetricLayer):
 
         return K.sum(upper_score, -1)
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> BackendTensor:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> BackendTensor:
         """
         Args:
             inputs

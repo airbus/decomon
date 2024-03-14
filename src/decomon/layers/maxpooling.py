@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import keras.ops as K
 import numpy as np
@@ -19,15 +19,15 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
 
     original_keras_layer_class = MaxPooling2D
 
-    pool_size: Tuple[int, int]
-    strides: Tuple[int, int]
+    pool_size: tuple[int, int]
+    strides: tuple[int, int]
     padding: str
     data_format: str
 
     def __init__(
         self,
-        pool_size: Union[int, Tuple[int, int]] = (2, 2),
-        strides: Optional[Union[int, Tuple[int, int]]] = None,
+        pool_size: Union[int, tuple[int, int]] = (2, 2),
+        strides: Optional[Union[int, tuple[int, int]]] = None,
         padding: str = "valid",
         data_format: Optional[str] = None,
         perturbation_domain: Optional[PerturbationDomain] = None,
@@ -157,8 +157,8 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
 
     def _pooling_function_fast(
         self,
-        inputs: List[BackendTensor],
-    ) -> List[BackendTensor]:
+        inputs: list[BackendTensor],
+    ) -> list[BackendTensor]:
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
         dtype = x.dtype
         empty_tensor = self.inputs_outputs_spec.get_empty_tensor(dtype=dtype)
@@ -186,8 +186,8 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
 
     def _pooling_function_not_fast(
         self,
-        inputs: List[BackendTensor],
-    ) -> List[BackendTensor]:
+        inputs: list[BackendTensor],
+    ) -> list[BackendTensor]:
         x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec.get_fullinputs_from_inputsformode(
             inputs, compute_ibp_from_affine=False
         )
@@ -230,7 +230,7 @@ class DecomonMaxPooling2D(DecomonLayer, MaxPooling2D):
             outputs, axis=-1, dc_decomp=self.dc_decomp, mode=self.mode, perturbation_domain=self.perturbation_domain
         )
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> list[BackendTensor]:
         if self.fast:
             return self._pooling_function_fast(inputs)
         else:

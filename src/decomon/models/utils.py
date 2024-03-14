@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import keras
 import keras.ops as K
@@ -41,7 +41,7 @@ class ConvertMethod(str, Enum):
     FORWARD_HYBRID = "forward-hybrid"
 
 
-def get_ibp_affine_from_method(method: Union[str, ConvertMethod]) -> Tuple[bool, bool]:
+def get_ibp_affine_from_method(method: Union[str, ConvertMethod]) -> tuple[bool, bool]:
     method = ConvertMethod(method)
     if method in [ConvertMethod.FORWARD_IBP, ConvertMethod.CROWN_FORWARD_IBP]:
         return True, False
@@ -90,7 +90,7 @@ def get_input_tensors(
     perturbation_domain: PerturbationDomain,
     ibp: bool = True,
     affine: bool = True,
-) -> Tuple[keras.KerasTensor, List[keras.KerasTensor]]:
+) -> tuple[keras.KerasTensor, list[keras.KerasTensor]]:
     input_dim = get_input_dim(model)
     mode = get_mode(ibp=ibp, affine=affine)
     dc_decomp = False
@@ -158,8 +158,8 @@ def get_input_dim(layer: Layer) -> int:
 
 
 def prepare_inputs_for_layer(
-    inputs: Union[Tuple[keras.KerasTensor, ...], List[keras.KerasTensor], keras.KerasTensor]
-) -> Union[Tuple[keras.KerasTensor, ...], List[keras.KerasTensor], keras.KerasTensor]:
+    inputs: Union[tuple[keras.KerasTensor, ...], list[keras.KerasTensor], keras.KerasTensor]
+) -> Union[tuple[keras.KerasTensor, ...], list[keras.KerasTensor], keras.KerasTensor]:
     """Prepare inputs for keras/decomon layers.
 
     Some Keras layers do not like list of tensors even with one single tensor.
@@ -173,8 +173,8 @@ def prepare_inputs_for_layer(
 
 
 def wrap_outputs_from_layer_in_list(
-    outputs: Union[Tuple[keras.KerasTensor, ...], List[keras.KerasTensor], keras.KerasTensor]
-) -> List[keras.KerasTensor]:
+    outputs: Union[tuple[keras.KerasTensor, ...], list[keras.KerasTensor], keras.KerasTensor]
+) -> list[keras.KerasTensor]:
     if not isinstance(outputs, list):
         if isinstance(outputs, tuple):
             return list(outputs)
@@ -184,7 +184,7 @@ def wrap_outputs_from_layer_in_list(
         return outputs
 
 
-def split_activation(layer: Layer) -> List[Layer]:
+def split_activation(layer: Layer) -> list[Layer]:
     # get activation
     config = layer.get_config()
     activation = config.pop("activation", None)
@@ -218,7 +218,7 @@ def split_activation(layer: Layer) -> List[Layer]:
         return [layer_wo_activation, activation_layer]
 
 
-def preprocess_layer(layer: Layer) -> List[Layer]:
+def preprocess_layer(layer: Layer) -> list[Layer]:
     return split_activation(layer)
 
 
@@ -226,16 +226,16 @@ def is_input_node(node: Node) -> bool:
     return len(node.input_tensors) == 0
 
 
-def get_depth_dict(model: Model) -> Dict[int, List[Node]]:
+def get_depth_dict(model: Model) -> dict[int, list[Node]]:
     depth_keys = list(model._nodes_by_depth.keys())
     depth_keys.sort(reverse=True)
 
     nodes_list = []
 
-    dico_depth: Dict[int, int] = {}
-    dico_nodes: Dict[int, List[Node]] = {}
+    dico_depth: dict[int, int] = {}
+    dico_nodes: dict[int, list[Node]] = {}
 
-    def fill_dico(node: Node, dico_depth: Optional[Dict[int, int]] = None) -> Dict[int, int]:
+    def fill_dico(node: Node, dico_depth: Optional[dict[int, int]] = None) -> dict[int, int]:
         if dico_depth is None:
             dico_depth = {}
 
@@ -311,7 +311,7 @@ class Convert2Mode(Layer):
             model_input_dim=self.input_dim,
         )
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> list[BackendTensor]:
         compute_ibp_from_affine = self.mode_from == ForwardMode.AFFINE and self.mode_to != ForwardMode.AFFINE
         tight = self.mode_from == ForwardMode.HYBRID and self.mode_to != ForwardMode.AFFINE
         compute_dummy_affine = self.mode_from == ForwardMode.IBP and self.mode_to != ForwardMode.IBP
@@ -331,7 +331,7 @@ class Convert2Mode(Layer):
             [x, u_c, w_u, b_u, l_c, w_l, b_l, h, g]
         )
 
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int], ...]]) -> List[Tuple[Optional[int], ...]]:
+    def compute_output_shape(self, input_shape: list[tuple[Optional[int], ...]]) -> list[tuple[Optional[int], ...]]:
         (
             x_shape,
             u_c_shape,
@@ -347,7 +347,7 @@ class Convert2Mode(Layer):
             [x_shape, u_c_shape, w_u_shape, b_u_shape, l_c_shape, w_l_shape, b_l_shape, h_shape, g_shape]
         )
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         config = super().get_config()
         config.update(
             {"mode_from": self.mode_from, "mode_to": self.mode_to, "perturbation_domain": self.perturbation_domain}

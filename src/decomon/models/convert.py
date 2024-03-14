@@ -1,4 +1,5 @@
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from collections.abc import Callable
+from typing import Any, Optional, Union
 
 import keras
 from keras.layers import InputLayer, Layer
@@ -31,7 +32,7 @@ from decomon.models.utils import (
 )
 
 
-def _clone_keras_model(model: Model, layer_fn: Callable[[Layer], List[Layer]]) -> Model:
+def _clone_keras_model(model: Model, layer_fn: Callable[[Layer], list[Layer]]) -> Model:
     if model.inputs is None:
         raise ValueError("model.inputs must be not None. You should call the model on a batch of data.")
 
@@ -79,11 +80,11 @@ def preprocess_keras_model(
 # create status
 def convert(
     model: Model,
-    input_tensors: List[keras.KerasTensor],
+    input_tensors: list[keras.KerasTensor],
     method: Union[str, ConvertMethod] = ConvertMethod.CROWN,
     ibp: bool = False,
     affine: bool = False,
-    back_bounds: Optional[List[keras.KerasTensor]] = None,
+    back_bounds: Optional[list[keras.KerasTensor]] = None,
     layer_fn: Callable[..., Layer] = to_decomon,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     input_dim: int = -1,
@@ -97,10 +98,10 @@ def convert(
     final_ibp: bool = False,
     final_affine: bool = False,
     **kwargs: Any,
-) -> Tuple[
-    List[keras.KerasTensor],
-    List[keras.KerasTensor],
-    Union[LayerMapDict, Dict[int, BackwardLayer]],
+) -> tuple[
+    list[keras.KerasTensor],
+    list[keras.KerasTensor],
+    Union[LayerMapDict, dict[int, BackwardLayer]],
     Optional[OutputMapDict],
 ]:
     if back_bounds is None:
@@ -119,7 +120,7 @@ def convert(
     # prepare the Keras Model: split non-linear activation functions into separate Activation layers
     model = preprocess_keras_model(model)
 
-    layer_map: Union[LayerMapDict, Dict[int, BackwardLayer]]
+    layer_map: Union[LayerMapDict, dict[int, BackwardLayer]]
 
     if method != ConvertMethod.CROWN:
         input_tensors, output, layer_map, forward_map = convert_forward(
@@ -172,12 +173,12 @@ def clone(
     slope: Union[str, Slope] = Slope.V_SLOPE,
     perturbation_domain: Optional[PerturbationDomain] = None,
     method: Union[str, ConvertMethod] = ConvertMethod.CROWN,
-    back_bounds: Optional[List[keras.KerasTensor]] = None,
+    back_bounds: Optional[list[keras.KerasTensor]] = None,
     finetune: bool = False,
     shared: bool = True,
     finetune_forward: bool = False,
     finetune_backward: bool = False,
-    extra_inputs: Optional[List[keras.KerasTensor]] = None,
+    extra_inputs: Optional[list[keras.KerasTensor]] = None,
     to_keras: bool = True,
     final_ibp: Optional[bool] = None,
     final_affine: Optional[bool] = None,

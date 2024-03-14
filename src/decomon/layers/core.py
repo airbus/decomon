@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Optional, Union
 
 import keras
 from keras.layers import Layer
@@ -19,11 +19,11 @@ from decomon.types import BackendTensor
 class DecomonLayer(ABC, Layer):
     """Abstract class that contains the common information of every implemented layers for Forward LiRPA"""
 
-    _trainable_weights: List[keras.Variable]
+    _trainable_weights: list[keras.Variable]
 
     @property
     @abstractmethod
-    def original_keras_layer_class(self) -> Type[Layer]:
+    def original_keras_layer_class(self) -> type[Layer]:
         """The keras layer class from which this class is the decomon equivalent."""
         pass
 
@@ -72,7 +72,7 @@ class DecomonLayer(ABC, Layer):
     def affine(self) -> bool:
         return get_affine(self.mode)
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         config = super().get_config()
         config.update(
             {
@@ -86,7 +86,7 @@ class DecomonLayer(ABC, Layer):
         )
         return config
 
-    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
+    def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
         """
         Args:
             input_shape
@@ -99,7 +99,7 @@ class DecomonLayer(ABC, Layer):
         self.original_keras_layer_class.build(self, y_input_shape)
 
     @abstractmethod
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> List[BackendTensor]:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> list[BackendTensor]:
         """
         Args:
             inputs
@@ -109,8 +109,8 @@ class DecomonLayer(ABC, Layer):
         """
 
     def compute_output_shape(
-        self, input_shape: Union[Tuple[Optional[int], ...], List[Tuple[Optional[int], ...]]]
-    ) -> Union[Tuple[Optional[int], ...], List[Tuple[Optional[int], ...]]]:
+        self, input_shape: Union[tuple[Optional[int], ...], list[tuple[Optional[int], ...]]]
+    ) -> Union[tuple[Optional[int], ...], list[tuple[Optional[int], ...]]]:
         """Compute expected output shape according to input shape
 
         Will be called by symbolic calls on Keras Tensors.
@@ -139,7 +139,7 @@ class DecomonLayer(ABC, Layer):
                 return input_shape
 
         # we know from here that we got a list of input shapes. Mypy does not.
-        input_shapes: List[Tuple[Optional[int], ...]] = input_shape  # type: ignore
+        input_shapes: list[tuple[Optional[int], ...]] = input_shape  # type: ignore
         y_shape = self.inputs_outputs_spec.get_kerasinputshape_from_inputshapesformode(
             input_shapes
         )  # input shape for the original layer
@@ -203,7 +203,7 @@ class DecomonLayer(ABC, Layer):
             reset_layer(new_layer=self, original_layer=layer, weight_names=weight_names)
 
     @property
-    def keras_weights_names(self) -> List[str]:
+    def keras_weights_names(self) -> list[str]:
         """Weights names of the corresponding Keras layer.
 
         Will be used to decide which weight to take from the keras layer in `reset_layer()`
@@ -211,7 +211,7 @@ class DecomonLayer(ABC, Layer):
         """
         return []
 
-    def join(self, bounds: List[BackendTensor]) -> List[BackendTensor]:
+    def join(self, bounds: list[BackendTensor]) -> list[BackendTensor]:
         """
         Args:
             bounds

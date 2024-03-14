@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import keras.ops as K
 import numpy as np
@@ -18,13 +18,13 @@ from decomon.types import BackendTensor, Tensor
 
 
 def get_upper_linear_hull_max(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     perturbation_domain: Optional[PerturbationDomain] = None,
     axis: int = -1,
     dc_decomp: bool = False,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """Compute the linear hull that overapproximates max along the axis dimension
 
     Args:
@@ -135,14 +135,14 @@ def get_upper_linear_hull_max(
 
 
 def get_lower_linear_hull_max(
-    inputs: List[Tensor],
+    inputs: list[Tensor],
     mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
     perturbation_domain: Optional[PerturbationDomain] = None,
     axis: int = -1,
     finetune_lower: Optional[BackendTensor] = None,
     dc_decomp: bool = False,
     **kwargs: Any,
-) -> List[Tensor]:
+) -> list[Tensor]:
     """Compute the linear hull that overapproximates max along the axis dimension
 
     Args:

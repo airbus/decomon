@@ -1,4 +1,5 @@
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from collections.abc import Callable
+from typing import Any, Optional, Union
 
 import keras
 import keras.ops as K
@@ -33,7 +34,7 @@ def get_model(model: DecomonModel) -> DecomonModel:
 
     if mode == ForwardMode.IBP:
 
-        def func(outputs: List[Tensor]) -> Tensor:
+        def func(outputs: list[Tensor]) -> Tensor:
             u_c, l_c = outputs
             return K.concatenate([K.expand_dims(u_c, -1), K.expand_dims(l_c, -1)], -1)
 
@@ -41,7 +42,7 @@ def get_model(model: DecomonModel) -> DecomonModel:
 
     elif mode == ForwardMode.AFFINE:
 
-        def func(outputs: List[Tensor]) -> Tensor:
+        def func(outputs: list[Tensor]) -> Tensor:
             x_0, w_u, b_u, w_l, b_l = outputs
             if len(x_0.shape) == 2:
                 x_0_reshaped = x_0[:, :, None]
@@ -60,7 +61,7 @@ def get_model(model: DecomonModel) -> DecomonModel:
 
     elif mode == ForwardMode.HYBRID:
 
-        def func(outputs: List[Tensor]) -> Tensor:
+        def func(outputs: list[Tensor]) -> Tensor:
             x_0, u_c, w_u, b_u, l_c, w_l, b_l = outputs
 
             if len(x_0.shape) == 2:
@@ -384,7 +385,7 @@ class DecomonLossFusion(DecomonLayer):
         self.asymptotic = asymptotic
         self.backward = backward
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         config = super().get_config()
         config.update(
             {
@@ -394,7 +395,7 @@ class DecomonLossFusion(DecomonLayer):
         )
         return config
 
-    def call_no_backward(self, inputs: List[BackendTensor], **kwargs: Any) -> BackendTensor:
+    def call_no_backward(self, inputs: list[BackendTensor], **kwargs: Any) -> BackendTensor:
         if not self.asymptotic:
             u_c, l_c = self.convert2mode_layer(inputs)
 
@@ -423,7 +424,7 @@ class DecomonLossFusion(DecomonLayer):
                 score, K.cast(-1, dtype=score.dtype)
             )  # + 1e-3*K.maximum(K.max(K.abs(u_c), -1)[:,None], K.abs(l_c))
 
-    def call_backward(self, inputs: List[BackendTensor], **kwargs: Any) -> BackendTensor:
+    def call_backward(self, inputs: list[BackendTensor], **kwargs: Any) -> BackendTensor:
         if not self.asymptotic:
             u_c, l_c = self.convert2mode_layer(inputs)
             return K.softmax(u_c)
@@ -431,16 +432,16 @@ class DecomonLossFusion(DecomonLayer):
         else:
             raise NotImplementedError()
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> BackendTensor:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> BackendTensor:
         if self.backward:
             return self.call_backward(inputs, **kwargs)
         else:
             return self.call_no_backward(inputs, **kwargs)
 
-    def compute_output_shape(self, input_shape: List[Tuple[Optional[int], ...]]) -> Tuple[Optional[int], ...]:  # type: ignore
+    def compute_output_shape(self, input_shape: list[tuple[Optional[int], ...]]) -> tuple[Optional[int], ...]:  # type: ignore
         return input_shape[-1]
 
-    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
+    def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
         return None
 
 
@@ -477,7 +478,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
         self.backward = backward
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         config = super().get_config()
         config.update(
             {
@@ -486,7 +487,7 @@ class DecomonRadiusRobust(DecomonLayer):
         )
         return config
 
-    def call_no_backward(self, inputs: List[BackendTensor], **kwargs: Any) -> BackendTensor:
+    def call_no_backward(self, inputs: list[BackendTensor], **kwargs: Any) -> BackendTensor:
         if self.mode == ForwardMode.HYBRID:
             x, _, w_u, b_u, _, w_l, b_l = inputs
         else:
@@ -522,7 +523,7 @@ class DecomonRadiusRobust(DecomonLayer):
 
         return K.concatenate([radius_label(source_tensor[:, i]) for i in range(shape)], -1)
 
-    def call_backward(self, inputs: List[BackendTensor], **kwargs: Any) -> BackendTensor:
+    def call_backward(self, inputs: list[BackendTensor], **kwargs: Any) -> BackendTensor:
         if self.mode == ForwardMode.HYBRID:
             x, _, w_u, b_u, _, w_l, b_l = inputs
         else:
@@ -552,16 +553,16 @@ class DecomonRadiusRobust(DecomonLayer):
 
         return K.concatenate([radius_label(source_tensor[:, i]) for i in range(shape)], -1)
 
-    def call(self, inputs: List[BackendTensor], **kwargs: Any) -> BackendTensor:
+    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> BackendTensor:
         if self.backward:
             return self.call_backward(inputs, **kwargs)
         else:
             return self.call_no_backward(inputs, **kwargs)
 
-    def compute_output_shape(self, input_shape: Union[List[Tuple[Optional[int], ...]],]) -> Tuple[Optional[int], ...]:  # type: ignore
+    def compute_output_shape(self, input_shape: Union[list[tuple[Optional[int], ...]],]) -> tuple[Optional[int], ...]:  # type: ignore
         return input_shape[-1]
 
-    def build(self, input_shape: List[Tuple[Optional[int], ...]]) -> None:
+    def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
         return None
 
 

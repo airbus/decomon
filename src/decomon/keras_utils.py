@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 import keras
 import keras.ops as K
@@ -143,7 +143,7 @@ def get_weight_index_from_name(layer: Layer, weight_name: str) -> int:
         raise IndexError(f"The weight {weight_name} is not tracked by the layer {layer}.")
 
 
-def reset_layer(new_layer: Layer, original_layer: Layer, weight_names: List[str]) -> None:
+def reset_layer(new_layer: Layer, original_layer: Layer, weight_names: list[str]) -> None:
     """Reset some weights of a layer by using the weights of another layer.
 
     Args:
@@ -199,7 +199,7 @@ def share_layer_all_weights(
     )
 
 
-def share_weights_and_build(original_layer: Layer, new_layer: Layer, weight_names: List[str]) -> None:
+def share_weights_and_build(original_layer: Layer, new_layer: Layer, weight_names: list[str]) -> None:
     """Share the weights specidifed by names of an already built layer to another unbuilt layer.
 
     We assume that each weight is also an original_laer's attribute whose name is the weight name.

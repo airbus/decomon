@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from copy import deepcopy
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import keras
 import keras.ops as K
@@ -46,7 +47,7 @@ def get_disconnected_input(
     if dtype is None:
         dtype = floatx()
 
-    def disco_priv(inputs: List[Tensor]) -> List[Tensor]:
+    def disco_priv(inputs: list[Tensor]) -> list[Tensor]:
         x, u_c, w_f_u, b_f_u, l_c, w_f_l, b_f_l, h, g = inputs_outputs_spec.get_fullinputs_from_inputsformode(inputs)
         dtype = x.dtype
         empty_tensor = inputs_outputs_spec.get_empty_tensor(dtype=dtype)
@@ -66,7 +67,7 @@ def get_disconnected_input(
 def retrieve_layer(
     node: Node,
     layer_fn: Callable[[Layer], BackwardLayer],
-    backward_map: Dict[int, BackwardLayer],
+    backward_map: dict[int, BackwardLayer],
     joint: bool = True,
 ) -> BackwardLayer:
     if id(node) in backward_map:
@@ -83,17 +84,17 @@ def crown_(
     ibp: bool,
     affine: bool,
     perturbation_domain: PerturbationDomain,
-    input_map: Dict[int, List[keras.KerasTensor]],
+    input_map: dict[int, list[keras.KerasTensor]],
     layer_fn: Callable[[Layer], BackwardLayer],
-    backward_bounds: List[keras.KerasTensor],
-    backward_map: Optional[Dict[int, BackwardLayer]] = None,
+    backward_bounds: list[keras.KerasTensor],
+    backward_map: Optional[dict[int, BackwardLayer]] = None,
     joint: bool = True,
     fuse: bool = True,
-    output_map: Optional[Dict[int, List[keras.KerasTensor]]] = None,
+    output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     merge_layers: Optional[Layer] = None,
     fuse_layer: Optional[Layer] = None,
     **kwargs: Any,
-) -> Tuple[List[keras.KerasTensor], Optional[Layer]]:
+) -> tuple[list[keras.KerasTensor], Optional[Layer]]:
     """
 
 
@@ -216,25 +217,25 @@ def crown_(
 
 def get_input_nodes(
     model: Model,
-    dico_nodes: Dict[int, List[Node]],
+    dico_nodes: dict[int, list[Node]],
     ibp: bool,
     affine: bool,
-    input_tensors: List[keras.KerasTensor],
+    input_tensors: list[keras.KerasTensor],
     output_map: OutputMapDict,
     layer_fn: Callable[[Layer], BackwardLayer],
     joint: bool,
     set_mode_layer: Layer,
     perturbation_domain: Optional[PerturbationDomain] = None,
     **kwargs: Any,
-) -> Tuple[Dict[int, List[keras.KerasTensor]], Dict[int, BackwardLayer], Dict[int, List[keras.KerasTensor]]]:
+) -> tuple[dict[int, list[keras.KerasTensor]], dict[int, BackwardLayer], dict[int, list[keras.KerasTensor]]]:
     keys = [e for e in dico_nodes.keys()]
     keys.sort(reverse=True)
     fuse_layer = None
-    input_map: Dict[int, List[keras.KerasTensor]] = {}
-    backward_map: Dict[int, BackwardLayer] = {}
+    input_map: dict[int, list[keras.KerasTensor]] = {}
+    backward_map: dict[int, BackwardLayer] = {}
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
-    crown_map: Dict[int, List[keras.KerasTensor]] = {}
+    crown_map: dict[int, list[keras.KerasTensor]] = {}
     for depth in keys:
         nodes = dico_nodes[depth]
         for node in nodes:
@@ -246,7 +247,7 @@ def get_input_nodes(
                 #    import pdb; pdb.set_trace()
                 input_map[id(node)] = input_tensors
             else:
-                output: List[keras.KerasTensor] = []
+                output: list[keras.KerasTensor] = []
                 for parent in parents:
                     # do something
                     if id(parent) in output_map.keys():
@@ -283,8 +284,8 @@ def get_input_nodes(
 
 def crown_model(
     model: Model,
-    input_tensors: List[keras.KerasTensor],
-    back_bounds: Optional[List[keras.KerasTensor]] = None,
+    input_tensors: list[keras.KerasTensor],
+    back_bounds: Optional[list[keras.KerasTensor]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     ibp: bool = True,
     affine: bool = True,
@@ -296,7 +297,7 @@ def crown_model(
     layer_fn: Callable[..., BackwardLayer] = to_backward,
     fuse: bool = True,
     **kwargs: Any,
-) -> Tuple[List[keras.KerasTensor], List[keras.KerasTensor], Dict[int, BackwardLayer], None]:
+) -> tuple[list[keras.KerasTensor], list[keras.KerasTensor], dict[int, BackwardLayer], None]:
     if back_bounds is None:
         back_bounds = []
     if forward_map is None:
@@ -400,8 +401,8 @@ def crown_model(
 
 def convert_backward(
     model: Model,
-    input_tensors: List[keras.KerasTensor],
-    back_bounds: Optional[List[keras.KerasTensor]] = None,
+    input_tensors: list[keras.KerasTensor],
+    back_bounds: Optional[list[keras.KerasTensor]] = None,
     slope: Union[str, Slope] = Slope.V_SLOPE,
     ibp: bool = True,
     affine: bool = True,
@@ -415,7 +416,7 @@ def convert_backward(
     final_affine: bool = False,
     input_dim: int = -1,
     **kwargs: Any,
-) -> Tuple[List[keras.KerasTensor], List[keras.KerasTensor], Dict[int, BackwardLayer], None]:
+) -> tuple[list[keras.KerasTensor], list[keras.KerasTensor], dict[int, BackwardLayer], None]:
     model = ensure_functional_model(model)
     if input_dim == -1:
         input_dim = get_input_dim(model)

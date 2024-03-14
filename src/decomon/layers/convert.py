@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import keras
 from keras.layers import Activation, Input, Layer
@@ -79,7 +79,7 @@ def to_decomon(
 
 def _to_decomon_wo_input_init(
     layer: Layer,
-    namespace: Dict[str, Any],
+    namespace: dict[str, Any],
     slope: Union[str, Slope] = Slope.V_SLOPE,
     dc_decomp: bool = False,
     perturbation_domain: Optional[PerturbationDomain] = None,
@@ -119,9 +119,9 @@ def _to_decomon_wo_input_init(
 
 def _prepare_input_tensors(
     layer: Layer, input_dim: int, dc_decomp: bool, perturbation_domain: PerturbationDomain, mode: ForwardMode
-) -> List[keras.KerasTensor]:
+) -> list[keras.KerasTensor]:
     original_input_shapes = get_layer_input_shape(layer)
-    decomon_input_shapes: List[List[Optional[int]]] = [list(input_shape[1:]) for input_shape in original_input_shapes]
+    decomon_input_shapes: list[list[Optional[int]]] = [list(input_shape[1:]) for input_shape in original_input_shapes]
     n_input = len(decomon_input_shapes)
     x_input_shape = perturbation_domain.get_x_input_shape_wo_batchsize(input_dim)
     x_input = Input(x_input_shape, dtype=layer.dtype)
@@ -150,10 +150,10 @@ def _prepare_input_tensors(
     return flatten_input_list
 
 
-SingleInputShapeType = Tuple[Optional[int], ...]
+SingleInputShapeType = tuple[Optional[int], ...]
 
 
-def get_layer_input_shape(layer: Layer) -> List[SingleInputShapeType]:
+def get_layer_input_shape(layer: Layer) -> list[SingleInputShapeType]:
     """Retrieves the input shape(s) of a layer.
 
     Only applicable if the layer has exactly one input,

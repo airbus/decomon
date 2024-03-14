@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 from keras.layers import Layer
 
@@ -8,7 +8,7 @@ import decomon.backward_layers.backward_merge
 from decomon.backward_layers.core import BackwardLayer
 from decomon.core import BoxDomain, ForwardMode, PerturbationDomain, Slope
 
-_mapping_name2class: Dict[str, Any] = vars(decomon.backward_layers.backward_layers)
+_mapping_name2class: dict[str, Any] = vars(decomon.backward_layers.backward_layers)
 _mapping_name2class.update(vars(decomon.backward_layers.backward_merge))
 _mapping_name2class.update(vars(decomon.backward_layers.backward_maxpooling))
 
