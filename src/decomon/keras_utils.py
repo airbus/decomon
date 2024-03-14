@@ -13,33 +13,6 @@ BACKEND_NUMPY = "numpy"
 BACKEND_JAX = "jax"
 
 
-class LinalgSolve(keras.Operation):
-    """Keras operation mimicking tensorflow.linalg.solve()."""
-
-    def compute_output_spec(self, matrix: keras.KerasTensor, rhs: keras.KerasTensor) -> keras.KerasTensor:
-        rhs_shape = rhs.shape
-        rhs_dtype = getattr(rhs, "dtype", type(rhs))
-        rhs_sparse = getattr(rhs, "sparse", False)
-        return keras.KerasTensor(
-            shape=rhs_shape,
-            dtype=rhs_dtype,
-            sparse=rhs_sparse,
-        )
-
-    def call(self, matrix: BackendTensor, rhs: BackendTensor) -> BackendTensor:
-        backend = keras.config.backend()
-        if backend == BACKEND_TENSORFLOW:
-            import tensorflow as tf
-
-            return tf.linalg.solve(matrix=matrix, rhs=rhs)
-        elif backend == BACKEND_PYTORCH:
-            import torch
-
-            return torch.linalg.solve(A=matrix, B=rhs)
-        else:
-            raise NotImplementedError(f"linalg_solve() not yet implemented for backend {backend}.")
-
-
 class BatchedIdentityLike(keras.Operation):
     """Keras Operation creating an identity tensor with shape (including batch_size) based on input.
 
