@@ -3,8 +3,9 @@ import numpy as np
 import pytest
 from pytest_cases import parametrize
 
-from decomon.core import InputsOutputsSpec, Propagation
+from decomon.constants import Propagation
 from decomon.layers.fuse import Fuse
+from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 
 
 def generate_simple_inputs(ibp, affine, input_shape, output_shape, batchsize, diag, nobatch):

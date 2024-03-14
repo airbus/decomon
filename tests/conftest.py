@@ -15,7 +15,7 @@ from pytest_cases import (
     unpack_fixture,
 )
 
-from decomon.core import BoxDomain, ConvertMethod, InputsOutputsSpec, Propagation, Slope
+from decomon.constants import ConvertMethod, Propagation, Slope
 from decomon.keras_utils import (
     BACKEND_JAX,
     BACKEND_NUMPY,
@@ -23,6 +23,8 @@ from decomon.keras_utils import (
     BACKEND_TENSORFLOW,
     batch_multid_dot,
 )
+from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
+from decomon.perturbation_domain import BoxDomain
 from decomon.types import BackendTensor, Tensor
 
 empty, diag, nobatch = param_fixtures(
@@ -162,7 +164,6 @@ class Helpers:
             ibp=ibp,
             affine=affine,
             propagation=propagation,
-            perturbation_domain=perturbation_domain,
             layer_input_shape=layer_input_shape,
             model_input_shape=model_input_shape,
             model_output_shape=model_output_shape,
@@ -263,7 +264,6 @@ class Helpers:
             ibp=ibp,
             affine=affine,
             propagation=propagation,
-            perturbation_domain=perturbation_domain,
             layer_input_shape=layer_input_shape,
             model_input_shape=model_input_shape,
             model_output_shape=model_output_shape,
@@ -321,7 +321,6 @@ class Helpers:
             ibp=ibp,
             affine=affine,
             propagation=propagation,
-            perturbation_domain=perturbation_domain,
             layer_input_shape=layer_input_shape,
             model_input_shape=model_input_shape,
             model_output_shape=model_output_shape,
@@ -1432,7 +1431,6 @@ def convert_standard_input_functions_for_single_layer(
                 ibp=ibp,
                 affine=affine,
                 propagation=propagation,
-                perturbation_domain=perturbation_domain,
                 layer_input_shape=layer_input_shape,
                 model_input_shape=model_input_shape,
                 model_output_shape=output_shape,
@@ -1472,7 +1470,6 @@ def convert_standard_input_functions_for_single_layer(
                 ibp=ibp,
                 affine=affine,
                 propagation=propagation,
-                perturbation_domain=perturbation_domain,
                 layer_input_shape=layer_input_shape,
                 model_input_shape=model_input_shape,
                 model_output_shape=output_shape,
@@ -1514,7 +1511,6 @@ def convert_standard_input_functions_for_single_layer(
                 ibp=ibp,
                 affine=affine,
                 propagation=propagation,
-                perturbation_domain=perturbation_domain,
                 layer_input_shape=layer_input_shape,
                 model_input_shape=model_input_shape,
                 model_output_shape=output_shape,
@@ -1568,7 +1564,6 @@ def convert_standard_input_functions_for_single_layer(
                 ibp=ibp,
                 affine=affine,
                 propagation=propagation,
-                perturbation_domain=perturbation_domain,
                 layer_input_shape=layer_input_shape,
                 model_input_shape=model_input_shape,
                 model_output_shape=output_shape,

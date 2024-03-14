@@ -6,7 +6,8 @@ from typing import Any, Optional, Union, overload
 import keras
 from keras.layers import Layer
 
-from decomon.core import InputsOutputsSpec, PerturbationDomain
+from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
+from decomon.perturbation_domain import PerturbationDomain
 from decomon.types import BackendTensor
 
 
@@ -64,7 +65,6 @@ class DecomonOracle(BaseOracle):
         self.inputs_outputs_spec = InputsOutputsSpec(
             ibp=ibp,
             affine=affine,
-            perturbation_domain=perturbation_domain,
             layer_input_shape=layer_input_shape,
             is_merging_layer=is_merging_layer,
         )

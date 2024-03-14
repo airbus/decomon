@@ -1,36 +1,19 @@
-from copy import deepcopy
 from collections.abc import Callable
 from typing import Any, Optional, Union
 
 import keras
-import keras.ops as K
-from keras.config import floatx
-from keras.layers import InputLayer, Lambda, Layer
+from keras.layers import Layer
 from keras.models import Model
 from keras.src.ops.node import Node
-from keras.src.utils.python_utils import to_list
 
-from decomon.core import (
-    BoxDomain,
-    ForwardMode,
-    InputsOutputsSpec,
-    PerturbationDomain,
-    Propagation,
-    Slope,
-    get_affine,
-    get_mode,
-)
+from decomon.constants import Propagation, Slope
 from decomon.layers import DecomonLayer
 from decomon.layers.convert import to_decomon
 from decomon.layers.crown import ReduceCrownBounds
 from decomon.layers.merging.base_merge import DecomonMerge
 from decomon.layers.oracle import DecomonOracle
-from decomon.models.crown import Convert2BackwardMode, Fuse, MergeWithPrevious
-from decomon.models.utils import (
-    ensure_functional_model,
-    get_depth_dict,
-    get_output_nodes,
-)
+from decomon.models.utils import ensure_functional_model, get_output_nodes
+from decomon.perturbation_domain import BoxDomain, PerturbationDomain
 from decomon.types import Tensor
 
 

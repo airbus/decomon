@@ -4,8 +4,9 @@ from typing import Any, Optional
 from keras.layers import Activation, Add, Dense, Layer
 
 import decomon.layers
-from decomon.core import PerturbationDomain, Propagation, Slope
+from decomon.constants import Propagation, Slope
 from decomon.layers import DecomonActivation, DecomonAdd, DecomonDense, DecomonLayer
+from decomon.perturbation_domain import PerturbationDomain
 
 logger = logging.getLogger(__name__)
 

@@ -7,8 +7,10 @@ import keras
 import keras.ops as K
 from keras.layers import Layer
 
-from decomon.core import InputsOutputsSpec, PerturbationDomain, Propagation
+from decomon.constants import Propagation
+from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.layers.oracle import get_forward_oracle
+from decomon.perturbation_domain import PerturbationDomain
 from decomon.types import BackendTensor, Tensor
 
 

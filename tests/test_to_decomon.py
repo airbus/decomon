@@ -7,9 +7,10 @@ from keras.layers import Activation, Dense, Input, Layer
 
 import decomon.layers
 import decomon.layers.convert
-from decomon.core import BoxDomain, PerturbationDomain, Propagation, Slope
+from decomon.constants import Propagation, Slope
 from decomon.layers import DecomonActivation, DecomonDense, DecomonLayer
 from decomon.layers.convert import to_decomon
+from decomon.perturbation_domain import BoxDomain, PerturbationDomain
 
 # Add a new class in decomon.layers namespace for testing conversion by name
 # We must do it *before* importing decomon.layers.convert

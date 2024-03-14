@@ -5,12 +5,14 @@ import keras
 import keras.ops as K
 from keras.layers import Layer, Wrapper
 
-from decomon.core import BoxDomain, InputsOutputsSpec, PerturbationDomain, Propagation
+from decomon.constants import Propagation
 from decomon.layers.fuse import (
     combine_affine_bound_with_constant_bound,
     combine_affine_bounds,
 )
+from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.layers.oracle import get_forward_oracle
+from decomon.perturbation_domain import BoxDomain, PerturbationDomain
 from decomon.types import Tensor
 
 _keras_base_layer_keyword_parameters = [
@@ -124,7 +126,6 @@ class DecomonLayer(Wrapper):
         # input-output-manager
         self.inputs_outputs_spec = self.create_inputs_outputs_spec(
             layer=layer,
-            perturbation_domain=perturbation_domain,
             ibp=ibp,
             affine=affine,
             propagation=propagation,
@@ -135,7 +136,6 @@ class DecomonLayer(Wrapper):
     def create_inputs_outputs_spec(
         self,
         layer: Layer,
-        perturbation_domain: PerturbationDomain,
         ibp: bool,
         affine: bool,
         propagation: Propagation,
@@ -154,7 +154,6 @@ class DecomonLayer(Wrapper):
             ibp=ibp,
             affine=affine,
             propagation=propagation,
-            perturbation_domain=perturbation_domain,
             layer_input_shape=layer_input_shape,
             model_input_shape=model_input_shape,
             model_output_shape=model_output_shape,

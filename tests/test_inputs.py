@@ -1,7 +1,7 @@
 import pytest
 from pytest_cases import parametrize
 
-from decomon.core import Propagation
+from decomon.constants import Propagation
 from decomon.layers.input import BackwardInput, ForwardInput
 
 

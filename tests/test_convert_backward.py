@@ -1,7 +1,7 @@
 from keras.models import Model
 from pytest_cases import fixture, parametrize
 
-from decomon.core import Propagation, Slope
+from decomon.constants import Propagation, Slope
 from decomon.models.backward_cloning import convert_backward
 from decomon.models.forward_cloning import convert_forward
 

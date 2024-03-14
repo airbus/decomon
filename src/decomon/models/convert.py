@@ -6,13 +6,7 @@ import keras
 from keras.layers import Layer
 from keras.models import Model
 
-from decomon.core import (
-    BoxDomain,
-    ConvertMethod,
-    PerturbationDomain,
-    Propagation,
-    Slope,
-)
+from decomon.constants import ConvertMethod, Propagation, Slope
 from decomon.layers import DecomonLayer
 from decomon.layers.convert import to_decomon
 from decomon.layers.fuse import Fuse
@@ -37,10 +31,10 @@ from decomon.models.utils import (
     get_ibp_affine_from_method,
     is_input_node,
     method2propagation,
-    preprocess_backward_bounds,
     preprocess_layer,
     split_activation,
 )
+from decomon.perturbation_domain import BoxDomain, PerturbationDomain
 
 logger = logging.getLogger(__name__)
 

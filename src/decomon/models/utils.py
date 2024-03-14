@@ -1,30 +1,15 @@
 from typing import Any, Optional, Union
 
 import keras
-import keras.ops as K
 import numpy as np
 from keras import Model, Sequential
-from keras import ops as K
-from keras.layers import Activation, Input, Lambda, Layer
+from keras.layers import Activation, Input, Layer
 from keras.src import Functional
 from keras.src.ops.node import Node
 
-from decomon.core import (
-    BallDomain,
-    BoxDomain,
-    ConvertMethod,
-    ForwardMode,
-    InputsOutputsSpec,
-    PerturbationDomain,
-    Propagation,
-    get_mode,
-)
-from decomon.keras_utils import (
-    BatchedIdentityLike,
-    is_a_merge_layer,
-    share_weights_and_build,
-)
-from decomon.types import BackendTensor
+from decomon.constants import ConvertMethod, Propagation
+from decomon.keras_utils import share_weights_and_build
+from decomon.perturbation_domain import PerturbationDomain
 
 
 def generate_perturbation_domain_input(
@@ -176,89 +161,6 @@ def get_depth_dict(model: Model) -> dict[int, list[Node]]:
     return dico_nodes
 
 
-def get_inner_layers(model: Model) -> int:
-    count = 0
-    for layer in model.layers:
-        if isinstance(layer, Model):
-            count += get_inner_layers(layer)
-        else:
-            count += 1
-    return count
-
-
-class Convert2Mode(Layer):
-    def __init__(
-        self,
-        mode_from: Union[str, ForwardMode],
-        mode_to: Union[str, ForwardMode],
-        perturbation_domain: PerturbationDomain,
-        input_dim: int = -1,
-        **kwargs: Any,
-    ):
-        super().__init__(**kwargs)
-        self.mode_from = ForwardMode(mode_from)
-        self.mode_to = ForwardMode(mode_to)
-        self.perturbation_domain = perturbation_domain
-        self.input_dim = input_dim
-        dc_decomp = False
-        self.dc_decomp = dc_decomp
-        self.inputs_outputs_spec_from = InputsOutputsSpec(
-            dc_decomp=dc_decomp,
-            mode=mode_from,
-            perturbation_domain=perturbation_domain,
-            model_input_dim=self.input_dim,
-        )
-        self.inputs_outputs_spec_to = InputsOutputsSpec(
-            dc_decomp=dc_decomp,
-            mode=mode_to,
-            perturbation_domain=perturbation_domain,
-            model_input_dim=self.input_dim,
-        )
-
-    def call(self, inputs: list[BackendTensor], **kwargs: Any) -> list[BackendTensor]:
-        compute_ibp_from_affine = self.mode_from == ForwardMode.AFFINE and self.mode_to != ForwardMode.AFFINE
-        tight = self.mode_from == ForwardMode.HYBRID and self.mode_to != ForwardMode.AFFINE
-        compute_dummy_affine = self.mode_from == ForwardMode.IBP and self.mode_to != ForwardMode.IBP
-        x, u_c, w_u, b_u, l_c, w_l, b_l, h, g = self.inputs_outputs_spec_from.get_fullinputs_from_inputsformode(
-            inputs, compute_ibp_from_affine=compute_ibp_from_affine, tight=tight
-        )
-
-        if compute_dummy_affine:
-            x = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
-            w = K.zeros_like(BatchedIdentityLike()(l_c))
-            w_u = w
-            b_u = u_c
-            w_l = w
-            b_l = l_c
-
-        return self.inputs_outputs_spec_to.extract_outputsformode_from_fulloutputs(
-            [x, u_c, w_u, b_u, l_c, w_l, b_l, h, g]
-        )
-
-    def compute_output_shape(self, input_shape: list[tuple[Optional[int], ...]]) -> list[tuple[Optional[int], ...]]:
-        (
-            x_shape,
-            u_c_shape,
-            w_u_shape,
-            b_u_shape,
-            l_c_shape,
-            w_l_shape,
-            b_l_shape,
-            h_shape,
-            g_shape,
-        ) = self.inputs_outputs_spec_from.get_fullinputshapes_from_inputshapesformode(input_shape)
-        return self.inputs_outputs_spec_to.extract_inputshapesformode_from_fullinputshapes(
-            [x_shape, u_c_shape, w_u_shape, b_u_shape, l_c_shape, w_l_shape, b_l_shape, h_shape, g_shape]
-        )
-
-    def get_config(self) -> dict[str, Any]:
-        config = super().get_config()
-        config.update(
-            {"mode_from": self.mode_from, "mode_to": self.mode_to, "perturbation_domain": self.perturbation_domain}
-        )
-        return config
-
-
 def ensure_functional_model(model: Model) -> Functional:
     if isinstance(model, Functional):
         return model
@@ -268,80 +170,6 @@ def ensure_functional_model(model: Model) -> Functional:
         return model
     else:
         raise NotImplementedError("Decomon model available only for functional or sequential models.")
-
-
-def preprocess_backward_bounds(
-    backward_bounds: Optional[Union[keras.KerasTensor, list[keras.KerasTensor], list[list[keras.KerasTensor]]]],
-    nb_model_outputs: int,
-) -> Optional[list[list[keras.KerasTensor]]]:
-    """Preprocess backward bounds to be used by `convert()`.
-
-    Args:
-        backward_bounds: backward bounds to propagate
-        nb_model_outputs: number of outputs of the keras model to convert
-
-    Returns:
-        formatted backward bounds
-
-    Backward bounds can be given as
-    - None or empty list => backward bounds to propagate will be identity
-    - a single list (potentially partially filled) => same backward bounds on all model outputs (assuming that all outputs have same shape)
-    - a list of list : different backward bounds for each model output
-
-    Which leads to the following formatting:
-    - None, [], or [[]] -> None
-    - single keras tensor w -> [[w, 0, w, 0]] * nb_model_outputs
-    - [w] -> idem
-    - [w, b] -> [[w, b, w, b]] * nb_model_outputs
-    - [w_l, b_l, w_u, b_u] -> [[w_l, b_l, w_u, b_u]] * nb_model_outputs
-    - [[w_l, b_l, w_u, b_u]] -> [[w_l, b_l, w_u, b_u]] * nb_model_outputs
-    - list of lists of tensors [w_l[i], b_l[i], w_u[i], b_u[i]]_i -> we enforce each sublist to have 4 elements
-
-    """
-    if backward_bounds is None:
-        # None
-        return None
-    if isinstance(backward_bounds, keras.KerasTensor):
-        # single tensor w
-        w = backward_bounds
-        b = K.zeros_like(w[:, 0])
-        backward_bounds = [w, b, w, b]
-    if len(backward_bounds) == 0:
-        return None
-    else:
-        if isinstance(backward_bounds[0], keras.KerasTensor):
-            # list of tensors
-            if len(backward_bounds) == 1:
-                # single tensor w
-                return preprocess_backward_bounds(backward_bounds=backward_bounds[0], nb_model_outputs=nb_model_outputs)
-            elif len(backward_bounds) == 2:
-                # w, b
-                w, b = backward_bounds
-                return preprocess_backward_bounds(backward_bounds=[w, b, w, b], nb_model_outputs=nb_model_outputs)
-            elif len(backward_bounds) == 4:
-                return [backward_bounds] * nb_model_outputs
-            else:
-                raise ValueError(
-                    "If backward_bounds is given as a list of tensors, it should have 1, 2, or 4 elements."
-                )
-        else:
-            # list of list of tensors
-            if len(backward_bounds) == 1:
-                if len(backward_bounds[0]) == 0:
-                    # [[]]
-                    return None
-                else:
-                    return [backward_bounds[0]] * nb_model_outputs
-            elif len(backward_bounds) != nb_model_outputs:
-                raise ValueError(
-                    "If backward_bounds is given as a list of tensors, it should have nb_model_ouptputs elements."
-                )
-            elif not all([len(backward_bounds_i) == 4 for backward_bounds_i in backward_bounds]):
-                raise ValueError(
-                    "If backward_bounds is given as a list of tensors, each sublist should have 4 elements (w_l_, b_l, w_u, b_u)."
-                )
-            else:
-                return backward_bounds
 
 
 def get_ibp_affine_from_method(method: ConvertMethod) -> tuple[bool, bool]:

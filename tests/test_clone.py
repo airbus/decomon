@@ -5,10 +5,11 @@ from keras.layers import Activation, Input
 from keras.models import Model
 from pytest_cases import parametrize
 
-from decomon.core import BoxDomain, ConvertMethod, Propagation, Slope
+from decomon.constants import ConvertMethod, Propagation, Slope
 from decomon.layers.input import IdentityInput
 from decomon.layers.utils.symbolify import LinkToPerturbationDomainInput
 from decomon.models.convert import clone
+from decomon.perturbation_domain import BoxDomain
 
 
 def test_clone_nok_several_inputs():

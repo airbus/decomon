@@ -3,7 +3,7 @@ from typing import TypeVar
 import pytest
 from pytest_cases import parametrize
 
-from decomon.core import Propagation
+from decomon.constants import Propagation
 from decomon.layers.oracle import DecomonOracle
 
 T = TypeVar("T")

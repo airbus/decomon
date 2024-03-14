@@ -3,8 +3,10 @@ import numpy as np
 import pytest
 from pytest_cases import parametrize
 
-from decomon.core import BoxDomain, InputsOutputsSpec, Propagation
+from decomon.constants import Propagation
+from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.layers.output import ConvertOutput
+from decomon.perturbation_domain import BoxDomain
 
 
 def generate_simple_inputs(

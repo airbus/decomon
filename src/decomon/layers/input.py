@@ -7,7 +7,9 @@ import keras
 import keras.ops as K
 from keras.layers import Layer
 
-from decomon.core import InputsOutputsSpec, PerturbationDomain, Propagation
+from decomon.constants import Propagation
+from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
+from decomon.perturbation_domain import PerturbationDomain
 from decomon.types import BackendTensor
 
 
@@ -38,7 +40,6 @@ class ForwardInput(Layer):
             ibp=ibp,
             affine=affine,
             propagation=Propagation.FORWARD,
-            perturbation_domain=perturbation_domain,
             model_input_shape=tuple(),
             layer_input_shape=tuple(),
         )

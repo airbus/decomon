@@ -6,11 +6,11 @@ from keras import Layer
 from keras.activations import linear, relu
 from keras.layers import Activation
 
-from decomon.core import PerturbationDomain, Propagation, Slope
-from decomon.keras_utils import BatchedDiagLike
+from decomon.constants import Propagation, Slope
+from decomon.layers.activations.utils import get_linear_hull_relu
 from decomon.layers.layer import DecomonLayer
+from decomon.perturbation_domain import PerturbationDomain
 from decomon.types import Tensor
-from decomon.utils import get_linear_hull_relu
 
 
 class DecomonBaseActivation(DecomonLayer):

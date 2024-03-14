@@ -4,23 +4,17 @@ It inherits from keras Sequential class.
 
 """
 from collections.abc import Callable
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import keras
-import keras.ops as K
 from keras.layers import InputLayer, Layer
 from keras.models import Model
 
-from decomon.core import (
-    BoxDomain,
-    InputsOutputsSpec,
-    PerturbationDomain,
-    Propagation,
-    Slope,
-)
+from decomon.constants import Propagation, Slope
 from decomon.layers import DecomonLayer
 from decomon.layers.convert import to_decomon
 from decomon.layers.input import ForwardInput
+from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.models.utils import (
     ensure_functional_model,
     get_depth_dict,
@@ -28,6 +22,7 @@ from decomon.models.utils import (
     prepare_inputs_for_layer,
     wrap_outputs_from_layer_in_list,
 )
+from decomon.perturbation_domain import BoxDomain, PerturbationDomain
 
 
 def convert_forward(
@@ -78,7 +73,6 @@ def convert_forward(
         ibp=ibp,
         affine=affine,
         propagation=propagation,
-        perturbation_domain=perturbation_domain,
         model_input_shape=model_input_shape,
         layer_input_shape=model_input_shape,
     )

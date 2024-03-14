@@ -3,9 +3,10 @@ import numpy as np
 import pytest
 from keras.layers import Dense, Input
 
-from decomon.core import BoxDomain, Propagation
+from decomon.constants import Propagation
 from decomon.keras_utils import batch_multid_dot
 from decomon.layers.layer import DecomonLayer
+from decomon.perturbation_domain import BoxDomain
 
 
 def test_decomon_layer_nok_unbuilt_keras_layer():

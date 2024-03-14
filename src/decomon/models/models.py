@@ -6,7 +6,8 @@ import numpy as np
 from keras import Model
 from keras.utils import serialize_keras_object
 
-from decomon.core import ConvertMethod, PerturbationDomain
+from decomon.constants import ConvertMethod
+from decomon.perturbation_domain import PerturbationDomain
 
 
 class DecomonModel(keras.Model):

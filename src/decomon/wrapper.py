@@ -5,9 +5,10 @@ import keras
 import numpy as np
 import numpy.typing as npt
 
-from decomon.core import BallDomain, BoxDomain, ConvertMethod, GridDomain
+from decomon.constants import ConvertMethod
 from decomon.models.convert import clone
 from decomon.models.models import DecomonModel
+from decomon.perturbation_domain import BallDomain, BoxDomain, GridDomain
 
 IntegerType = Union[int, np.int_]
 """Alias for integers types."""
