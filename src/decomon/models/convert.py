@@ -288,6 +288,9 @@ def clone(
     if isinstance(method, str):
         method = ConvertMethod(method.lower())
 
+    if isinstance(slope, str):
+        slope = Slope(slope.lower())
+
     # preprocess backward_bounds
     backward_bounds_flattened: Optional[list[keras.KerasTensor]]
     backward_bounds_for_convert: Optional[list[keras.KerasTensor]]
