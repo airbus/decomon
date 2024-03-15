@@ -33,6 +33,7 @@ def convert_forward(
     perturbation_domain: Optional[PerturbationDomain] = None,
     ibp: bool = True,
     affine: bool = True,
+    mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]] = None,
     **kwargs: Any,
 ) -> tuple[list[keras.KerasTensor], dict[int, list[keras.KerasTensor]], dict[int, DecomonLayer]]:
     """Convert keras model via forward propagation.
@@ -45,6 +46,7 @@ def convert_forward(
         perturbation_domain_input: perturbation domain input (input to the future decomon model).
           Used to convert affine bounds into constant ones.
         layer_fn: conversion function on layers. Default to `to_decomon()`.
+        mapping_keras2decomon_classes: user-defined mapping between keras and decomon layers classes, to be passed to `layer_fn`
         slope: slope used by decomon activation layers
         perturbation_domain: perturbation domain type for keras input
         ibp: specify if constant bounds are propagated
@@ -90,6 +92,7 @@ def convert_forward(
         ibp=ibp,
         affine=affine,
         propagation=propagation,
+        mapping_keras2decomon_classes=mapping_keras2decomon_classes,
         **kwargs,
     )
 
@@ -224,6 +227,7 @@ def include_kwargs_layer_fn(
     affine: bool,
     propagation: Propagation,
     slope: Slope,
+    mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]],
     **kwargs: Any,
 ) -> Callable[[Layer], list[Layer]]:
     """Include external parameters in the function converting layers
@@ -237,6 +241,7 @@ def include_kwargs_layer_fn(
         ibp:
         affine:
         slope:
+        mapping_keras2decomon_classes:
         **kwargs:
 
     Returns:
@@ -253,6 +258,7 @@ def include_kwargs_layer_fn(
                 ibp=ibp,
                 affine=affine,
                 propagation=propagation,
+                mapping_keras2decomon_classes=mapping_keras2decomon_classes,
                 **kwargs,
             )
         ]

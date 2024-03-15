@@ -409,6 +409,7 @@ def convert_backward(
     slope: Union[str, Slope] = Slope.V_SLOPE,
     forward_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
+    mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]] = None,
     **kwargs: Any,
 ) -> list[keras.KerasTensor]:
     """Convert keras model via backward propagation.
@@ -421,6 +422,7 @@ def convert_backward(
         perturbation_domain_input: perturbation domain input
         perturbation_domain: perturbation domain type on keras model input
         layer_fn: callable converting a layer and a model_output_shape into a (backward) decomon layer
+        mapping_keras2decomon_classes: user-defined mapping between keras and decomon layers classes, to be passed to `layer_fn`
         backward_bounds: if set, should be of the same size as the number of model outputs times 4,
             being the concatenation of backward bounds for each keras model output
         from_linear_backward_bounds: specify if backward_bounds come from a linear model (=> no batchsize + upper == lower)
@@ -454,6 +456,7 @@ def convert_backward(
         slope=slope,
         perturbation_domain=perturbation_domain,
         propagation=propagation,
+        mapping_keras2decomon_classes=mapping_keras2decomon_classes,
         **kwargs,
     )
 
@@ -508,6 +511,7 @@ def include_kwargs_layer_fn(
     perturbation_domain: PerturbationDomain,
     propagation: Propagation,
     slope: Slope,
+    mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]],
     **kwargs: Any,
 ) -> Callable[[Layer, tuple[int, ...]], DecomonLayer]:
     """Include external parameters in the function converting layers
@@ -519,6 +523,7 @@ def include_kwargs_layer_fn(
         perturbation_domain:
         propagation:
         slope:
+        mapping_keras2decomon_classes:
         **kwargs:
 
     Returns:
@@ -532,6 +537,7 @@ def include_kwargs_layer_fn(
             slope=slope,
             perturbation_domain=perturbation_domain,
             propagation=propagation,
+            mapping_keras2decomon_classes=mapping_keras2decomon_classes,
             **kwargs,
         )
 

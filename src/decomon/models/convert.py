@@ -94,6 +94,7 @@ def convert(
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
     final_ibp: bool = False,
     final_affine: bool = True,
+    mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]] = None,
     **kwargs: Any,
 ) -> list[keras.KerasTensor]:
     """
@@ -107,6 +108,7 @@ def convert(
         from_linear_backward_bounds: specify if backward_bounds come from a linear model (=> no batchsize + upper == lower)
             if a boolean, flag for each backward bound, else a list of boolean, one per keras model output.
         layer_fn: callable converting a layer and a model_output_shape into a decomon layer
+        mapping_keras2decomon_classes: user-defined mapping between keras and decomon layers classes, to be passed to `layer_fn`
         slope: slope used by decomon activation layers
         forward_output_map: forward outputs per node from a previously performed forward conversion.
             To be used for forward oracle if not empty.
@@ -148,6 +150,7 @@ def convert(
             perturbation_domain=perturbation_domain,
             ibp=ibp,
             affine=affine,
+            mapping_keras2decomon_classes=mapping_keras2decomon_classes,
             **kwargs,
         )
 
@@ -162,6 +165,7 @@ def convert(
             slope=slope,
             forward_output_map=forward_output_map,
             forward_layer_map=forward_layer_map,
+            mapping_keras2decomon_classes=mapping_keras2decomon_classes,
             **kwargs,
         )
         # output updated mode
@@ -214,6 +218,7 @@ def clone(
     layer_fn: Callable[..., DecomonLayer] = to_decomon,
     forward_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
+    mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]] = None,
     **kwargs: Any,
 ) -> DecomonModel:
     """
@@ -232,6 +237,7 @@ def clone(
         final_affine: specify if final outputs should include affine bounds.
             Default to True all methods except forward-ibp.
         layer_fn: callable converting a layer and a model_output_shape into a decomon layer
+        mapping_keras2decomon_classes: user-defined mapping between keras and decomon layers classes, to be passed to `layer_fn`
         forward_output_map: forward outputs per node from a previously performed forward conversion.
             To be used for forward oracle if not empty.
             To be recomputed if empty and needed by the method.
@@ -324,6 +330,7 @@ def clone(
         forward_layer_map=forward_layer_map,
         final_ibp=final_ibp,
         final_affine=final_affine,
+        mapping_keras2decomon_classes=mapping_keras2decomon_classes,
         **kwargs,
     )
 
