@@ -8,7 +8,7 @@ dependencies:
       - kaggle
       - pandas
       - scipy
-      - tensorboard>=2.13
-#      - tensorflow>=2.15  # conflicting dependencies with decomon (keras 2)
+      - tensorboard>=2.16
+      - tensorflow>=2.16
       - jupyter-server-proxy
-      - ..  # decomon
+      - ..  # decomon

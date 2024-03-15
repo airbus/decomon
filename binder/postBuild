@@ -1,9 +1,3 @@
-# install tensorflow backend separately from decomon (dependencies conflict as tf 2.15 requires keras 2)
-pip install tensorflow>=2.15
-# use keras 3 instead of keras 2 installed by tensorflow
-pip uninstall -y keras
-pip install "keras>=3"
-
 # tensorboard launches at startup
 mv binder/tensorboardserverextension.py ${NB_PYTHON_PREFIX}/lib/python*/site-packages/
 # enable tensorboard extension
