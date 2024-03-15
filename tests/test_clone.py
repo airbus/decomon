@@ -1,11 +1,12 @@
 import keras.ops as K
 import numpy as np
 import pytest
-from keras.layers import Activation, Input
+from keras.layers import Activation, Dense, Input
 from keras.models import Model
 from pytest_cases import parametrize
 
-from decomon.constants import ConvertMethod, Slope
+from decomon.constants import ConvertMethod, Propagation, Slope
+from decomon.layers import DecomonDense, DecomonLayer
 from decomon.layers.input import IdentityInput
 from decomon.layers.utils.symbolify import LinkToPerturbationDomainInput
 from decomon.models.convert import clone
@@ -558,3 +559,53 @@ def test_clone_identity_model(
     # check that we added a layer to insert batch axis
     if method.lower().startswith("crown"):
         assert isinstance(decomon_model.layers[-1], IdentityInput)
+
+
+class MyDenseDecomonLayer(DecomonLayer):
+    def __init__(
+        self,
+        layer,
+        perturbation_domain=None,
+        ibp: bool = True,
+        affine: bool = True,
+        propagation=Propagation.FORWARD,
+        model_input_shape=None,
+        model_output_shape=None,
+        my_super_attribute=0.0,
+        **kwargs,
+    ):
+        super().__init__(
+            layer, perturbation_domain, ibp, affine, propagation, model_input_shape, model_output_shape, **kwargs
+        )
+        self.my_super_attribute = my_super_attribute
+
+
+def test_clone_custom_layer(
+    method,
+    perturbation_domain,
+    helpers,
+):
+    decimal = 4
+
+    input_shape = (5,)
+
+    mapping_keras2decomon_classes = {Dense: MyDenseDecomonLayer}
+
+    # keras model
+    keras_model = helpers.toy_network_tutorial(input_shape=input_shape)
+
+    # conversion
+    decomon_model = clone(
+        model=keras_model,
+        perturbation_domain=perturbation_domain,
+        method=method,
+        mapping_keras2decomon_classes=mapping_keras2decomon_classes,
+        my_super_attribute=12.5,
+    )
+
+    # check layers
+    assert any([isinstance(l, MyDenseDecomonLayer) for l in decomon_model.layers])
+    assert not any([isinstance(l, DecomonDense) for l in decomon_model.layers])
+    for l in decomon_model.layers:
+        if isinstance(l, MyDenseDecomonLayer):
+            assert l.my_super_attribute == 12.5
