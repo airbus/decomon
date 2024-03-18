@@ -73,19 +73,6 @@ class PerturbationDomain(ABC):
         """
         ...
 
-    @abstractmethod
-    def get_input_from_constant_bounds(self, constant_bounds: list[Tensor]) -> Tensor:
-        """Construct perturbation domain input x from constant bounds on keras model input
-
-        Args:
-            constant_bounds: lower and upper constant bounds on keras model input
-
-        Returns:
-            x: perturbation domain input
-
-        """
-        ...
-
     def get_config(self) -> dict[str, Any]:
         return {
             "opt_option": self.opt_option,
@@ -142,10 +129,6 @@ class BoxDomain(PerturbationDomain):
 
     def get_nb_x_components(self) -> int:
         return 2
-
-    def get_input_from_constant_bounds(self, constant_bounds: list[Tensor]) -> Tensor:
-        lower, upper = constant_bounds
-        return K.concatenate([lower[:, None], upper[:, None]], axis=1)
 
 
 class GridDomain(PerturbationDomain):
