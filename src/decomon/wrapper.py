@@ -62,8 +62,12 @@ def get_adv_box(
         batch_size: for computational efficiency, one can split the
             calls to minibatches
         n_sub_boxes:
+
     Returns:
         numpy array, vector with upper bounds for adversarial attacks
+
+    Hypothesis: the underlying keras model has only 1 output
+
     """
     if np.min(x_max - x_min) < 0:
         raise UserWarning("Inconsistency Error: x_max < x_min")
@@ -76,6 +80,11 @@ def get_adv_box(
         assert isinstance(model.perturbation_domain, (BoxDomain, GridDomain))
         decomon_model = model
 
+    # if missing batch axis, add it
+    input_shape = decomon_model.model.inputs[0].shape[1:]
+    x_min = np.reshape(x_min, (-1,) + input_shape)
+    x_max = np.reshape(x_max, (-1,) + input_shape)
+
     n_split = 1
     n_batch = len(x_min)
 
@@ -87,24 +96,12 @@ def get_adv_box(
         x_min = np.reshape(x_min, [-1] + shape)
         x_max = np.reshape(x_max, [-1] + shape)
 
-    # reshape x_mmin, x_max
-    if decomon_model.backward_bounds:
-        input_shape = list(decomon_model.input_shape[0][2:])
-    else:
-        input_shape = list(decomon_model.input_shape[2:])
-    input_dim = np.prod(input_shape)
-    x_reshaped = x_min + 0 * x_min
-    x_reshaped = x_reshaped.reshape([-1] + input_shape)
-
-    x_min = x_min.reshape((-1, 1, input_dim))
-    x_max = x_max.reshape((-1, 1, input_dim))
-
-    z = np.concatenate([x_min, x_max], 1)
+    # construct perturbation_domain_input
+    perturbation_domain_input = np.concatenate([x_min[:, None], x_max[:, None]], 1)
 
     source_labels = prepare_labels(source_labels, n_batch)
     if target_labels is not None:
         target_labels = prepare_labels(target_labels, n_batch)
-
     if n_split > 1:
         shape = list(source_labels.shape[1:])
         source_labels = np.reshape(np.concatenate([source_labels[:, None]] * n_split, 1), [-1] + shape)
@@ -114,16 +111,24 @@ def get_adv_box(
     if batch_size > 0:
         # split
         r = 0
-        if len(x_reshaped) % batch_size > 0:
+        if len(perturbation_domain_input) % batch_size > 0:
             r += 1
-        x_min_list = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
-        x_max_list = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        x_min_list = [
+            x_min[batch_size * i : batch_size * (i + 1)]
+            for i in range(len(perturbation_domain_input) // batch_size + r)
+        ]
+        x_max_list = [
+            x_max[batch_size * i : batch_size * (i + 1)]
+            for i in range(len(perturbation_domain_input) // batch_size + r)
+        ]
         source_labels_list = [
-            source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)
+            source_labels[batch_size * i : batch_size * (i + 1)]
+            for i in range(len(perturbation_domain_input) // batch_size + r)
         ]
         if target_labels is not None:
             target_labels_list = [
-                target_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)
+                target_labels[batch_size * i : batch_size * (i + 1)]
+                for i in range(len(perturbation_domain_input) // batch_size + r)
             ]
             adv_score = np.concatenate(
                 [
@@ -148,11 +153,12 @@ def get_adv_box(
 
         # two possitible cases: the model improves the bound based on the knowledge of the labels
         output: list[npt.NDArray[np.float_]]
-        if decomon_model.backward_bounds:
+        needs_backward_bounds = len(decomon_model.inputs) > 1
+        if needs_backward_bounds:  # backward bounds needed
             C = np.diag([1] * n_label)[None] - source_labels[:, :, None]
-            output = decomon_model.predict_on_single_batch_np([z, C])  # type: ignore
+            output = decomon_model.predict_on_single_batch_np([perturbation_domain_input, C])  # type: ignore
         else:
-            output = decomon_model.predict_on_single_batch_np(z)  # type: ignore
+            output = decomon_model.predict_on_single_batch_np(perturbation_domain_input)  # type: ignore
 
         def get_ibp_score(
             u_c: npt.NDArray[np.float_],
@@ -230,19 +236,26 @@ def get_adv_box(
             return np.max(np.max(upper, -2), -1)
 
         if ibp and affine:
-            z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = output[:7]
+            w_l_f, b_l_f, w_u_f, b_u_f, l_c, u_c = output
         elif not ibp and affine:
-            z, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
+            w_l_f, b_l_f, w_u_f, b_u_f = output
         elif ibp and not affine:
-            u_c, l_c = output[:2]
+            l_c, u_c = output
         else:
             raise NotImplementedError("not ibp and not affine not implemented")
 
         if ibp:
-            adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels, backward=decomon_model.backward_bounds)
+            adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels, backward=needs_backward_bounds)
         if affine:
             adv_f = get_affine_score(
-                z, w_u_f, b_u_f, w_l_f, b_l_f, source_labels, target_labels, backward=decomon_model.backward_bounds
+                perturbation_domain_input,
+                w_u_f,
+                b_u_f,
+                w_l_f,
+                b_l_f,
+                source_labels,
+                target_labels,
+                backward=needs_backward_bounds,
             )
 
         if ibp and not affine:
@@ -296,21 +309,17 @@ def check_adv_box(
         assert isinstance(model.perturbation_domain, (BoxDomain, GridDomain))
         decomon_model = model
 
-    ibp = decomon_model.ibp
-    affine = decomon_model.affine
+    # if missing batch axis, add it
+    input_shape = decomon_model.model.inputs[0].shape[1:]
+    x_min = np.reshape(x_min, (-1,) + input_shape)
+    x_max = np.reshape(x_max, (-1,) + input_shape)
 
     n_split = 1
     n_batch = len(x_min)
-    # reshape x_mmin, x_max
-    input_shape = list(decomon_model.input_shape[2:])
-    input_dim = np.prod(input_shape)
-    x_reshaped = x_min + 0 * x_min
-    x_reshaped = x_reshaped.reshape([-1] + input_shape)
 
-    x_min = x_min.reshape((-1, 1, input_dim))
-    x_max = x_max.reshape((-1, 1, input_dim))
+    # construct perturbation_domain_input
+    perturbation_domain_input = np.concatenate([x_min[:, None], x_max[:, None]], 1)
 
-    z = np.concatenate([x_min, x_max], 1)
     if isinstance(source_labels, (int, np.int_)):
         source_labels = np.zeros((n_batch, 1)) + source_labels
 
@@ -333,12 +342,19 @@ def check_adv_box(
     if batch_size > 0:
         # split
         r = 0
-        if len(x_reshaped) % batch_size > 0:
+        if len(perturbation_domain_input) % batch_size > 0:
             r += 1
-        x_min_list = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
-        x_max_list = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        x_min_list = [
+            x_min[batch_size * i : batch_size * (i + 1)]
+            for i in range(len(perturbation_domain_input) // batch_size + r)
+        ]
+        x_max_list = [
+            x_max[batch_size * i : batch_size * (i + 1)]
+            for i in range(len(perturbation_domain_input) // batch_size + r)
+        ]
         source_labels_list = [
-            source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)
+            source_labels[batch_size * i : batch_size * (i + 1)]
+            for i in range(len(perturbation_domain_input) // batch_size + r)
         ]
         target_labels_list: list[Optional[npt.NDArray[np.int_]]]
         if (
@@ -347,10 +363,11 @@ def check_adv_box(
             and (str(target_labels.dtype)[:3] != "int")
         ):
             target_labels_list = [
-                target_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)
+                target_labels[batch_size * i : batch_size * (i + 1)]
+                for i in range(len(perturbation_domain_input) // batch_size + r)
             ]
         else:
-            target_labels_list = [target_labels] * (len(x_reshaped) // batch_size + r)
+            target_labels_list = [target_labels] * (len(perturbation_domain_input) // batch_size + r)
 
         return np.concatenate(
             [
@@ -362,15 +379,7 @@ def check_adv_box(
         )
 
     else:
-        output = decomon_model.predict_on_single_batch_np(z)
-
-        if not affine:
-            # translate  into affine information
-            u_c = output[0]
-            w_u = 0 * u_c[:, None] + np.zeros((1, input_dim, 1))
-            output = [z, w_u, u_c, w_u, output[-1]]
-            ibp = False
-            affine = True
+        w_l_f, b_l_f, w_u_f, b_u_f = decomon_model.compute_affine_bounds_np([perturbation_domain_input])
 
         def get_affine_sample(
             z_tensor: npt.NDArray[np.float_],
@@ -410,12 +419,7 @@ def check_adv_box(
 
             return np.max(np.max(upper, -2), -1)
 
-        if ibp:
-            z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = output[:7]
-        else:
-            z, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
-
-        return get_affine_sample(z, w_l_f, b_l_f, w_u_f, b_u_f, source_labels)
+        return get_affine_sample(perturbation_domain_input, w_l_f, b_l_f, w_u_f, b_u_f, source_labels)
 
 
 #### FORMAL BOUNDS ######
@@ -472,19 +476,23 @@ def get_range_box(
     batch_size: int = -1,
     n_sub_boxes: int = 1,
 ) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
-    """bounding the outputs of a model in a given box
-    if the constant is negative, then it is a formal guarantee that there is no adversarial examples
+    """Bound the outputs of a model in a given box
 
     Args:
         model: either a Keras model or a Decomon model
         x_min: numpy array for the extremal lower corner of the boxes
         x_max: numpy array for the extremal upper corner of the boxes
         batch_size: for computational efficiency, one can split the
-            calls to minibatches
+            calls into minibatches
 
     Returns:
         2 numpy array, vector with upper bounds and vector with lower
         bounds
+
+    Hypotheses:
+        - the underlying keras model has only 1 output;
+        - if already cloned as a decomon model, non precomputed backward_bounds have been given.
+
     """
     if np.min(x_max - x_min) < 0:
         raise UserWarning("Inconsistency Error: x_max < x_min")
@@ -496,8 +504,10 @@ def get_range_box(
         assert isinstance(model.perturbation_domain, (BoxDomain, GridDomain))
         decomon_model = model
 
-    n_split = 1
-    n_batch = len(x_min)
+    # if missing batch axis, add it
+    input_shape = decomon_model.model.inputs[0].shape[1:]
+    x_min = np.reshape(x_min, (-1,) + input_shape)
+    x_max = np.reshape(x_max, (-1,) + input_shape)
 
     if n_sub_boxes > 1:
         x_min, x_max = refine_boxes(x_min, x_max, n_sub_boxes)
@@ -506,87 +516,33 @@ def get_range_box(
         shape = list(x_min.shape[2:])
         x_min = np.reshape(x_min, [-1] + shape)
         x_max = np.reshape(x_max, [-1] + shape)
+    else:
+        n_split = 1
 
-    # reshape x_mmin, x_max
-    input_shape = list(decomon_model.input_shape[2:])
-    input_dim = np.prod(input_shape)
-    x_reshaped = x_min + 0 * x_min
-    x_reshaped = x_reshaped.reshape([-1] + input_shape)
-    x_min = x_min.reshape((-1, 1, input_dim))
-    x_max = x_max.reshape((-1, 1, input_dim))
-
-    z = np.concatenate([x_min, x_max], 1)
+    # construct perturbation_domain_input
+    perturbation_domain_input = np.concatenate([x_min[:, None], x_max[:, None]], 1)
 
     if batch_size > 0:
-        # split
+        # call by minibatch
         r = 0
-        if len(x_reshaped) % batch_size > 0:
+        if len(perturbation_domain_input) % batch_size > 0:
             r += 1
-        x_min_list = [x_min[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
-        x_max_list = [x_max[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        x_min_list = [
+            x_min[batch_size * i : batch_size * (i + 1)]
+            for i in range(len(perturbation_domain_input) // batch_size + r)
+        ]
+        x_max_list = [
+            x_max[batch_size * i : batch_size * (i + 1)]
+            for i in range(len(perturbation_domain_input) // batch_size + r)
+        ]
         results = [get_range_box(decomon_model, x_min_list[i], x_max_list[i], -1) for i in range(len(x_min_list))]
 
         u_out = np.concatenate([r[0] for r in results])
         l_out = np.concatenate([r[1] for r in results])
 
     else:
-        ibp = decomon_model.ibp
-        affine = decomon_model.affine
-
-        output = decomon_model.predict_on_single_batch_np(z)
-        shape = list(output[-1].shape[1:])
-        output_dim = np.prod(shape)
-
-        if affine:
-            if ibp:
-                _, u_i, w_u_f, b_u_f, l_i, w_l_f, b_l_f = output[:7]
-                if len(u_i.shape) > 2:
-                    u_i = np.reshape(u_i, (-1, output_dim))
-                    l_i = np.reshape(l_i, (-1, output_dim))
-            else:
-                _, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
-
-            # reshape if necessary
-            if len(w_u_f.shape) > 3:
-                w_u_f = np.reshape(w_u_f, (-1, input_dim, output_dim))
-                w_l_f = np.reshape(w_l_f, (-1, input_dim, output_dim))
-                b_u_f = np.reshape(b_u_f, (-1, output_dim))
-                b_l_f = np.reshape(b_l_f, (-1, output_dim))
-
-            u_f = (
-                np.sum(np.maximum(w_u_f, 0) * x_max[:, 0, :, None], 1)
-                + np.sum(np.minimum(w_u_f, 0) * x_min[:, 0, :, None], 1)
-                + b_u_f
-            )
-            l_f = (
-                np.sum(np.maximum(w_l_f, 0) * x_min[:, 0, :, None], 1)
-                + np.sum(np.minimum(w_l_f, 0) * x_max[:, 0, :, None], 1)
-                + b_l_f
-            )
-
-        else:
-            u_i = output[0]
-            l_i = output[1]
-            if len(u_i.shape) > 2:
-                u_i = np.reshape(u_i, (-1, output_dim))
-                l_i = np.reshape(l_i, (-1, output_dim))
-
-        if ibp and affine:
-            u_out = np.minimum(u_i, u_f)
-            l_out = np.maximum(l_i, l_f)
-        elif ibp and not affine:
-            u_out = u_i
-            l_out = l_i
-        elif not ibp and affine:
-            u_out = u_f
-            l_out = l_f
-        else:
-            raise NotImplementedError("not ibp and not affine not implemented")
-
-        #####
-        if len(shape) > 1:
-            u_out = np.reshape(u_out, [-1] + shape)
-            l_out = np.reshape(l_out, [-1] + shape)
+        # call on all data at once
+        l_out, u_out = decomon_model.compute_constant_bounds_np([perturbation_domain_input])
 
     if n_split > 1:
         u_out = np.max(np.reshape(u_out, (-1, n_split)), -1)
@@ -654,7 +610,7 @@ def get_range_noise(
     p: float = np.inf,
     batch_size: int = -1,
 ) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
-    """Bounds the output of a model in an Lp Ball
+    """Bound the output of a model on an Lp Ball
 
     Args:
         model: either a Keras model or a Decomon model
@@ -662,11 +618,15 @@ def get_range_noise(
         eps: the radius of the ball
         p: the type of Lp norm (p=2, 1, np.inf)
         batch_size: for computational efficiency, one can split the
-            calls to minibatches
+            calls into minibatches
 
     Returns:
-        2 numpy arrays, vector with upper andlower bounds
-    of the range of values taken by the model inside the ball
+        2 numpy arrays, vector with upper and lower bounds of the range of values taken by the model inside the ball
+
+    Hypotheses:
+        - the underlying keras model has only 1 output;
+        - if already cloned as a decomon model, non precomputed backward_bounds have been given.
+
     """
 
     # check that the model is a DecomonModel, else do the conversion
@@ -683,76 +643,29 @@ def get_range_noise(
         if eps >= 0:
             decomon_model.set_domain(perturbation_domain)
 
-    # reshape x_mmin, x_max
-    input_shape = list(decomon_model.input_shape[1:])
-    input_dim = np.prod(input_shape)
-    x_reshaped = x + 0 * x
-    x_reshaped = x_reshaped.reshape([-1] + input_shape)
+    # if missing batch axis, add it
+    input_shape = decomon_model.model.inputs[0].shape[1:]
+    x = np.reshape(x, (-1,) + input_shape)
+
+    # perturbation_domain_input : x itself
+    perturbation_domain_input = x
 
     if batch_size > 0:
-        # split
+        # call by minibatch
         r = 0
-        if len(x_reshaped) % batch_size > 0:
+        if len(perturbation_domain_input) % batch_size > 0:
             r += 1
-        x_list = [x_reshaped[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        x_list = [
+            x[batch_size * i : batch_size * (i + 1)] for i in range(len(perturbation_domain_input) // batch_size + r)
+        ]
         results = [get_range_noise(decomon_model, x_list[i], eps=eps, p=p, batch_size=-1) for i in range(len(x_list))]
 
         return np.concatenate([r[0] for r in results]), np.concatenate([r[1] for r in results])
 
-    ibp = decomon_model.ibp
-    affine = decomon_model.affine
-
-    output = decomon_model.predict_on_single_batch_np(x_reshaped)
-    shape = list(output[-1].shape[1:])
-    output_dim = np.prod(shape)
-
-    x_reshaped = x_reshaped.reshape((len(x_reshaped), -1))
-    ord = _get_dual_ord(p)
-
-    if affine:
-        if ibp:
-            _, u_i, w_u_f, b_u_f, l_i, w_l_f, b_l_f = output[:7]
-            if len(u_i.shape) > 2:
-                u_i = np.reshape(u_i, (-1, output_dim))
-                l_i = np.reshape(l_i, (-1, output_dim))
-        else:
-            _, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
-
-        # reshape if necessary
-        if len(w_u_f.shape) > 3:
-            w_u_f = np.reshape(w_u_f, (-1, input_dim, output_dim))
-            b_u_f = np.reshape(b_u_f, (-1, output_dim))
-            w_l_f = np.reshape(w_l_f, (-1, input_dim, output_dim))
-            b_l_f = np.reshape(b_l_f, (-1, output_dim))
-
-        u_f = eps * np.linalg.norm(w_u_f, ord=ord, axis=1) + np.sum(w_u_f * x_reshaped[:, :, None], 1) + b_u_f
-        l_f = -eps * np.linalg.norm(w_l_f, ord=ord, axis=1) + np.sum(w_l_f * x_reshaped[:, :, None], 1) + b_l_f
-
     else:
-        u_i = output[0]
-        l_i = output[1]
-        if len(u_i.shape) > 2:
-            u_i = np.reshape(u_i, (-1, output_dim))
-            l_i = np.reshape(l_i, (-1, output_dim))
-            ######
-
-    if ibp and affine:
-        u_out = np.minimum(u_i, u_f)
-        l_out = np.maximum(l_i, l_f)
-    elif ibp and not affine:
-        u_out = u_i
-        l_out = l_i
-    elif not ibp and affine:
-        u_out = u_f
-        l_out = l_f
-    else:
-        raise NotImplementedError("not ibp and not affine not implemented")
-
-    if len(shape) > 1:
-        u_out = np.reshape(u_out, [-1] + shape)
-        l_out = np.reshape(l_out, [-1] + shape)
-
-    return u_out, l_out
+        # call on all data at once
+        l_out, u_out = decomon_model.compute_constant_bounds_np([perturbation_domain_input])
+        return u_out, l_out
 
 
 def refine_boxes(
@@ -949,16 +862,12 @@ def get_adv_noise(
 
     eps = model.perturbation_domain.eps
 
-    # reshape x_mmin, x_max
-    input_shape = list(decomon_model.input_shape[1:])
-    x_reshaped = x + 0 * x
-    x_reshaped = x_reshaped.reshape([-1] + input_shape)
-    n_split = 1
-    n_batch = len(x_reshaped)
+    # if missing batch axis, add it
+    input_shape = decomon_model.model.inputs[0].shape[1:]
+    x = np.reshape(x, (-1,) + input_shape)
 
-    input_shape = list(decomon_model.input_shape[1:])
-    x_reshaped = x + 0 * x
-    x_reshaped = x_reshaped.reshape([-1] + input_shape)
+    n_split = 1
+    n_batch = len(x)
 
     if isinstance(source_labels, (int, np.int_)):
         source_labels = np.zeros((n_batch, 1), dtype=np.int_) + source_labels
@@ -972,11 +881,11 @@ def get_adv_noise(
     if batch_size > 0:
         # split
         r = 0
-        if len(x_reshaped) % batch_size > 0:
+        if len(x) % batch_size > 0:
             r += 1
-        x_list = [x_reshaped[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)]
+        x_list = [x[batch_size * i : batch_size * (i + 1)] for i in range(len(x) // batch_size + r)]
         source_labels_list = [
-            source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)
+            source_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x) // batch_size + r)
         ]
         target_labels_list: list[Optional[npt.NDArray[np.int_]]]
         if (
@@ -985,10 +894,10 @@ def get_adv_noise(
             and (str(target_labels.dtype)[:3] != "int")
         ):
             target_labels_list = [
-                target_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x_reshaped) // batch_size + r)
+                target_labels[batch_size * i : batch_size * (i + 1)] for i in range(len(x) // batch_size + r)
             ]
         else:
-            target_labels_list = [target_labels] * (len(x_reshaped) // batch_size + r)
+            target_labels_list = [target_labels] * (len(x) // batch_size + r)
 
         results = [
             get_adv_noise(
@@ -1007,7 +916,7 @@ def get_adv_noise(
     else:
         ibp = decomon_model.ibp
         affine = decomon_model.affine
-        output = decomon_model.predict_on_single_batch_np(x_reshaped)
+        output = decomon_model.predict_on_single_batch_np(x)
 
         def get_ibp_score(
             u_c: npt.NDArray[np.float_],
@@ -1084,18 +993,18 @@ def get_adv_noise(
             return np.max(np.max(upper, -2), -1)
 
         if ibp and affine:
-            z, u_c, w_u_f, b_u_f, l_c, w_l_f, b_l_f = output[:7]
-        if not ibp and affine:
-            z, w_u_f, b_u_f, w_l_f, b_l_f = output[:5]
-        if ibp and not affine:
-            u_c, l_c = output[:2]
+            w_l_f, b_l_f, w_u_f, b_u_f, l_c, u_c = output
+        elif not ibp and affine:
+            w_l_f, b_l_f, w_u_f, b_u_f = output
+        elif ibp and not affine:
+            l_c, u_c = output
         else:
             raise NotImplementedError("not ibp and not affine not implemented")
 
         if ibp:
             adv_ibp = get_ibp_score(u_c, l_c, source_labels, target_labels)
         if affine:
-            adv_f = get_affine_score(z, w_u_f, b_u_f, w_l_f, b_l_f, source_labels, target_labels)
+            adv_f = get_affine_score(x, w_u_f, b_u_f, w_l_f, b_l_f, source_labels, target_labels)
 
         if ibp and not affine:
             adv_score = adv_ibp

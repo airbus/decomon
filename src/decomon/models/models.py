@@ -128,7 +128,7 @@ class DecomonModel(keras.Model):
 
         Returns:
             constant bounds: sum_{i} constant_bounds[i], constant bounds for each keras model output, concatenated
-                with constant_bounds[i] = [lower[i] + upper[i]]
+                with constant_bounds[i] = [lower[i], upper[i]]
 
         Notes:
             Constant bounds are
@@ -144,6 +144,42 @@ class DecomonModel(keras.Model):
                 affine_from=self.affine,
                 ibp_to=True,
                 affine_to=False,
+                perturbation_domain=self.perturbation_domain,
+                model_output_shapes=[t.shape[1:] for t in self.model.outputs],
+            )
+            if convert_layer.needs_perturbation_domain_inputs():
+                if isinstance(inputs, np.ndarray):
+                    perturbation_domain_input = inputs
+                else:
+                    perturbation_domain_input = inputs[0]
+                output_tensors.append(perturbation_domain_input)
+            # convert actual outputs
+            output_tensors = convert_layer(output_tensors)
+        return [K.convert_to_numpy(output) for output in output_tensors]
+
+    def compute_affine_bounds_np(self, inputs: Union[np.ndarray, list[np.ndarray]]) -> list[np.ndarray]:
+        """
+
+        Args:
+            inputs: perturbation_domain_inputs + backward_bounds, same format as `self.inputs`
+
+        Returns:
+            affine bounds: sum_{i} affine_bounds[i], affine bounds for each keras model output, concatenated
+                with affine_bounds[i] = [w_l[i], b_l[i], w_u[i], b_u[i]]
+
+        Notes:
+            Affine bounds are
+            - either directly computed as is (forward-affine or crown-* methods)
+            - or deduced from constant bounds (forward-ibp method)
+
+        """
+        output_tensors = self(inputs)
+        if not (self.affine and not self.ibp):
+            convert_layer = ConvertOutput(
+                ibp_from=self.ibp,
+                affine_from=self.affine,
+                ibp_to=False,
+                affine_to=True,
                 perturbation_domain=self.perturbation_domain,
                 model_output_shapes=[t.shape[1:] for t in self.model.outputs],
             )
