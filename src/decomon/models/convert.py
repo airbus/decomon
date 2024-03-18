@@ -359,4 +359,5 @@ def clone(
         method=method,
         ibp=final_ibp,
         affine=final_affine,
+        model=model,
     )
