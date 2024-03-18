@@ -2,12 +2,18 @@ from collections.abc import Callable
 from typing import Any, Optional
 
 import keras
+import keras.ops as K
 from keras import Layer
-from keras.activations import linear, relu
+from keras.activations import linear, relu, softsign
+from keras.config import epsilon
 from keras.layers import Activation
 
 from decomon.constants import Propagation, Slope
-from decomon.layers.activations.utils import get_linear_hull_relu
+from decomon.layers.activations.utils import (
+    get_linear_hull_relu,
+    get_linear_hull_s_shape,
+    softsign_prime,
+)
 from decomon.layers.layer import DecomonLayer
 from decomon.perturbation_domain import PerturbationDomain
 from decomon.types import Tensor
@@ -182,9 +188,55 @@ class DecomonReLU(DecomonBaseActivation):
         return w_l, b_l, w_u, b_u
 
 
+class DecomonSoftSign(DecomonBaseActivation):
+    diagonal = True
+
+    def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        func = softsign
+        func_prime = softsign_prime
+
+        # chord
+        w_chord = (func(upper) - func(lower)) / K.maximum(K.cast(epsilon(), dtype=upper.dtype), upper - lower)
+        b_chord = func(lower) - w_chord * lower
+
+        # tangent at upper
+        w_tangent_upper = func_prime(upper)
+        b_tangent_upper = func(upper) - w_tangent_upper * upper
+
+        # tangent at lower
+        w_tangent_lower = func_prime(lower)
+        b_tangent_lower = func(lower) - w_tangent_lower * lower
+
+        # compare slopes to choose between chord and tangent
+        w_l = K.where(
+            w_chord <= w_tangent_lower,
+            w_chord,
+            w_tangent_lower,
+        )
+        b_l = K.where(
+            w_chord <= w_tangent_lower,
+            b_chord,
+            b_tangent_lower,
+        )
+
+        w_u = K.where(
+            w_chord <= w_tangent_upper,
+            w_chord,
+            w_tangent_upper,
+        )
+        b_u = K.where(
+            w_chord <= w_tangent_upper,
+            b_chord,
+            b_tangent_upper,
+        )
+
+        return w_l, b_l, w_u, b_u
+
+
 MAPPING_KERAS_ACTIVATION_TO_DECOMON_ACTIVATION: dict[Callable[[Tensor], Tensor], type[DecomonBaseActivation]] = {
     linear: DecomonLinear,
     relu: DecomonReLU,
+    softsign: DecomonSoftSign,
 }
 
 

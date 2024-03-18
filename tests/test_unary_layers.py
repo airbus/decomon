@@ -1,7 +1,7 @@
 import keras.ops as K
 import numpy as np
 from keras.layers import Activation, Dense
-from pytest_cases import fixture, parametrize
+from pytest_cases import fixture, fixture_union, parametrize, unpack_fixture
 
 from decomon.keras_utils import batch_multid_dot
 from decomon.layers import DecomonActivation, DecomonDense
@@ -9,25 +9,44 @@ from decomon.layers.activations.activation import DecomonLinear
 
 
 @fixture
-def keras_dense_kwargs(use_bias):
+def dense_keras_kwargs(use_bias):
     return dict(units=7, use_bias=use_bias)
 
 
-@fixture
-def keras_activation_kwargs(activation):
-    return dict(activation=activation)
+def _activation_kwargs(activation, slope=None):
+    keras_kwargs = dict(activation=activation)
+    if activation == "relu":
+        decomon_kwargs = dict(slope=slope)
+    else:
+        decomon_kwargs = {}
+    return keras_kwargs, decomon_kwargs
 
 
 @fixture
-def decomon_activation_kwargs(slope):
-    return dict(slope=slope)
+@parametrize("activation", [None, "softsign"])
+def non_relu_activation_kwargs(activation):
+    return _activation_kwargs(activation)
+
+
+@fixture
+def relu_activation_kwargs(slope):
+    return _activation_kwargs(activation="relu", slope=slope)
+
+
+activation_kwargs = fixture_union(
+    "activation_kwargs",
+    [non_relu_activation_kwargs, relu_activation_kwargs],
+)
+activation_keras_kwargs, activation_decomon_kwargs = unpack_fixture(
+    "activation_keras_kwargs, activation_decomon_kwargs", activation_kwargs
+)
 
 
 @parametrize(
     "decomon_layer_class, decomon_layer_kwargs, keras_layer_class, keras_layer_kwargs, is_actually_linear",
     [
-        (DecomonDense, {}, Dense, keras_dense_kwargs, None),
-        (DecomonActivation, decomon_activation_kwargs, Activation, keras_activation_kwargs, None),
+        (DecomonDense, {}, Dense, dense_keras_kwargs, None),
+        (DecomonActivation, activation_decomon_kwargs, Activation, activation_keras_kwargs, None),
     ],
 )
 def test_decomon_unary_layer(
