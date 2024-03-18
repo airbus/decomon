@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 import keras.ops as K
 from keras.layers import Layer
+from keras.utils import serialize_keras_object
 
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.layers.oracle import get_forward_oracle
@@ -52,6 +53,20 @@ class ConvertOutput(Layer):
             affine_to=affine_to,
             model_output_shapes=model_output_shapes,
         )
+
+    def get_config(self) -> dict[str, Any]:
+        config = super().get_config()
+        config.update(
+            {
+                "ibp_from": self.ibp_from,
+                "affine_from": self.affine_from,
+                "ibp_to": self.ibp_to,
+                "affine_to": self.affine_to,
+                "model_output_shapes": self.model_output_shapes,
+                "perturbation_domain": serialize_keras_object(self.perturbation_domain),
+            }
+        )
+        return config
 
     def needs_perturbation_domain_inputs(self) -> bool:
         return self.inputs_outputs_spec.needs_perturbation_domain_inputs()

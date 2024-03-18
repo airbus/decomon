@@ -6,6 +6,7 @@ from typing import Any, Optional, Union
 import keras
 import keras.ops as K
 from keras.layers import Layer
+from keras.utils import serialize_keras_object
 
 from decomon.constants import Propagation
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
@@ -43,6 +44,17 @@ class ForwardInput(Layer):
             model_input_shape=tuple(),
             layer_input_shape=tuple(),
         )
+
+    def get_config(self) -> dict[str, Any]:
+        config = super().get_config()
+        config.update(
+            {
+                "ibp": self.ibp,
+                "affine": self.affine,
+                "perturbation_domain": serialize_keras_object(self.perturbation_domain),
+            }
+        )
+        return config
 
     def call(self, inputs: BackendTensor) -> list[BackendTensor]:
         """Generate ibp and affine bounds to propagate by the first forward layer.
@@ -124,6 +136,15 @@ class IdentityInput(Layer):
 
         self.perturbation_domain = perturbation_domain
 
+    def get_config(self) -> dict[str, Any]:
+        config = super().get_config()
+        config.update(
+            {
+                "perturbation_domain": serialize_keras_object(self.perturbation_domain),
+            }
+        )
+        return config
+
     def call(self, inputs: BackendTensor) -> list[BackendTensor]:
         """Generate ibp and affine bounds to propagate by the first forward layer.
 
@@ -196,6 +217,16 @@ class BackwardInput(Layer):
         self.model_output_shapes = model_output_shapes
         self.nb_model_outputs = len(model_output_shapes)
         self.from_linear = from_linear
+
+    def get_config(self) -> dict[str, Any]:
+        config = super().get_config()
+        config.update(
+            {
+                "model_output_shapes": self.model_output_shapes,
+                "from_linear": self.from_linear,
+            }
+        )
+        return config
 
     def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
         # list of tensors

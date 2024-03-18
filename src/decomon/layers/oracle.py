@@ -4,6 +4,7 @@
 from typing import Any, Optional, Union, overload
 
 from keras.layers import Layer
+from keras.utils import serialize_keras_object
 
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.perturbation_domain import PerturbationDomain
@@ -67,6 +68,19 @@ class DecomonOracle(BaseOracle):
             layer_input_shape=layer_input_shape,
             is_merging_layer=is_merging_layer,
         )
+
+    def get_config(self) -> dict[str, Any]:
+        config = super().get_config()
+        config.update(
+            {
+                "ibp": self.ibp,
+                "affine": self.affine,
+                "perturbation_domain": serialize_keras_object(self.perturbation_domain),
+                "layer_input_shape": self.layer_input_shape,
+                "is_merging_layer": self.is_merging_layer,
+            }
+        )
+        return config
 
     def call(self, inputs: list[BackendTensor]) -> Union[list[BackendTensor], list[list[BackendTensor]]]:
         """Deduce  ibp and affine bounds to propagate by the first forward layer.

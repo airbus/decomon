@@ -79,13 +79,10 @@ class DecomonModel(keras.Model):
             dict(
                 name=self.name,
                 perturbation_domain=serialize_keras_object(self.perturbation_domain),
-                dc_decomp=self.dc_decomp,
                 method=self.method,
                 ibp=self.ibp,
                 affine=self.affine,
-                finetune=self.finetune,
-                shared=self.shared,
-                backward_bounds=self.backward_bounds,
+                model=serialize_keras_object(self.model),
             )
         )
         return config

@@ -99,6 +99,21 @@ class Fuse(Layer):
             for m2_input_shape in m_1_output_shapes
         ]
 
+    def get_config(self) -> dict[str, Any]:
+        config = super().get_config()
+        config.update(
+            {
+                "ibp_1": self.ibp_1,
+                "affine_1": self.affine_1,
+                "ibp_2": self.ibp_2,
+                "affine_2": self.affine_2,
+                "m1_input_shape": self.m1_input_shape,
+                "m_1_output_shapes": self.m_1_output_shapes,
+                "from_linear_2": self.from_linear_2,
+            }
+        )
+        return config
+
     def build(self, input_shape: tuple[list[tuple[Optional[int], ...]], list[tuple[Optional[int], ...]]]) -> None:
         input_shape_1, input_shape_2 = input_shape
 

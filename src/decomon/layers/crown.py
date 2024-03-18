@@ -38,6 +38,15 @@ class ReduceCrownBounds(Layer):
         super().__init__(**kwargs)
         self.model_output_shape = model_output_shape
 
+    def get_config(self) -> dict[str, Any]:
+        config = super().get_config()
+        config.update(
+            {
+                "model_output_shape": self.model_output_shape,
+            }
+        )
+        return config
+
     def call(self, inputs: list[list[BackendTensor]]) -> list[BackendTensor]:
         """Reduce the list of crown bounds to a single one by summation.
 

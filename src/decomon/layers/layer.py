@@ -4,6 +4,7 @@ from typing import Any, Optional
 import keras
 import keras.ops as K
 from keras.layers import Layer, Wrapper
+from keras.utils import serialize_keras_object
 
 from decomon.constants import Propagation
 from decomon.layers.fuse import (
@@ -184,9 +185,10 @@ class DecomonLayer(Wrapper):
             {
                 "ibp": self.ibp,
                 "affine": self.affine,
-                "perturbation_domain": self.perturbation_domain,
+                "perturbation_domain": serialize_keras_object(self.perturbation_domain),
                 "propagation": self.propagation,
-                "model_output_shape_length": self.model_output_shape_length,
+                "model_input_shape": self.model_input_shape,
+                "model_output_shape": self.model_output_shape,
             }
         )
         return config
