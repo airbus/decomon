@@ -32,6 +32,7 @@ from decomon.models.utils import (
     is_input_node,
     method2propagation,
     preprocess_layer,
+    remove_last_softmax_layers,
     split_activation,
 )
 from decomon.perturbation_domain import BoxDomain, PerturbationDomain
@@ -76,8 +77,29 @@ def split_activations_in_keras_model(
 
 def preprocess_keras_model(
     model: Model,
+    rm_last_softmax: bool = False,
 ) -> Model:
-    return _clone_keras_model(model=model, layer_fn=preprocess_layer)
+    """Preprocess keras model before decomon conversion
+
+    - split activations into separate layers
+    - if `rm_last_softmax` is true: remove last layer for each output,
+        if it is a softmax activation layer.
+
+    Args:
+        model: model to preprocess
+        rm_last_softmax: flag to enable last softmax removing
+
+    Returns:
+
+    """
+    # split activations
+    model = _clone_keras_model(model=model, layer_fn=preprocess_layer)
+
+    # remove softmax last activation layers (for each output)
+    if rm_last_softmax:
+        model = remove_last_softmax_layers(model)
+
+    return model
 
 
 # create status
@@ -94,6 +116,7 @@ def convert(
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
     final_ibp: bool = False,
     final_affine: bool = True,
+    rm_last_softmax: bool = True,
     mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]] = None,
     **kwargs: Any,
 ) -> list[keras.KerasTensor]:
@@ -118,6 +141,7 @@ def convert(
             To be recomputed if empty and needed by the method.
         final_ibp: specify if final outputs should include constant bounds.
         final_affine: specify if final outputs should include affine bounds.
+        rm_last_softmax: specify if last softmax layer (for each output) are removed during preprocessing
         **kwargs: keyword arguments to pass to layer_fn
 
     Returns:
@@ -134,7 +158,7 @@ def convert(
         from_linear_backward_bounds = [from_linear_backward_bounds] * len(model.outputs)
 
     # prepare the Keras Model: split non-linear activation functions into separate Activation layers
-    model = preprocess_keras_model(model)
+    model = preprocess_keras_model(model=model, rm_last_softmax=rm_last_softmax)
 
     # loop over propagations needed
     propagations = method2propagation(method)
@@ -219,6 +243,7 @@ def clone(
     forward_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
     mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]] = None,
+    rm_last_softmax: bool = True,
     **kwargs: Any,
 ) -> DecomonModel:
     """
@@ -244,6 +269,7 @@ def clone(
         forward_layer_map: forward decomon layer per node from a previously performed forward conversion.
             To be used for forward oracle if not empty.
             To be recomputed if empty and needed by the method.
+        rm_last_softmax: specify if last softmax layer (for each output) are removed during preprocessing
         **kwargs: keyword arguments to pass to layer_fn
 
     Returns:
@@ -331,6 +357,7 @@ def clone(
         final_ibp=final_ibp,
         final_affine=final_affine,
         mapping_keras2decomon_classes=mapping_keras2decomon_classes,
+        rm_last_softmax=rm_last_softmax,
         **kwargs,
     )
 

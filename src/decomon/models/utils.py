@@ -98,6 +98,41 @@ def preprocess_layer(layer: Layer) -> list[Layer]:
     return split_activation(layer)
 
 
+def remove_last_softmax_layers(model: Model) -> Model:
+    """Remove for each output the last layer if it is a softmax activation
+
+    NB: this should be applied after the split of activations, so that we only need
+    to check for Activation layers.
+
+    Args:
+        model: original keras model
+
+    Returns:
+        model without the last softmax layers
+
+    It will return the same model if no such softmax have to be removed, else construct a new functional model.
+
+    """
+    output_nodes = get_output_nodes(model)
+    new_outputs = []
+    has_changed = False
+    for output_node in output_nodes:
+        layer = output_node.operation
+        # NB: activations have been already split => we need only to check for Activation layers
+        if isinstance(layer, Activation) and layer.get_config()["activation"] == "softmax":
+            # softmax: take parent nodes outputs instead
+            for parent in output_node.parent_nodes:
+                new_outputs += parent.outputs
+            has_changed = True
+        else:
+            # no softmax: keep same outputs
+            new_outputs += output_node.outputs
+    if has_changed:
+        return Model(model.inputs, new_outputs)
+    else:
+        return model
+
+
 def is_input_node(node: Node) -> bool:
     return len(node.input_tensors) == 0
 
