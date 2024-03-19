@@ -1293,7 +1293,9 @@ class Helpers:
         return Model(x, y)
 
     @staticmethod
-    def toy_struct_cnn(input_shape: tuple[int, ...] = (6, 6, 2), dtype: Optional[str] = None):
+    def toy_struct_cnn(
+        input_shape: tuple[int, ...] = (6, 6, 2), dtype: Optional[str] = None, data_format="channels_last"
+    ):
         if dtype is None:
             dtype = keras_config.floatx()
         layers = [
@@ -1302,7 +1304,7 @@ class Helpers:
                 10,
                 kernel_size=(3, 3),
                 activation="relu",
-                data_format="channels_last",
+                data_format=data_format,
                 dtype=dtype,
             ),
             Flatten(dtype=dtype),

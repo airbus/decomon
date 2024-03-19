@@ -61,7 +61,11 @@ def test_clone(
     decimal = 4
 
     # keras model to convert
-    keras_model = toy_model_fn(input_shape=input_shape)
+    if toy_model_name == "cnn":
+        kwargs_toy_model = dict(data_format=model_decomon_input_metadata["data_format"])
+    else:
+        kwargs_toy_model = {}
+    keras_model = toy_model_fn(input_shape=input_shape, **kwargs_toy_model)
 
     # conversion
     decomon_model = clone(model=keras_model, slope=slope, perturbation_domain=perturbation_domain, method=method)
