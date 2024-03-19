@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>decomon.utils &mdash; decomon main documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=a8da1a53"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../_static/versions.js?v=59b132a2"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            decomon
+          </a>
+              <div class="version">
+                main
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">decomon</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content style-external-links">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">decomon.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for decomon.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Callable</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">keras.ops</span> <span class="k">as</span> <span class="nn">K</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">keras.config</span> <span class="kn">import</span> <span class="n">epsilon</span>
+
+<span class="kn">from</span> <span class="nn">decomon.core</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">BoxDomain</span><span class="p">,</span>
+    <span class="n">ForwardMode</span><span class="p">,</span>
+    <span class="n">GridDomain</span><span class="p">,</span>
+    <span class="n">InputsOutputsSpec</span><span class="p">,</span>
+    <span class="n">PerturbationDomain</span><span class="p">,</span>
+    <span class="n">Slope</span><span class="p">,</span>
+    <span class="n">get_affine</span><span class="p">,</span>
+    <span class="n">get_ibp</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">decomon.types</span> <span class="kn">import</span> <span class="n">Tensor</span>
+
+<span class="n">TensorFunction</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">Tensor</span><span class="p">]</span>
+
+
+<span class="c1"># linear hull for activation function</span>
+<div class="viewcode-block" id="relu_prime">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.relu_prime">[docs]</a>
+<span class="k">def</span> <span class="nf">relu_prime</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Derivative of relu</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">K</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="sigmoid_prime">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.sigmoid_prime">[docs]</a>
+<span class="k">def</span> <span class="nf">sigmoid_prime</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Derivative of sigmoid</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">s_x</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">s_x</span> <span class="o">*</span> <span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">-</span> <span class="n">s_x</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="tanh_prime">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.tanh_prime">[docs]</a>
+<span class="k">def</span> <span class="nf">tanh_prime</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Derivative of tanh</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">s_x</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">-</span> <span class="n">K</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">s_x</span><span class="p">,</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="softsign_prime">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.softsign_prime">[docs]</a>
+<span class="k">def</span> <span class="nf">softsign_prime</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Derivative of softsign</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">/</span> <span class="n">K</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span> <span class="n">K</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span></div>
+
+
+
+<span class="c1">##### corners ######</span>
+<div class="viewcode-block" id="get_lower_bound_grid">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.get_lower_bound_grid">[docs]</a>
+<span class="k">def</span> <span class="nf">get_lower_bound_grid</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">W</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+    <span class="n">A</span><span class="p">,</span> <span class="n">B</span> <span class="o">=</span> <span class="n">convert_lower_search_2_subset_sum</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">subset_sum_lower</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="n">n</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_upper_bound_grid">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.get_upper_bound_grid">[docs]</a>
+<span class="k">def</span> <span class="nf">get_upper_bound_grid</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">W</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+    <span class="k">return</span> <span class="o">-</span><span class="n">get_lower_bound_grid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">-</span><span class="n">W</span><span class="p">,</span> <span class="o">-</span><span class="n">b</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_bound_grid">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.get_bound_grid">[docs]</a>
+<span class="k">def</span> <span class="nf">get_bound_grid</span><span class="p">(</span>
+    <span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">W_u</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">b_u</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">W_l</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">b_l</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Tensor</span><span class="p">]:</span>
+    <span class="n">upper</span> <span class="o">=</span> <span class="n">get_upper_bound_grid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">W_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+    <span class="n">lower</span> <span class="o">=</span> <span class="n">get_lower_bound_grid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">W_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">upper</span><span class="p">,</span> <span class="n">lower</span></div>
+
+
+
+<span class="c1"># convert max Wx +b s.t Wx+b&lt;=0 into a subset-sum problem with positive values</span>
+<div class="viewcode-block" id="convert_lower_search_2_subset_sum">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.convert_lower_search_2_subset_sum">[docs]</a>
+<span class="k">def</span> <span class="nf">convert_lower_search_2_subset_sum</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">W</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Tensor</span><span class="p">]:</span>
+    <span class="n">x_min</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">x_max</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">W</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">W</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">W</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">W</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">W</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:]))))</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))))</span>
+
+    <span class="n">const</span> <span class="o">=</span> <span class="n">BoxDomain</span><span class="p">()</span><span class="o">.</span><span class="n">get_lower</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">W</span><span class="p">)</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">((</span><span class="n">x_max</span> <span class="o">-</span> <span class="n">x_min</span><span class="p">)</span> <span class="o">/</span> <span class="n">n</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">weights</span><span class="p">,</span> <span class="n">const</span></div>
+
+
+
+<div class="viewcode-block" id="subset_sum_lower">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.subset_sum_lower">[docs]</a>
+<span class="k">def</span> <span class="nf">subset_sum_lower</span><span class="p">(</span><span class="n">W</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">repeat</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+    <span class="n">B</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">W</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">repeats</span><span class="o">=</span><span class="n">repeat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">C_reduced</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="o">-</span><span class="n">b</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">C_reduced</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">b</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+
+    <span class="n">score</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">D</span> <span class="o">*</span> <span class="n">C</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">b</span><span class="p">,</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">b</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">score</span></div>
+
+
+
+<span class="c1"># define routines to get linear relaxations useful both for forward and backward</span>
+<div class="viewcode-block" id="get_linear_hull_relu">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.get_linear_hull_relu">[docs]</a>
+<span class="k">def</span> <span class="nf">get_linear_hull_relu</span><span class="p">(</span>
+    <span class="n">upper</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">lower</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">slope</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Slope</span><span class="p">],</span>
+    <span class="n">upper_g</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">lower_g</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]:</span>
+    <span class="n">slope</span> <span class="o">=</span> <span class="n">Slope</span><span class="p">(</span><span class="n">slope</span><span class="p">)</span>
+    <span class="c1"># in case upper=lower, this cases are</span>
+    <span class="c1"># considered with index_dead and index_linear</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">upper</span><span class="p">)</span> <span class="o">-</span> <span class="n">K</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">lower</span><span class="p">))</span> <span class="o">/</span> <span class="n">K</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">epsilon</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">upper</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span> <span class="n">upper</span> <span class="o">-</span> <span class="n">lower</span><span class="p">)</span>
+
+    <span class="c1"># scaling factor for the upper bound on the relu</span>
+    <span class="c1"># see README</span>
+
+    <span class="n">w_u</span> <span class="o">=</span> <span class="n">alpha</span>
+    <span class="n">b_u</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">lower</span><span class="p">)</span> <span class="o">-</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">lower</span>
+    <span class="n">z_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">upper</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">o_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">upper</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">slope</span> <span class="o">==</span> <span class="n">Slope</span><span class="o">.</span><span class="n">V_SLOPE</span><span class="p">:</span>
+        <span class="c1"># 1 if upper&lt;=-lower else 0</span>
+        <span class="n">index_a</span> <span class="o">=</span> <span class="o">-</span><span class="n">K</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">upper</span> <span class="o">+</span> <span class="n">lower</span><span class="p">)</span> <span class="o">-</span> <span class="n">o_value</span><span class="p">,</span> <span class="o">-</span><span class="n">o_value</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>
+
+        <span class="c1"># 1 if upper&gt;-lower else 0</span>
+        <span class="n">index_b</span> <span class="o">=</span> <span class="n">o_value</span> <span class="o">-</span> <span class="n">index_a</span>
+        <span class="n">w_l</span> <span class="o">=</span> <span class="n">index_b</span>
+        <span class="n">b_l</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">b_u</span>
+
+    <span class="k">elif</span> <span class="n">slope</span> <span class="o">==</span> <span class="n">Slope</span><span class="o">.</span><span class="n">A_SLOPE</span><span class="p">:</span>
+        <span class="n">w_l</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">w_u</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">b_l</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">b_u</span>
+
+    <span class="k">elif</span> <span class="n">slope</span> <span class="o">==</span> <span class="n">Slope</span><span class="o">.</span><span class="n">Z_SLOPE</span><span class="p">:</span>
+        <span class="n">w_l</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">w_u</span>
+        <span class="n">b_l</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">b_u</span>
+
+    <span class="k">elif</span> <span class="n">slope</span> <span class="o">==</span> <span class="n">Slope</span><span class="o">.</span><span class="n">O_SLOPE</span><span class="p">:</span>
+        <span class="n">w_l</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">w_u</span> <span class="o">+</span> <span class="n">o_value</span>
+        <span class="n">b_l</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">b_u</span>
+
+    <span class="k">elif</span> <span class="n">slope</span> <span class="o">==</span> <span class="n">Slope</span><span class="o">.</span><span class="n">S_SLOPE</span><span class="p">:</span>
+        <span class="n">w_l</span> <span class="o">=</span> <span class="n">w_u</span>
+        <span class="n">b_l</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">b_u</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Not implemented for slope </span><span class="si">{</span><span class="n">slope</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;upper_grid&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="n">gamma</span> <span class="o">=</span> <span class="n">o_value</span>
+    <span class="k">if</span> <span class="s2">&quot;finetune&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="c1"># retrieve variables to optimize the slopes</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;finetune&quot;</span><span class="p">][</span><span class="kc">None</span><span class="p">]</span>
+
+    <span class="n">w_l</span> <span class="o">=</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">w_l</span> <span class="o">+</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">gamma</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">w_l</span><span class="p">)</span>
+
+    <span class="c1"># check inactive relu state: u&lt;=0</span>
+    <span class="n">index_dead</span> <span class="o">=</span> <span class="o">-</span><span class="n">K</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">upper</span><span class="p">)</span> <span class="o">-</span> <span class="n">o_value</span><span class="p">,</span> <span class="o">-</span><span class="n">o_value</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>  <span class="c1"># =1 if inactive state</span>
+    <span class="n">index_linear</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">lower</span><span class="p">)</span> <span class="o">+</span> <span class="n">o_value</span><span class="p">,</span> <span class="n">z_value</span><span class="p">,</span> <span class="n">o_value</span><span class="p">)</span>  <span class="c1"># 1 if linear state</span>
+
+    <span class="n">w_u</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_dead</span><span class="p">)</span> <span class="o">*</span> <span class="n">w_u</span>
+    <span class="n">w_l</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_dead</span><span class="p">)</span> <span class="o">*</span> <span class="n">w_l</span>
+    <span class="n">b_u</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_dead</span><span class="p">)</span> <span class="o">*</span> <span class="n">b_u</span>
+    <span class="n">b_l</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_dead</span><span class="p">)</span> <span class="o">*</span> <span class="n">b_l</span>
+
+    <span class="n">w_u</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_linear</span><span class="p">)</span> <span class="o">*</span> <span class="n">w_u</span> <span class="o">+</span> <span class="n">index_linear</span>
+    <span class="n">w_l</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_linear</span><span class="p">)</span> <span class="o">*</span> <span class="n">w_l</span> <span class="o">+</span> <span class="n">index_linear</span>
+    <span class="n">b_u</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_linear</span><span class="p">)</span> <span class="o">*</span> <span class="n">b_u</span>
+    <span class="n">b_l</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_linear</span><span class="p">)</span> <span class="o">*</span> <span class="n">b_l</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="get_linear_hull_sigmoid">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.get_linear_hull_sigmoid">[docs]</a>
+<span class="k">def</span> <span class="nf">get_linear_hull_sigmoid</span><span class="p">(</span><span class="n">upper</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">lower</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">slope</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Slope</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]:</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">upper</span><span class="p">,</span> <span class="n">lower</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">get_linear_hull_s_shape</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="n">K</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">,</span> <span class="n">f_prime</span><span class="o">=</span><span class="n">sigmoid_prime</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">ForwardMode</span><span class="o">.</span><span class="n">IBP</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_linear_hull_tanh">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.get_linear_hull_tanh">[docs]</a>
+<span class="k">def</span> <span class="nf">get_linear_hull_tanh</span><span class="p">(</span><span class="n">upper</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">lower</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">slope</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Slope</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]:</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">upper</span><span class="p">,</span> <span class="n">lower</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">get_linear_hull_s_shape</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="n">K</span><span class="o">.</span><span class="n">tanh</span><span class="p">,</span> <span class="n">f_prime</span><span class="o">=</span><span class="n">tanh_prime</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">ForwardMode</span><span class="o">.</span><span class="n">IBP</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_linear_softplus_hull">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.get_linear_softplus_hull">[docs]</a>
+<span class="k">def</span> <span class="nf">get_linear_softplus_hull</span><span class="p">(</span><span class="n">upper</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">lower</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">slope</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Slope</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]:</span>
+    <span class="n">slope</span> <span class="o">=</span> <span class="n">Slope</span><span class="p">(</span><span class="n">slope</span><span class="p">)</span>
+    <span class="c1"># in case upper=lower, this cases are</span>
+    <span class="c1"># considered with index_dead and index_linear</span>
+    <span class="n">u_c</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">softsign</span><span class="p">(</span><span class="n">upper</span><span class="p">)</span>
+    <span class="n">l_c</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">softsign</span><span class="p">(</span><span class="n">lower</span><span class="p">)</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="p">(</span><span class="n">u_c</span> <span class="o">-</span> <span class="n">l_c</span><span class="p">)</span> <span class="o">/</span> <span class="n">K</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">epsilon</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">upper</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span> <span class="p">(</span><span class="n">upper</span> <span class="o">-</span> <span class="n">lower</span><span class="p">))</span>
+    <span class="n">w_u</span> <span class="o">=</span> <span class="n">alpha</span>
+    <span class="n">b_u</span> <span class="o">=</span> <span class="o">-</span><span class="n">alpha</span> <span class="o">*</span> <span class="n">lower</span> <span class="o">+</span> <span class="n">l_c</span>
+
+    <span class="n">z_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">upper</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">o_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">upper</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">slope</span> <span class="o">==</span> <span class="n">Slope</span><span class="o">.</span><span class="n">V_SLOPE</span><span class="p">:</span>
+        <span class="c1"># 1 if upper&lt;=-lower else 0</span>
+        <span class="n">index_a</span> <span class="o">=</span> <span class="o">-</span><span class="n">K</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">upper</span> <span class="o">+</span> <span class="n">lower</span><span class="p">)</span> <span class="o">-</span> <span class="n">o_value</span><span class="p">,</span> <span class="o">-</span><span class="n">o_value</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>
+        <span class="c1"># 1 if upper&gt;-lower else 0</span>
+        <span class="n">index_b</span> <span class="o">=</span> <span class="n">o_value</span> <span class="o">-</span> <span class="n">index_a</span>
+        <span class="n">w_l</span> <span class="o">=</span> <span class="n">index_b</span>
+        <span class="n">b_l</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">b_u</span>
+    <span class="k">elif</span> <span class="n">slope</span> <span class="o">==</span> <span class="n">Slope</span><span class="o">.</span><span class="n">Z_SLOPE</span><span class="p">:</span>
+        <span class="n">w_l</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">w_u</span>
+        <span class="n">b_l</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">b_u</span>
+    <span class="k">elif</span> <span class="n">slope</span> <span class="o">==</span> <span class="n">Slope</span><span class="o">.</span><span class="n">O_SLOPE</span><span class="p">:</span>
+        <span class="n">w_l</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">w_u</span> <span class="o">+</span> <span class="n">o_value</span>
+        <span class="n">b_l</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">b_u</span>
+    <span class="k">elif</span> <span class="n">slope</span> <span class="o">==</span> <span class="n">Slope</span><span class="o">.</span><span class="n">S_SLOPE</span><span class="p">:</span>
+        <span class="n">w_l</span> <span class="o">=</span> <span class="n">w_u</span>
+        <span class="n">b_l</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">b_u</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown slope </span><span class="si">{</span><span class="n">slope</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">index_dead</span> <span class="o">=</span> <span class="o">-</span><span class="n">K</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">upper</span><span class="p">)</span> <span class="o">-</span> <span class="n">o_value</span><span class="p">,</span> <span class="o">-</span><span class="n">o_value</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>
+
+    <span class="n">w_u</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_dead</span><span class="p">)</span> <span class="o">*</span> <span class="n">w_u</span>
+    <span class="n">w_l</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_dead</span><span class="p">)</span> <span class="o">*</span> <span class="n">w_l</span>
+    <span class="n">b_u</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_dead</span><span class="p">)</span> <span class="o">*</span> <span class="n">b_u</span>
+    <span class="n">b_l</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_dead</span><span class="p">)</span> <span class="o">*</span> <span class="n">b_l</span>
+
+    <span class="k">if</span> <span class="s2">&quot;finetune&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="c1"># weighted linear combination</span>
+        <span class="n">alpha_u</span><span class="p">,</span> <span class="n">alpha_l</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;finetune&quot;</span><span class="p">]</span>
+        <span class="n">alpha_u</span> <span class="o">=</span> <span class="n">alpha_u</span><span class="p">[</span><span class="kc">None</span><span class="p">]</span>
+        <span class="n">alpha_l</span> <span class="o">=</span> <span class="n">alpha_l</span><span class="p">[</span><span class="kc">None</span><span class="p">]</span>
+
+        <span class="n">w_u</span> <span class="o">=</span> <span class="n">alpha_u</span> <span class="o">*</span> <span class="n">w_u</span>
+        <span class="n">b_u</span> <span class="o">=</span> <span class="n">alpha_u</span> <span class="o">*</span> <span class="n">b_u</span> <span class="o">+</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">alpha_u</span><span class="p">)</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">upper</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>
+
+        <span class="n">w_l</span> <span class="o">=</span> <span class="n">alpha_l</span> <span class="o">*</span> <span class="n">w_l</span>
+        <span class="n">b_l</span> <span class="o">=</span> <span class="n">alpha_l</span> <span class="o">*</span> <span class="n">b_l</span> <span class="o">+</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">alpha_l</span><span class="p">)</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="subtract">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.subtract">[docs]</a>
+<span class="k">def</span> <span class="nf">subtract</span><span class="p">(</span>
+    <span class="n">inputs_0</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
+    <span class="n">inputs_1</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
+    <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of inputs_0-inputs_1</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        inputs_0: tensor</span>
+<span class="sd">        inputs_1: tensor</span>
+<span class="sd">        dc_decomp: boolean that indicates</span>
+<span class="sd">        perturbation_domain: the type of perturbation domain</span>
+<span class="sd">    whether we return a difference of convex decomposition of our layer</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        inputs_0 - inputs_1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">perturbation_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">BoxDomain</span><span class="p">()</span>
+    <span class="n">inputs_1</span> <span class="o">=</span> <span class="n">minus</span><span class="p">(</span><span class="n">inputs_1</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">)</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">add</span><span class="p">(</span><span class="n">inputs_0</span><span class="p">,</span> <span class="n">inputs_1</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">output</span></div>
+
+
+
+<div class="viewcode-block" id="add">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.add">[docs]</a>
+<span class="k">def</span> <span class="nf">add</span><span class="p">(</span>
+    <span class="n">inputs_0</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
+    <span class="n">inputs_1</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
+    <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of inputs_0+inputs_1</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        inputs_0: tensor</span>
+<span class="sd">        inputs_1: tensor</span>
+<span class="sd">        dc_decomp: boolean that indicates</span>
+<span class="sd">        perturbation_domain: the type of perturbation domain</span>
+<span class="sd">    whether we return a difference of convex decomposition of our layer</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        inputs_0 + inputs_1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">perturbation_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">BoxDomain</span><span class="p">()</span>
+
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+    <span class="n">inputs_outputs_spec</span> <span class="o">=</span> <span class="n">InputsOutputsSpec</span><span class="p">(</span><span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">)</span>
+
+    <span class="n">x_0</span><span class="p">,</span> <span class="n">u_c_0</span><span class="p">,</span> <span class="n">w_u_0</span><span class="p">,</span> <span class="n">b_u_0</span><span class="p">,</span> <span class="n">l_c_0</span><span class="p">,</span> <span class="n">w_l_0</span><span class="p">,</span> <span class="n">b_l_0</span><span class="p">,</span> <span class="n">h_0</span><span class="p">,</span> <span class="n">g_0</span> <span class="o">=</span> <span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_fullinputs_from_inputsformode</span><span class="p">(</span>
+        <span class="n">inputs_0</span>
+    <span class="p">)</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">u_c_1</span><span class="p">,</span> <span class="n">w_u_1</span><span class="p">,</span> <span class="n">b_u_1</span><span class="p">,</span> <span class="n">l_c_1</span><span class="p">,</span> <span class="n">w_l_1</span><span class="p">,</span> <span class="n">b_l_1</span><span class="p">,</span> <span class="n">h_1</span><span class="p">,</span> <span class="n">g_1</span> <span class="o">=</span> <span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_fullinputs_from_inputsformode</span><span class="p">(</span>
+        <span class="n">inputs_1</span>
+    <span class="p">)</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">x_0</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">h_0</span> <span class="o">+</span> <span class="n">h_1</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">g_0</span> <span class="o">+</span> <span class="n">g_1</span>
+    <span class="n">u_c</span> <span class="o">=</span> <span class="n">u_c_0</span> <span class="o">+</span> <span class="n">u_c_1</span>
+    <span class="n">l_c</span> <span class="o">=</span> <span class="n">l_c_0</span> <span class="o">+</span> <span class="n">l_c_1</span>
+    <span class="n">w_u</span> <span class="o">=</span> <span class="n">w_u_0</span> <span class="o">+</span> <span class="n">w_u_1</span>
+    <span class="n">w_l</span> <span class="o">=</span> <span class="n">w_l_0</span> <span class="o">+</span> <span class="n">w_l_1</span>
+    <span class="n">b_u</span> <span class="o">=</span> <span class="n">b_u_0</span> <span class="o">+</span> <span class="n">b_u_1</span>
+    <span class="n">b_l</span> <span class="o">=</span> <span class="n">b_l_0</span> <span class="o">+</span> <span class="n">b_l_1</span>
+
+    <span class="n">fulloutputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">l_c</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">g</span><span class="p">]</span>
+    <span class="n">outputs</span> <span class="o">=</span> <span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">extract_outputsformode_from_fulloutputs</span><span class="p">(</span><span class="n">fulloutputs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">outputs</span></div>
+
+
+
+<div class="viewcode-block" id="relu_">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.relu_">[docs]</a>
+<span class="k">def</span> <span class="nf">relu_</span><span class="p">(</span>
+    <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
+    <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+    <span class="n">slope</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Slope</span><span class="p">]</span> <span class="o">=</span> <span class="n">Slope</span><span class="o">.</span><span class="n">V_SLOPE</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="n">perturbation_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">BoxDomain</span><span class="p">()</span>
+
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+    <span class="n">affine</span> <span class="o">=</span> <span class="n">get_affine</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+    <span class="n">ibp</span> <span class="o">=</span> <span class="n">get_ibp</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+    <span class="n">inputs_outputs_spec</span> <span class="o">=</span> <span class="n">InputsOutputsSpec</span><span class="p">(</span><span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">)</span>
+
+    <span class="n">x</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">l_c</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">g</span> <span class="o">=</span> <span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_fullinputs_from_inputsformode</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span>
+
+    <span class="n">z_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">o_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">empty_tensor</span> <span class="o">=</span> <span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_empty_tensor</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">dc_decomp</span><span class="p">:</span>
+        <span class="n">h_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="o">-</span><span class="n">g</span><span class="p">)</span>
+        <span class="n">g_out</span> <span class="o">=</span> <span class="n">g</span>
+        <span class="n">index_dead</span> <span class="o">=</span> <span class="o">-</span><span class="n">K</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">u_c</span><span class="p">)</span> <span class="o">-</span> <span class="n">o_value</span><span class="p">,</span> <span class="o">-</span><span class="n">o_value</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>  <span class="c1"># =1 if inactive state</span>
+        <span class="n">index_linear</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">l_c</span><span class="p">)</span> <span class="o">+</span> <span class="n">o_value</span><span class="p">,</span> <span class="n">z_value</span><span class="p">,</span> <span class="n">o_value</span><span class="p">)</span>  <span class="c1"># 1 if linear state</span>
+
+        <span class="n">h_out</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_dead</span><span class="p">)</span> <span class="o">*</span> <span class="n">h_out</span>
+        <span class="n">g_out</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_dead</span><span class="p">)</span> <span class="o">*</span> <span class="n">g_out</span>
+        <span class="n">h_out</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_linear</span><span class="p">)</span> <span class="o">*</span> <span class="n">h_out</span> <span class="o">+</span> <span class="n">index_linear</span> <span class="o">*</span> <span class="n">h</span>
+        <span class="n">g_out</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">index_linear</span><span class="p">)</span> <span class="o">*</span> <span class="n">g_out</span> <span class="o">+</span> <span class="n">index_linear</span> <span class="o">*</span> <span class="n">g</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">h_out</span><span class="p">,</span> <span class="n">g_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+    <span class="k">if</span> <span class="n">ibp</span><span class="p">:</span>
+        <span class="n">u_c_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">u_c</span><span class="p">)</span>
+        <span class="n">l_c_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">l_c</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">u_c_out</span> <span class="o">=</span> <span class="n">empty_tensor</span>
+        <span class="n">l_c_out</span> <span class="o">=</span> <span class="n">empty_tensor</span>
+
+    <span class="k">if</span> <span class="n">affine</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">perturbation_domain</span><span class="p">,</span> <span class="n">GridDomain</span><span class="p">):</span>
+            <span class="n">upper_g</span><span class="p">,</span> <span class="n">lower_g</span> <span class="o">=</span> <span class="n">get_bound_grid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;upper_grid&quot;</span><span class="p">:</span> <span class="n">upper_g</span><span class="p">,</span> <span class="s2">&quot;lower_grid&quot;</span><span class="p">:</span> <span class="n">lower_g</span><span class="p">})</span>
+
+        <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span> <span class="o">=</span> <span class="n">get_linear_hull_relu</span><span class="p">(</span><span class="n">u_c</span><span class="p">,</span> <span class="n">l_c</span><span class="p">,</span> <span class="n">slope</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">b_u_out</span> <span class="o">=</span> <span class="n">w_u_out</span> <span class="o">*</span> <span class="n">b_u</span> <span class="o">+</span> <span class="n">b_u_out</span>
+        <span class="n">b_l_out</span> <span class="o">=</span> <span class="n">w_l_out</span> <span class="o">*</span> <span class="n">b_l</span> <span class="o">+</span> <span class="n">b_l_out</span>
+        <span class="n">w_u_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">w_u_out</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">w_u</span>
+        <span class="n">w_l_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">w_l_out</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">w_l</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+    <span class="k">return</span> <span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">extract_outputsformode_from_fulloutputs</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">u_c_out</span><span class="p">,</span> <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">l_c_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span><span class="p">,</span> <span class="n">h_out</span><span class="p">,</span> <span class="n">g_out</span><span class="p">]</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="minus">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.minus">[docs]</a>
+<span class="k">def</span> <span class="nf">minus</span><span class="p">(</span>
+    <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
+    <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+    <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of minus(x)=-x.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        inputs</span>
+<span class="sd">        mode</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">perturbation_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">BoxDomain</span><span class="p">()</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+    <span class="n">inputs_outputs_spec</span> <span class="o">=</span> <span class="n">InputsOutputsSpec</span><span class="p">(</span><span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">)</span>
+
+    <span class="n">x</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">l_c</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">g</span> <span class="o">=</span> <span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_fullinputs_from_inputsformode</span><span class="p">(</span>
+        <span class="n">inputs</span><span class="p">,</span> <span class="n">tight</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">compute_ibp_from_affine</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+
+    <span class="n">u_c_out</span> <span class="o">=</span> <span class="o">-</span><span class="n">l_c</span>
+    <span class="n">l_c_out</span> <span class="o">=</span> <span class="o">-</span><span class="n">u_c</span>
+    <span class="n">w_u_out</span> <span class="o">=</span> <span class="o">-</span><span class="n">w_l</span>
+    <span class="n">b_u_out</span> <span class="o">=</span> <span class="o">-</span><span class="n">b_l</span>
+    <span class="n">w_l_out</span> <span class="o">=</span> <span class="o">-</span><span class="n">w_u</span>
+    <span class="n">b_l_out</span> <span class="o">=</span> <span class="o">-</span><span class="n">b_u</span>
+    <span class="n">h_out</span> <span class="o">=</span> <span class="o">-</span><span class="n">g</span>
+    <span class="n">g_out</span> <span class="o">=</span> <span class="o">-</span><span class="n">h</span>
+
+    <span class="k">return</span> <span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">extract_outputsformode_from_fulloutputs</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">u_c_out</span><span class="p">,</span> <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">l_c_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span><span class="p">,</span> <span class="n">h_out</span><span class="p">,</span> <span class="n">g_out</span><span class="p">]</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="maximum">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.maximum">[docs]</a>
+<span class="k">def</span> <span class="nf">maximum</span><span class="p">(</span>
+    <span class="n">inputs_0</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
+    <span class="n">inputs_1</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
+    <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+    <span class="n">finetune</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of element-wise max</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        inputs_0: list of tensors</span>
+<span class="sd">        inputs_1: list of tensors</span>
+<span class="sd">        dc_decomp: boolean that indicates</span>
+<span class="sd">        perturbation_domain: the type of perturbation domain</span>
+<span class="sd">    whether we return a difference of convex decomposition of our layer</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        maximum(inputs_0, inputs_1)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">perturbation_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">BoxDomain</span><span class="p">()</span>
+    <span class="n">output_0</span> <span class="o">=</span> <span class="n">subtract</span><span class="p">(</span><span class="n">inputs_1</span><span class="p">,</span> <span class="n">inputs_0</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">finetune</span><span class="p">:</span>
+        <span class="n">finetune</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;finetune_params&quot;</span><span class="p">]</span>
+        <span class="n">output_1</span> <span class="o">=</span> <span class="n">relu_</span><span class="p">(</span>
+            <span class="n">output_0</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">output_1</span> <span class="o">=</span> <span class="n">relu_</span><span class="p">(</span><span class="n">output_0</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">add</span><span class="p">(</span>
+        <span class="n">output_1</span><span class="p">,</span>
+        <span class="n">inputs_0</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+        <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="minimum">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.minimum">[docs]</a>
+<span class="k">def</span> <span class="nf">minimum</span><span class="p">(</span>
+    <span class="n">inputs_0</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
+    <span class="n">inputs_1</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
+    <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+    <span class="n">finetune</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of element-wise min</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        inputs_0</span>
+<span class="sd">        inputs_1</span>
+<span class="sd">        dc_decomp</span>
+<span class="sd">        perturbation_domain</span>
+<span class="sd">        mode</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">perturbation_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">BoxDomain</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">minus</span><span class="p">(</span>
+        <span class="n">maximum</span><span class="p">(</span>
+            <span class="n">minus</span><span class="p">(</span><span class="n">inputs_0</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">),</span>
+            <span class="n">minus</span><span class="p">(</span><span class="n">inputs_1</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">),</span>
+            <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+            <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+        <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_linear_hull_s_shape">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.get_linear_hull_s_shape">[docs]</a>
+<span class="k">def</span> <span class="nf">get_linear_hull_s_shape</span><span class="p">(</span>
+    <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
+    <span class="n">func</span><span class="p">:</span> <span class="n">TensorFunction</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">,</span>
+    <span class="n">f_prime</span><span class="p">:</span> <span class="n">TensorFunction</span> <span class="o">=</span> <span class="n">sigmoid_prime</span><span class="p">,</span>
+    <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+    <span class="n">slope</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Slope</span><span class="p">]</span> <span class="o">=</span> <span class="n">Slope</span><span class="o">.</span><span class="n">V_SLOPE</span><span class="p">,</span>
+    <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computing the linear hull of shape functions  given the pre activation neurons</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        inputs: list of input tensors</span>
+<span class="sd">        func: the function (sigmoid, tanh, softsign...)</span>
+<span class="sd">        f_prime: the derivative of the function (sigmoid_prime...)</span>
+<span class="sd">        perturbation_domain: the type of convex input domain</span>
+<span class="sd">        mode: type of Forward propagation (ibp, affine, or hybrid)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        the updated list of tensors</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">perturbation_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">BoxDomain</span><span class="p">()</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+    <span class="n">inputs_outputs_spec</span> <span class="o">=</span> <span class="n">InputsOutputsSpec</span><span class="p">(</span><span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">)</span>
+
+    <span class="n">x</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">l_c</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">g</span> <span class="o">=</span> <span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_fullinputs_from_inputsformode</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span>
+
+    <span class="n">z_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">o_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">t_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="c1"># flatten</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">u_c</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+    <span class="n">u_c_flat</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">u_c</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">shape</span><span class="p">))))</span>  <span class="c1"># (None, n)</span>
+    <span class="n">l_c_flat</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">l_c</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">shape</span><span class="p">))))</span>  <span class="c1"># (None, n)</span>
+
+    <span class="c1"># upper bound</span>
+    <span class="c1"># derivative</span>
+    <span class="n">s_u_prime</span> <span class="o">=</span> <span class="n">f_prime</span><span class="p">(</span><span class="n">u_c_flat</span><span class="p">)</span>  <span class="c1"># (None, n)</span>
+    <span class="n">s_l_prime</span> <span class="o">=</span> <span class="n">f_prime</span><span class="p">(</span><span class="n">l_c_flat</span><span class="p">)</span>  <span class="c1"># (None, n)</span>
+    <span class="n">s_u</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">u_c_flat</span><span class="p">)</span>  <span class="c1"># (None, n)</span>
+    <span class="n">s_l</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">l_c_flat</span><span class="p">)</span>  <span class="c1"># (None, n)</span>
+
+    <span class="c1"># case 0:</span>
+    <span class="n">coeff</span> <span class="o">=</span> <span class="p">(</span><span class="n">s_u</span> <span class="o">-</span> <span class="n">s_l</span><span class="p">)</span> <span class="o">/</span> <span class="n">K</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">epsilon</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">),</span> <span class="n">u_c_flat</span> <span class="o">-</span> <span class="n">l_c_flat</span><span class="p">)</span>
+    <span class="n">alpha_u_0</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+        <span class="n">K</span><span class="o">.</span><span class="n">greater_equal</span><span class="p">(</span><span class="n">s_u_prime</span><span class="p">,</span> <span class="n">coeff</span><span class="p">),</span> <span class="n">o_value</span> <span class="o">+</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">u_c_flat</span><span class="p">,</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">u_c_flat</span>
+    <span class="p">)</span>  <span class="c1"># (None, n)</span>
+    <span class="n">alpha_u_1</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">alpha_u_0</span><span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="n">K</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">l_c_flat</span><span class="p">)</span> <span class="o">+</span> <span class="n">o_value</span><span class="p">)</span> <span class="o">/</span> <span class="n">t_value</span><span class="p">)</span>
+
+    <span class="n">w_u_0</span> <span class="o">=</span> <span class="n">coeff</span>
+    <span class="n">b_u_0</span> <span class="o">=</span> <span class="o">-</span><span class="n">w_u_0</span> <span class="o">*</span> <span class="n">l_c_flat</span> <span class="o">+</span> <span class="n">s_l</span>
+
+    <span class="n">w_u_1</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">u_c_flat</span>
+    <span class="n">b_u_1</span> <span class="o">=</span> <span class="n">s_u</span>
+
+    <span class="n">w_u_2</span><span class="p">,</span> <span class="n">b_u_2</span> <span class="o">=</span> <span class="n">get_t_upper</span><span class="p">(</span><span class="n">u_c_flat</span><span class="p">,</span> <span class="n">l_c_flat</span><span class="p">,</span> <span class="n">s_l</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="n">func</span><span class="p">,</span> <span class="n">f_prime</span><span class="o">=</span><span class="n">f_prime</span><span class="p">)</span>
+
+    <span class="n">w_u_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">alpha_u_0</span> <span class="o">*</span> <span class="n">w_u_0</span> <span class="o">+</span> <span class="n">alpha_u_1</span> <span class="o">*</span> <span class="n">w_u_1</span> <span class="o">+</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">alpha_u_0</span> <span class="o">-</span> <span class="n">alpha_u_1</span><span class="p">)</span> <span class="o">*</span> <span class="n">w_u_2</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">shape</span><span class="p">)</span>
+    <span class="n">b_u_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">alpha_u_0</span> <span class="o">*</span> <span class="n">b_u_0</span> <span class="o">+</span> <span class="n">alpha_u_1</span> <span class="o">*</span> <span class="n">b_u_1</span> <span class="o">+</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">alpha_u_0</span> <span class="o">-</span> <span class="n">alpha_u_1</span><span class="p">)</span> <span class="o">*</span> <span class="n">b_u_2</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">shape</span><span class="p">)</span>
+
+    <span class="c1"># linear hull</span>
+    <span class="c1"># case 0:</span>
+    <span class="n">alpha_l_0</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+        <span class="n">K</span><span class="o">.</span><span class="n">greater_equal</span><span class="p">(</span><span class="n">s_l_prime</span><span class="p">,</span> <span class="n">coeff</span><span class="p">),</span> <span class="n">o_value</span> <span class="o">+</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">l_c_flat</span><span class="p">,</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">l_c_flat</span>
+    <span class="p">)</span>  <span class="c1"># (None, n)</span>
+    <span class="n">alpha_l_1</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">alpha_l_0</span><span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="n">K</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="o">-</span><span class="n">u_c_flat</span><span class="p">)</span> <span class="o">+</span> <span class="n">o_value</span><span class="p">)</span> <span class="o">/</span> <span class="n">t_value</span><span class="p">)</span>
+
+    <span class="n">w_l_0</span> <span class="o">=</span> <span class="n">coeff</span>
+    <span class="n">b_l_0</span> <span class="o">=</span> <span class="o">-</span><span class="n">w_l_0</span> <span class="o">*</span> <span class="n">u_c_flat</span> <span class="o">+</span> <span class="n">s_u</span>
+
+    <span class="n">w_l_1</span> <span class="o">=</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">u_c_flat</span>
+    <span class="n">b_l_1</span> <span class="o">=</span> <span class="n">s_l</span>
+
+    <span class="n">w_l_2</span><span class="p">,</span> <span class="n">b_l_2</span> <span class="o">=</span> <span class="n">get_t_lower</span><span class="p">(</span><span class="n">u_c_flat</span><span class="p">,</span> <span class="n">l_c_flat</span><span class="p">,</span> <span class="n">s_u</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="n">func</span><span class="p">,</span> <span class="n">f_prime</span><span class="o">=</span><span class="n">f_prime</span><span class="p">)</span>
+
+    <span class="n">w_l_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">alpha_l_0</span> <span class="o">*</span> <span class="n">w_l_0</span> <span class="o">+</span> <span class="n">alpha_l_1</span> <span class="o">*</span> <span class="n">w_l_1</span> <span class="o">+</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">alpha_l_0</span> <span class="o">-</span> <span class="n">alpha_l_1</span><span class="p">)</span> <span class="o">*</span> <span class="n">w_l_2</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">shape</span><span class="p">)</span>
+    <span class="n">b_l_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">alpha_l_0</span> <span class="o">*</span> <span class="n">b_l_0</span> <span class="o">+</span> <span class="n">alpha_l_1</span> <span class="o">*</span> <span class="n">b_l_1</span> <span class="o">+</span> <span class="p">(</span><span class="n">o_value</span> <span class="o">-</span> <span class="n">alpha_l_0</span> <span class="o">-</span> <span class="n">alpha_l_1</span><span class="p">)</span> <span class="o">*</span> <span class="n">b_l_2</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">shape</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="get_t_upper">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.get_t_upper">[docs]</a>
+<span class="k">def</span> <span class="nf">get_t_upper</span><span class="p">(</span>
+    <span class="n">u_c_flat</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">l_c_flat</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">s_l</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">func</span><span class="p">:</span> <span class="n">TensorFunction</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">,</span>
+    <span class="n">f_prime</span><span class="p">:</span> <span class="n">TensorFunction</span> <span class="o">=</span> <span class="n">sigmoid_prime</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;linear interpolation between lower and upper bounds on the function func to have a symbolic approximation of the best</span>
+<span class="sd">    coefficient for the affine upper bound</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        u_c_flat: flatten tensor of constant upper bound</span>
+<span class="sd">        l_c_flat: flatten tensor of constant lower bound</span>
+<span class="sd">        s_l: lowest value of the function func on the domain</span>
+<span class="sd">        func: the function (sigmoid, tanh,  softsign)</span>
+<span class="sd">        f_prime: the derivative of the function</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        the upper affine bounds in this subcase</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">o_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">u_c_flat</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">z_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">u_c_flat</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="c1"># step1: find t</span>
+    <span class="n">u_c_reshaped</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">u_c_flat</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (None, n , 1)</span>
+    <span class="n">l_c_reshaped</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">l_c_flat</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (None, n,  1)</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">100</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">u_c_flat</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="n">u_c_reshaped</span>  <span class="c1"># (None, n , 100)</span>
+
+    <span class="n">s_p_t</span> <span class="o">=</span> <span class="n">f_prime</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>  <span class="c1"># (None, n, 100)</span>
+    <span class="n">s_t</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>  <span class="c1"># (None, n, 100)</span>
+
+    <span class="n">score</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">s_p_t</span> <span class="o">-</span> <span class="p">(</span><span class="n">s_t</span> <span class="o">-</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">s_l</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">t</span> <span class="o">-</span> <span class="n">l_c_reshaped</span><span class="p">))</span>  <span class="c1"># (None, n, 100)</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (None, n)</span>
+    <span class="n">threshold</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (None, n)</span>
+
+    <span class="n">index_t</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span>
+        <span class="n">K</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">greater</span><span class="p">(</span><span class="n">threshold</span><span class="p">,</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">threshold</span><span class="p">),</span> <span class="n">index</span><span class="p">,</span> <span class="n">K</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">u_c_flat</span><span class="o">.</span><span class="n">dtype</span>
+    <span class="p">)</span>  <span class="c1"># (None, n)</span>
+    <span class="n">t_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="n">K</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+            <span class="n">K</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span>
+                <span class="n">o_value</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">u_c_flat</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">u_c_reshaped</span><span class="p">,</span>
+                <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">index_t</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">u_c_reshaped</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">t</span><span class="p">,</span>
+            <span class="n">z_value</span> <span class="o">*</span> <span class="n">t</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>  <span class="c1"># (None, n)</span>
+
+    <span class="n">s_t</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">t_value</span><span class="p">)</span>  <span class="c1"># (None, n)</span>
+    <span class="n">w_u</span> <span class="o">=</span> <span class="p">(</span><span class="n">s_t</span> <span class="o">-</span> <span class="n">s_l</span><span class="p">)</span> <span class="o">/</span> <span class="n">K</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">epsilon</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">u_c_flat</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span> <span class="n">t_value</span> <span class="o">-</span> <span class="n">l_c_flat</span><span class="p">)</span>  <span class="c1"># (None, n)</span>
+    <span class="n">b_u</span> <span class="o">=</span> <span class="o">-</span><span class="n">w_u</span> <span class="o">*</span> <span class="n">l_c_flat</span> <span class="o">+</span> <span class="n">s_l</span>  <span class="c1"># + func(l_c_flat)</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="get_t_lower">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.utils.get_t_lower">[docs]</a>
+<span class="k">def</span> <span class="nf">get_t_lower</span><span class="p">(</span>
+    <span class="n">u_c_flat</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">l_c_flat</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">s_u</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">func</span><span class="p">:</span> <span class="n">TensorFunction</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">,</span>
+    <span class="n">f_prime</span><span class="p">:</span> <span class="n">TensorFunction</span> <span class="o">=</span> <span class="n">sigmoid_prime</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;linear interpolation between lower and upper bounds on the function func to have a symbolic approximation of the best</span>
+<span class="sd">    coefficient for the affine lower bound</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        u_c_flat: flatten tensor of constant upper bound</span>
+<span class="sd">        l_c_flat: flatten tensor of constant lower bound</span>
+<span class="sd">        s_u: highest value of the function func on the domain</span>
+<span class="sd">        func: the function (sigmoid, tanh,  softsign)</span>
+<span class="sd">        f_prime: the derivative of the function</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        the lower affine bounds in this subcase</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">z_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">u_c_flat</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">o_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">u_c_flat</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="c1"># step1: find t</span>
+    <span class="n">u_c_reshaped</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">u_c_flat</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (None, n , 1)</span>
+    <span class="n">l_c_reshaped</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">l_c_flat</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (None, n,  1)</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">u_c_flat</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="n">l_c_reshaped</span>  <span class="c1"># (None, n , 100)</span>
+
+    <span class="n">s_p_t</span> <span class="o">=</span> <span class="n">f_prime</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>  <span class="c1"># (None, n, 100)</span>
+    <span class="n">s_t</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>  <span class="c1"># (None, n, 100)</span>
+
+    <span class="n">score</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">s_p_t</span> <span class="o">-</span> <span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">s_u</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">s_t</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">u_c_reshaped</span> <span class="o">-</span> <span class="n">t</span><span class="p">))</span>  <span class="c1"># (None, n, 100)</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (None, n)</span>
+
+    <span class="n">threshold</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">index_t</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span>
+        <span class="n">K</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">greater</span><span class="p">(</span><span class="n">threshold</span><span class="p">,</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">threshold</span><span class="p">),</span> <span class="n">index</span><span class="p">,</span> <span class="n">K</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">u_c_flat</span><span class="o">.</span><span class="n">dtype</span>
+    <span class="p">)</span>  <span class="c1"># (None, n)</span>
+    <span class="n">t_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="n">K</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+            <span class="n">K</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span>
+                <span class="n">o_value</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">u_c_flat</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">u_c_reshaped</span><span class="p">,</span>
+                <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">index_t</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">z_value</span> <span class="o">*</span> <span class="n">u_c_reshaped</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">t</span><span class="p">,</span>
+            <span class="n">z_value</span> <span class="o">*</span> <span class="n">t</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">s_t</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">t_value</span><span class="p">)</span>  <span class="c1"># (None, n)</span>
+    <span class="n">w_l</span> <span class="o">=</span> <span class="p">(</span><span class="n">s_u</span> <span class="o">-</span> <span class="n">s_t</span><span class="p">)</span> <span class="o">/</span> <span class="n">K</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">epsilon</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">u_c_flat</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span> <span class="n">u_c_flat</span> <span class="o">-</span> <span class="n">t_value</span><span class="p">)</span>  <span class="c1"># (None, n)</span>
+    <span class="n">b_l</span> <span class="o">=</span> <span class="o">-</span><span class="n">w_l</span> <span class="o">*</span> <span class="n">u_c_flat</span> <span class="o">+</span> <span class="n">s_u</span>  <span class="c1"># func(u_c_flat)</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">]</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Airbus.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+<script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

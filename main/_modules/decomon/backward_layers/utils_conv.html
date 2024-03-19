@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>decomon.backward_layers.utils_conv &mdash; decomon main documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=a8da1a53"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/versions.js?v=59b132a2"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            decomon
+          </a>
+              <div class="version">
+                main
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">decomon</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content style-external-links">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">decomon.backward_layers.utils_conv</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for decomon.backward_layers.utils_conv</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">import</span> <span class="nn">keras</span>
+<span class="kn">import</span> <span class="nn">keras.ops</span> <span class="k">as</span> <span class="nn">K</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Conv2D</span><span class="p">,</span> <span class="n">Input</span>
+<span class="kn">from</span> <span class="nn">keras.ops.image</span> <span class="kn">import</span> <span class="n">extract_patches</span>
+
+<span class="kn">from</span> <span class="nn">decomon.types</span> <span class="kn">import</span> <span class="n">BackendTensor</span>
+
+
+<div class="viewcode-block" id="get_toeplitz">
+<a class="viewcode-back" href="../../../api/decomon.backward_layers.html#decomon.backward_layers.utils_conv.get_toeplitz">[docs]</a>
+<span class="k">def</span> <span class="nf">get_toeplitz</span><span class="p">(</span><span class="n">conv_layer</span><span class="p">:</span> <span class="n">Conv2D</span><span class="p">,</span> <span class="n">flatten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BackendTensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Express formally the affine component of the convolution</span>
+<span class="sd">    Conv is a linear operator but its affine component is implicit</span>
+<span class="sd">    we use im2col and extract_patches to express the affine matrix</span>
+<span class="sd">    Note that this matrix is Toeplitz</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        conv_layer: Keras Conv2D layer or Decomon Conv2D layer</span>
+<span class="sd">        flatten (optional): convert the affine component as a 2D matrix (n_in, n_out). Defaults to True.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">         the affine operator W: conv(x)= Wx + bias</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="s2">&quot;float16&quot;</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Loss of precision for float16 !&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">data_format</span> <span class="o">==</span> <span class="s2">&quot;channels_last&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">get_toeplitz_channels_last</span><span class="p">(</span><span class="n">conv_layer</span><span class="p">,</span> <span class="n">flatten</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">get_toeplitz_channels_first</span><span class="p">(</span><span class="n">conv_layer</span><span class="p">,</span> <span class="n">flatten</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_toeplitz_channels_last">
+<a class="viewcode-back" href="../../../api/decomon.backward_layers.html#decomon.backward_layers.utils_conv.get_toeplitz_channels_last">[docs]</a>
+<span class="k">def</span> <span class="nf">get_toeplitz_channels_last</span><span class="p">(</span><span class="n">conv_layer</span><span class="p">:</span> <span class="n">Conv2D</span><span class="p">,</span> <span class="n">flatten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BackendTensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Express formally the affine component of the convolution for data_format=channels_last</span>
+<span class="sd">    Conv is a linear operator but its affine component is implicit</span>
+<span class="sd">    we use im2col and extract_patches to express the affine matrix</span>
+<span class="sd">    Note that this matrix is Toeplitz</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        conv_layer: Keras Conv2D layer or Decomon Conv2D layer</span>
+<span class="sd">        flatten (optional): convert the affine component as a 2D matrix (n_in, n_out). Defaults to True.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">         the affine operator W: conv(x)= Wx + bias</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">input</span> <span class="o">=</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">input</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">keras</span><span class="o">.</span><span class="n">KerasTensor</span><span class="p">):</span>
+        <span class="n">input_shape</span> <span class="o">=</span> <span class="nb">input</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># list of inputs</span>
+        <span class="n">input_shape</span> <span class="o">=</span> <span class="nb">input</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">w_in</span><span class="p">,</span> <span class="n">h_in</span><span class="p">,</span> <span class="n">c_in</span> <span class="o">=</span> <span class="n">input_shape</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">output</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">keras</span><span class="o">.</span><span class="n">KerasTensor</span><span class="p">):</span>
+        <span class="n">output_shape</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># list of outputs</span>
+        <span class="n">output_shape</span> <span class="o">=</span> <span class="n">output</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">w_out</span><span class="p">,</span> <span class="n">h_out</span><span class="p">,</span> <span class="n">c_out</span> <span class="o">=</span> <span class="n">output_shape</span>
+
+    <span class="n">kernel_filter</span> <span class="o">=</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">kernel</span>
+    <span class="n">filter_size</span> <span class="o">=</span> <span class="n">kernel_filter</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">diag</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">w_in</span> <span class="o">*</span> <span class="n">h_in</span> <span class="o">*</span> <span class="n">c_in</span><span class="p">),</span> <span class="p">(</span><span class="n">w_in</span> <span class="o">*</span> <span class="n">h_in</span> <span class="o">*</span> <span class="n">c_in</span><span class="p">,</span> <span class="n">w_in</span><span class="p">,</span> <span class="n">h_in</span><span class="p">,</span> <span class="n">c_in</span><span class="p">))</span>
+
+    <span class="n">diag_patches</span> <span class="o">=</span> <span class="n">extract_patches</span><span class="p">(</span>
+        <span class="n">diag</span><span class="p">,</span>
+        <span class="n">size</span><span class="o">=</span><span class="p">[</span><span class="n">filter_size</span><span class="p">,</span> <span class="n">filter_size</span><span class="p">],</span>
+        <span class="n">strides</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">conv_layer</span><span class="o">.</span><span class="n">strides</span><span class="p">),</span>
+        <span class="n">dilation_rate</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">conv_layer</span><span class="o">.</span><span class="n">dilation_rate</span><span class="p">),</span>
+        <span class="n">padding</span><span class="o">=</span><span class="n">conv_layer</span><span class="o">.</span><span class="n">padding</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">diag_patches_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">diag_patches</span><span class="p">,</span> <span class="p">(</span><span class="n">w_in</span><span class="p">,</span> <span class="n">h_in</span><span class="p">,</span> <span class="n">c_in</span><span class="p">,</span> <span class="n">w_out</span><span class="p">,</span> <span class="n">h_out</span><span class="p">,</span> <span class="n">filter_size</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">c_in</span><span class="p">))</span>
+
+    <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">diag_patches_</span><span class="o">.</span><span class="n">shape</span><span class="p">)))</span>
+    <span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">diag_patches_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">diag_patches_</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
+    <span class="n">kernel</span> <span class="o">=</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">kernel</span>  <span class="c1"># (filter_size, filter_size, c_in, c_out)</span>
+
+    <span class="n">kernel</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="p">(</span><span class="n">filter_size</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">c_in</span><span class="p">,</span> <span class="n">c_out</span><span class="p">)),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">))[</span>
+        <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="p">]</span>  <span class="c1"># (1,1,c_in, c_out, filter_size^2)</span>
+
+    <span class="c1"># element-wise multiplication is only compatible with float32</span>
+    <span class="n">diag_patches_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">diag_patches_</span><span class="p">,</span> <span class="s2">&quot;float32&quot;</span><span class="p">)</span>
+    <span class="n">kernel</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="s2">&quot;float32&quot;</span><span class="p">)</span>
+
+    <span class="n">w</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">diag_patches_</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">kernel</span><span class="p">,</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+    <span class="c1"># kernel shape: (1,1,1,1,1,c_in, c_out, filter_size^2)</span>
+    <span class="c1"># diag_patches shape: (w_in, h_in, c_in, w_out, h_out, c_in, 1,     filter_size^2)</span>
+    <span class="c1"># (w_in, h_in, c_in, w_out, h_out, c_in, c_out, filter^2)</span>
+
+    <span class="n">w</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="c1"># cast w for dtype</span>
+
+    <span class="k">if</span> <span class="n">flatten</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="p">(</span><span class="n">w_in</span> <span class="o">*</span> <span class="n">h_in</span> <span class="o">*</span> <span class="n">c_in</span><span class="p">,</span> <span class="n">w_out</span> <span class="o">*</span> <span class="n">h_out</span> <span class="o">*</span> <span class="n">c_out</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">w</span></div>
+
+
+
+<div class="viewcode-block" id="get_toeplitz_channels_first">
+<a class="viewcode-back" href="../../../api/decomon.backward_layers.html#decomon.backward_layers.utils_conv.get_toeplitz_channels_first">[docs]</a>
+<span class="k">def</span> <span class="nf">get_toeplitz_channels_first</span><span class="p">(</span><span class="n">conv_layer</span><span class="p">:</span> <span class="n">Conv2D</span><span class="p">,</span> <span class="n">flatten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BackendTensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Express formally the affine component of the convolution for data_format=channels_first</span>
+<span class="sd">    Conv is a linear operator but its affine component is implicit</span>
+<span class="sd">    we use im2col and extract_patches to express the affine matrix</span>
+<span class="sd">    Note that this matrix is Toeplitz</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        conv_layer: Keras Conv2D layer or Decomon Conv2D layer</span>
+<span class="sd">        flatten (optional): convert the affine component as a 2D matrix (n_in, n_out). Defaults to True.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        the affine operator W: conv(x)= Wx + bias</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">input</span> <span class="o">=</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">input</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">keras</span><span class="o">.</span><span class="n">KerasTensor</span><span class="p">):</span>
+        <span class="n">input_shape</span> <span class="o">=</span> <span class="nb">input</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># list of inputs</span>
+        <span class="n">input_shape</span> <span class="o">=</span> <span class="nb">input</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">c_in</span><span class="p">,</span> <span class="n">w_in</span><span class="p">,</span> <span class="n">h_in</span> <span class="o">=</span> <span class="n">input_shape</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">output</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">keras</span><span class="o">.</span><span class="n">KerasTensor</span><span class="p">):</span>
+        <span class="n">output_shape</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># list of outputs</span>
+        <span class="n">output_shape</span> <span class="o">=</span> <span class="n">output</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">c_out</span><span class="p">,</span> <span class="n">w_out</span><span class="p">,</span> <span class="n">h_out</span> <span class="o">=</span> <span class="n">output_shape</span>
+    <span class="n">kernel_filter</span> <span class="o">=</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">kernel</span>
+    <span class="n">filter_size</span> <span class="o">=</span> <span class="n">kernel_filter</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">diag</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">w_in</span> <span class="o">*</span> <span class="n">h_in</span> <span class="o">*</span> <span class="n">c_in</span><span class="p">),</span> <span class="p">(</span><span class="n">w_in</span> <span class="o">*</span> <span class="n">h_in</span> <span class="o">*</span> <span class="n">c_in</span><span class="p">,</span> <span class="n">w_in</span><span class="p">,</span> <span class="n">h_in</span><span class="p">,</span> <span class="n">c_in</span><span class="p">))</span>
+
+    <span class="n">diag_patches</span> <span class="o">=</span> <span class="n">extract_patches</span><span class="p">(</span><span class="n">diag</span><span class="p">,</span> <span class="p">[</span><span class="n">filter_size</span><span class="p">,</span> <span class="n">filter_size</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">padding</span><span class="o">=</span><span class="n">conv_layer</span><span class="o">.</span><span class="n">padding</span><span class="p">)</span>
+
+    <span class="n">diag_patches_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">diag_patches</span><span class="p">,</span> <span class="p">(</span><span class="n">w_in</span><span class="p">,</span> <span class="n">h_in</span><span class="p">,</span> <span class="n">c_in</span><span class="p">,</span> <span class="n">w_out</span><span class="p">,</span> <span class="n">h_out</span><span class="p">,</span> <span class="n">filter_size</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">c_in</span><span class="p">))</span>
+
+    <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">diag_patches_</span><span class="o">.</span><span class="n">shape</span><span class="p">)))</span>
+    <span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">diag_patches_</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">diag_patches_</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
+    <span class="n">kernel</span> <span class="o">=</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">kernel</span>  <span class="c1"># (filter_size, filter_size, c_in, c_out)</span>
+
+    <span class="n">kernel</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="p">(</span><span class="n">filter_size</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">c_in</span><span class="p">,</span> <span class="n">c_out</span><span class="p">)),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">))[</span>
+        <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="p">]</span>  <span class="c1"># (1,1,c_in, c_out, filter_size^2)</span>
+
+    <span class="n">w</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">diag_patches_</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">kernel</span><span class="p">,</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+    <span class="c1"># kernel shape: (1,      1,     1,   1,    1,    c_in, c_out, filter_size^2)</span>
+    <span class="c1"># diag_patches shape: (w_in, h_in, c_in, w_out, h_out, c_in, 1,     filter_size^2)</span>
+    <span class="c1"># (w_in, h_in, c_in, w_out, h_out, c_in, c_out, filter^2)</span>
+
+    <span class="n">w</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="c1"># cast w for dtype</span>
+
+    <span class="k">if</span> <span class="n">flatten</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="p">(</span><span class="n">w_in</span> <span class="o">*</span> <span class="n">h_in</span> <span class="o">*</span> <span class="n">c_in</span><span class="p">,</span> <span class="n">w_out</span> <span class="o">*</span> <span class="n">h_out</span> <span class="o">*</span> <span class="n">c_out</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">w</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Airbus.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+<script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

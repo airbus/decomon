@@ -1,0 +1,61 @@
+decomon.models package
+======================
+
+Submodules
+----------
+
+decomon.models.backward\_cloning module
+---------------------------------------
+
+.. automodule:: decomon.models.backward_cloning
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.models.convert module
+-----------------------------
+
+.. automodule:: decomon.models.convert
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.models.crown module
+---------------------------
+
+.. automodule:: decomon.models.crown
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.models.forward\_cloning module
+--------------------------------------
+
+.. automodule:: decomon.models.forward_cloning
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.models.models module
+----------------------------
+
+.. automodule:: decomon.models.models
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.models.utils module
+---------------------------
+
+.. automodule:: decomon.models.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: decomon.models
+   :members:
+   :undoc-members:
+   :show-inheritance:

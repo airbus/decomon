@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>decomon.metrics.metric &mdash; decomon main documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=a8da1a53"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/versions.js?v=59b132a2"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            decomon
+          </a>
+              <div class="version">
+                main
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">decomon</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content style-external-links">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">decomon.metrics.metric</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for decomon.metrics.metric</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">keras</span>
+<span class="kn">import</span> <span class="nn">keras.ops</span> <span class="k">as</span> <span class="nn">K</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Input</span><span class="p">,</span> <span class="n">Layer</span>
+<span class="kn">from</span> <span class="nn">keras.models</span> <span class="kn">import</span> <span class="n">Model</span>
+
+<span class="kn">from</span> <span class="nn">decomon.core</span> <span class="kn">import</span> <span class="n">BoxDomain</span><span class="p">,</span> <span class="n">PerturbationDomain</span>
+<span class="kn">from</span> <span class="nn">decomon.models.models</span> <span class="kn">import</span> <span class="n">DecomonModel</span>
+<span class="kn">from</span> <span class="nn">decomon.types</span> <span class="kn">import</span> <span class="n">BackendTensor</span><span class="p">,</span> <span class="n">Tensor</span>
+
+
+<div class="viewcode-block" id="MetricMode">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.MetricMode">[docs]</a>
+<span class="k">class</span> <span class="nc">MetricMode</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+    <span class="n">FORWARD</span> <span class="o">=</span> <span class="s2">&quot;forward&quot;</span>
+    <span class="n">BACKWARD</span> <span class="o">=</span> <span class="s2">&quot;backward&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="MetricLayer">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.MetricLayer">[docs]</a>
+<span class="k">class</span> <span class="nc">MetricLayer</span><span class="p">(</span><span class="n">ABC</span><span class="p">,</span> <span class="n">Layer</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">ibp</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">affine</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MetricMode</span><span class="p">],</span>
+        <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">],</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            ibp: boolean that indicates whether we propagate constant</span>
+<span class="sd">                bounds</span>
+<span class="sd">            affine: boolean that indicates whether we propagate affine</span>
+<span class="sd">                bounds</span>
+<span class="sd">            mode: str: &#39;backward&#39; or &#39;forward&#39; whether we doforward or</span>
+<span class="sd">                backward linear relaxation</span>
+<span class="sd">            perturbation_domain: the type of input perturbation domain for the</span>
+<span class="sd">                linear relaxation</span>
+<span class="sd">            **kwargs</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="o">=</span> <span class="n">ibp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">affine</span> <span class="o">=</span> <span class="n">affine</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">MetricMode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">PerturbationDomain</span>
+        <span class="k">if</span> <span class="n">perturbation_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">BoxDomain</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">perturbation_domain</span>
+
+<div class="viewcode-block" id="MetricLayer.get_config">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.MetricLayer.get_config">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_config</span><span class="p">()</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;ibp&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span><span class="p">,</span>
+                <span class="s2">&quot;affine&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
+                <span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span>
+                <span class="s2">&quot;perturbation_domain&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">config</span></div>
+
+
+<div class="viewcode-block" id="MetricLayer.call">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.MetricLayer.call">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BackendTensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            inputs</span>
+
+<span class="sd">        Returns:</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="AdversarialCheck">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.AdversarialCheck">[docs]</a>
+<span class="k">class</span> <span class="nc">AdversarialCheck</span><span class="p">(</span><span class="n">MetricLayer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Training with symbolic LiRPA bounds for promoting adversarial robustness&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">ibp</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">affine</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MetricMode</span><span class="p">],</span>
+        <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">],</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            ibp: boolean that indicates whether we propagate constant</span>
+<span class="sd">                bounds</span>
+<span class="sd">            affine: boolean that indicates whether we propagate affine</span>
+<span class="sd">                bounds</span>
+<span class="sd">            mode: str: &#39;backward&#39; or &#39;forward&#39; whether we doforward or</span>
+<span class="sd">                backward linear relaxation</span>
+<span class="sd">            perturbation_domain: the type of input perturbation domain for the</span>
+<span class="sd">                linear relaxation</span>
+<span class="sd">            **kwargs</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ibp</span><span class="o">=</span><span class="n">ibp</span><span class="p">,</span> <span class="n">affine</span><span class="o">=</span><span class="n">affine</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AdversarialCheck.linear_adv">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.AdversarialCheck.linear_adv">[docs]</a>
+    <span class="k">def</span> <span class="nf">linear_adv</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">z_tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">y_tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">w_u</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">b_u</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">w_l</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">b_l</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+        <span class="n">w_upper</span> <span class="o">=</span> <span class="n">w_u</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">y_tensor</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">])</span> <span class="o">-</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w_l</span> <span class="o">*</span> <span class="n">y_tensor</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">b_upper</span> <span class="o">=</span> <span class="n">b_u</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">y_tensor</span><span class="p">)</span> <span class="o">-</span> <span class="n">b_l</span> <span class="o">*</span> <span class="n">y_tensor</span>
+
+        <span class="n">adv_score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="o">.</span><span class="n">get_upper</span><span class="p">(</span><span class="n">z_tensor</span><span class="p">,</span> <span class="n">w_upper</span><span class="p">,</span> <span class="n">b_upper</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1e6</span> <span class="o">*</span> <span class="n">y_tensor</span>
+
+        <span class="k">return</span> <span class="n">K</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">adv_score</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AdversarialCheck.call">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.AdversarialCheck.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BackendTensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            inputs</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            adv_score &lt;0 if the predictionis robust on the input convex</span>
+<span class="sd">            domain</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">y_tensor</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">w_u_f</span><span class="p">,</span> <span class="n">b_u_f</span><span class="p">,</span> <span class="n">l_c</span><span class="p">,</span> <span class="n">w_l_f</span><span class="p">,</span> <span class="n">b_l_f</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[:</span><span class="mi">8</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">w_u_f</span><span class="p">,</span> <span class="n">b_u_f</span><span class="p">,</span> <span class="n">w_l_f</span><span class="p">,</span> <span class="n">b_l_f</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">l_c</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;not ibp and not affine not implemented&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span><span class="p">:</span>
+            <span class="n">adv_ibp</span> <span class="o">=</span> <span class="n">_get_ibp_score</span><span class="p">(</span><span class="n">u_c</span><span class="p">,</span> <span class="n">l_c</span><span class="p">,</span> <span class="n">y_tensor</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">adv_f</span> <span class="o">=</span> <span class="n">_get_affine_score</span><span class="p">(</span>
+                <span class="n">z</span><span class="p">,</span> <span class="n">w_u_f</span><span class="p">,</span> <span class="n">b_u_f</span><span class="p">,</span> <span class="n">w_l_f</span><span class="p">,</span> <span class="n">b_l_f</span><span class="p">,</span> <span class="n">y_tensor</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">adv_score</span> <span class="o">=</span> <span class="n">adv_ibp</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">adv_score</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">adv_ibp</span><span class="p">,</span> <span class="n">adv_f</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">adv_score</span> <span class="o">=</span> <span class="n">adv_f</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;not ibp and not affine not implemented&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">MetricMode</span><span class="o">.</span><span class="n">BACKWARD</span><span class="p">:</span>
+            <span class="n">w_u_b</span><span class="p">,</span> <span class="n">b_u_b</span><span class="p">,</span> <span class="n">w_l_b</span><span class="p">,</span> <span class="n">b_l_b</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
+            <span class="n">adv_b</span> <span class="o">=</span> <span class="n">_get_backward_score</span><span class="p">(</span>
+                <span class="n">z</span><span class="p">,</span> <span class="n">w_u_b</span><span class="p">,</span> <span class="n">b_u_b</span><span class="p">,</span> <span class="n">w_l_b</span><span class="p">,</span> <span class="n">b_l_b</span><span class="p">,</span> <span class="n">y_tensor</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span>
+            <span class="p">)</span>
+            <span class="n">adv_score</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">adv_score</span><span class="p">,</span> <span class="n">adv_b</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">adv_score</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="AdversarialScore">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.AdversarialScore">[docs]</a>
+<span class="k">class</span> <span class="nc">AdversarialScore</span><span class="p">(</span><span class="n">AdversarialCheck</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Training with symbolic LiRPA bounds for promoting adversarial robustness&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">ibp</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">affine</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MetricMode</span><span class="p">],</span>
+        <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">],</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            ibp: boolean that indicates whether we propagate constant</span>
+<span class="sd">                bounds</span>
+<span class="sd">            affine: boolean that indicates whether we propagate affine</span>
+<span class="sd">                bounds</span>
+<span class="sd">            mode: str: &#39;backward&#39; or &#39;forward&#39; whether we doforward or</span>
+<span class="sd">                backward linear relaxation</span>
+<span class="sd">            perturbation_domain: the type of input perturbation domain for the</span>
+<span class="sd">                linear relaxation</span>
+<span class="sd">            **kwargs</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ibp</span><span class="o">=</span><span class="n">ibp</span><span class="p">,</span> <span class="n">affine</span><span class="o">=</span><span class="n">affine</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AdversarialScore.call">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.AdversarialScore.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BackendTensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            inputs</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            adv_score &lt;0 if the predictionis robust on the input convex</span>
+<span class="sd">            domain</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">y_tensor</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">w_u_f</span><span class="p">,</span> <span class="n">b_u_f</span><span class="p">,</span> <span class="n">l_c</span><span class="p">,</span> <span class="n">w_l_f</span><span class="p">,</span> <span class="n">b_l_f</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[:</span><span class="mi">8</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">w_u_f</span><span class="p">,</span> <span class="n">b_u_f</span><span class="p">,</span> <span class="n">w_l_f</span><span class="p">,</span> <span class="n">b_l_f</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">l_c</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;not ibp and not affine not implemented&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span><span class="p">:</span>
+            <span class="n">adv_ibp</span> <span class="o">=</span> <span class="n">_get_ibp_score</span><span class="p">(</span><span class="n">u_c</span><span class="o">=</span><span class="n">l_c</span><span class="p">,</span> <span class="n">l_c</span><span class="o">=</span><span class="n">u_c</span><span class="p">,</span> <span class="n">source_tensor</span><span class="o">=</span><span class="n">y_tensor</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">adv_f</span> <span class="o">=</span> <span class="n">_get_affine_score</span><span class="p">(</span>
+                <span class="n">z</span><span class="p">,</span>
+                <span class="n">w_u</span><span class="o">=</span><span class="n">w_l_f</span><span class="p">,</span>
+                <span class="n">b_u</span><span class="o">=</span><span class="n">b_l_f</span><span class="p">,</span>
+                <span class="n">w_l</span><span class="o">=</span><span class="n">w_u_f</span><span class="p">,</span>
+                <span class="n">b_l</span><span class="o">=</span><span class="n">b_u_f</span><span class="p">,</span>
+                <span class="n">source_tensor</span><span class="o">=</span><span class="n">y_tensor</span><span class="p">,</span>
+                <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">adv_score</span> <span class="o">=</span> <span class="n">adv_ibp</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">adv_score</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">adv_ibp</span><span class="p">,</span> <span class="n">adv_f</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">adv_score</span> <span class="o">=</span> <span class="n">adv_f</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;not ibp and not affine not implemented&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">MetricMode</span><span class="o">.</span><span class="n">BACKWARD</span><span class="p">:</span>
+            <span class="n">w_u_b</span><span class="p">,</span> <span class="n">b_u_b</span><span class="p">,</span> <span class="n">w_l_b</span><span class="p">,</span> <span class="n">b_l_b</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
+            <span class="n">adv_b</span> <span class="o">=</span> <span class="n">_get_backward_score</span><span class="p">(</span>
+                <span class="n">z</span><span class="p">,</span> <span class="n">w_u_b</span><span class="p">,</span> <span class="n">b_u_b</span><span class="p">,</span> <span class="n">w_l_b</span><span class="p">,</span> <span class="n">b_l_b</span><span class="p">,</span> <span class="n">y_tensor</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span>
+            <span class="p">)</span>
+            <span class="n">adv_score</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">adv_score</span><span class="p">,</span> <span class="n">adv_b</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">adv_score</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="build_formal_adv_check_model">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.build_formal_adv_check_model">[docs]</a>
+<span class="k">def</span> <span class="nf">build_formal_adv_check_model</span><span class="p">(</span><span class="n">decomon_model</span><span class="p">:</span> <span class="n">DecomonModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">keras</span><span class="o">.</span><span class="n">Model</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;automatic design on a Keras  model which predicts a certificate of adversarial robustness</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        decomon_model</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># check type and that backward pass is available</span>
+
+    <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">perturbation_domain</span>
+    <span class="n">layer</span> <span class="o">=</span> <span class="n">AdversarialCheck</span><span class="p">(</span><span class="n">decomon_model</span><span class="o">.</span><span class="n">ibp</span><span class="p">,</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="p">)</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">output</span>
+    <span class="nb">input</span> <span class="o">=</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">input</span>
+    <span class="n">n_out</span> <span class="o">=</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="n">y_out</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">n_out</span><span class="p">)</span>
+
+    <span class="n">adv_score</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">output</span> <span class="o">+</span> <span class="p">[</span><span class="n">y_out</span><span class="p">])</span>
+    <span class="n">adv_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="nb">input</span> <span class="o">+</span> <span class="p">[</span><span class="n">y_out</span><span class="p">],</span> <span class="n">adv_score</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">adv_model</span></div>
+
+
+
+<div class="viewcode-block" id="build_formal_adv_model">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.build_formal_adv_model">[docs]</a>
+<span class="k">def</span> <span class="nf">build_formal_adv_model</span><span class="p">(</span><span class="n">decomon_model</span><span class="p">:</span> <span class="n">DecomonModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">keras</span><span class="o">.</span><span class="n">Model</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;automatic design on a Keras  model which predicts a certificate of adversarial robustness</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        decomon_model</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># check type and that backward pass is available</span>
+
+    <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">perturbation_domain</span>
+    <span class="n">layer</span> <span class="o">=</span> <span class="n">AdversarialScore</span><span class="p">(</span><span class="n">decomon_model</span><span class="o">.</span><span class="n">ibp</span><span class="p">,</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="p">)</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">output</span>
+    <span class="nb">input</span> <span class="o">=</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">input</span>
+    <span class="n">n_out</span> <span class="o">=</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="n">y_out</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">n_out</span><span class="p">)</span>
+
+    <span class="n">adv_score</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">output</span> <span class="o">+</span> <span class="p">[</span><span class="n">y_out</span><span class="p">])</span>
+    <span class="n">adv_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="nb">input</span> <span class="o">+</span> <span class="p">[</span><span class="n">y_out</span><span class="p">],</span> <span class="n">adv_score</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">adv_model</span></div>
+
+
+
+<div class="viewcode-block" id="UpperScore">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.UpperScore">[docs]</a>
+<span class="k">class</span> <span class="nc">UpperScore</span><span class="p">(</span><span class="n">MetricLayer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Training with symbolic LiRPA bounds for limiting the local maximum of a neural network&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">ibp</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">affine</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MetricMode</span><span class="p">],</span>
+        <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">],</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            ibp: boolean that indicates whether we propagate constant</span>
+<span class="sd">                bounds</span>
+<span class="sd">            affine: boolean that indicates whether we propagate affine</span>
+<span class="sd">                bounds</span>
+<span class="sd">            mode: str: &#39;backward&#39; or &#39;forward&#39; whether we doforward or</span>
+<span class="sd">                backward linear relaxation</span>
+<span class="sd">            perturbation_domain: the type of input perturbation domain for the</span>
+<span class="sd">                linear relaxation</span>
+<span class="sd">            **kwargs</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ibp</span><span class="o">=</span><span class="n">ibp</span><span class="p">,</span> <span class="n">affine</span><span class="o">=</span><span class="n">affine</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="UpperScore.linear_upper">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.UpperScore.linear_upper">[docs]</a>
+    <span class="k">def</span> <span class="nf">linear_upper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z_tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">y_tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">w_u</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">b_u</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+        <span class="n">w_upper</span> <span class="o">=</span> <span class="n">w_u</span> <span class="o">*</span> <span class="n">y_tensor</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="n">b_upper</span> <span class="o">=</span> <span class="n">b_u</span> <span class="o">*</span> <span class="n">y_tensor</span>
+
+        <span class="n">upper_score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="o">.</span><span class="n">get_upper</span><span class="p">(</span><span class="n">z_tensor</span><span class="p">,</span> <span class="n">w_upper</span><span class="p">,</span> <span class="n">b_upper</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">upper_score</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="UpperScore.call">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.UpperScore.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BackendTensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            inputs</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            upper_score &lt;=0 if the maximum of the neural network is</span>
+<span class="sd">            lower than the target</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">y_tensor</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">z_tensor</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">w_u_f</span><span class="p">,</span> <span class="n">b_u_f</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[:</span><span class="mi">8</span><span class="p">]</span>
+
+            <span class="n">upper_ibp</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u_c</span> <span class="o">*</span> <span class="n">y_tensor</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">upper_affine</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linear_upper</span><span class="p">(</span><span class="n">z_tensor</span><span class="p">,</span> <span class="n">y_tensor</span><span class="p">,</span> <span class="n">w_u_f</span><span class="p">,</span> <span class="n">b_u_f</span><span class="p">)</span>
+            <span class="n">upper_score</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">upper_ibp</span><span class="p">,</span> <span class="n">upper_affine</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">w_u_f</span><span class="p">,</span> <span class="n">b_u_f</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span>
+            <span class="n">upper_score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linear_upper</span><span class="p">(</span><span class="n">z_tensor</span><span class="p">,</span> <span class="n">y_tensor</span><span class="p">,</span> <span class="n">w_u_f</span><span class="p">,</span> <span class="n">b_u_f</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">l_c</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span>
+            <span class="n">upper_score</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u_c</span> <span class="o">*</span> <span class="n">y_tensor</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;not ibp and not affine not implemented&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">MetricMode</span><span class="o">.</span><span class="n">BACKWARD</span><span class="p">:</span>
+            <span class="n">w_u_b</span><span class="p">,</span> <span class="n">b_u_b</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
+            <span class="n">upper_backward</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linear_upper</span><span class="p">(</span><span class="n">z_tensor</span><span class="p">,</span> <span class="n">y_tensor</span><span class="p">,</span> <span class="n">w_u_b</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">b_u_b</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+            <span class="n">upper_score</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">upper_score</span><span class="p">,</span> <span class="n">upper_backward</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">upper_score</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="build_formal_upper_model">
+<a class="viewcode-back" href="../../../api/decomon.metrics.html#decomon.metrics.metric.build_formal_upper_model">[docs]</a>
+<span class="k">def</span> <span class="nf">build_formal_upper_model</span><span class="p">(</span><span class="n">decomon_model</span><span class="p">:</span> <span class="n">DecomonModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">keras</span><span class="o">.</span><span class="n">Model</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;automatic design on a Keras  model which predicts a certificate on the local upper bound</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        decomon_model</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># check type and that backward pass is available</span>
+
+    <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">perturbation_domain</span>
+    <span class="n">layer</span> <span class="o">=</span> <span class="n">UpperScore</span><span class="p">(</span><span class="n">decomon_model</span><span class="o">.</span><span class="n">ibp</span><span class="p">,</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="p">)</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">output</span>
+    <span class="nb">input</span> <span class="o">=</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">input</span>
+    <span class="n">n_out</span> <span class="o">=</span> <span class="n">decomon_model</span><span class="o">.</span><span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="n">y_out</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">n_out</span><span class="p">)</span>
+
+    <span class="n">upper_score</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">output</span> <span class="o">+</span> <span class="p">[</span><span class="n">y_out</span><span class="p">])</span>
+    <span class="n">upper_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="nb">input</span> <span class="o">+</span> <span class="p">[</span><span class="n">y_out</span><span class="p">],</span> <span class="n">upper_score</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">upper_model</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_get_ibp_score</span><span class="p">(</span>
+    <span class="n">u_c</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">l_c</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">source_tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">target_tensor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">target_tensor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">target_tensor</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">source_tensor</span>
+
+    <span class="n">shape</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">u_c</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+    <span class="n">u_c_reshaped</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">u_c</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="p">))</span>
+    <span class="n">l_c_reshaped</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">l_c</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="p">))</span>
+
+    <span class="n">score_u</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">l_c_reshaped</span> <span class="o">*</span> <span class="n">target_tensor</span>
+        <span class="o">-</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">u_c_reshaped</span> <span class="o">*</span> <span class="n">source_tensor</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="o">-</span> <span class="mf">1e6</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">target_tensor</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">K</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">score_u</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_affine_score</span><span class="p">(</span>
+    <span class="n">z_tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">w_u</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">b_u</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">w_l</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">b_l</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">source_tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">PerturbationDomain</span><span class="p">,</span>
+    <span class="n">target_tensor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">target_tensor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">target_tensor</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">source_tensor</span>
+
+    <span class="n">n_dim</span> <span class="o">=</span> <span class="n">w_u</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">b_u</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+    <span class="n">w_u_reshaped</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">w_u</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_dim</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">w_l_reshaped</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">w_l</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_dim</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="p">))</span>
+    <span class="n">b_u_reshaped</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">b_u</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">b_l_reshaped</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">b_l</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="p">))</span>
+
+    <span class="n">w_u_f</span> <span class="o">=</span> <span class="n">w_l_reshaped</span> <span class="o">-</span> <span class="n">w_u_reshaped</span>
+    <span class="n">b_u_f</span> <span class="o">=</span> <span class="n">b_l_reshaped</span> <span class="o">-</span> <span class="n">b_u_reshaped</span>
+
+    <span class="c1"># add penalties on biases</span>
+    <span class="n">oneminus_target_tensor</span><span class="p">:</span> <span class="n">Tensor</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">target_tensor</span>  <span class="c1"># for mypy</span>
+    <span class="n">oneminus_source_tensor</span><span class="p">:</span> <span class="n">Tensor</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">source_tensor</span>  <span class="c1"># for mypy</span>
+    <span class="n">b_u_f</span> <span class="o">=</span> <span class="n">b_u_f</span> <span class="o">-</span> <span class="mf">1e6</span> <span class="o">*</span> <span class="n">oneminus_target_tensor</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">b_u_f</span> <span class="o">=</span> <span class="n">b_u_f</span> <span class="o">-</span> <span class="mf">1e6</span> <span class="o">*</span> <span class="n">oneminus_source_tensor</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
+
+    <span class="n">upper</span> <span class="o">=</span> <span class="n">perturbation_domain</span><span class="o">.</span><span class="n">get_upper</span><span class="p">(</span><span class="n">z_tensor</span><span class="p">,</span> <span class="n">w_u_f</span><span class="p">,</span> <span class="n">b_u_f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">K</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">upper</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_get_backward_score</span><span class="p">(</span>
+    <span class="n">z_tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">w_u</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">b_u</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">w_l</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">b_l</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">source_tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">PerturbationDomain</span><span class="p">,</span>
+    <span class="n">target_tensor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">_get_affine_score</span><span class="p">(</span>
+        <span class="n">z_tensor</span><span class="p">,</span>
+        <span class="n">w_u</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="n">b_u</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="n">w_l</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="n">b_l</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="n">source_tensor</span><span class="p">,</span>
+        <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span>
+        <span class="n">target_tensor</span><span class="o">=</span><span class="n">target_tensor</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Airbus.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+<script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>decomon.models.models &mdash; decomon main documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=a8da1a53"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/versions.js?v=59b132a2"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            decomon
+          </a>
+              <div class="version">
+                main
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">decomon</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content style-external-links">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">decomon.models.models</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for decomon.models.models</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">keras</span>
+<span class="kn">import</span> <span class="nn">keras.ops</span> <span class="k">as</span> <span class="nn">K</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">keras</span> <span class="kn">import</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">keras.utils</span> <span class="kn">import</span> <span class="n">serialize_keras_object</span>
+
+<span class="kn">from</span> <span class="nn">decomon.core</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">BoxDomain</span><span class="p">,</span>
+    <span class="n">GridDomain</span><span class="p">,</span>
+    <span class="n">InputsOutputsSpec</span><span class="p">,</span>
+    <span class="n">Option</span><span class="p">,</span>
+    <span class="n">PerturbationDomain</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">decomon.models.utils</span> <span class="kn">import</span> <span class="n">ConvertMethod</span>
+
+
+<div class="viewcode-block" id="DecomonModel">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.models.DecomonModel">[docs]</a>
+<span class="k">class</span> <span class="nc">DecomonModel</span><span class="p">(</span><span class="n">keras</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">inputs</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">keras</span><span class="o">.</span><span class="n">KerasTensor</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">keras</span><span class="o">.</span><span class="n">KerasTensor</span><span class="p">]],</span>
+        <span class="n">outputs</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">keras</span><span class="o">.</span><span class="n">KerasTensor</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">keras</span><span class="o">.</span><span class="n">KerasTensor</span><span class="p">]],</span>
+        <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">method</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ConvertMethod</span><span class="p">]</span> <span class="o">=</span> <span class="n">ConvertMethod</span><span class="o">.</span><span class="n">FORWARD_AFFINE</span><span class="p">,</span>
+        <span class="n">ibp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">affine</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">shared</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">backward_bounds</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">perturbation_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">BoxDomain</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">perturbation_domain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span> <span class="o">=</span> <span class="n">dc_decomp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="n">ConvertMethod</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span> <span class="o">=</span> <span class="n">ibp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">affine</span> <span class="o">=</span> <span class="n">affine</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finetune</span> <span class="o">=</span> <span class="n">finetune</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backward_bounds</span> <span class="o">=</span> <span class="n">backward_bounds</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared</span> <span class="o">=</span> <span class="n">shared</span>
+
+<div class="viewcode-block" id="DecomonModel.get_config">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.models.DecomonModel.get_config">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="c1"># force having functional config which is skipped by default</span>
+        <span class="c1"># because DecomonModel.__init__() has not same signature as Functional.__init__()</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="p">)</span><span class="o">.</span><span class="n">get_config</span><span class="p">()</span>
+        <span class="c1"># update with correct name + specific attributes of decomon model</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="nb">dict</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">serialize_keras_object</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">),</span>
+                <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span>
+                <span class="n">method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="p">,</span>
+                <span class="n">ibp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ibp</span><span class="p">,</span>
+                <span class="n">affine</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
+                <span class="n">finetune</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">finetune</span><span class="p">,</span>
+                <span class="n">shared</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shared</span><span class="p">,</span>
+                <span class="n">backward_bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">backward_bounds</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">config</span></div>
+
+
+<div class="viewcode-block" id="DecomonModel.set_domain">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.models.DecomonModel.set_domain">[docs]</a>
+    <span class="k">def</span> <span class="nf">set_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">PerturbationDomain</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">_check_domain</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">perturbation_domain</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;perturbation_domain&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">perturbation_domain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span></div>
+
+
+<div class="viewcode-block" id="DecomonModel.freeze_weights">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.models.DecomonModel.freeze_weights">[docs]</a>
+    <span class="k">def</span> <span class="nf">freeze_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;freeze_weights&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">freeze_weights</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="DecomonModel.unfreeze_weights">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.models.DecomonModel.unfreeze_weights">[docs]</a>
+    <span class="k">def</span> <span class="nf">unfreeze_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;unfreeze_weights&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">unfreeze_weights</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="DecomonModel.freeze_alpha">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.models.DecomonModel.freeze_alpha">[docs]</a>
+    <span class="k">def</span> <span class="nf">freeze_alpha</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;freeze_alpha&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">freeze_alpha</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="DecomonModel.unfreeze_alpha">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.models.DecomonModel.unfreeze_alpha">[docs]</a>
+    <span class="k">def</span> <span class="nf">unfreeze_alpha</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;unfreeze_alpha&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">unfreeze_alpha</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="DecomonModel.reset_finetuning">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.models.DecomonModel.reset_finetuning">[docs]</a>
+    <span class="k">def</span> <span class="nf">reset_finetuning</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;reset_finetuning&quot;</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">reset_finetuning</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="DecomonModel.predict_on_single_batch_np">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.models.DecomonModel.predict_on_single_batch_np">[docs]</a>
+    <span class="k">def</span> <span class="nf">predict_on_single_batch_np</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Make predictions on numpy arrays fitting in one batch</span>
+
+<span class="sd">        Avoid using `self.predict()` known to be not designed for small arrays,</span>
+<span class="sd">        and leading to memory leaks when used in loops.</span>
+
+<span class="sd">        See https://keras.io/api/models/model_training_apis/#predict-method and</span>
+<span class="sd">        https://github.com/tensorflow/tensorflow/issues/44711</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            inputs:</span>
+
+<span class="sd">        Returns:</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">output_tensors</span> <span class="o">=</span> <span class="bp">self</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output_tensors</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">K</span><span class="o">.</span><span class="n">convert_to_numpy</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="k">for</span> <span class="n">output</span> <span class="ow">in</span> <span class="n">output_tensors</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">K</span><span class="o">.</span><span class="n">convert_to_numpy</span><span class="p">(</span><span class="n">output_tensors</span><span class="p">)</span></div>
+</div>
+
+
+
+<span class="k">def</span> <span class="nf">_check_domain</span><span class="p">(</span>
+    <span class="n">perturbation_domain_prev</span><span class="p">:</span> <span class="n">PerturbationDomain</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">PerturbationDomain</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PerturbationDomain</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">perturbation_domain</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">type</span><span class="p">(</span><span class="n">perturbation_domain_prev</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;We can only change the parameters of the perturbation domain, not its type.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">perturbation_domain</span>
+
+
+<div class="viewcode-block" id="get_AB">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.models.get_AB">[docs]</a>
+<span class="k">def</span> <span class="nf">get_AB</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">DecomonModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">keras</span><span class="o">.</span><span class="n">Variable</span><span class="p">]]:</span>
+    <span class="n">dico_AB</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">keras</span><span class="o">.</span><span class="n">Variable</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">perturbation_domain</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">perturbation_domain</span><span class="p">,</span> <span class="n">GridDomain</span><span class="p">)</span> <span class="ow">and</span> <span class="n">perturbation_domain</span><span class="o">.</span><span class="n">opt_option</span> <span class="o">==</span> <span class="n">Option</span><span class="o">.</span><span class="n">milp</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">dico_AB</span>
+
+    <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">sub_names</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;backward_activation&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sub_names</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">layer</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">layer</span><span class="o">.</span><span class="n">rec</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dico_AB</span><span class="p">:</span>
+                <span class="n">dico_AB</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">grid_finetune</span>
+    <span class="k">return</span> <span class="n">dico_AB</span></div>
+
+
+
+<div class="viewcode-block" id="get_AB_finetune">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.models.get_AB_finetune">[docs]</a>
+<span class="k">def</span> <span class="nf">get_AB_finetune</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">DecomonModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">keras</span><span class="o">.</span><span class="n">Variable</span><span class="p">]:</span>
+    <span class="n">dico_AB</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">keras</span><span class="o">.</span><span class="n">Variable</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">perturbation_domain</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">perturbation_domain</span><span class="p">,</span> <span class="n">GridDomain</span><span class="p">)</span> <span class="ow">and</span> <span class="n">perturbation_domain</span><span class="o">.</span><span class="n">opt_option</span> <span class="o">==</span> <span class="n">Option</span><span class="o">.</span><span class="n">milp</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">dico_AB</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">model</span><span class="o">.</span><span class="n">finetune</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">dico_AB</span>
+
+    <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">sub_names</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;backward_activation&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sub_names</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">layer</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">layer</span><span class="o">.</span><span class="n">rec</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dico_AB</span><span class="p">:</span>
+                <span class="n">dico_AB</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">alpha_b_l</span>
+    <span class="k">return</span> <span class="n">dico_AB</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Airbus.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+<script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

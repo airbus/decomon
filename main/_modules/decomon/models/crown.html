@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>decomon.models.crown &mdash; decomon main documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=a8da1a53"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/versions.js?v=59b132a2"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            decomon
+          </a>
+              <div class="version">
+                main
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">decomon</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content style-external-links">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">decomon.models.crown</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for decomon.models.crown</h1><div class="highlight"><pre>
+<span></span><span class="c1"># extra layers necessary for backward LiRPA</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">keras.ops</span> <span class="k">as</span> <span class="nn">K</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">InputSpec</span><span class="p">,</span> <span class="n">Layer</span>
+<span class="kn">from</span> <span class="nn">keras.src.layers.merging.dot</span> <span class="kn">import</span> <span class="n">batch_dot</span>
+
+<span class="kn">from</span> <span class="nn">decomon.core</span> <span class="kn">import</span> <span class="n">ForwardMode</span><span class="p">,</span> <span class="n">PerturbationDomain</span>
+<span class="kn">from</span> <span class="nn">decomon.keras_utils</span> <span class="kn">import</span> <span class="n">BatchedDiagLike</span>
+<span class="kn">from</span> <span class="nn">decomon.types</span> <span class="kn">import</span> <span class="n">BackendTensor</span>
+
+
+<div class="viewcode-block" id="Fuse">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.crown.Fuse">[docs]</a>
+<span class="k">class</span> <span class="nc">Fuse</span><span class="p">(</span><span class="n">Layer</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Fuse.call">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.crown.Fuse.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">]:</span>
+        <span class="n">inputs_wo_backward_bounds</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span>
+        <span class="n">backward_bounds</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">:]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">AFFINE</span><span class="p">:</span>
+            <span class="n">x_0</span><span class="p">,</span> <span class="n">w_f_u</span><span class="p">,</span> <span class="n">b_f_u</span><span class="p">,</span> <span class="n">w_f_l</span><span class="p">,</span> <span class="n">b_f_l</span> <span class="o">=</span> <span class="n">inputs_wo_backward_bounds</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">:</span>
+            <span class="n">x_0</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">w_f_u</span><span class="p">,</span> <span class="n">b_f_u</span><span class="p">,</span> <span class="n">l_c</span><span class="p">,</span> <span class="n">w_f_l</span><span class="p">,</span> <span class="n">b_f_l</span> <span class="o">=</span> <span class="n">inputs_wo_backward_bounds</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">backward_bounds</span>
+
+        <span class="k">return</span> <span class="n">merge_with_previous</span><span class="p">([</span><span class="n">w_f_u</span><span class="p">,</span> <span class="n">b_f_u</span><span class="p">,</span> <span class="n">w_f_l</span><span class="p">,</span> <span class="n">b_f_l</span><span class="p">]</span> <span class="o">+</span> <span class="n">backward_bounds</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Fuse.compute_output_shape">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.crown.Fuse.compute_output_shape">[docs]</a>
+    <span class="k">def</span> <span class="nf">compute_output_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]]:</span>
+        <span class="n">inputs_wo_backward_bounds_shapes</span> <span class="o">=</span> <span class="n">input_shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span>
+        <span class="n">backward_bounds_shapes</span> <span class="o">=</span> <span class="n">input_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">:]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">AFFINE</span><span class="p">:</span>
+            <span class="n">x_0_shape</span><span class="p">,</span> <span class="n">w_f_u_shape</span><span class="p">,</span> <span class="n">b_f_u_shape</span><span class="p">,</span> <span class="n">w_f_l_shape</span><span class="p">,</span> <span class="n">b_f_l_shape</span> <span class="o">=</span> <span class="n">inputs_wo_backward_bounds_shapes</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">:</span>
+            <span class="p">(</span>
+                <span class="n">x_0_shape</span><span class="p">,</span>
+                <span class="n">u_c_shape</span><span class="p">,</span>
+                <span class="n">w_f_u_shape</span><span class="p">,</span>
+                <span class="n">b_f_u_shape</span><span class="p">,</span>
+                <span class="n">l_c_shape</span><span class="p">,</span>
+                <span class="n">w_f_l_shape</span><span class="p">,</span>
+                <span class="n">b_f_l_shape</span><span class="p">,</span>
+            <span class="p">)</span> <span class="o">=</span> <span class="n">inputs_wo_backward_bounds_shapes</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">backward_bounds_shapes</span>
+
+        <span class="k">return</span> <span class="n">merge_with_previous_compute_output_shape</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">w_f_u_shape</span><span class="p">,</span> <span class="n">b_f_u_shape</span><span class="p">,</span> <span class="n">w_f_l_shape</span><span class="p">,</span> <span class="n">b_f_l_shape</span><span class="p">]</span> <span class="o">+</span> <span class="n">backward_bounds_shapes</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Fuse.get_config">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.crown.Fuse.get_config">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_config</span><span class="p">()</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">config</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="Convert2BackwardMode">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.crown.Convert2BackwardMode">[docs]</a>
+<span class="k">class</span> <span class="nc">Convert2BackwardMode</span><span class="p">(</span><span class="n">Layer</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">],</span> <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">PerturbationDomain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">perturbation_domain</span>
+
+<div class="viewcode-block" id="Convert2BackwardMode.call">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.crown.Convert2BackwardMode.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">]:</span>
+        <span class="n">inputs_wo_backward_bounds</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span>
+        <span class="n">backward_bounds</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">:]</span>
+        <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span> <span class="o">=</span> <span class="n">backward_bounds</span>
+        <span class="n">empty_tensor</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">convert_to_tensor</span><span class="p">([])</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">ForwardMode</span><span class="o">.</span><span class="n">AFFINE</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">]:</span>
+            <span class="n">x_0</span> <span class="o">=</span> <span class="n">inputs_wo_backward_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">u_c</span><span class="p">,</span> <span class="n">l_c</span> <span class="o">=</span> <span class="n">inputs_wo_backward_bounds</span>
+            <span class="n">x_0</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">l_c</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">K</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">u_c</span><span class="p">,</span> <span class="mi">1</span><span class="p">)],</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">ForwardMode</span><span class="o">.</span><span class="n">IBP</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">]:</span>
+            <span class="n">u_c_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="o">.</span><span class="n">get_upper</span><span class="p">(</span><span class="n">x_0</span><span class="p">,</span> <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">)</span>
+            <span class="n">l_c_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="o">.</span><span class="n">get_lower</span><span class="p">(</span><span class="n">x_0</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">u_c_out</span><span class="p">,</span> <span class="n">l_c_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">AFFINE</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">x_0</span><span class="p">]</span> <span class="o">+</span> <span class="n">backward_bounds</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">IBP</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">u_c_out</span><span class="p">,</span> <span class="n">l_c_out</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">x_0</span><span class="p">,</span> <span class="n">u_c_out</span><span class="p">,</span> <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">l_c_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span><span class="p">]</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknwon mode </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Convert2BackwardMode.get_config">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.crown.Convert2BackwardMode.get_config">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_config</span><span class="p">()</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;perturbation_domain&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">config</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="MergeWithPrevious">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.crown.MergeWithPrevious">[docs]</a>
+<span class="k">class</span> <span class="nc">MergeWithPrevious</span><span class="p">(</span><span class="n">Layer</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">input_shape_layer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">backward_shape_layer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_shape_layer</span> <span class="o">=</span> <span class="n">input_shape_layer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backward_shape_layer</span> <span class="o">=</span> <span class="n">backward_shape_layer</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">input_shape_layer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">backward_shape_layer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">n_in</span><span class="p">,</span> <span class="n">n_h</span> <span class="o">=</span> <span class="n">input_shape_layer</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">n_h</span><span class="p">,</span> <span class="n">n_out</span> <span class="o">=</span> <span class="n">backward_shape_layer</span>
+
+            <span class="n">w_out_spec</span> <span class="o">=</span> <span class="n">InputSpec</span><span class="p">(</span><span class="n">ndim</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="n">n_h</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">:</span> <span class="n">n_in</span><span class="p">})</span>
+            <span class="n">b_out_spec</span> <span class="o">=</span> <span class="n">InputSpec</span><span class="p">(</span><span class="n">ndim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="n">n_h</span><span class="p">})</span>
+            <span class="n">w_b_spec</span> <span class="o">=</span> <span class="n">InputSpec</span><span class="p">(</span><span class="n">ndim</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="n">n_out</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">:</span> <span class="n">n_h</span><span class="p">})</span>
+            <span class="n">b_b_spec</span> <span class="o">=</span> <span class="n">InputSpec</span><span class="p">(</span><span class="n">ndim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="n">n_out</span><span class="p">})</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">input_spec</span> <span class="o">=</span> <span class="p">[</span><span class="n">w_out_spec</span><span class="p">,</span> <span class="n">b_out_spec</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">[</span><span class="n">w_b_spec</span><span class="p">,</span> <span class="n">b_b_spec</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span>  <span class="c1">#</span>
+
+<div class="viewcode-block" id="MergeWithPrevious.call">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.crown.MergeWithPrevious.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">merge_with_previous</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MergeWithPrevious.compute_output_shape">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.crown.MergeWithPrevious.compute_output_shape">[docs]</a>
+    <span class="k">def</span> <span class="nf">compute_output_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]]:</span>
+        <span class="k">return</span> <span class="n">merge_with_previous_compute_output_shape</span><span class="p">(</span><span class="n">input_shape</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MergeWithPrevious.get_config">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.crown.MergeWithPrevious.get_config">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_config</span><span class="p">()</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;input_shape_layer&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_shape_layer</span><span class="p">,</span>
+                <span class="s2">&quot;backward_shape_layer&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">backward_shape_layer</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">config</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="merge_with_previous_compute_output_shape">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.crown.merge_with_previous_compute_output_shape">[docs]</a>
+<span class="k">def</span> <span class="nf">merge_with_previous_compute_output_shape</span><span class="p">(</span>
+    <span class="n">input_shapes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]]:</span>
+    <span class="n">w_b_in_shape</span><span class="p">,</span> <span class="n">b_b_in_shape</span> <span class="o">=</span> <span class="n">input_shapes</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
+    <span class="n">w_out_in_shape</span><span class="p">,</span> <span class="n">b_out_in_shape</span> <span class="o">=</span> <span class="n">input_shapes</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">batch_size</span><span class="p">,</span> <span class="n">flattened_keras_input_shape</span><span class="p">,</span> <span class="n">flattened_keras_output_shape</span> <span class="o">=</span> <span class="n">w_out_in_shape</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">flattened_model_output_shape</span> <span class="o">=</span> <span class="n">w_b_in_shape</span>
+    <span class="n">b_b_out_shape</span> <span class="o">=</span> <span class="n">b_b_in_shape</span>
+    <span class="n">w_b_out_shape</span> <span class="o">=</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">flattened_keras_input_shape</span><span class="p">,</span> <span class="n">flattened_model_output_shape</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">w_b_out_shape</span><span class="p">,</span> <span class="n">b_b_out_shape</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span></div>
+
+
+
+<div class="viewcode-block" id="merge_with_previous">
+<a class="viewcode-back" href="../../../api/decomon.models.html#decomon.models.crown.merge_with_previous">[docs]</a>
+<span class="k">def</span> <span class="nf">merge_with_previous</span><span class="p">(</span><span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">]:</span>
+    <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span><span class="p">,</span> <span class="n">w_b_u</span><span class="p">,</span> <span class="n">b_b_u</span><span class="p">,</span> <span class="n">w_b_l</span><span class="p">,</span> <span class="n">b_b_l</span> <span class="o">=</span> <span class="n">inputs</span>
+
+    <span class="c1"># w_u_out (None, n_h_in, n_h_out)</span>
+    <span class="c1"># w_b_u (None, n_h_out, n_out)</span>
+
+    <span class="c1"># w_u_out_ (None, n_h_in, n_h_out, 1)</span>
+    <span class="c1"># w_b_u_ (None, 1, n_h_out, n_out)</span>
+    <span class="c1"># w_u_out_*w_b_u_ (None, n_h_in, n_h_out, n_out)</span>
+
+    <span class="c1"># result (None, n_h_in, n_out)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">w_u_out</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">w_u_out</span> <span class="o">=</span> <span class="n">BatchedDiagLike</span><span class="p">()(</span><span class="n">w_u_out</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">w_l_out</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">w_l_out</span> <span class="o">=</span> <span class="n">BatchedDiagLike</span><span class="p">()(</span><span class="n">w_l_out</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">w_b_u</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">w_b_u</span> <span class="o">=</span> <span class="n">BatchedDiagLike</span><span class="p">()(</span><span class="n">w_b_u</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">w_b_l</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">w_b_l</span> <span class="o">=</span> <span class="n">BatchedDiagLike</span><span class="p">()(</span><span class="n">w_b_l</span><span class="p">)</span>
+
+    <span class="c1"># import pdb; pdb.set_trace()</span>
+
+    <span class="n">z_value</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">w_u_out</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">w_b_u_pos</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">w_b_u</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>
+    <span class="n">w_b_u_neg</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">w_b_u</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>
+    <span class="n">w_b_l_pos</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">w_b_l</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>
+    <span class="n">w_b_l_neg</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">w_b_l</span><span class="p">,</span> <span class="n">z_value</span><span class="p">)</span>
+
+    <span class="n">w_u</span> <span class="o">=</span> <span class="n">batch_dot</span><span class="p">(</span><span class="n">w_u_out</span><span class="p">,</span> <span class="n">w_b_u_pos</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">))</span> <span class="o">+</span> <span class="n">batch_dot</span><span class="p">(</span><span class="n">w_l_out</span><span class="p">,</span> <span class="n">w_b_u_neg</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">w_l</span> <span class="o">=</span> <span class="n">batch_dot</span><span class="p">(</span><span class="n">w_l_out</span><span class="p">,</span> <span class="n">w_b_l_pos</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">))</span> <span class="o">+</span> <span class="n">batch_dot</span><span class="p">(</span><span class="n">w_u_out</span><span class="p">,</span> <span class="n">w_b_l_neg</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">b_u</span> <span class="o">=</span> <span class="n">batch_dot</span><span class="p">(</span><span class="n">b_u_out</span><span class="p">,</span> <span class="n">w_b_u_pos</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">))</span> <span class="o">+</span> <span class="n">batch_dot</span><span class="p">(</span><span class="n">b_l_out</span><span class="p">,</span> <span class="n">w_b_u_neg</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">))</span> <span class="o">+</span> <span class="n">b_b_u</span>
+    <span class="n">b_l</span> <span class="o">=</span> <span class="n">batch_dot</span><span class="p">(</span><span class="n">b_l_out</span><span class="p">,</span> <span class="n">w_b_l_pos</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">))</span> <span class="o">+</span> <span class="n">batch_dot</span><span class="p">(</span><span class="n">b_u_out</span><span class="p">,</span> <span class="n">w_b_l_neg</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">))</span> <span class="o">+</span> <span class="n">b_b_l</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">]</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Airbus.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+<script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

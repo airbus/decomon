@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>decomon.keras_utils &mdash; decomon main documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=a8da1a53"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../_static/versions.js?v=59b132a2"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            decomon
+          </a>
+              <div class="version">
+                main
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">decomon</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content style-external-links">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">decomon.keras_utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for decomon.keras_utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span> <span class="nn">keras</span>
+<span class="kn">import</span> <span class="nn">keras.ops</span> <span class="k">as</span> <span class="nn">K</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Layer</span>
+
+<span class="kn">from</span> <span class="nn">decomon.types</span> <span class="kn">import</span> <span class="n">BackendTensor</span><span class="p">,</span> <span class="n">Tensor</span>
+
+<span class="n">BACKEND_TENSORFLOW</span> <span class="o">=</span> <span class="s2">&quot;tensorflow&quot;</span>
+<span class="n">BACKEND_PYTORCH</span> <span class="o">=</span> <span class="s2">&quot;torch&quot;</span>
+<span class="n">BACKEND_NUMPY</span> <span class="o">=</span> <span class="s2">&quot;numpy&quot;</span>
+<span class="n">BACKEND_JAX</span> <span class="o">=</span> <span class="s2">&quot;jax&quot;</span>
+
+
+<div class="viewcode-block" id="BatchedIdentityLike">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.keras_utils.BatchedIdentityLike">[docs]</a>
+<span class="k">class</span> <span class="nc">BatchedIdentityLike</span><span class="p">(</span><span class="n">keras</span><span class="o">.</span><span class="n">Operation</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Keras Operation creating an identity tensor with shape (including batch_size) based on input.</span>
+
+<span class="sd">    The output shape is tuple(x.shape) + (x.shape[-1],), the tensor being the identity</span>
+<span class="sd">    along the 2 last dimensions.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="BatchedIdentityLike.call">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.keras_utils.BatchedIdentityLike.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">BackendTensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+        <span class="n">input_shape</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">identity_tensor</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">input_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">n_repeat</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">input_shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">identity_tensor</span><span class="p">[</span><span class="kc">None</span><span class="p">],</span> <span class="n">n_repeat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span></div>
+
+
+<div class="viewcode-block" id="BatchedIdentityLike.compute_output_spec">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.keras_utils.BatchedIdentityLike.compute_output_spec">[docs]</a>
+    <span class="k">def</span> <span class="nf">compute_output_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">keras</span><span class="o">.</span><span class="n">KerasTensor</span><span class="p">:</span>
+        <span class="n">x_shape</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">x_type</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="s2">&quot;dtype&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">x_sparse</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="s2">&quot;sparse&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">keras</span><span class="o">.</span><span class="n">KerasTensor</span><span class="p">(</span>
+            <span class="n">shape</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">x_shape</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">x_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],),</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">x_type</span><span class="p">,</span>
+            <span class="n">sparse</span><span class="o">=</span><span class="n">x_sparse</span><span class="p">,</span>
+        <span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="BatchedDiagLike">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.keras_utils.BatchedDiagLike">[docs]</a>
+<span class="k">class</span> <span class="nc">BatchedDiagLike</span><span class="p">(</span><span class="n">keras</span><span class="o">.</span><span class="n">Operation</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Keras Operation transforming last dimension into a diagonal tensor.</span>
+
+<span class="sd">    The output shape is tuple(x.shape) + (x.shape[-1],).</span>
+<span class="sd">    When fixing all but 2 last dimensions, the output tensor is a square tensor</span>
+<span class="sd">    whose main diagonal is the input tensor with same first dimensions fixed, and 0 elsewhere.</span>
+
+<span class="sd">    This is a replacement for tensorflow.linalg.diag().</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="BatchedDiagLike.call">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.keras_utils.BatchedDiagLike.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">BackendTensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">K</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">K</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">w_part</span><span class="p">))[</span><span class="kc">None</span><span class="p">]</span> <span class="k">for</span> <span class="n">w_part</span> <span class="ow">in</span> <span class="n">K</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="BatchedDiagLike.compute_output_spec">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.keras_utils.BatchedDiagLike.compute_output_spec">[docs]</a>
+    <span class="k">def</span> <span class="nf">compute_output_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">keras</span><span class="o">.</span><span class="n">KerasTensor</span><span class="p">:</span>
+        <span class="n">x_shape</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">x_type</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="s2">&quot;dtype&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">x_sparse</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="s2">&quot;sparse&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">keras</span><span class="o">.</span><span class="n">KerasTensor</span><span class="p">(</span>
+            <span class="n">shape</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">x_shape</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">x_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],),</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">x_type</span><span class="p">,</span>
+            <span class="n">sparse</span><span class="o">=</span><span class="n">x_sparse</span><span class="p">,</span>
+        <span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="is_symbolic_tensor">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.keras_utils.is_symbolic_tensor">[docs]</a>
+<span class="k">def</span> <span class="nf">is_symbolic_tensor</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check whether the tensor is symbolic or not.</span>
+
+<span class="sd">    Works even during backend calls made by layers without actual compute_output_shape().</span>
+<span class="sd">    In this case, x is not KerasTensor anymore but a backend Tensor with None in its shape.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="kc">None</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span></div>
+
+
+
+<div class="viewcode-block" id="get_weight_index">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.keras_utils.get_weight_index">[docs]</a>
+<span class="k">def</span> <span class="nf">get_weight_index</span><span class="p">(</span><span class="n">layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span> <span class="n">weight</span><span class="p">:</span> <span class="n">keras</span><span class="o">.</span><span class="n">Variable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get weight index among layer tracked weights</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        layer: layer we are looking</span>
+<span class="sd">        weight: weight supposed to be part of tracked weights by the layer</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        the index of the weight in `layer.weights` list</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        IndexError: if `weight` is not part of `layer.weights`</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">indexes</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span> <span class="k">if</span> <span class="n">w</span> <span class="ow">is</span> <span class="n">weight</span><span class="p">]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">indexes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The weight </span><span class="si">{</span><span class="n">weight</span><span class="si">}</span><span class="s2"> is not tracked by the layer </span><span class="si">{</span><span class="n">layer</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_weight_index_from_name">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.keras_utils.get_weight_index_from_name">[docs]</a>
+<span class="k">def</span> <span class="nf">get_weight_index_from_name</span><span class="p">(</span><span class="n">layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span> <span class="n">weight_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get weight index among layer tracked weights</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        layer: layer we are looking</span>
+<span class="sd">        weight_name: name of the weight supposed to be part of tracked weights by the layer</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        the index of the weight in `layer.weights` list</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        AttributeError: if `weight_name` is not the name of an attribute of `layer`</span>
+<span class="sd">        IndexError: if the corresponding layer attribute is not part of `layer.weights`</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">weight</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">weight_name</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">get_weight_index</span><span class="p">(</span><span class="n">layer</span><span class="o">=</span><span class="n">layer</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="n">weight</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The weight </span><span class="si">{</span><span class="n">weight_name</span><span class="si">}</span><span class="s2"> is not tracked by the layer </span><span class="si">{</span><span class="n">layer</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="reset_layer">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.keras_utils.reset_layer">[docs]</a>
+<span class="k">def</span> <span class="nf">reset_layer</span><span class="p">(</span><span class="n">new_layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span> <span class="n">original_layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span> <span class="n">weight_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reset some weights of a layer by using the weights of another layer.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        new_layer: the decomon layer whose weights will be updated</span>
+<span class="sd">        original_layer: the layer used to update the weights</span>
+<span class="sd">        weight_names: the names of the weights to update</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">original_layer</span><span class="o">.</span><span class="n">built</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;the layer </span><span class="si">{</span><span class="n">original_layer</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has not been built yet&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">new_layer</span><span class="o">.</span><span class="n">built</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;the layer </span><span class="si">{</span><span class="n">new_layer</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has not been built yet&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">new_params</span> <span class="o">=</span> <span class="n">new_layer</span><span class="o">.</span><span class="n">get_weights</span><span class="p">()</span>
+        <span class="n">original_params</span> <span class="o">=</span> <span class="n">original_layer</span><span class="o">.</span><span class="n">get_weights</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">weight_name</span> <span class="ow">in</span> <span class="n">weight_names</span><span class="p">:</span>
+            <span class="n">new_params</span><span class="p">[</span><span class="n">get_weight_index_from_name</span><span class="p">(</span><span class="n">new_layer</span><span class="p">,</span> <span class="n">weight_name</span><span class="p">)]</span> <span class="o">=</span> <span class="n">original_params</span><span class="p">[</span>
+                <span class="n">get_weight_index_from_name</span><span class="p">(</span><span class="n">original_layer</span><span class="p">,</span> <span class="n">weight_name</span><span class="p">)</span>
+            <span class="p">]</span>
+        <span class="n">new_layer</span><span class="o">.</span><span class="n">set_weights</span><span class="p">(</span><span class="n">new_params</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="reset_layer_all_weights">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.keras_utils.reset_layer_all_weights">[docs]</a>
+<span class="k">def</span> <span class="nf">reset_layer_all_weights</span><span class="p">(</span><span class="n">new_layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span> <span class="n">original_layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reset all the weights of a layer by using the weights of another layer.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        new_layer: the decomon layer whose weights will be updated</span>
+<span class="sd">        original_layer: the layer used to update the weights</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">reset_layer</span><span class="p">(</span><span class="n">new_layer</span><span class="o">=</span><span class="n">new_layer</span><span class="p">,</span> <span class="n">original_layer</span><span class="o">=</span><span class="n">original_layer</span><span class="p">,</span> <span class="n">weight_names</span><span class="o">=</span><span class="p">[</span><span class="n">w</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">new_layer</span><span class="o">.</span><span class="n">weights</span><span class="p">])</span></div>
+
+
+
+<div class="viewcode-block" id="share_layer_all_weights">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.keras_utils.share_layer_all_weights">[docs]</a>
+<span class="k">def</span> <span class="nf">share_layer_all_weights</span><span class="p">(</span>
+    <span class="n">original_layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span>
+    <span class="n">new_layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Share all the weights of an already built layer to another unbuilt layer.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        original_layer: the layer used to share the weights</span>
+<span class="sd">        new_layer: the new layer which will be buit and will share the weights of the original layer</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">share_weights_and_build</span><span class="p">(</span>
+        <span class="n">new_layer</span><span class="o">=</span><span class="n">new_layer</span><span class="p">,</span> <span class="n">original_layer</span><span class="o">=</span><span class="n">original_layer</span><span class="p">,</span> <span class="n">weight_names</span><span class="o">=</span><span class="p">[</span><span class="n">w</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">original_layer</span><span class="o">.</span><span class="n">weights</span><span class="p">]</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="share_weights_and_build">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.keras_utils.share_weights_and_build">[docs]</a>
+<span class="k">def</span> <span class="nf">share_weights_and_build</span><span class="p">(</span><span class="n">original_layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span> <span class="n">new_layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span> <span class="n">weight_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Share the weights specidifed by names of an already built layer to another unbuilt layer.</span>
+
+<span class="sd">    We assume that each weight is also an original_laer&#39;s attribute whose name is the weight name.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        original_layer: the layer used to share the weights</span>
+<span class="sd">        new_layer: the new layer which will be buit and will share the weights of the original layer</span>
+<span class="sd">        weight_names: names of the weights to share</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Check the original_layer is built and the new_layer is not built</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">original_layer</span><span class="o">.</span><span class="n">built</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The original layer must already be built for sharing its weights.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">new_layer</span><span class="o">.</span><span class="n">built</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The new layer must not be built to get the weights of the original layer&quot;</span><span class="p">)</span>
+    <span class="c1"># Check that input exists really (ie that the layer has already been called on a symbolic KerasTensor</span>
+    <span class="n">inp</span> <span class="o">=</span> <span class="n">original_layer</span><span class="o">.</span><span class="n">input</span>  <span class="c1"># will raise a ValueError if not existing</span>
+
+    <span class="c1"># store the weights as a new_layer variable before build (ie before the lock)</span>
+    <span class="k">for</span> <span class="n">w_name</span> <span class="ow">in</span> <span class="n">weight_names</span><span class="p">:</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">original_layer</span><span class="p">,</span> <span class="n">w_name</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="n">new_layer</span><span class="p">,</span> <span class="n">w_name</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="c1"># manage hidden weights introduced for LoRA https://github.com/keras-team/keras/pull/18942</span>
+            <span class="n">w_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;_</span><span class="si">{</span><span class="n">w_name</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">original_layer</span><span class="p">,</span> <span class="n">w_name</span><span class="p">)</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="n">new_layer</span><span class="p">,</span> <span class="n">w_name</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+
+    <span class="c1"># build the layer</span>
+    <span class="n">new_layer</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span>
+    <span class="c1"># overwrite the newly generated weights and untrack them</span>
+    <span class="k">for</span> <span class="n">w_name</span> <span class="ow">in</span> <span class="n">weight_names</span><span class="p">:</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">original_layer</span><span class="p">,</span> <span class="n">w_name</span><span class="p">)</span>
+        <span class="n">w_to_drop</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">new_layer</span><span class="p">,</span> <span class="n">w_name</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="n">new_layer</span><span class="p">,</span> <span class="n">w_name</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="c1"># manage hidden weights introduced for LoRA https://github.com/keras-team/keras/pull/18942</span>
+            <span class="n">w_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;_</span><span class="si">{</span><span class="n">w_name</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">original_layer</span><span class="p">,</span> <span class="n">w_name</span><span class="p">)</span>
+            <span class="n">w_to_drop</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">new_layer</span><span class="p">,</span> <span class="n">w_name</span><span class="p">)</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="n">new_layer</span><span class="p">,</span> <span class="n">w_name</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+        <span class="c1"># untrack the not used anymore weight</span>
+        <span class="n">new_layer</span><span class="o">.</span><span class="n">_tracker</span><span class="o">.</span><span class="n">untrack</span><span class="p">(</span><span class="n">w_to_drop</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="check_if_single_shape">
+<a class="viewcode-back" href="../../api/decomon.html#decomon.keras_utils.check_if_single_shape">[docs]</a>
+<span class="k">def</span> <span class="nf">check_if_single_shape</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        input_shape:</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="n">shape</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">))):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)):</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">)))</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Airbus.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+<script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

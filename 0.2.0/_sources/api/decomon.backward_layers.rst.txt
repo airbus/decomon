@@ -1,0 +1,85 @@
+decomon.backward\_layers package
+================================
+
+Submodules
+----------
+
+decomon.backward\_layers.activations module
+-------------------------------------------
+
+.. automodule:: decomon.backward_layers.activations
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.backward\_layers.backward\_layers module
+------------------------------------------------
+
+.. automodule:: decomon.backward_layers.backward_layers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.backward\_layers.backward\_maxpooling module
+----------------------------------------------------
+
+.. automodule:: decomon.backward_layers.backward_maxpooling
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.backward\_layers.backward\_merge module
+-----------------------------------------------
+
+.. automodule:: decomon.backward_layers.backward_merge
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.backward\_layers.backward\_reshape module
+-------------------------------------------------
+
+.. automodule:: decomon.backward_layers.backward_reshape
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.backward\_layers.convert module
+---------------------------------------
+
+.. automodule:: decomon.backward_layers.convert
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.backward\_layers.core module
+------------------------------------
+
+.. automodule:: decomon.backward_layers.core
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.backward\_layers.utils module
+-------------------------------------
+
+.. automodule:: decomon.backward_layers.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.backward\_layers.utils\_conv module
+-------------------------------------------
+
+.. automodule:: decomon.backward_layers.utils_conv
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: decomon.backward_layers
+   :members:
+   :undoc-members:
+   :show-inheritance:

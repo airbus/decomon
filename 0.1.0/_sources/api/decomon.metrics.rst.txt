@@ -1,0 +1,45 @@
+decomon.metrics package
+=======================
+
+Submodules
+----------
+
+decomon.metrics.complexity module
+---------------------------------
+
+.. automodule:: decomon.metrics.complexity
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.metrics.loss module
+---------------------------
+
+.. automodule:: decomon.metrics.loss
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.metrics.metric module
+-----------------------------
+
+.. automodule:: decomon.metrics.metric
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.metrics.utils module
+----------------------------
+
+.. automodule:: decomon.metrics.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: decomon.metrics
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,109 @@
+# Tutorials
+
+We present here a curated list of notebooks recommended to start with decomon,
+available in the `tutorials/` folder of the repository.
+
+```{contents}
+---
+local: true
+---
+```
+
+## DECOMON tutorial #1
+
+[![Github](https://img.shields.io/badge/see-Github-579aca?logo=github)](https://github.com/airbus/decomon/blob/tutorials-v0.1.1/tutorials/tutorial1_sinus-interactive.ipynb)
+[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/airbus/decomon/blob/tutorials-v0.1.1/tutorials/tutorial1_sinus-interactive.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/airbus/decomon/tutorials-v0.1.1?labpath=tutorials%2Ftutorial1_sinus-interactive.ipynb)
+
+ 
+_**Bounding the output of a Neural Network trained on a sinusoidal function**_
+
+
+
+After training a model, we want to make sure that the model is *smooth*: it will predict almost the same output for any data "close" to the initial one, showing some robustness to perturbation. 
+
+In this notebook, we train a Neural Network to approximate at best a simple sinusoidal function (the reference model). However, between test samples, we have no clue that the output of the Neural Network will look like. The objective is to have a formal proof that outputs of the neural network's predictions do not go to weird values. 
+
+In the first part of the notebook, we define the reference function, build a training and test dataset and learn a dense fully connected neural network to approximate this reference function. 
+
+In the second part of the notebook, we use *decomon* to compute guaranteed bounds to the output of the model.  
+
+What we will show is how decomon module is able to provide guaranteed bounds that ensure our approximation will never have a strange behaviour between test dataset points. 
+
+
+## DECOMON tutorial #2
+
+[![Github](https://img.shields.io/badge/see-Github-579aca?logo=github)](https://github.com/airbus/decomon/blob/tutorials-v0.1.1/tutorials/tutorial2_noise_sensor.ipynb)
+[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/airbus/decomon/blob/tutorials-v0.1.1/tutorials/tutorial2_noise_sensor.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/airbus/decomon/tutorials-v0.1.1?labpath=tutorials%2Ftutorial2_noise_sensor.ipynb)
+
+ 
+_**Local Robustness to sensor noise for Regression**_
+
+
+
+Embedding simulation models developed during the design
+of a platform opens a lot of potential new functionalities
+but requires additional certification. Usually, these models require too much computing power, take too much time to run
+so we need to build an approximation of these models that can
+be compatible with operational constraints, hardware constraints, and real-time constraints. Also, we need to prove that
+the decisions made by the system using the surrogate model
+instead of the reference one will be safe.
+
+A first assessment that can be performed is the **robustness of the prediction given sensor noise**: demonstrating that despite sensor noise, the neural network prediction remains consistent.
+
+Local Robustness to **sensoir noise** can be performed efficiently thanks to formal robustness. In this notebook, we demonstrate how to derive deterministic upper and lower bounds of the output prediction of a neural network in the vicinity of a test sample.
+
+## DECOMON tutorial #3
+
+[![Github](https://img.shields.io/badge/see-Github-579aca?logo=github)](https://github.com/airbus/decomon/blob/tutorials-v0.1.1/tutorials/tutorial3_adversarial_attack.ipynb)
+[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/airbus/decomon/blob/tutorials-v0.1.1/tutorials/tutorial3_adversarial_attack.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/airbus/decomon/tutorials-v0.1.1?labpath=tutorials%2Ftutorial3_adversarial_attack.ipynb)
+
+ 
+_**Local Robustness to Adversarial Attacks for classification tasks**_
+
+
+
+After training a model, we want to make sure that the model will give the same output for any images "close" to the initial one, showing some robustness to perturbation. 
+
+In this notebook, we start from a classifier built on MNIST dataset that given a hand-written digit as input will predict the digit. This will be the first part of the notebook.
+
+<img src="./data/Plot-of-a-Subset-of-Images-from-the-MNIST-Dataset.png" alt="examples of hand-written digit" width="600"/>
+
+In the second part of the notebook, we will investigate the robustness of this model to unstructured modification of the input space: adversarial attacks. For this kind of attacks, **we vary the magnitude of the perturbation of the initial image** and want to assess that despite this noise, the classifier's prediction remain unchanged.
+
+<img src="./data/illustration_adv_attacks.jpeg" alt="examples of perturbated images" width="600"/>
+
+What we will show is the use of decomon module to assess the robustness of the prediction towards noise.
+
+## DECOMON tutorial #4
+
+[![Github](https://img.shields.io/badge/see-Github-579aca?logo=github)](https://github.com/airbus/decomon/blob/tutorials-v0.1.1/tutorials/tutorial4_certified_over_estimation.ipynb)
+[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/airbus/decomon/blob/tutorials-v0.1.1/tutorials/tutorial4_certified_over_estimation.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/airbus/decomon/tutorials-v0.1.1?labpath=tutorials%2Ftutorial4_certified_over_estimation.ipynb)
+
+
+_**Overestimation with formal guarantee for Braking Distance Estimation**_
+
+
+
+In recent years, we have seen the emergence of safety-related properties for regression tasks in many industries. For example, numerical models have been developed to approximate the physical phenomena inherent in their systems. Since these models are based on physical equations, the relevance of which is affirmed by scientific experts, their qualifications are carried out without any problems.
+ However, as their computational costs and execution time prevent us from embedding them, the use of these numerical models in the aeronautical domain remains mainly limited to the development and design phase of the aircraft. Thanks to the current success of deep neural networks, previous works have already studied neural network-based surrogates for the approximation of numerical models. Nevertheless, these surrogates have additional safety properties that need to be demonstrated to certification authorities. In this blog post, we will examine a specification that arises for a neural network used for take-off distance estimation which is the over-estimation of the simulation model. We will explore how to address them with _**decomon**_.
+
+## Advanced
+
+### Tensorboard with decomon
+
+[![Github](https://img.shields.io/badge/see-Github-579aca?logo=github)](https://github.com/airbus/decomon/blob/tutorials-v0.1.1/tutorials/z_Advanced/tensorboard-and-decomon.ipynb)
+[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/airbus/decomon/blob/tutorials-v0.1.1/tutorials/z_Advanced/tensorboard-and-decomon.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/airbus/decomon/tutorials-v0.1.1?labpath=tutorials%2Fz_Advanced%2Ftensorboard-and-decomon.ipynb)
+
+
+
+In this notebook, we show how to have a look to the graph of a decomon model.
+
+We use here the same model as in [tutorial 1](../tutorial1_sinus-interactive.ipynb) and you should refer to it for any details about how it works.
+
+
+

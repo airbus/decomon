@@ -1,0 +1,85 @@
+decomon.layers package
+======================
+
+Submodules
+----------
+
+decomon.layers.activations module
+---------------------------------
+
+.. automodule:: decomon.layers.activations
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.layers.convert module
+-----------------------------
+
+.. automodule:: decomon.layers.convert
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.layers.core module
+--------------------------
+
+.. automodule:: decomon.layers.core
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.layers.decomon\_layers module
+-------------------------------------
+
+.. automodule:: decomon.layers.decomon_layers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.layers.decomon\_merge\_layers module
+--------------------------------------------
+
+.. automodule:: decomon.layers.decomon_merge_layers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.layers.decomon\_reshape module
+--------------------------------------
+
+.. automodule:: decomon.layers.decomon_reshape
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.layers.maxpooling module
+--------------------------------
+
+.. automodule:: decomon.layers.maxpooling
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.layers.utils module
+---------------------------
+
+.. automodule:: decomon.layers.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.layers.utils\_pooling module
+------------------------------------
+
+.. automodule:: decomon.layers.utils_pooling
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: decomon.layers
+   :members:
+   :undoc-members:
+   :show-inheritance:

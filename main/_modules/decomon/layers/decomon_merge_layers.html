@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>decomon.layers.decomon_merge_layers &mdash; decomon main documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=a8da1a53"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/versions.js?v=59b132a2"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            decomon
+          </a>
+              <div class="version">
+                main
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">decomon</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content style-external-links">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">decomon.layers.decomon_merge_layers</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for decomon.layers.decomon_merge_layers</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">keras.ops</span> <span class="k">as</span> <span class="nn">K</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Add</span><span class="p">,</span>
+    <span class="n">Average</span><span class="p">,</span>
+    <span class="n">Concatenate</span><span class="p">,</span>
+    <span class="n">Dot</span><span class="p">,</span>
+    <span class="n">Lambda</span><span class="p">,</span>
+    <span class="n">Layer</span><span class="p">,</span>
+    <span class="n">Maximum</span><span class="p">,</span>
+    <span class="n">Minimum</span><span class="p">,</span>
+    <span class="n">Multiply</span><span class="p">,</span>
+    <span class="n">Subtract</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">decomon.core</span> <span class="kn">import</span> <span class="n">ForwardMode</span><span class="p">,</span> <span class="n">PerturbationDomain</span>
+<span class="kn">from</span> <span class="nn">decomon.layers.core</span> <span class="kn">import</span> <span class="n">DecomonLayer</span>
+<span class="kn">from</span> <span class="nn">decomon.layers.utils</span> <span class="kn">import</span> <span class="n">broadcast</span><span class="p">,</span> <span class="n">multiply</span><span class="p">,</span> <span class="n">permute_dimensions</span>
+<span class="kn">from</span> <span class="nn">decomon.types</span> <span class="kn">import</span> <span class="n">BackendTensor</span>
+<span class="kn">from</span> <span class="nn">decomon.utils</span> <span class="kn">import</span> <span class="n">maximum</span><span class="p">,</span> <span class="n">minus</span><span class="p">,</span> <span class="n">subtract</span>
+
+<span class="c1">##### Merge Layer ####</span>
+
+
+<div class="viewcode-block" id="DecomonMerge">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMerge">[docs]</a>
+<span class="k">class</span> <span class="nc">DecomonMerge</span><span class="p">(</span><span class="n">DecomonLayer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for Decomon layers based on Mergind Keras layers.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="DecomonMerge.compute_output_shape">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMerge.compute_output_shape">[docs]</a>
+    <span class="k">def</span> <span class="nf">compute_output_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]]:</span>  <span class="c1"># type: ignore</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute output shapes from input shapes.</span>
+
+<span class="sd">        By default, we assume that all inputs will be merged into &quot;one&quot; (still a list of tensors though).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># split inputs</span>
+        <span class="n">input_shapes_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">split_inputsformode_to_merge</span><span class="p">(</span><span class="n">input_shape</span><span class="p">)</span>
+
+        <span class="c1"># compute original layer output shape</span>
+        <span class="n">y_shapes</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_kerasinputshape_from_inputshapesformode</span><span class="p">(</span><span class="n">input_shapes</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">input_shapes</span> <span class="ow">in</span> <span class="n">input_shapes_list</span>
+        <span class="p">]</span>  <span class="c1"># input shapes for the original layer</span>
+        <span class="n">y_out_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">original_keras_layer_class</span><span class="o">.</span><span class="n">compute_output_shape</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">y_shapes</span>
+        <span class="p">)</span>  <span class="c1"># output shape of the original layer</span>
+
+        <span class="c1"># same shape as one input or not?</span>
+        <span class="k">if</span> <span class="n">y_out_shape</span> <span class="o">==</span> <span class="n">y_shapes</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="c1"># same output shape as one input</span>
+            <span class="k">return</span> <span class="n">input_shapes_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># something change along the way (cf Concatenate), =&gt; we deduce decomon output shape</span>
+            <span class="p">(</span>
+                <span class="n">x_shape</span><span class="p">,</span>
+                <span class="n">u_c_shape</span><span class="p">,</span>
+                <span class="n">w_u_shape</span><span class="p">,</span>
+                <span class="n">b_u_shape</span><span class="p">,</span>
+                <span class="n">l_c_shape</span><span class="p">,</span>
+                <span class="n">w_l_shape</span><span class="p">,</span>
+                <span class="n">b_l_shape</span><span class="p">,</span>
+                <span class="n">h_shape</span><span class="p">,</span>
+                <span class="n">g_shape</span><span class="p">,</span>
+            <span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_fullinputshapes_from_inputshapesformode</span><span class="p">(</span><span class="n">input_shapes_list</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">y_out_shape_wo_batchsize</span> <span class="o">=</span> <span class="n">y_out_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+                <span class="n">model_inputdim</span> <span class="o">=</span> <span class="n">x_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">batchsize</span> <span class="o">=</span> <span class="n">x_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">w_out_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">batchsize</span><span class="p">,</span> <span class="n">model_inputdim</span><span class="p">)</span> <span class="o">+</span> <span class="n">y_out_shape_wo_batchsize</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">w_out_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">()</span>
+            <span class="n">fulloutputshapes</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">x_shape</span><span class="p">,</span>
+                <span class="n">y_out_shape</span><span class="p">,</span>
+                <span class="n">w_out_shape</span><span class="p">,</span>
+                <span class="n">y_out_shape</span><span class="p">,</span>
+                <span class="n">y_out_shape</span><span class="p">,</span>
+                <span class="n">w_out_shape</span><span class="p">,</span>
+                <span class="n">y_out_shape</span><span class="p">,</span>
+                <span class="n">y_out_shape</span><span class="p">,</span>
+                <span class="n">y_out_shape</span><span class="p">,</span>
+            <span class="p">]</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">extract_inputshapesformode_from_fullinputshapes</span><span class="p">(</span><span class="n">fulloutputshapes</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DecomonMerge.build">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMerge.build">[docs]</a>
+    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">n_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_tensors</span>
+        <span class="n">input_shape_y</span> <span class="o">=</span> <span class="n">input_shape</span><span class="p">[</span><span class="n">n_comp</span> <span class="o">-</span> <span class="mi">1</span> <span class="p">::</span> <span class="n">n_comp</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">original_keras_layer_class</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shape_y</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="DecomonAdd">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonAdd">[docs]</a>
+<span class="k">class</span> <span class="nc">DecomonAdd</span><span class="p">(</span><span class="n">DecomonMerge</span><span class="p">,</span> <span class="n">Add</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Add layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Add operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">original_keras_layer_class</span> <span class="o">=</span> <span class="n">Add</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">shared</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">fast</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span>
+            <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+            <span class="n">shared</span><span class="o">=</span><span class="n">shared</span><span class="p">,</span>
+            <span class="n">fast</span><span class="o">=</span><span class="n">fast</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="DecomonAdd.call">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonAdd.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">]:</span>
+        <span class="c1"># splits the inputs</span>
+        <span class="p">(</span>
+            <span class="n">inputs_x</span><span class="p">,</span>
+            <span class="n">inputs_u_c</span><span class="p">,</span>
+            <span class="n">inputs_w_u</span><span class="p">,</span>
+            <span class="n">inputs_b_u</span><span class="p">,</span>
+            <span class="n">inputs_l_c</span><span class="p">,</span>
+            <span class="n">inputs_w_l</span><span class="p">,</span>
+            <span class="n">inputs_b_l</span><span class="p">,</span>
+            <span class="n">inputs_h</span><span class="p">,</span>
+            <span class="n">inputs_g</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_fullinputs_by_type_from_inputsformode_to_merge</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">x_out</span> <span class="o">=</span> <span class="n">inputs_x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">x_out</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="n">empty_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_empty_tensor</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="c1"># outputs</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span><span class="p">:</span>
+            <span class="n">u_c_out</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">inputs_u_c</span><span class="p">)</span>
+            <span class="n">l_c_out</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">inputs_l_c</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">u_c_out</span><span class="p">,</span> <span class="n">l_c_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">b_u_out</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">inputs_b_u</span><span class="p">)</span>
+            <span class="n">b_l_out</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">inputs_b_l</span><span class="p">)</span>
+            <span class="n">w_u_out</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">inputs_w_u</span><span class="p">)</span>
+            <span class="n">w_l_out</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">inputs_w_l</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">h_out</span><span class="p">,</span> <span class="n">g_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">extract_outputsformode_from_fulloutputs</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">x_out</span><span class="p">,</span> <span class="n">u_c_out</span><span class="p">,</span> <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">l_c_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span><span class="p">,</span> <span class="n">h_out</span><span class="p">,</span> <span class="n">g_out</span><span class="p">]</span>
+        <span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="DecomonAverage">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonAverage">[docs]</a>
+<span class="k">class</span> <span class="nc">DecomonAverage</span><span class="p">(</span><span class="n">DecomonMerge</span><span class="p">,</span> <span class="n">Average</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Average layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Average operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">original_keras_layer_class</span> <span class="o">=</span> <span class="n">Average</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">shared</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">fast</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span>
+            <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+            <span class="n">shared</span><span class="o">=</span><span class="n">shared</span><span class="p">,</span>
+            <span class="n">fast</span><span class="o">=</span><span class="n">fast</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">=</span> <span class="n">Lambda</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+
+<div class="viewcode-block" id="DecomonAverage.call">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonAverage.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">]:</span>
+        <span class="c1"># splits the inputs</span>
+        <span class="p">(</span>
+            <span class="n">inputs_x</span><span class="p">,</span>
+            <span class="n">inputs_u_c</span><span class="p">,</span>
+            <span class="n">inputs_w_u</span><span class="p">,</span>
+            <span class="n">inputs_b_u</span><span class="p">,</span>
+            <span class="n">inputs_l_c</span><span class="p">,</span>
+            <span class="n">inputs_w_l</span><span class="p">,</span>
+            <span class="n">inputs_b_l</span><span class="p">,</span>
+            <span class="n">inputs_h</span><span class="p">,</span>
+            <span class="n">inputs_g</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_fullinputs_by_type_from_inputsformode_to_merge</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">x_out</span> <span class="o">=</span> <span class="n">inputs_x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">x_out</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="n">empty_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_empty_tensor</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="c1"># outputs</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span><span class="p">:</span>
+            <span class="n">u_c_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_u_c</span><span class="p">)</span>
+            <span class="n">l_c_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_l_c</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">u_c_out</span><span class="p">,</span> <span class="n">l_c_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">b_u_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_b_u</span><span class="p">)</span>
+            <span class="n">b_l_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_b_l</span><span class="p">)</span>
+            <span class="n">w_u_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_w_u</span><span class="p">)</span>
+            <span class="n">w_l_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_w_l</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">h_out</span><span class="p">,</span> <span class="n">g_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">extract_outputsformode_from_fulloutputs</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">x_out</span><span class="p">,</span> <span class="n">u_c_out</span><span class="p">,</span> <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">l_c_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span><span class="p">,</span> <span class="n">h_out</span><span class="p">,</span> <span class="n">g_out</span><span class="p">]</span>
+        <span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="DecomonSubtract">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonSubtract">[docs]</a>
+<span class="k">class</span> <span class="nc">DecomonSubtract</span><span class="p">(</span><span class="n">DecomonMerge</span><span class="p">,</span> <span class="n">Subtract</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Subtract layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Subtract operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">original_keras_layer_class</span> <span class="o">=</span> <span class="n">Subtract</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">shared</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">fast</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span>
+            <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+            <span class="n">shared</span><span class="o">=</span><span class="n">shared</span><span class="p">,</span>
+            <span class="n">fast</span><span class="o">=</span><span class="n">fast</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="DecomonSubtract.call">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonSubtract.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="c1"># splits the inputs</span>
+        <span class="n">inputs_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">split_inputsformode_to_merge</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+
+        <span class="c1"># check number of inputs</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs_list</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;This layer is intended to merge only 2 layers.&quot;</span><span class="p">)</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="n">subtract</span><span class="p">(</span>
+            <span class="n">inputs_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">inputs_list</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span>
+            <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">output</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="DecomonMinimum">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMinimum">[docs]</a>
+<span class="k">class</span> <span class="nc">DecomonMinimum</span><span class="p">(</span><span class="n">DecomonMerge</span><span class="p">,</span> <span class="n">Minimum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Minimum layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Minimum operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">original_keras_layer_class</span> <span class="o">=</span> <span class="n">Minimum</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">shared</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">fast</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span>
+            <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+            <span class="n">shared</span><span class="o">=</span><span class="n">shared</span><span class="p">,</span>
+            <span class="n">fast</span><span class="o">=</span><span class="n">fast</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="DecomonMinimum.call">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMinimum.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="c1"># splits the inputs</span>
+        <span class="n">inputs_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">split_inputsformode_to_merge</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="c1"># look at minus the input to apply maximum</span>
+        <span class="n">inputs_list</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">minus</span><span class="p">(</span><span class="n">single_inputs</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">single_inputs</span> <span class="ow">in</span> <span class="n">inputs_list</span>
+        <span class="p">]</span>
+
+        <span class="c1">#  check number of inputs</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># nothing to merge</span>
+            <span class="k">return</span> <span class="n">inputs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">maximum</span><span class="p">(</span>
+                <span class="n">inputs_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">inputs_list</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span>
+                <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">,</span>
+                <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs_list</span><span class="p">)):</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">maximum</span><span class="p">(</span>
+                    <span class="n">output</span><span class="p">,</span>
+                    <span class="n">inputs_list</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                    <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span>
+                    <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">,</span>
+                    <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">minus</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="DecomonMaximum">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMaximum">[docs]</a>
+<span class="k">class</span> <span class="nc">DecomonMaximum</span><span class="p">(</span><span class="n">DecomonMerge</span><span class="p">,</span> <span class="n">Maximum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Maximum layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Maximum operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">original_keras_layer_class</span> <span class="o">=</span> <span class="n">Maximum</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">shared</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">fast</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span>
+            <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+            <span class="n">shared</span><span class="o">=</span><span class="n">shared</span><span class="p">,</span>
+            <span class="n">fast</span><span class="o">=</span><span class="n">fast</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="DecomonMaximum.call">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMaximum.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="c1"># splits the inputs</span>
+        <span class="n">inputs_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">split_inputsformode_to_merge</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+
+        <span class="c1">#  check number of inputs</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># nothing to merge</span>
+            <span class="k">return</span> <span class="n">inputs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">maximum</span><span class="p">(</span>
+                <span class="n">inputs_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">inputs_list</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span>
+                <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">,</span>
+                <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs_list</span><span class="p">)):</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">maximum</span><span class="p">(</span>
+                    <span class="n">output</span><span class="p">,</span>
+                    <span class="n">inputs_list</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                    <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span>
+                    <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">,</span>
+                    <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span>
+                <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="DecomonConcatenate">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonConcatenate">[docs]</a>
+<span class="k">class</span> <span class="nc">DecomonConcatenate</span><span class="p">(</span><span class="n">DecomonMerge</span><span class="p">,</span> <span class="n">Concatenate</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Concatenate layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Concatenate operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">original_keras_layer_class</span> <span class="o">=</span> <span class="n">Concatenate</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">shared</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">fast</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span>
+            <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span>
+            <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+            <span class="n">shared</span><span class="o">=</span><span class="n">shared</span><span class="p">,</span>
+            <span class="n">fast</span><span class="o">=</span><span class="n">fast</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">BackendTensor</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Concatenate</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">=</span> <span class="n">func</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">op_w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">op_w</span> <span class="o">=</span> <span class="n">Concatenate</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DecomonConcatenate.call">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonConcatenate.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">]:</span>
+        <span class="c1"># splits the inputs</span>
+        <span class="p">(</span>
+            <span class="n">inputs_x</span><span class="p">,</span>
+            <span class="n">inputs_u_c</span><span class="p">,</span>
+            <span class="n">inputs_w_u</span><span class="p">,</span>
+            <span class="n">inputs_b_u</span><span class="p">,</span>
+            <span class="n">inputs_l_c</span><span class="p">,</span>
+            <span class="n">inputs_w_l</span><span class="p">,</span>
+            <span class="n">inputs_b_l</span><span class="p">,</span>
+            <span class="n">inputs_h</span><span class="p">,</span>
+            <span class="n">inputs_g</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_fullinputs_by_type_from_inputsformode_to_merge</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">x_out</span> <span class="o">=</span> <span class="n">inputs_x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">x_out</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="n">empty_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_empty_tensor</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="c1"># outputs</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span><span class="p">:</span>
+            <span class="n">u_c_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_u_c</span><span class="p">)</span>
+            <span class="n">l_c_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_l_c</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">u_c_out</span><span class="p">,</span> <span class="n">l_c_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">b_u_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_b_u</span><span class="p">)</span>
+            <span class="n">b_l_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">inputs_b_l</span><span class="p">)</span>
+            <span class="n">w_u_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op_w</span><span class="p">(</span><span class="n">inputs_w_u</span><span class="p">)</span>
+            <span class="n">w_l_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op_w</span><span class="p">(</span><span class="n">inputs_w_l</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">h_out</span><span class="p">,</span> <span class="n">g_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">extract_outputsformode_from_fulloutputs</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">x_out</span><span class="p">,</span> <span class="n">u_c_out</span><span class="p">,</span> <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">l_c_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span><span class="p">,</span> <span class="n">h_out</span><span class="p">,</span> <span class="n">g_out</span><span class="p">]</span>
+        <span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="DecomonMultiply">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMultiply">[docs]</a>
+<span class="k">class</span> <span class="nc">DecomonMultiply</span><span class="p">(</span><span class="n">DecomonMerge</span><span class="p">,</span> <span class="n">Multiply</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Multiply layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Multiply operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">original_keras_layer_class</span> <span class="o">=</span> <span class="n">Multiply</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">shared</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">fast</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span>
+            <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+            <span class="n">shared</span><span class="o">=</span><span class="n">shared</span><span class="p">,</span>
+            <span class="n">fast</span><span class="o">=</span><span class="n">fast</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="DecomonMultiply.call">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonMultiply.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="c1"># splits the inputs</span>
+        <span class="n">inputs_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">split_inputsformode_to_merge</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+
+        <span class="c1">#  check number of inputs</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># nothing to merge</span>
+            <span class="k">return</span> <span class="n">inputs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">multiply</span><span class="p">(</span>
+                <span class="n">inputs_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">inputs_list</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span>
+                <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">,</span>
+                <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs_list</span><span class="p">)):</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">multiply</span><span class="p">(</span>
+                    <span class="n">output</span><span class="p">,</span>
+                    <span class="n">inputs_list</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                    <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span>
+                    <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">,</span>
+                    <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">output</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="DecomonDot">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonDot">[docs]</a>
+<span class="k">class</span> <span class="nc">DecomonDot</span><span class="p">(</span><span class="n">DecomonMerge</span><span class="p">,</span> <span class="n">Dot</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LiRPA implementation of Dot layers.</span>
+<span class="sd">    See Keras official documentation for further details on the Dot operator</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">original_keras_layer_class</span> <span class="o">=</span> <span class="n">Dot</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">axes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">shared</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">fast</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">axes</span><span class="o">=</span><span class="n">axes</span><span class="p">,</span>
+            <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span>
+            <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+            <span class="n">shared</span><span class="o">=</span><span class="n">shared</span><span class="p">,</span>
+            <span class="n">fast</span><span class="o">=</span><span class="n">fast</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">axes</span> <span class="o">=</span> <span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="n">axes</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">axes</span> <span class="o">=</span> <span class="n">axes</span>
+
+<div class="viewcode-block" id="DecomonDot.call">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.decomon_merge_layers.DecomonDot.call">[docs]</a>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BackendTensor</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+        <span class="c1"># splits the inputs</span>
+        <span class="n">inputs_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">split_inputsformode_to_merge</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+
+        <span class="c1">#  check number of inputs</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># nothing to merge</span>
+            <span class="k">return</span> <span class="n">inputs</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">inputs_0</span><span class="p">,</span> <span class="n">inputs_1</span> <span class="o">=</span> <span class="n">inputs_list</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;This layer is not implemented to merge more than 2 layers.&quot;</span><span class="p">)</span>
+
+        <span class="n">input_shape_0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_kerasinputshape</span><span class="p">(</span><span class="n">inputs_0</span><span class="p">)</span>
+        <span class="n">input_shape_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_kerasinputshape</span><span class="p">(</span><span class="n">inputs_1</span><span class="p">)</span>
+        <span class="n">n_0</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_shape_0</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="n">n_1</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_shape_1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span>
+
+        <span class="n">inputs_0</span> <span class="o">=</span> <span class="n">permute_dimensions</span><span class="p">(</span><span class="n">inputs_0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">)</span>
+        <span class="n">inputs_1</span> <span class="o">=</span> <span class="n">permute_dimensions</span><span class="p">(</span><span class="n">inputs_1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">)</span>
+        <span class="n">inputs_0</span> <span class="o">=</span> <span class="n">broadcast</span><span class="p">(</span>
+            <span class="n">inputs_0</span><span class="p">,</span> <span class="n">n_1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span>
+        <span class="p">)</span>
+        <span class="n">inputs_1</span> <span class="o">=</span> <span class="n">broadcast</span><span class="p">(</span>
+            <span class="n">inputs_1</span><span class="p">,</span> <span class="n">n_0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span>
+        <span class="p">)</span>
+        <span class="n">outputs_multiply</span> <span class="o">=</span> <span class="n">multiply</span><span class="p">(</span>
+            <span class="n">inputs_0</span><span class="p">,</span> <span class="n">inputs_1</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">perturbation_domain</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span>
+        <span class="p">)</span>
+
+        <span class="n">x</span><span class="p">,</span> <span class="n">u_c</span><span class="p">,</span> <span class="n">w_u</span><span class="p">,</span> <span class="n">b_u</span><span class="p">,</span> <span class="n">l_c</span><span class="p">,</span> <span class="n">w_l</span><span class="p">,</span> <span class="n">b_l</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_fullinputs_from_inputsformode</span><span class="p">(</span>
+            <span class="n">outputs_multiply</span><span class="p">,</span> <span class="n">compute_ibp_from_affine</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="n">empty_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">get_empty_tensor</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ibp</span><span class="p">:</span>
+            <span class="n">u_c_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u_c</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">l_c_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">l_c</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">u_c_out</span><span class="p">,</span> <span class="n">l_c_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+            <span class="n">w_u_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w_u</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">b_u_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">b_u</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">w_l_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w_l</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">b_l_out</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">b_l</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dc_decomp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">h_out</span><span class="p">,</span> <span class="n">g_out</span> <span class="o">=</span> <span class="n">empty_tensor</span><span class="p">,</span> <span class="n">empty_tensor</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_outputs_spec</span><span class="o">.</span><span class="n">extract_outputsformode_from_fulloutputs</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">u_c_out</span><span class="p">,</span> <span class="n">w_u_out</span><span class="p">,</span> <span class="n">b_u_out</span><span class="p">,</span> <span class="n">l_c_out</span><span class="p">,</span> <span class="n">w_l_out</span><span class="p">,</span> <span class="n">b_l_out</span><span class="p">,</span> <span class="n">h_out</span><span class="p">,</span> <span class="n">g_out</span><span class="p">]</span>
+        <span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Airbus.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+<script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

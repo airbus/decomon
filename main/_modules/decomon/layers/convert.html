@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>decomon.layers.convert &mdash; decomon main documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=a8da1a53"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/versions.js?v=59b132a2"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            decomon
+          </a>
+              <div class="version">
+                main
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">decomon</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content style-external-links">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">decomon.layers.convert</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for decomon.layers.convert</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">keras</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Activation</span><span class="p">,</span> <span class="n">Input</span><span class="p">,</span> <span class="n">Layer</span>
+
+<span class="kn">import</span> <span class="nn">decomon.layers.decomon_layers</span>
+<span class="kn">import</span> <span class="nn">decomon.layers.decomon_merge_layers</span>
+<span class="kn">import</span> <span class="nn">decomon.layers.decomon_reshape</span>
+<span class="kn">import</span> <span class="nn">decomon.layers.maxpooling</span>
+<span class="kn">from</span> <span class="nn">decomon.core</span> <span class="kn">import</span> <span class="n">BoxDomain</span><span class="p">,</span> <span class="n">ForwardMode</span><span class="p">,</span> <span class="n">PerturbationDomain</span><span class="p">,</span> <span class="n">Slope</span><span class="p">,</span> <span class="n">get_mode</span>
+<span class="kn">from</span> <span class="nn">decomon.layers.core</span> <span class="kn">import</span> <span class="n">DecomonLayer</span>
+
+<span class="c1"># mapping between decomon class names and actual classes</span>
+<span class="n">_mapping_name2class</span> <span class="o">=</span> <span class="nb">vars</span><span class="p">(</span><span class="n">decomon</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">decomon_layers</span><span class="p">)</span>
+<span class="n">_mapping_name2class</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">vars</span><span class="p">(</span><span class="n">decomon</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">decomon_merge_layers</span><span class="p">))</span>
+<span class="n">_mapping_name2class</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">vars</span><span class="p">(</span><span class="n">decomon</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">decomon_reshape</span><span class="p">))</span>
+<span class="n">_mapping_name2class</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">vars</span><span class="p">(</span><span class="n">decomon</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">maxpooling</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="to_decomon">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.convert.to_decomon">[docs]</a>
+<span class="k">def</span> <span class="nf">to_decomon</span><span class="p">(</span>
+    <span class="n">layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span>
+    <span class="n">input_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">slope</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Slope</span><span class="p">]</span> <span class="o">=</span> <span class="n">Slope</span><span class="o">.</span><span class="n">V_SLOPE</span><span class="p">,</span>
+    <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">finetune</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">ibp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">affine</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">shared</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">fast</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DecomonLayer</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Transform a standard keras layer into a Decomon layer.</span>
+
+<span class="sd">    Type of layer is tested to know how to transform it into a DecomonLayer of the good type.</span>
+<span class="sd">    If type is not treated yet, raises an TypeError</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        layer: a Keras Layer</span>
+<span class="sd">        input_dim: an integer that represents the dim</span>
+<span class="sd">            of the input perturbation domain</span>
+<span class="sd">        slope:</span>
+<span class="sd">        dc_decomp: boolean that indicates whether we return a difference</span>
+<span class="sd">            of convex decomposition of our layer</span>
+<span class="sd">        perturbation_domain: the type of perturbation domain</span>
+<span class="sd">        ibp: boolean that indicates whether we propagate constant bounds</span>
+<span class="sd">        affine: boolean that indicates whether we propagate affine</span>
+<span class="sd">            bounds</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        the associated DecomonLayer</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># get class name</span>
+    <span class="k">if</span> <span class="n">perturbation_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">BoxDomain</span><span class="p">()</span>
+
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">get_mode</span><span class="p">(</span><span class="n">ibp</span><span class="o">=</span><span class="n">ibp</span><span class="p">,</span> <span class="n">affine</span><span class="o">=</span><span class="n">affine</span><span class="p">)</span>
+    <span class="n">layer_decomon</span> <span class="o">=</span> <span class="n">_to_decomon_wo_input_init</span><span class="p">(</span>
+        <span class="n">layer</span><span class="o">=</span><span class="n">layer</span><span class="p">,</span>
+        <span class="n">namespace</span><span class="o">=</span><span class="n">_mapping_name2class</span><span class="p">,</span>
+        <span class="n">slope</span><span class="o">=</span><span class="n">slope</span><span class="p">,</span>
+        <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span>
+        <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span>
+        <span class="n">finetune</span><span class="o">=</span><span class="n">finetune</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+        <span class="n">shared</span><span class="o">=</span><span class="n">shared</span><span class="p">,</span>
+        <span class="n">fast</span><span class="o">=</span><span class="n">fast</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">input_tensors</span> <span class="o">=</span> <span class="n">_prepare_input_tensors</span><span class="p">(</span>
+        <span class="n">layer</span><span class="o">=</span><span class="n">layer</span><span class="p">,</span> <span class="n">input_dim</span><span class="o">=</span><span class="n">input_dim</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="o">=</span><span class="n">dc_decomp</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="o">=</span><span class="n">perturbation_domain</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span>
+    <span class="p">)</span>
+    <span class="n">layer_decomon</span><span class="p">(</span><span class="n">input_tensors</span><span class="p">)</span>
+    <span class="n">layer_decomon</span><span class="o">.</span><span class="n">reset_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+
+    <span class="c1"># return layer_decomon</span>
+    <span class="k">return</span> <span class="n">layer_decomon</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_to_decomon_wo_input_init</span><span class="p">(</span>
+    <span class="n">layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span>
+    <span class="n">namespace</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">slope</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Slope</span><span class="p">]</span> <span class="o">=</span> <span class="n">Slope</span><span class="o">.</span><span class="n">V_SLOPE</span><span class="p">,</span>
+    <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PerturbationDomain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">finetune</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">mode</span><span class="p">:</span> <span class="n">ForwardMode</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">,</span>
+    <span class="n">shared</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">fast</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DecomonLayer</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">perturbation_domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">perturbation_domain</span> <span class="o">=</span> <span class="n">BoxDomain</span><span class="p">()</span>
+    <span class="n">class_name</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+    <span class="c1"># check if layer has a built argument that built is set to True</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;built&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">layer</span><span class="o">.</span><span class="n">built</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;the layer </span><span class="si">{</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has not been built yet&quot;</span><span class="p">)</span>
+    <span class="n">decomon_class_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Decomon</span><span class="si">{</span><span class="n">class_name</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">config_layer</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">get_config</span><span class="p">()</span>
+    <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_decomon&quot;</span>
+    <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;dc_decomp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dc_decomp</span>
+    <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;perturbation_domain&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">perturbation_domain</span>
+
+    <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;mode&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mode</span>
+    <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;finetune&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">finetune</span>
+    <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;slope&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">slope</span>
+    <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;shared&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">shared</span>
+    <span class="n">config_layer</span><span class="p">[</span><span class="s2">&quot;fast&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fast</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">Activation</span><span class="p">):</span>
+        <span class="n">config_layer</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;activation&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>  <span class="c1"># Hyp: no non-linear activation in dense or conv2d layers</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">layer_decomon</span> <span class="o">=</span> <span class="n">namespace</span><span class="p">[</span><span class="n">decomon_class_name</span><span class="p">]</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">config_layer</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The decomon version of </span><span class="si">{</span><span class="n">class_name</span><span class="si">}</span><span class="s2"> is not yet implemented.&quot;</span><span class="p">)</span>
+
+    <span class="n">layer_decomon</span><span class="o">.</span><span class="n">share_weights</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">layer_decomon</span>
+
+
+<span class="k">def</span> <span class="nf">_prepare_input_tensors</span><span class="p">(</span>
+    <span class="n">layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">dc_decomp</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">perturbation_domain</span><span class="p">:</span> <span class="n">PerturbationDomain</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="n">ForwardMode</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">keras</span><span class="o">.</span><span class="n">KerasTensor</span><span class="p">]:</span>
+    <span class="n">original_input_shapes</span> <span class="o">=</span> <span class="n">get_layer_input_shape</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+    <span class="n">decomon_input_shapes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">input_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="k">for</span> <span class="n">input_shape</span> <span class="ow">in</span> <span class="n">original_input_shapes</span><span class="p">]</span>
+    <span class="n">n_input</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">decomon_input_shapes</span><span class="p">)</span>
+    <span class="n">x_input_shape</span> <span class="o">=</span> <span class="n">perturbation_domain</span><span class="o">.</span><span class="n">get_x_input_shape_wo_batchsize</span><span class="p">(</span><span class="n">input_dim</span><span class="p">)</span>
+    <span class="n">x_input</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">x_input_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">w_input</span> <span class="o">=</span> <span class="p">[</span><span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">([</span><span class="n">input_dim</span><span class="p">]</span> <span class="o">+</span> <span class="n">decomon_input_shapes</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">)]</span>
+    <span class="n">y_input</span> <span class="o">=</span> <span class="p">[</span><span class="n">Input</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">decomon_input_shapes</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">)]</span>
+
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">HYBRID</span><span class="p">:</span>
+        <span class="n">nested_input_list</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">[</span><span class="n">x_input</span><span class="p">,</span> <span class="n">y_input</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">w_input</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_input</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_input</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">w_input</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_input</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">)</span>
+        <span class="p">]</span>
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">IBP</span><span class="p">:</span>
+        <span class="n">nested_input_list</span> <span class="o">=</span> <span class="p">[[</span><span class="n">y_input</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_input</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">)]</span>
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">AFFINE</span><span class="p">:</span>
+        <span class="n">nested_input_list</span> <span class="o">=</span> <span class="p">[[</span><span class="n">x_input</span><span class="p">,</span> <span class="n">w_input</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_input</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">w_input</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_input</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">)]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown mode </span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">flatten_input_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">tensor</span> <span class="k">for</span> <span class="n">input_list</span> <span class="ow">in</span> <span class="n">nested_input_list</span> <span class="k">for</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">input_list</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">dc_decomp</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">n_input</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">flatten_input_list</span> <span class="o">+=</span> <span class="p">[</span><span class="n">y_input</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y_input</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">flatten_input_list</span>
+
+
+<span class="n">SingleInputShapeType</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="get_layer_input_shape">
+<a class="viewcode-back" href="../../../api/decomon.layers.html#decomon.layers.convert.get_layer_input_shape">[docs]</a>
+<span class="k">def</span> <span class="nf">get_layer_input_shape</span><span class="p">(</span><span class="n">layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">SingleInputShapeType</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieves the input shape(s) of a layer.</span>
+
+<span class="sd">    Only applicable if the layer has exactly one input,</span>
+<span class="sd">    i.e. if it is connected to one incoming layer, or if all inputs</span>
+<span class="sd">    have the same shape.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        layer:</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Input shape, as an integer shape tuple</span>
+<span class="sd">        (or list of shape tuples, one tuple per input tensor).</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        AttributeError: if the layer has no defined input_shape.</span>
+<span class="sd">        RuntimeError: if called in Eager mode.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">layer</span><span class="o">.</span><span class="n">_inbound_nodes</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The layer &quot;</span><span class="si">{</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&quot; has never been called &#39;</span> <span class="s2">&quot;and thus has no defined input shape.&quot;</span><span class="p">)</span>
+    <span class="n">all_input_shapes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="nb">str</span><span class="p">([</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span> <span class="k">for</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">input_tensors</span><span class="p">])</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">layer</span><span class="o">.</span><span class="n">_inbound_nodes</span><span class="p">])</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_input_shapes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span> <span class="k">for</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">layer</span><span class="o">.</span><span class="n">_inbound_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">input_tensors</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span>
+            <span class="s1">&#39;The layer &quot;&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;&quot; has multiple inbound nodes, &#39;</span>
+            <span class="s2">&quot;with different input shapes. Hence &quot;</span>
+            <span class="s1">&#39;the notion of &quot;input shape&quot; is &#39;</span>
+            <span class="s2">&quot;ill-defined for the layer. &quot;</span>
+        <span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Airbus.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+<script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

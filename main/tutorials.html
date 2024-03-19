@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tutorials &mdash; decomon main documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=a8da1a53"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="_static/versions.js?v=59b132a2"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Reference" href="api/modules.html" />
+    <link rel="prev" title="Getting started" href="getting_started.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            decomon
+          </a>
+              <div class="version">
+                main
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#decomon-tutorial-1">DECOMON tutorial #1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#decomon-tutorial-2">DECOMON tutorial #2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#decomon-tutorial-3">DECOMON tutorial #3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#decomon-tutorial-4">DECOMON tutorial #4</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#advanced">Advanced</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#tensorboard-with-decomon-not-yet-working-with-keras-3-and-decomon-0-1-1">Tensorboard with decomon (not yet working with keras 3 and decomon&gt;0.1.1)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contribute.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/airbus/decomon">Github</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">decomon</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content style-external-links">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Tutorials</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="tutorials">
+<h1>Tutorials<a class="headerlink" href="#tutorials" title="Link to this heading"></a></h1>
+<p>We present here a curated list of notebooks recommended to start with decomon,
+available in the <code class="docutils literal notranslate"><span class="pre">tutorials/</span></code> folder of the repository.</p>
+<nav class="contents local" id="contents">
+<ul class="simple">
+<li><p><a class="reference internal" href="#decomon-tutorial-1" id="id1">DECOMON tutorial #1</a></p></li>
+<li><p><a class="reference internal" href="#decomon-tutorial-2" id="id2">DECOMON tutorial #2</a></p></li>
+<li><p><a class="reference internal" href="#decomon-tutorial-3" id="id3">DECOMON tutorial #3</a></p></li>
+<li><p><a class="reference internal" href="#decomon-tutorial-4" id="id4">DECOMON tutorial #4</a></p></li>
+<li><p><a class="reference internal" href="#advanced" id="id5">Advanced</a></p>
+<ul>
+<li><p><a class="reference internal" href="#tensorboard-with-decomon-not-yet-working-with-keras-3-and-decomon-0-1-1" id="id6">Tensorboard with decomon (not yet working with keras 3 and decomon&gt;0.1.1)</a></p></li>
+</ul>
+</li>
+</ul>
+</nav>
+<section id="decomon-tutorial-1">
+<h2><a class="toc-backref" href="#id1" role="doc-backlink">DECOMON tutorial #1</a><a class="headerlink" href="#decomon-tutorial-1" title="Link to this heading"></a></h2>
+<p><a class="reference external" href="https://github.com/airbus/decomon/blob/main/tutorials/tutorial1_sinus-interactive.ipynb"><img alt="Github" src="https://img.shields.io/badge/see-Github-579aca?logo=github" /></a>
+<a class="reference external" href="https://colab.research.google.com/github/airbus/decomon/blob/main/tutorials/tutorial1_sinus-interactive.ipynb"><img alt="Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a>
+<a class="reference external" href="https://mybinder.org/v2/gh/airbus/decomon/main?labpath=tutorials%2Ftutorial1_sinus-interactive.ipynb"><img alt="Binder" src="https://mybinder.org/badge_logo.svg" /></a></p>
+<p><em><strong>Bounding the output of a Neural Network trained on a sinusoidal function</strong></em></p>
+<p>After training a model, we want to make sure that the model is <em>smooth</em>: it will predict almost the same output for any data “close” to the initial one, showing some robustness to perturbation.</p>
+<p>In this notebook, we train a Neural Network to approximate at best a simple sinusoidal function (the reference model). However, between test samples, we have no clue that the output of the Neural Network will look like. The objective is to have a formal proof that outputs of the neural network’s predictions do not go to weird values.</p>
+<p>In the first part of the notebook, we define the reference function, build a training and test dataset and learn a dense fully connected neural network to approximate this reference function.</p>
+<p>In the second part of the notebook, we use <em>decomon</em> to compute guaranteed bounds to the output of the model.</p>
+<p>What we will show is how decomon module is able to provide guaranteed bounds that ensure our approximation will never have a strange behaviour between test dataset points.</p>
+</section>
+<section id="decomon-tutorial-2">
+<h2><a class="toc-backref" href="#id2" role="doc-backlink">DECOMON tutorial #2</a><a class="headerlink" href="#decomon-tutorial-2" title="Link to this heading"></a></h2>
+<p><a class="reference external" href="https://github.com/airbus/decomon/blob/main/tutorials/tutorial2_noise_sensor.ipynb"><img alt="Github" src="https://img.shields.io/badge/see-Github-579aca?logo=github" /></a>
+<a class="reference external" href="https://colab.research.google.com/github/airbus/decomon/blob/main/tutorials/tutorial2_noise_sensor.ipynb"><img alt="Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a>
+<a class="reference external" href="https://mybinder.org/v2/gh/airbus/decomon/main?labpath=tutorials%2Ftutorial2_noise_sensor.ipynb"><img alt="Binder" src="https://mybinder.org/badge_logo.svg" /></a></p>
+<p><em><strong>Local Robustness to sensor noise for Regression</strong></em></p>
+<p>Embedding simulation models developed during the design
+of a platform opens a lot of potential new functionalities
+but requires additional certification. Usually, these models require too much computing power, take too much time to run
+so we need to build an approximation of these models that can
+be compatible with operational constraints, hardware constraints, and real-time constraints. Also, we need to prove that
+the decisions made by the system using the surrogate model
+instead of the reference one will be safe.</p>
+<p>A first assessment that can be performed is the <strong>robustness of the prediction given sensor noise</strong>: demonstrating that despite sensor noise, the neural network prediction remains consistent.</p>
+<p>Local Robustness to <strong>sensoir noise</strong> can be performed efficiently thanks to formal robustness. In this notebook, we demonstrate how to derive deterministic upper and lower bounds of the output prediction of a neural network in the vicinity of a test sample.</p>
+</section>
+<section id="decomon-tutorial-3">
+<h2><a class="toc-backref" href="#id3" role="doc-backlink">DECOMON tutorial #3</a><a class="headerlink" href="#decomon-tutorial-3" title="Link to this heading"></a></h2>
+<p><a class="reference external" href="https://github.com/airbus/decomon/blob/main/tutorials/tutorial3_adversarial_attack.ipynb"><img alt="Github" src="https://img.shields.io/badge/see-Github-579aca?logo=github" /></a>
+<a class="reference external" href="https://colab.research.google.com/github/airbus/decomon/blob/main/tutorials/tutorial3_adversarial_attack.ipynb"><img alt="Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a>
+<a class="reference external" href="https://mybinder.org/v2/gh/airbus/decomon/main?labpath=tutorials%2Ftutorial3_adversarial_attack.ipynb"><img alt="Binder" src="https://mybinder.org/badge_logo.svg" /></a></p>
+<p><em><strong>Local Robustness to Adversarial Attacks for classification tasks</strong></em></p>
+<p>After training a model, we want to make sure that the model will give the same output for any images “close” to the initial one, showing some robustness to perturbation.</p>
+<p>In this notebook, we start from a classifier built on MNIST dataset that given a hand-written digit as input will predict the digit. This will be the first part of the notebook.</p>
+<a class="reference internal image-reference" href="data/Plot-of-a-Subset-of-Images-from-the-MNIST-Dataset.png"><img alt="examples of hand-written digit" src="data/Plot-of-a-Subset-of-Images-from-the-MNIST-Dataset.png" style="width: 600px;" /></a>
+<p>In the second part of the notebook, we will investigate the robustness of this model to unstructured modification of the input space: adversarial attacks. For this kind of attacks, <strong>we vary the magnitude of the perturbation of the initial image</strong> and want to assess that despite this noise, the classifier’s prediction remain unchanged.</p>
+<a class="reference internal image-reference" href="data/illustration_adv_attacks.jpeg"><img alt="examples of perturbated images" src="data/illustration_adv_attacks.jpeg" style="width: 600px;" /></a>
+<p>What we will show is the use of decomon module to assess the robustness of the prediction towards noise.</p>
+</section>
+<section id="decomon-tutorial-4">
+<h2><a class="toc-backref" href="#id4" role="doc-backlink">DECOMON tutorial #4</a><a class="headerlink" href="#decomon-tutorial-4" title="Link to this heading"></a></h2>
+<p><a class="reference external" href="https://github.com/airbus/decomon/blob/main/tutorials/tutorial4_certified_over_estimation.ipynb"><img alt="Github" src="https://img.shields.io/badge/see-Github-579aca?logo=github" /></a>
+<a class="reference external" href="https://colab.research.google.com/github/airbus/decomon/blob/main/tutorials/tutorial4_certified_over_estimation.ipynb"><img alt="Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a>
+<a class="reference external" href="https://mybinder.org/v2/gh/airbus/decomon/main?labpath=tutorials%2Ftutorial4_certified_over_estimation.ipynb"><img alt="Binder" src="https://mybinder.org/badge_logo.svg" /></a></p>
+<p><em><strong>Overestimation with formal guarantee for Braking Distance Estimation</strong></em></p>
+<p>In recent years, we have seen the emergence of safety-related properties for regression tasks in many industries. For example, numerical models have been developed to approximate the physical phenomena inherent in their systems. Since these models are based on physical equations, the relevance of which is affirmed by scientific experts, their qualifications are carried out without any problems.
+However, as their computational costs and execution time prevent us from embedding them, the use of these numerical models in the aeronautical domain remains mainly limited to the development and design phase of the aircraft. Thanks to the current success of deep neural networks, previous works have already studied neural network-based surrogates for the approximation of numerical models. Nevertheless, these surrogates have additional safety properties that need to be demonstrated to certification authorities. In this blog post, we will examine a specification that arises for a neural network used for take-off distance estimation which is the over-estimation of the simulation model. We will explore how to address them with <em><strong>decomon</strong></em>.</p>
+</section>
+<section id="advanced">
+<h2><a class="toc-backref" href="#id5" role="doc-backlink">Advanced</a><a class="headerlink" href="#advanced" title="Link to this heading"></a></h2>
+<section id="tensorboard-with-decomon-not-yet-working-with-keras-3-and-decomon-0-1-1">
+<h3><a class="toc-backref" href="#id6" role="doc-backlink">Tensorboard with decomon (not yet working with keras 3 and decomon&gt;0.1.1)</a><a class="headerlink" href="#tensorboard-with-decomon-not-yet-working-with-keras-3-and-decomon-0-1-1" title="Link to this heading"></a></h3>
+<p><a class="reference external" href="https://github.com/airbus/decomon/blob/main/tutorials/z_Advanced/tensorboard-and-decomon.ipynb"><img alt="Github" src="https://img.shields.io/badge/see-Github-579aca?logo=github" /></a>
+<a class="reference external" href="https://colab.research.google.com/github/airbus/decomon/blob/main/tutorials/z_Advanced/tensorboard-and-decomon.ipynb"><img alt="Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a>
+<a class="reference external" href="https://mybinder.org/v2/gh/airbus/decomon/main?labpath=tutorials%2Fz_Advanced%2Ftensorboard-and-decomon.ipynb"><img alt="Binder" src="https://mybinder.org/badge_logo.svg" /></a></p>
+<p>In this notebook, we show how to have a look to the graph of a decomon model.</p>
+<p>We use here the same model as in <a class="reference internal" href="#../tutorial1_sinus-interactive.ipynb"><span class="xref myst">tutorial 1</span></a> and you should refer to it for any details about how it works.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="getting_started.html" class="btn btn-neutral float-left" title="Getting started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api/modules.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Airbus.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Versions</span>
+      v: main
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl id="docs-versions">
+      </dl>
+    </div>
+  </div>
+<script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

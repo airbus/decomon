@@ -1,0 +1,65 @@
+decomon package
+===============
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   decomon.backward_layers
+   decomon.layers
+   decomon.metrics
+   decomon.models
+   decomon.types
+
+Submodules
+----------
+
+decomon.core module
+-------------------
+
+.. automodule:: decomon.core
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.keras\_utils module
+---------------------------
+
+.. automodule:: decomon.keras_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.utils module
+--------------------
+
+.. automodule:: decomon.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.wrapper module
+----------------------
+
+.. automodule:: decomon.wrapper
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+decomon.wrapper\_with\_tuning module
+------------------------------------
+
+.. automodule:: decomon.wrapper_with_tuning
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: decomon
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,10 @@
+decomon.types package
+=====================
+
+Module contents
+---------------
+
+.. automodule:: decomon.types
+   :members:
+   :undoc-members:
+   :show-inheritance:
