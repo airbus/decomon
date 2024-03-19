@@ -79,3 +79,7 @@ module = [
     "torch.*"
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "decomon.visualization.model_visualization"
+ignore_errors = true
