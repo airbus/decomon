@@ -89,7 +89,7 @@ class ReduceCrownBounds(Layer):
             b_l = add_tensors(b_l, b_l_i, missing_batchsize=missing_batchsize)
             b_u = add_tensors(b_u, b_u_i, missing_batchsize=missing_batchsize)
 
-            affine_bounds = w_l, b_l, w_u, b_u
+            affine_bounds = [w_l, b_l, w_u, b_u]
         return affine_bounds
 
     def build(self, input_shape: list[list[tuple[Optional[int], ...]]]) -> None:

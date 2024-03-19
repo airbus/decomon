@@ -496,7 +496,7 @@ class InputsOutputsSpec:
         return self.propagation == Propagation.FORWARD and self.is_merging_layer
 
     @overload
-    def extract_shapes_from_affine_bounds(
+    def extract_shapes_from_affine_bounds(  # type:ignore
         self, affine_bounds: list[Tensor], i: int = -1
     ) -> list[tuple[Optional[int], ...]]:
         ...
@@ -575,14 +575,14 @@ class InputsOutputsSpec:
             b_shape = affine_bounds_shape[1]
             if self.propagation == Propagation.FORWARD:
                 if i > -1:
-                    return len(b_shape) == len(self.layer_input_shape[i])
+                    return len(b_shape) == len(self.layer_input_shape[i])  # type: ignore
                 else:
                     return len(b_shape) == len(self.layer_input_shape)
             else:
                 return len(b_shape) == len(self.model_output_shape)
 
     @overload
-    def is_wo_batch_bounds_by_keras_input(
+    def is_wo_batch_bounds_by_keras_input(  # type: ignore
         self,
         affine_bounds: list[Tensor],
     ) -> bool:

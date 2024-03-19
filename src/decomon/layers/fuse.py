@@ -53,7 +53,7 @@ class Fuse(Layer):
         m1_input_shape: tuple[int, ...],
         m_1_output_shapes: list[tuple[int, ...]],
         from_linear_2: list[bool],
-        **kwargs,
+        **kwargs: Any,
     ):
         """
 
@@ -138,7 +138,7 @@ class Fuse(Layer):
         return len(affine_bounds) == 0 or affine_bounds[1].shape == self.m_1_output_shapes[i]
 
     def _is_from_linear_m1_ith_affine_bounds_shape(
-        self, affine_bounds_shape: list[tuple[Optional[int]]], i: int
+        self, affine_bounds_shape: list[tuple[Optional[int], ...]], i: int
     ) -> bool:
         return len(affine_bounds_shape) == 0 or affine_bounds_shape[1] == self.m_1_output_shapes[i]
 
@@ -226,14 +226,16 @@ class Fuse(Layer):
     ) -> list[tuple[Optional[int], ...]]:
         bounds_1_shape, bounds_2_shape = input_shape
 
-        bounds_fused_shape: list[tuple[int, ...]] = []
+        bounds_fused_shape: list[tuple[Optional[int], ...]] = []
         for i in range(self.nb_outputs_first_model):
             bounds_1_i_shape = bounds_1_shape[
                 i
                 * self.inputs_outputs_spec_1.nb_output_tensors : (i + 1)
                 * self.inputs_outputs_spec_1.nb_output_tensors
             ]
-            affine_bounds_1_shape, constant_bounds_1_shape = self.inputs_outputs_spec_1.split_output_shape(
+            affine_bounds_1_shape: list[tuple[Optional[int], ...]]
+            constant_bounds_1_shape: list[tuple[Optional[int], ...]]
+            affine_bounds_1_shape, constant_bounds_1_shape = self.inputs_outputs_spec_1.split_output_shape(  # type: ignore
                 bounds_1_i_shape
             )
 
@@ -242,9 +244,14 @@ class Fuse(Layer):
                 * self.inputs_outputs_spec_2[0].nb_output_tensors : (i + 1)
                 * self.inputs_outputs_spec_2[0].nb_output_tensors
             ]
-            affine_bounds_2_shape, constant_bounds_2_shape = self.inputs_outputs_spec_2[0].split_output_shape(
-                bounds_2_i_shape
-            )
+            affine_bounds_2_shape: list[tuple[Optional[int], ...]]
+            constant_bounds_2_shape: list[tuple[Optional[int], ...]]
+            (
+                affine_bounds_2_shape,
+                constant_bounds_2_shape,
+            ) = self.inputs_outputs_spec_2[  # type:ignore
+                0
+            ].split_output_shape(bounds_2_i_shape)
 
             # constant bounds
             if self.ibp_2:
@@ -264,10 +271,11 @@ class Fuse(Layer):
             # affine bounds
             if self.affine_1 and self.affine_2:
                 _, b2_shape, _, _ = affine_bounds_2_shape
+                model_2_output_shape_wo_batchisze: tuple[int, ...]
                 if self.from_linear_2[i]:
-                    model_2_output_shape_wo_batchisze = b2_shape
+                    model_2_output_shape_wo_batchisze = b2_shape  # type: ignore
                 else:
-                    model_2_output_shape_wo_batchisze = b2_shape[1:]
+                    model_2_output_shape_wo_batchisze = b2_shape[1:]  # type: ignore
 
                 diagonal = self.inputs_outputs_spec_1.is_diagonal_bounds_shape(
                     affine_bounds_1_shape
@@ -281,6 +289,8 @@ class Fuse(Layer):
                     self._is_from_linear_m1_ith_affine_bounds_shape(affine_bounds_shape=affine_bounds_1_shape, i=i)
                     and self.from_linear_2[i]
                 )
+                w_fused_shape: tuple[Optional[int], ...]
+                b_fused_shape: tuple[Optional[int], ...]
                 if from_linear_layer:
                     w_fused_shape = w_fused_shape_wo_batchsize
                     b_fused_shape = model_2_output_shape_wo_batchisze

@@ -95,7 +95,7 @@ class ForwardInput(Layer):
         self,
         input_shape: tuple[Optional[int], ...],
     ) -> list[tuple[Optional[int], ...]]:
-        perturbation_domain_input_shape_wo_batchsize = input_shape[1:]
+        perturbation_domain_input_shape_wo_batchsize: tuple[int, ...] = input_shape[1:]  # type: ignore
         keras_input_shape_wo_batchsize = self.perturbation_domain.get_keras_input_shape_wo_batchsize(
             x_shape=perturbation_domain_input_shape_wo_batchsize
         )
@@ -112,7 +112,7 @@ class ForwardInput(Layer):
         else:
             constant_bounds_shape = []
         return self.inputs_outputs_spec.flatten_inputs_shape(
-            affine_bounds_to_propagate_shape=affine_bounds_shape,
+            affine_bounds_to_propagate_shape=affine_bounds_shape,  # type: ignore
             constant_oracle_bounds_shape=constant_bounds_shape,
             perturbation_domain_inputs_shape=[],
         )
@@ -165,7 +165,7 @@ class IdentityInput(Layer):
         self,
         input_shape: tuple[Optional[int], ...],
     ) -> list[tuple[Optional[int], ...]]:
-        perturbation_domain_input_shape_wo_batchsize = input_shape[1:]
+        perturbation_domain_input_shape_wo_batchsize: tuple[int, ...] = input_shape[1:]  # type: ignore
         keras_input_shape_wo_batchsize = self.perturbation_domain.get_keras_input_shape_wo_batchsize(
             x_shape=perturbation_domain_input_shape_wo_batchsize
         )
@@ -312,11 +312,13 @@ class BackwardInput(Layer):
                     else:
                         w_shape_wo_batchsize = w_shape[1:]
                     is_diag = w_shape_wo_batchsize == model_output_shape
+                    m2_output_shape: tuple[Optional[int], ...]
                     if is_diag:
                         m2_output_shape = model_output_shape
                     else:
                         m2_output_shape = w_shape_wo_batchsize[len(model_output_shape) :]
                     b_shape_wo_batchsize = m2_output_shape
+                    b_shape: tuple[Optional[int], ...]
                     if from_linear:
                         b_shape = b_shape_wo_batchsize
                     else:
@@ -330,10 +332,6 @@ class BackwardInput(Layer):
             return bounds_per_output_shape * self.nb_model_outputs
         else:
             return input_shape
-
-
-def _is_keras_tensor_shape(shape):
-    return len(shape) > 0 and (shape[0] is None or isinstance(shape[0], int))
 
 
 def flatten_backward_bounds(

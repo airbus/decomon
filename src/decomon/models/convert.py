@@ -311,17 +311,17 @@ def clone(
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
 
-    default_final_ibp, default_final_affine = get_final_ibp_affine_from_method(method)
-    if final_ibp is None:
-        final_ibp = default_final_ibp
-    if final_affine is None:
-        final_affine = default_final_affine
-
     if isinstance(method, str):
         method = ConvertMethod(method.lower())
 
     if isinstance(slope, str):
         slope = Slope(slope.lower())
+
+    default_final_ibp, default_final_affine = get_final_ibp_affine_from_method(method)
+    if final_ibp is None:
+        final_ibp = default_final_ibp
+    if final_affine is None:
+        final_affine = default_final_affine
 
     # preprocess backward_bounds
     backward_bounds_flattened: Optional[list[keras.KerasTensor]]

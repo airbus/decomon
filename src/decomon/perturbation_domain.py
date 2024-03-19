@@ -31,7 +31,7 @@ class PerturbationDomain(ABC):
         ...
 
     @abstractmethod
-    def get_upper(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
+    def get_upper(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize: bool = False, **kwargs: Any) -> Tensor:
         """Merge upper affine bounds with perturbation domain input to get upper constant bound.
 
         Args:
@@ -47,7 +47,7 @@ class PerturbationDomain(ABC):
         ...
 
     @abstractmethod
-    def get_lower(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
+    def get_lower(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize: bool = False, **kwargs: Any) -> Tensor:
         """Merge lower affine bounds with perturbation domain input to get lower constant bound.
 
         Args:
@@ -111,12 +111,12 @@ class PerturbationDomain(ABC):
 
 
 class BoxDomain(PerturbationDomain):
-    def get_upper(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
+    def get_upper(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize: bool = False, **kwargs: Any) -> Tensor:
         x_min = x[:, 0]
         x_max = x[:, 1]
         return get_upper_box(x_min=x_min, x_max=x_max, w=w, b=b, missing_batchsize=missing_batchsize, **kwargs)
 
-    def get_lower(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
+    def get_lower(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize: bool = False, **kwargs: Any) -> Tensor:
         x_min = x[:, 0]
         x_max = x[:, 1]
         return get_lower_box(x_min=x_min, x_max=x_max, w=w, b=b, missing_batchsize=missing_batchsize, **kwargs)
@@ -162,10 +162,10 @@ class BallDomain(PerturbationDomain):
         )
         return config
 
-    def get_lower(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
+    def get_lower(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize: bool = False, **kwargs: Any) -> Tensor:
         return get_lower_ball(x_0=x, eps=self.eps, p=self.p, w=w, b=b, missing_batchsize=missing_batchsize, **kwargs)
 
-    def get_upper(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
+    def get_upper(self, x: Tensor, w: Tensor, b: Tensor, missing_batchsize: bool = False, **kwargs: Any) -> Tensor:
         return get_upper_ball(x_0=x, eps=self.eps, p=self.p, w=w, b=b, missing_batchsize=missing_batchsize, **kwargs)
 
     def get_nb_x_components(self) -> int:
@@ -178,7 +178,9 @@ class BallDomain(PerturbationDomain):
         return x + self.eps
 
 
-def get_upper_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
+def get_upper_box(
+    x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, missing_batchsize: bool = False, **kwargs: Any
+) -> Tensor:
     """Compute the max of an affine function
     within a box (hypercube) defined by its extremal corners
 
@@ -203,16 +205,18 @@ def get_upper_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, missing_ba
 
     is_diag = w.shape == b.shape
     diagonal = (False, is_diag)
-    missing_batchsize = (False, missing_batchsize)
+    missing_batchsize_dot = (False, missing_batchsize)
 
     return (
-        batch_multid_dot(x_max, w_pos, diagonal=diagonal, missing_batchsize=missing_batchsize)
-        + batch_multid_dot(x_min, w_neg, diagonal=diagonal, missing_batchsize=missing_batchsize)
+        batch_multid_dot(x_max, w_pos, diagonal=diagonal, missing_batchsize=missing_batchsize_dot)
+        + batch_multid_dot(x_min, w_neg, diagonal=diagonal, missing_batchsize=missing_batchsize_dot)
         + b
     )
 
 
-def get_lower_box(x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, missing_batchsize=False, **kwargs: Any) -> Tensor:
+def get_lower_box(
+    x_min: Tensor, x_max: Tensor, w: Tensor, b: Tensor, missing_batchsize: bool = False, **kwargs: Any
+) -> Tensor:
     """
     Args:
         x_min: lower bound of the box domain
@@ -296,8 +300,8 @@ def get_upper_ball(
             w_q = get_lq_norm(w, p, axis=reduced_axes)
 
         diagonal = (False, is_diag)
-        missing_batchsize = (False, missing_batchsize)
-        return batch_multid_dot(x_0, w, diagonal=diagonal, missing_batchsize=missing_batchsize) + b + w_q * eps
+        missing_batchsize_dot = (False, missing_batchsize)
+        return batch_multid_dot(x_0, w, diagonal=diagonal, missing_batchsize=missing_batchsize_dot) + b + w_q * eps
 
 
 def get_lower_ball(
@@ -343,8 +347,8 @@ def get_lower_ball(
             w_q = get_lq_norm(w, p, axis=reduced_axes)
 
         diagonal = (False, is_diag)
-        missing_batchsize = (False, missing_batchsize)
-        return batch_multid_dot(x_0, w, diagonal=diagonal, missing_batchsize=missing_batchsize) + b - w_q * eps
+        missing_batchsize_dot = (False, missing_batchsize)
+        return batch_multid_dot(x_0, w, diagonal=diagonal, missing_batchsize=missing_batchsize_dot) + b - w_q * eps
 
 
 def get_lower_ball_finetune(

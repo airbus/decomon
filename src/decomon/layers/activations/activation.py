@@ -176,7 +176,7 @@ class DecomonLinear(DecomonBaseActivation):
         ) = self.inputs_outputs_spec.split_input_shape(input_shape=input_shape)
         return self.inputs_outputs_spec.flatten_outputs_shape(
             affine_bounds_propagated_shape=affine_bounds_to_propagate_shape,
-            constant_bounds_propagated_shape=constant_oracle_bounds_shape,
+            constant_bounds_propagated_shape=constant_oracle_bounds_shape,  # type: ignore
         )
 
 

@@ -134,12 +134,13 @@ class DecomonOracle(BaseOracle):
         """Compute output shape in case of symbolic call."""
         if self.is_merging_layer:
             output_shape = []
-            for layer_input_shape_i in self.layer_input_shape:
+            layer_input_shape_i: tuple[int, ...]
+            for layer_input_shape_i in self.layer_input_shape:  # type: ignore
                 layer_input_shape_w_batchsize_i = (None,) + layer_input_shape_i
                 output_shape.append([layer_input_shape_w_batchsize_i, layer_input_shape_w_batchsize_i])
             return output_shape
         else:
-            layer_input_shape_w_batchsize = (None,) + self.layer_input_shape
+            layer_input_shape_w_batchsize = (None,) + self.layer_input_shape  # type: ignore
             return [layer_input_shape_w_batchsize, layer_input_shape_w_batchsize]
 
 
@@ -222,7 +223,7 @@ def get_forward_oracle(
         x = perturbation_domain_inputs[0]
         if is_merging_layer:
             constant_bounds = []
-            for affine_bounds_i, from_linear_i in zip(affine_bounds, from_linear):
+            for affine_bounds_i, from_linear_i in zip(affine_bounds, from_linear):  # type: ignore
                 if len(affine_bounds_i) == 0:
                     # special case: empty affine bounds => identity bounds
                     l_affine = perturbation_domain.get_lower_x(x)
@@ -239,6 +240,8 @@ def get_forward_oracle(
                 l_affine = perturbation_domain.get_lower_x(x)
                 u_affine = perturbation_domain.get_upper_x(x)
             else:
+                if not isinstance(from_linear, bool):
+                    raise ValueError("from_linear must be a boolean for a non-merging layer")
                 w_l, b_l, w_u, b_u = affine_bounds
                 l_affine = perturbation_domain.get_lower(x, w_l, b_l, missing_batchsize=from_linear)
                 u_affine = perturbation_domain.get_upper(x, w_u, b_u, missing_batchsize=from_linear)

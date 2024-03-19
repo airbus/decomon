@@ -1,5 +1,6 @@
 from typing import Any
 
+import keras
 import keras.ops as K
 
 from decomon.keras_utils import add_tensors, batch_multid_dot
@@ -12,7 +13,7 @@ class DecomonMerge(DecomonLayer):
     _is_merging_layer = True
 
     @property
-    def keras_layer_input(self):
+    def keras_layer_input(self) -> list[keras.KerasTensor]:
         """self.layer.input returned as a list.
 
         In the degenerate case where only 1 input is merged, self.layer.input is a single keras tensor.
@@ -25,7 +26,7 @@ class DecomonMerge(DecomonLayer):
             return [self.layer.input]
 
     @property
-    def nb_keras_inputs(self):
+    def nb_keras_inputs(self) -> int:
         """Number of inputs merged by the underlying layer."""
         return len(self.keras_layer_input)
 
@@ -274,7 +275,7 @@ class DecomonMerge(DecomonLayer):
             from_linear_layer_new = all(from_linear_add)
         return w_l_new, b_l_new, w_u_new, b_u_new
 
-    def backward_affine_propagate(
+    def backward_affine_propagate(  # type: ignore
         self, output_affine_bounds: list[Tensor], input_constant_bounds: list[list[Tensor]]
     ) -> list[tuple[Tensor, Tensor, Tensor, Tensor]]:
         """Propagate model affine bounds in backward direction.

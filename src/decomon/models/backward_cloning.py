@@ -378,7 +378,7 @@ def crown_model(
         model_output_shape = get_model_output_shape(
             node=node, backward_bounds=backward_bounds_node, from_linear=from_linear
         )
-        backward_map_node = {}
+        backward_map_node: dict[int, DecomonLayer] = {}
 
         output_crown = crown(
             node=node,
@@ -406,7 +406,7 @@ def convert_backward(
     layer_fn: Callable[..., DecomonLayer] = to_decomon,
     backward_bounds: Optional[list[keras.KerasTensor]] = None,
     from_linear_backward_bounds: Union[bool, list[bool]] = False,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
+    slope: Slope = Slope.V_SLOPE,
     forward_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
     mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]] = None,
@@ -440,6 +440,7 @@ def convert_backward(
     """
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
+    backward_bounds_for_crown_model: list[list[keras.KerasTensor]]
     if backward_bounds is None:
         backward_bounds_for_crown_model = [[]] * len(model.outputs)
     else:
@@ -474,7 +475,7 @@ def convert_backward(
     return output
 
 
-def get_model_output_shape(node: Node, backward_bounds: list[Tensor], from_linear: bool = False):
+def get_model_output_shape(node: Node, backward_bounds: list[Tensor], from_linear: bool = False) -> tuple[int, ...]:
     """Get outer model output shape w/o batchsize.
 
     If any backward bounds are passed, we deduce the outer keras model output shape from it.
