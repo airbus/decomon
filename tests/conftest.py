@@ -1067,10 +1067,10 @@ class Helpers:
             dtype = keras_config.floatx()
         layers = []
         layers.append(Input(input_shape, dtype=dtype))
-        layers.append(Dense(100, dtype=dtype))
+        layers.append(Dense(10, dtype=dtype))
         if activation is not None:
             layers.append(Activation(activation, dtype=dtype))
-        layers.append(Dense(100, dtype=dtype))
+        layers.append(Dense(10, dtype=dtype))
         layers.append(Dense(1, activation="linear", dtype=dtype))
         model = Sequential(layers)
         return model
@@ -1101,14 +1101,14 @@ class Helpers:
     ) -> Model:
         if dtype is None:
             dtype = keras_config.floatx()
-        submodel_input_shape = input_shape[:-1] + (100,)
+        submodel_input_shape = input_shape[:-1] + (10,)
         layers = []
         layers.append(Input(input_shape, dtype=dtype))
-        layers.append(Dense(100, dtype=dtype))
+        layers.append(Dense(10, dtype=dtype))
         if activation is not None:
             layers.append(Activation(activation, dtype=dtype))
         layers.append(Helpers.toy_network_tutorial(submodel_input_shape, dtype=dtype, activation=activation))
-        layers.append(Dense(100, dtype=dtype))
+        layers.append(Dense(10, dtype=dtype))
         layers.append(Dense(1, activation="linear", dtype=dtype))
         model = Sequential(layers)
         return model
@@ -1120,11 +1120,11 @@ class Helpers:
         if dtype is None:
             dtype = keras_config.floatx()
         input_tensor = Input(input_shape, dtype=dtype)
-        output = Dense(100, dtype=dtype)(input_tensor)
+        output = Dense(10, dtype=dtype)(input_tensor)
         if activation is not None:
             output = Activation(activation, dtype=dtype)(output)
         output = Add()([output, output])
-        output = Dense(100, dtype=dtype)(output)
+        output = Dense(10, dtype=dtype)(output)
         if activation is not None:
             output = Activation(activation, dtype=dtype)(output)
         model = Model(inputs=input_tensor, outputs=output)
@@ -1137,11 +1137,11 @@ class Helpers:
         if dtype is None:
             dtype = keras_config.floatx()
         input_tensor = Input(input_shape, dtype=dtype)
-        output = Dense(100, dtype=dtype)(input_tensor)
+        output = Dense(10, dtype=dtype)(input_tensor)
         if activation is not None:
             output = Activation(activation, dtype=dtype)(output)
         output = Add()([output])
-        output = Dense(100, dtype=dtype)(output)
+        output = Dense(10, dtype=dtype)(output)
         if activation is not None:
             output = Activation(activation, dtype=dtype)(output)
         model = Model(inputs=input_tensor, outputs=output)
@@ -1153,8 +1153,8 @@ class Helpers:
             dtype = keras_config.floatx()
         layers = []
         layers.append(Input(input_shape, dtype=dtype))
-        layers.append(Dense(100, activation="relu", dtype=dtype))
-        layers.append(Dense(100, dtype=dtype))
+        layers.append(Dense(10, activation="relu", dtype=dtype))
+        layers.append(Dense(10, dtype=dtype))
         layers.append(Dense(1, activation="linear", dtype=dtype))
         model = Sequential(layers)
         return model
