@@ -76,11 +76,9 @@ jobs:
           echo "AUTODOC_NOTEBOOKS_BRANCH=${AUTODOC_NOTEBOOKS_BRANCH}" >> $GITHUB_ENV
           # check computed variables
           echo "Notebooks source: ${AUTODOC_NOTEBOOKS_REPO_URL}/tree/${AUTODOC_NOTEBOOKS_BRANCH}"
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
+      - uses: actions/checkout@v4
       - name: Setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.python-version }}
           cache: "pip"
@@ -92,9 +90,6 @@ jobs:
           python -m pip install -U pip setuptools
           pip install .
           pip install -r docs/requirements.txt
-          # ensure having keras 3 instead of keras 2.15 installed by tensorflow
-          pip uninstall -y keras
-          pip install "keras>=3"
       - name: generate documentation
         id: sphinx-build
         run: |
@@ -119,7 +114,7 @@ jobs:
           ')
           echo doc_version=${doc_version} >> $GITHUB_OUTPUT
       - name: upload as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.doc-artifact-name }}
           path: ${{ inputs.doc-path }}

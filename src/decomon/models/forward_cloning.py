@@ -3,107 +3,64 @@
 It inherits from keras Sequential class.
 
 """
-import inspect
-from copy import deepcopy
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from collections.abc import Callable
+from typing import Any, Optional
 
 import keras
 from keras.layers import InputLayer, Layer
 from keras.models import Model
-from keras.src.utils.python_utils import to_list
 
-from decomon.core import BoxDomain, PerturbationDomain, Slope
+from decomon.constants import Propagation, Slope
+from decomon.layers import DecomonLayer
 from decomon.layers.convert import to_decomon
-from decomon.layers.core import DecomonLayer
-from decomon.layers.utils import softmax_to_linear as softmax_2_linear
+from decomon.layers.input import ForwardInput
+from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.models.utils import (
     ensure_functional_model,
     get_depth_dict,
-    get_inner_layers,
-    get_input_dim,
+    get_output_nodes,
     prepare_inputs_for_layer,
     wrap_outputs_from_layer_in_list,
 )
-
-OutputMapKey = Union[str, int]
-OutputMapVal = Union[List[keras.KerasTensor], "OutputMapDict"]
-OutputMapDict = Dict[OutputMapKey, OutputMapVal]
-
-LayerMapVal = Union[List[DecomonLayer], "LayerMapDict"]
-LayerMapDict = Dict[int, LayerMapVal]
-
-
-def include_dim_layer_fn(
-    layer_fn: Callable[..., Layer],
-    input_dim: int,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
-    dc_decomp: bool = False,
-    perturbation_domain: Optional[PerturbationDomain] = None,
-    ibp: bool = True,
-    affine: bool = True,
-    finetune: bool = False,
-    shared: bool = True,
-) -> Callable[[Layer], List[Layer]]:
-    """include external parameters inside the translation of a layer to its decomon counterpart
-
-    Args:
-        layer_fn
-        input_dim
-        dc_decomp
-        perturbation_domain
-        finetune
-
-    Returns:
-
-    """
-    if perturbation_domain is None:
-        perturbation_domain = BoxDomain()
-
-    if not callable(layer_fn):
-        raise ValueError("Expected `layer_fn` argument to be a callable.")
-
-    layer_fn_copy = deepcopy(layer_fn)
-
-    if "input_dim" in inspect.signature(layer_fn).parameters:
-
-        def func(layer: Layer) -> List[Layer]:
-            return [
-                layer_fn_copy(
-                    layer,
-                    input_dim=input_dim,
-                    slope=slope,
-                    perturbation_domain=perturbation_domain,
-                    dc_decomp=dc_decomp,
-                    ibp=ibp,
-                    affine=affine,
-                    finetune=finetune,
-                    shared=shared,
-                )
-            ]
-
-    else:
-
-        def func(layer: Layer) -> List[Layer]:
-            return [layer_fn_copy(layer)]
-
-    return func
+from decomon.perturbation_domain import BoxDomain, PerturbationDomain
 
 
 def convert_forward(
     model: Model,
-    input_tensors: List[keras.KerasTensor],
-    layer_fn: Callable[..., Layer] = to_decomon,
-    slope: Union[str, Slope] = Slope.V_SLOPE,
-    input_dim: int = -1,
-    dc_decomp: bool = False,
+    perturbation_domain_input: keras.KerasTensor,
+    layer_fn: Callable[..., DecomonLayer] = to_decomon,
+    slope: Slope = Slope.V_SLOPE,
     perturbation_domain: Optional[PerturbationDomain] = None,
     ibp: bool = True,
     affine: bool = True,
-    finetune: bool = False,
-    shared: bool = True,
-    softmax_to_linear: bool = True,
+    mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]] = None,
     **kwargs: Any,
-) -> Tuple[List[keras.KerasTensor], List[keras.KerasTensor], LayerMapDict, OutputMapDict]:
+) -> tuple[list[keras.KerasTensor], dict[int, list[keras.KerasTensor]], dict[int, DecomonLayer]]:
+    """Convert keras model via forward propagation.
+
+    Prepare layer_fn by freezing all args except layer.
+    Ensure that model is functional (transform sequential ones to functional equivalent ones).
+
+    Args:
+        model: keras model to convert
+        perturbation_domain_input: perturbation domain input (input to the future decomon model).
+          Used to convert affine bounds into constant ones.
+        layer_fn: conversion function on layers. Default to `to_decomon()`.
+        mapping_keras2decomon_classes: user-defined mapping between keras and decomon layers classes, to be passed to `layer_fn`
+        slope: slope used by decomon activation layers
+        perturbation_domain: perturbation domain type for keras input
+        ibp: specify if constant bounds are propagated
+        affine: specify if affine bounds are propagated
+        **kwargs: keyword arguments to pass to layer_fn
+
+    Returns:
+        output, output_map, layer_map:
+        - output: propagated bounds (concatenated), see `DecomonLayer.call()` for the format.
+           output of the future decomon model
+        - output_map: output of each converted node. Can be used to feed oracle bounds used by backward conversion.
+        - layer_map: converted layer corresponding to each node. Can be used to transform output_map into oracle bounds
+
+    """
     if perturbation_domain is None:
         perturbation_domain = BoxDomain()
 
@@ -111,43 +68,93 @@ def convert_forward(
         raise ValueError("Expected `model` argument " "to be a `Model` instance, got ", model)
 
     model = ensure_functional_model(model)
+    model_input_shape = model.inputs[0].shape[1:]
 
-    if input_dim == -1:
-        input_dim = get_input_dim(model)
+    propagation = Propagation.FORWARD
+    inputs_outputs_spec = InputsOutputsSpec(
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        model_input_shape=model_input_shape,
+        layer_input_shape=model_input_shape,
+    )
 
-    layer_fn_to_list = include_dim_layer_fn(
+    if inputs_outputs_spec.needs_perturbation_domain_inputs():
+        perturbation_domain_inputs = [perturbation_domain_input]
+    else:
+        perturbation_domain_inputs = []
+
+    layer_fn_to_list = include_kwargs_layer_fn(
         layer_fn,
-        input_dim=input_dim,
+        model_input_shape=model_input_shape,
         slope=slope,
         perturbation_domain=perturbation_domain,
         ibp=ibp,
         affine=affine,
-        finetune=finetune,
-        shared=shared,
-    )  # return a list of Decomon layers
-
-    input_tensors, output, layer_map, output_map, _ = convert_forward_functional_model(
-        model=model,
-        input_tensors=input_tensors,
-        layer_fn=layer_fn_to_list,
-        softmax_to_linear=softmax_to_linear,
+        propagation=propagation,
+        mapping_keras2decomon_classes=mapping_keras2decomon_classes,
+        **kwargs,
     )
 
-    return input_tensors, output, layer_map, output_map
+    # generate input tensors
+    forward_input_layer = ForwardInput(perturbation_domain=perturbation_domain, ibp=ibp, affine=affine)
+    input_tensors_wo_pertubation_domain_inputs = forward_input_layer(perturbation_domain_input)
+
+    output_map: dict[int, list[keras.KerasTensor]] = {}
+    layer_list_map: dict[int, list[DecomonLayer]] = {}
+    output = convert_forward_functional_model(
+        model=model,
+        input_tensors=input_tensors_wo_pertubation_domain_inputs,
+        layer_fn=layer_fn_to_list,
+        common_inputs_part=perturbation_domain_inputs,
+        output_map=output_map,
+        layer_map=layer_list_map,
+    )
+    layer_map: dict[int, DecomonLayer] = {k: v[0] for k, v in layer_list_map.items()}
+
+    return output, output_map, layer_map
 
 
 def convert_forward_functional_model(
     model: Model,
-    layer_fn: Callable[[Layer], List[Layer]],
-    input_tensors: List[keras.KerasTensor],
-    softmax_to_linear: bool = True,
-    count: int = 0,
-    output_map: Optional[OutputMapDict] = None,
-    layer_map: Optional[LayerMapDict] = None,
-    layer2layer_map: Optional[Dict[int, List[Layer]]] = None,
-) -> Tuple[List[keras.KerasTensor], List[keras.KerasTensor], LayerMapDict, OutputMapDict, Dict[int, List[Layer]]]:
-    if softmax_to_linear:
-        model, has_softmax = softmax_2_linear(model)
+    layer_fn: Callable[[Layer], list[Layer]],
+    input_tensors: list[keras.KerasTensor],
+    common_inputs_part: Optional[list[keras.KerasTensor]] = None,
+    output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
+    layer_map: Optional[dict[int, list[Layer]]] = None,
+    submodel: bool = False,
+) -> list[keras.KerasTensor]:
+    """Convert a functional keras model via forward propagation.
+
+    Used
+    - for decomon conversion in forward mode with layer_fn=lambda l: [to_decomon(l)]
+    - also for preprocessing keras models (e.g. splitting activation layers) with layer_fn=preprocess_layer
+
+    Hypothesis: potential embedded submodels have only one input and one output.
+
+    Args:
+        model: keras model to convert
+        layer_fn: callable converting a layer into a list of converted layers
+        input_tensors: input tensors used by the converted (list of) layer(s) corresponding to the keras model input nodes
+        common_inputs_part: inputs part common to all converted layers.
+            The inputs of a converted layers is
+            the concatenation of the outputs of the converted layers corresponding to its inputs nodes
+            + this common_inputs_part (only once even for merging layers)
+            This allows to pass perturbation_domain_inputs only once when creating the decomon forward version of a keras model.
+            Default to an empty list.
+        output_map: output of each converted node (to be used when called recursively on submodels)
+            When a layer is converted into several layers, we store the propagated output of the last one.
+            This map is updated during the conversion.
+        layer_map: map between node and converted layers (to be used when called recursively on submodels)
+            This map is updated during the conversion.
+        submodel: specify if called from within another conversion to propagate through an embedded submodel
+
+    Returns:
+        concatenated outputs of the converted layers corresponding to the output nodes of the keras model
+
+    """
+    if common_inputs_part is None:
+        common_inputs_part = []
 
     # ensure the model is functional (to be able to use get_depth_dict), convert sequential ones into functional ones
     model = ensure_functional_model(model)
@@ -161,9 +168,7 @@ def convert_forward_functional_model(
         output_map = {}
     if layer_map is None:
         layer_map = {}
-    if layer2layer_map is None:
-        layer2layer_map = {}
-    output: List[keras.KerasTensor] = input_tensors
+    output: list[keras.KerasTensor] = input_tensors
     for depth in keys:
         nodes = dico_nodes[depth]
         for node in nodes:
@@ -177,51 +182,85 @@ def convert_forward_functional_model(
                     output += output_map[id(parent)]
 
             if isinstance(layer, InputLayer):
-                # no conversion, no transformation for output (instead of trying to pass in identity layer)
-                layer_map[id(node)] = layer
+                # no conversion, propagate output unchanged
+                pass
             elif isinstance(layer, Model):
-                (
-                    _,
-                    output,
-                    layer_map_submodel,
-                    output_map_submodel,
-                    layer2layer_map_submodel,
-                ) = convert_forward_functional_model(
+                output = convert_forward_functional_model(
                     model=layer,
                     input_tensors=output,
+                    common_inputs_part=common_inputs_part,
                     layer_fn=layer_fn,
-                    softmax_to_linear=softmax_to_linear,
-                    count=count,
-                    layer2layer_map=layer2layer_map,
+                    output_map=output_map,
+                    layer_map=layer_map,
                 )
-                count = count + get_inner_layers(layer)
-                layer_map.update(layer_map_submodel)
-                output_map.update(output_map_submodel)
-                layer2layer_map.update(layer2layer_map_submodel)
-                layer_map[id(node)] = layer_map_submodel
             else:
-                if id(layer) in layer2layer_map:
+                if id(node) in layer_map:
                     # avoid converting twice layers that are shared by several nodes
-                    converted_layers = layer2layer_map[id(layer)]
+                    converted_layers = layer_map[id(node)]
                 else:
                     converted_layers = layer_fn(layer)
-                    layer2layer_map[id(layer)] = converted_layers
+                    layer_map[id(node)] = converted_layers
                 for converted_layer in converted_layers:
-                    converted_layer.name = f"{converted_layer.name}_{count}"
-                    count += 1
-                    output = converted_layer(prepare_inputs_for_layer(output))
-                    if len(converted_layers) > 1:
-                        output_map[f"{id(node)}_{converted_layer.name}"] = wrap_outputs_from_layer_in_list(output)
-                layer_map[id(node)] = converted_layers
+                    output = wrap_outputs_from_layer_in_list(
+                        converted_layer(prepare_inputs_for_layer(output + common_inputs_part))
+                    )
             output_map[id(node)] = wrap_outputs_from_layer_in_list(output)
 
     output = []
-    output_nodes = dico_nodes[0]
-    # the ordering may change
-    output_names = [tensor._keras_history.operation.name for tensor in to_list(model.output)]
-    for output_name in output_names:
-        for node in output_nodes:
-            if node.operation.name == output_name:
-                output += output_map[id(node)]
+    output_nodes = get_output_nodes(model)
+    if submodel and len(output_nodes) > 1:
+        raise NotImplementedError(
+            "convert_forward_functional_model() not yet implemented for model "
+            "whose embedded submodels have multiple outputs."
+        )
+    for node in output_nodes:
+        output += output_map[id(node)]
 
-    return input_tensors, output, layer_map, output_map, layer2layer_map
+    return output
+
+
+def include_kwargs_layer_fn(
+    layer_fn: Callable[..., Layer],
+    model_input_shape: tuple[int, ...],
+    perturbation_domain: PerturbationDomain,
+    ibp: bool,
+    affine: bool,
+    propagation: Propagation,
+    slope: Slope,
+    mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]],
+    **kwargs: Any,
+) -> Callable[[Layer], list[Layer]]:
+    """Include external parameters in the function converting layers
+
+    In particular, include propagation=Propagation.FORWARD.
+
+    Args:
+        layer_fn:
+        model_input_shape:
+        perturbation_domain:
+        ibp:
+        affine:
+        slope:
+        mapping_keras2decomon_classes:
+        **kwargs:
+
+    Returns:
+
+    """
+
+    def func(layer: Layer) -> list[Layer]:
+        return [
+            layer_fn(
+                layer,
+                model_input_shape=model_input_shape,
+                slope=slope,
+                perturbation_domain=perturbation_domain,
+                ibp=ibp,
+                affine=affine,
+                propagation=propagation,
+                mapping_keras2decomon_classes=mapping_keras2decomon_classes,
+                **kwargs,
+            )
+        ]
+
+    return func

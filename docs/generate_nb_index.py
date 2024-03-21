@@ -4,7 +4,6 @@ import logging
 import os
 import re
 import urllib.parse
-from typing import List, Tuple
 
 NOTEBOOKS_LIST_PLACEHOLDER = "[[notebooks-list]]"
 NOTEBOOKS_PAGE_TEMPLATE_RELATIVE_PATH = "tutorials.template.md"
@@ -25,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 def extract_notebook_title_n_description(
     notebook_filepath: str,
-) -> Tuple[str, List[str]]:
+) -> tuple[str, list[str]]:
     # load notebook
     with open(notebook_filepath, "rt", encoding="utf-8") as f:
         notebook = json.load(f)
@@ -33,7 +32,7 @@ def extract_notebook_title_n_description(
     # find title + description: from first cell,  h1 title + remaining text.
     # or title from filename else
     title = ""
-    description_lines: List[str] = []
+    description_lines: list[str] = []
     cell = notebook["cells"][0]
     if cell["cell_type"] == "markdown":
         firstline = cell["source"][0].strip()
@@ -51,7 +50,7 @@ def extract_notebook_title_n_description(
     return title, description_lines
 
 
-def filter_tags_from_description(description_lines: List[str], html_tag_to_remove: str) -> List[str]:
+def filter_tags_from_description(description_lines: list[str], html_tag_to_remove: str) -> list[str]:
     description = "".join(description_lines)
     # opening/closing tags
     opening_tag = html_tag_to_remove
@@ -147,7 +146,7 @@ def get_binder_link(
     return link
 
 
-def get_repo_n_branches_for_binder_n_github_links() -> Tuple[bool, str, str, str, str, str, bool]:
+def get_repo_n_branches_for_binder_n_github_links() -> tuple[bool, str, str, str, str, str, bool]:
     # repos + branches to use for binder environment and notebooks content.
     creating_links = True
     use_nbgitpuller = False

@@ -1,7 +1,8 @@
 import keras.ops as K
 import numpy as np
 import pytest
-from keras.layers import Activation, Conv2D, Dense, Flatten, Input, PReLU
+from keras.activations import softmax
+from keras.layers import Activation, Conv2D, Dense, Input, PReLU
 from keras.models import Model, Sequential
 from numpy.testing import assert_almost_equal
 
@@ -11,23 +12,12 @@ from decomon.models.convert import (
 )
 
 
-def test_split_activations_in_keras_model_no_inputshape_ko():
-    layers = [
-        Conv2D(
-            10,
-            kernel_size=(3, 3),
-            activation="relu",
-            data_format="channels_last",
-        ),
-        Flatten(),
-        Dense(1),
-    ]
-    model = Sequential(layers)
-    with pytest.raises(ValueError):
-        converted_model = split_activations_in_keras_model(model)
+def test_split_activations_in_keras_model(toy_model_fn, input_shape, toy_model_name):
+    # skip cnn on 0d or 1d input_shape
+    if toy_model_name == "cnn" and len(input_shape) == 1:
+        pytest.skip("cnn not possible on 0d or 1d input.")
 
-
-def test_split_activations_in_keras_model(toy_model):
+    toy_model = toy_model_fn(input_shape=input_shape)
     converted_model = split_activations_in_keras_model(toy_model)
     assert isinstance(converted_model, Model)
     # check no more activation functions in non-activation layers
@@ -93,3 +83,20 @@ def test_preprocess(
     output_np_ref = K.convert_to_numpy(model(inputs_np))
     output_np_new = K.convert_to_numpy(converted_model(inputs_np))
     assert_almost_equal(output_np_new, output_np_ref, decimal=4)
+
+
+def test_preprocess_keras_model_with_softmax():
+    input_tensor = Input((1,))
+
+    output_tensor = Dense(3, activation="relu")(input_tensor)
+
+    output_tensor1 = Dense(2)(output_tensor)
+    output_tensor2 = Activation(activation="softmax")(Dense(3)(output_tensor))
+    output_tensor3 = Dense(4, activation="softmax")(output_tensor)
+
+    model = Model(input_tensor, [output_tensor1, output_tensor2, output_tensor3])
+
+    new_model = preprocess_keras_model(model=model, rm_last_softmax=True)
+
+    assert len(new_model.layers) == 6
+    assert not any([(isinstance(layer, Activation) and layer.activation == softmax) for layer in new_model.layers])

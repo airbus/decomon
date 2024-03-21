@@ -14,8 +14,8 @@ jobs:
     outputs:
       package_version: ${{ steps.get_package_version.outputs.version }}
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
       with:
         python-version: '3.9'
     - name: Install dependencies
@@ -33,7 +33,7 @@ jobs:
         echo "version=$version"
         echo "version=$version" >> $GITHUB_OUTPUT
     - name: Upload as build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: dist
         path: dist
@@ -59,7 +59,7 @@ jobs:
     outputs:
       tuto-tag-name: ${{ steps.push-tuto-release-tag.outputs.new_tag_name }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: replace decomon version to install in colab notebooks
         run: |
           version=${{ needs.deploy.outputs.package_version }}

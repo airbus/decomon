@@ -9,8 +9,8 @@ from numpy.testing import assert_almost_equal
 from onnx2keras import onnx_to_keras
 from onnx2torch import convert
 
+from decomon.constants import ConvertMethod
 from decomon.models.convert import clone
-from decomon.models.utils import ConvertMethod
 
 
 @pytest.mark.parametrize(

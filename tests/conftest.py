@@ -1,50 +1,77 @@
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import keras
 import keras.config as keras_config
 import keras.ops as K
 import numpy as np
-import numpy.typing as npt
 import pytest
-from keras import KerasTensor
-from keras.layers import (
-    Activation,
-    Add,
-    Average,
-    Conv2D,
-    Dense,
-    Flatten,
-    Input,
-    Reshape,
+from keras import KerasTensor, Model, Sequential
+from keras.layers import Activation, Add, Conv2D, Dense, Flatten, Input
+from pytest_cases import (
+    fixture,
+    fixture_union,
+    param_fixture,
+    param_fixtures,
+    unpack_fixture,
 )
-from keras.models import Model, Sequential
-from numpy.testing import assert_almost_equal
-from pytest_cases import fixture, fixture_union, param_fixture
 
-from decomon.core import ForwardMode, Slope
+from decomon.constants import ConvertMethod, Propagation, Slope
 from decomon.keras_utils import (
     BACKEND_JAX,
     BACKEND_NUMPY,
     BACKEND_PYTORCH,
     BACKEND_TENSORFLOW,
+    batch_multid_dot,
 )
-from decomon.models.utils import ConvertMethod
-from decomon.types import Tensor
+from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
+from decomon.perturbation_domain import BoxDomain
+from decomon.types import BackendTensor, Tensor
+
+empty, diag, nobatch = param_fixtures(
+    "empty, diag, nobatch",
+    [
+        (True, True, True),
+        (False, True, True),
+        (False, True, False),
+        (False, False, True),
+        (False, False, False),
+    ],
+    ids=["identity", "diagonal-nobatch", "diagonal", "nobatch", "generic"],
+)
+ibp, affine, propagation = param_fixtures(
+    "ibp, affine, propagation",
+    [
+        (True, True, Propagation.FORWARD),
+        (False, True, Propagation.FORWARD),
+        (True, False, Propagation.FORWARD),
+        (True, True, Propagation.BACKWARD),
+    ],
+    ids=["forward-hybrid", "forward-affine", "forward-ibp", "backward"],
+)
+final_ibp, final_affine = param_fixtures(
+    "final_ibp, final_affine", [(True, False), (False, True), (True, True)], ids=["ibp", "affine", "hybrid"]
+)
+slope = param_fixture("slope", [s.value for s in Slope])
+n = param_fixture("n", list(range(10)))
+odd = param_fixture("odd", list(range(2)))
+use_bias = param_fixture("use_bias", [True, False])
+randomize = param_fixture("randomize", [True, False])
+padding = param_fixture("padding", ["same", "valid"])
+activation = param_fixture("activation", [None, "relu", "softsign"])
+data_format = param_fixture("data_format", ["channels_last", "channels_first"])
+method = param_fixture("method", [m.value for m in ConvertMethod])
+input_shape = param_fixture("input_shape", [(1,), (3,), (5, 6, 2)], ids=["0d", "1d", "multid"])
+equal_ibp = param_fixture("equal_ibp", [True, False])
 
 
-@pytest.fixture(params=[m.value for m in ForwardMode])
-def mode(request):
-    return request.param
+@pytest.fixture
+def batchsize():
+    return 10
 
 
-@pytest.fixture(params=[s.value for s in Slope])
-def slope(request):
-    return request.param
-
-
-@pytest.fixture(params=list(range(10)))
-def n(request):
-    return request.param
+@pytest.fixture
+def perturbation_domain():
+    return BoxDomain()
 
 
 @pytest.fixture(params=[32, 64, 16])
@@ -71,96 +98,13 @@ def decimal(floatx):
         return 4
 
 
-@pytest.fixture(params=[True, False])
-def dc_decomp(request):
-    return request.param
-
-
-@pytest.fixture(params=[True, False])
-def use_bias(request):
-    return request.param
-
-
-@pytest.fixture(params=[True, False])
-def shared(request):
-    return request.param
-
-
-@pytest.fixture(params=["same", "valid"])
-def padding(request):
-    return request.param
-
-
-@pytest.fixture(params=[None, "linear", "relu"])
-def activation(request):
-    return request.param
-
-
-data_format = param_fixture(argname="data_format", argvalues=["channels_last", "channels_first"])
-
-
-@pytest.fixture(params=[0, 1])
-def odd(request):
-    return request.param
-
-
-@pytest.fixture(params=[1, 2, 3, -1])
-def axis(request):
-    return request.param
-
-
-@pytest.fixture(params=[1, 2, 11])
-def channels(request):
-    return request.param
-
-
-@pytest.fixture(params=[1, 2, 3])
-def filter_size(request):
-    return request.param
-
-
-@pytest.fixture(params=[1, 2])
-def strides(request):
-    return request.param
-
-
-@pytest.fixture(params=[True, False])
-def flatten(request):
-    return request.param
-
-
-@pytest.fixture(params=[0, 1, 2, 3, 4, 5, 6])
-def finetune_odd(request) -> Optional[np.ndarray]:
-    # hard code several configuration of finetune for images odd=1 (6, 6, 2)
-    finetune_params = np.zeros((6, 6, 2))
-    if request.param == 1:
-        finetune_params += 1
-    elif request.param == 2:
-        finetune_params[0] = 1
-    elif request.param == 3:
-        finetune_params[:, 0] = 1
-    elif request.param == 4:
-        finetune_params[:, :, 0] = 1
-    elif request.param == 5:
-        finetune_params[0, 0, 0] = 1
-    else:
-        return None
-
-    return finetune_params
-
-
-@pytest.fixture(params=[m.value for m in ConvertMethod])
-def method(request):
-    return request.param
-
-
 class ModelNumpyFromKerasTensors:
-    def __init__(self, inputs: List[KerasTensor], outputs: List[KerasTensor]):
+    def __init__(self, inputs: list[KerasTensor], outputs: list[KerasTensor]):
         self.inputs = inputs
         self.outputs = outputs
         self._model = Model(inputs, outputs)
 
-    def __call__(self, inputs_: List[np.ndarray]):
+    def __call__(self, inputs_: list[np.ndarray]):
         output_tensors = self._model(inputs_)
         if isinstance(output_tensors, list):
             return [K.convert_to_numpy(output) for output in output_tensors]
@@ -169,6 +113,8 @@ class ModelNumpyFromKerasTensors:
 
 
 class Helpers:
+    function = ModelNumpyFromKerasTensors
+
     @staticmethod
     def in_GPU_mode() -> bool:
         backend = keras.config.backend()
@@ -190,92 +136,347 @@ class Helpers:
             raise NotImplementedError(f"Not implemented for {backend} backend.")
 
     @staticmethod
-    def is_method_mode_compatible(method, mode):
-        return not (
-            ConvertMethod(method) in {ConvertMethod.CROWN_FORWARD_IBP, ConvertMethod.FORWARD_IBP}
-            and ForwardMode(mode) != ForwardMode.IBP
-        )
-
-    function = ModelNumpyFromKerasTensors
+    def generate_random_tensor(shape_wo_batchsize, batchsize=10, dtype=keras_config.floatx(), nobatch=False):
+        if nobatch:
+            shape = shape_wo_batchsize
+        else:
+            shape = (batchsize,) + shape_wo_batchsize
+        return K.convert_to_tensor(2.0 * np.random.random(shape) - 1.0, dtype=dtype)
 
     @staticmethod
-    def predict_on_small_numpy(
-        model: Model, x: Union[np.ndarray, List[np.ndarray]]
-    ) -> Union[np.ndarray, List[np.ndarray]]:
-        """Make predictions for model directly on small numpy arrays
+    def get_decomon_input_shapes(
+        model_input_shape,
+        model_output_shape,
+        layer_input_shape,
+        layer_output_shape,
+        ibp,
+        affine,
+        propagation,
+        perturbation_domain,
+        empty=False,
+        diag=False,
+        nobatch=False,
+        for_linear_layer=False,
+        remove_perturbation_domain_inputs=False,
+        add_perturbation_domain_inputs=False,
+    ):
+        inputs_outputs_spec = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            layer_input_shape=layer_input_shape,
+            model_input_shape=model_input_shape,
+            model_output_shape=model_output_shape,
+            linear=for_linear_layer,
+        )
+        if (
+            inputs_outputs_spec.needs_perturbation_domain_inputs() and not remove_perturbation_domain_inputs
+        ) or add_perturbation_domain_inputs:
+            perturbation_domain_inputs_shape = [perturbation_domain.get_x_input_shape_wo_batchsize(model_input_shape)]
+        else:
+            perturbation_domain_inputs_shape = []
 
-        Avoid using `model.predict()` known to be not designed for small arrays,
-        and leading to memory leaks when used in loops.
+        if inputs_outputs_spec.needs_affine_bounds_inputs() and not empty:
+            if propagation == Propagation.FORWARD:
+                b_in_shape = layer_input_shape
+                w_in_shape = model_input_shape + layer_input_shape
+            else:
+                b_in_shape = model_output_shape
+                w_in_shape = layer_output_shape + model_output_shape
+            if diag:
+                w_in_shape = b_in_shape
 
-        See https://keras.io/api/models/model_training_apis/#predict-method and
-        https://github.com/tensorflow/tensorflow/issues/44711
+            affine_bounds_to_propagate_shape = [w_in_shape, b_in_shape, w_in_shape, b_in_shape]
+        else:
+            affine_bounds_to_propagate_shape = []
+
+        if inputs_outputs_spec.needs_constant_bounds_inputs():
+            constant_oracle_bounds_shape = [layer_input_shape, layer_input_shape]
+        else:
+            constant_oracle_bounds_shape = []
+
+        return affine_bounds_to_propagate_shape, constant_oracle_bounds_shape, perturbation_domain_inputs_shape
+
+    @staticmethod
+    def get_decomon_symbolic_inputs(
+        model_input_shape,
+        model_output_shape,
+        layer_input_shape,
+        layer_output_shape,
+        ibp,
+        affine,
+        propagation,
+        perturbation_domain,
+        empty=False,
+        diag=False,
+        nobatch=False,
+        for_linear_layer=False,
+        remove_perturbation_domain_inputs=False,
+        add_perturbation_domain_inputs=False,
+        dtype=keras_config.floatx(),
+    ):
+        """Generate decomon symbolic inputs for a decomon layer
+
+        To be used as `decomon_layer(*decomon_inputs)`.
 
         Args:
-            model:
-            x:
+            model_input_shape:
+            model_output_shape:
+            layer_input_shape:
+            layer_output_shape:
+            ibp:
+            affine:
+            propagation:
+            perturbation_domain:
 
         Returns:
 
         """
-        output_tensors = model(x)
-        if isinstance(output_tensors, list):
-            return [K.convert_to_numpy(output) for output in output_tensors]
+        (
+            affine_bounds_to_propagate_shape,
+            constant_oracle_bounds_shape,
+            perturbation_domain_inputs_shape,
+        ) = Helpers.get_decomon_input_shapes(
+            model_input_shape,
+            model_output_shape,
+            layer_input_shape,
+            layer_output_shape,
+            ibp,
+            affine,
+            propagation,
+            perturbation_domain,
+            empty=empty,
+            diag=diag,
+            nobatch=nobatch,
+            for_linear_layer=for_linear_layer,
+            remove_perturbation_domain_inputs=remove_perturbation_domain_inputs,
+            add_perturbation_domain_inputs=add_perturbation_domain_inputs,
+        )
+        perturbation_domain_inputs = [Input(shape, dtype=dtype) for shape in perturbation_domain_inputs_shape]
+        constant_oracle_bounds = [Input(shape, dtype=dtype) for shape in constant_oracle_bounds_shape]
+        if nobatch:
+            affine_bounds_to_propagate = [
+                Input(batch_shape=shape, dtype=dtype) for shape in affine_bounds_to_propagate_shape
+            ]
         else:
-            return K.convert_to_numpy(output_tensors)
+            affine_bounds_to_propagate = [Input(shape=shape, dtype=dtype) for shape in affine_bounds_to_propagate_shape]
+        inputs_outputs_spec = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            layer_input_shape=layer_input_shape,
+            model_input_shape=model_input_shape,
+            model_output_shape=model_output_shape,
+        )
+        return inputs_outputs_spec.flatten_inputs(
+            affine_bounds_to_propagate=affine_bounds_to_propagate,
+            constant_oracle_bounds=constant_oracle_bounds,
+            perturbation_domain_inputs=perturbation_domain_inputs,
+        )
 
     @staticmethod
-    def get_standard_values_1d_box(n, dc_decomp=True, grad_bounds=False, nb=100):
+    def generate_simple_decomon_layer_inputs_from_keras_input(
+        keras_input,
+        layer_output_shape,
+        ibp,
+        affine,
+        propagation,
+        perturbation_domain,
+        empty=False,
+        diag=False,
+        nobatch=False,
+        for_linear_layer=False,
+        dtype=keras_config.floatx(),
+        equal_ibp=True,
+        remove_perturbation_domain_inputs=False,
+        add_perturbation_domain_inputs=False,
+    ):
+        """Generate simple decomon inputs for a layer from the corresponding keras input
+
+        Hypothesis: single-layer model => model input/output = layer input/output
+
+        For affine bounds, weights= identity + bias = 0
+        For constant bounds, (keras_input, keras_input)
+
+        To be used as `decomon_layer(*decomon_inputs)`.
+
+        Args:
+            keras_input:
+            layer_output_shape:
+            ibp:
+            affine:
+            propagation:
+            perturbation_domain:
+            empty:
+            diag:
+            nobatch:
+
+        Returns:
+
+        """
+        layer_input_shape = tuple(keras_input.shape[1:])
+        model_input_shape = layer_input_shape
+        model_output_shape = layer_output_shape
+        inputs_outputs_spec = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            layer_input_shape=layer_input_shape,
+            model_input_shape=model_input_shape,
+            model_output_shape=model_output_shape,
+            linear=for_linear_layer,
+        )
+
+        if (
+            inputs_outputs_spec.needs_perturbation_domain_inputs() and not remove_perturbation_domain_inputs
+        ) or add_perturbation_domain_inputs:
+            x = Helpers.generate_simple_perturbation_domain_inputs_from_keras_input(
+                keras_input=keras_input, perturbation_domain=perturbation_domain
+            )
+            perturbation_domain_inputs = [x]
+        else:
+            perturbation_domain_inputs = []
+
+        if inputs_outputs_spec.needs_affine_bounds_inputs() and not empty:
+            batchsize = keras_input.shape[0]
+            if propagation == Propagation.FORWARD:
+                bias_shape = layer_input_shape
+            else:
+                bias_shape = layer_output_shape
+            flatten_bias_dim = int(np.prod(bias_shape))
+            if diag:
+                w_in = K.ones(bias_shape, dtype=dtype)
+            else:
+                w_in = K.reshape(K.eye(flatten_bias_dim, dtype=dtype), bias_shape + bias_shape)
+            b_in = K.zeros(bias_shape, dtype=dtype)
+            if not nobatch:
+                w_in = K.repeat(
+                    w_in[None],
+                    batchsize,
+                    axis=0,
+                )
+                b_in = K.repeat(
+                    b_in[None],
+                    batchsize,
+                    axis=0,
+                )
+            affine_bounds_to_propagate = [w_in, b_in, w_in, b_in]
+        else:
+            affine_bounds_to_propagate = []
+
+        if inputs_outputs_spec.needs_constant_bounds_inputs():
+            if equal_ibp:
+                constant_oracle_bounds = [keras_input, keras_input]
+            else:
+                batchsize = keras_input.shape[0]
+                lower = K.repeat(K.min(keras_input, axis=0, keepdims=True), batchsize, axis=0)
+                upper = K.repeat(K.max(keras_input, axis=0, keepdims=True), batchsize, axis=0)
+                constant_oracle_bounds = [lower, upper]
+        else:
+            constant_oracle_bounds = []
+
+        return inputs_outputs_spec.flatten_inputs(
+            affine_bounds_to_propagate=affine_bounds_to_propagate,
+            constant_oracle_bounds=constant_oracle_bounds,
+            perturbation_domain_inputs=perturbation_domain_inputs,
+        )
+
+    @staticmethod
+    def generate_simple_perturbation_domain_inputs_from_keras_input(
+        keras_input, perturbation_domain, equal_bounds=True
+    ):
+        if isinstance(perturbation_domain, BoxDomain):
+            if equal_bounds:
+                return K.concatenate([keras_input[:, None], keras_input[:, None]], axis=1)
+            else:
+                batchsize = keras_input.shape[0]
+                lower = K.repeat(K.min(keras_input, axis=0, keepdims=True), batchsize, axis=0)
+                upper = K.repeat(K.max(keras_input, axis=0, keepdims=True), batchsize, axis=0)
+                return K.concatenate([lower[:, None], upper[:, None]], axis=1)
+        else:
+            raise NotImplementedError
+
+    @staticmethod
+    def generate_merging_decomon_input_from_single_decomon_inputs(
+        decomon_inputs: list[list[Tensor]], ibp: bool, affine: bool, propagation: Propagation, linear: bool
+    ) -> list[Tensor]:
+        inputs_outputs_spec_single = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            layer_input_shape=tuple(),
+            model_input_shape=tuple(),
+            model_output_shape=tuple(),
+            linear=linear,
+        )
+        affine_bounds_to_propagate, constant_oracle_bounds, perturbation_domain_inputs = [], [], []
+        for decomon_input in decomon_inputs:
+            (
+                affine_bounds_to_propagate_i,
+                constant_oracle_bounds_i,
+                perturbation_domain_inputs_i,
+            ) = inputs_outputs_spec_single.split_inputs(decomon_input)
+            perturbation_domain_inputs = perturbation_domain_inputs_i
+            if propagation == Propagation.FORWARD:
+                affine_bounds_to_propagate.append(affine_bounds_to_propagate_i)
+            else:
+                affine_bounds_to_propagate = affine_bounds_to_propagate_i
+            constant_oracle_bounds.append(constant_oracle_bounds_i)
+
+        inputs_outputs_spec_merging = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            layer_input_shape=[tuple()],
+            model_input_shape=tuple(),
+            model_output_shape=tuple(),
+            is_merging_layer=True,
+            linear=linear,
+        )
+        return inputs_outputs_spec_merging.flatten_inputs(
+            affine_bounds_to_propagate=affine_bounds_to_propagate,
+            constant_oracle_bounds=constant_oracle_bounds,
+            perturbation_domain_inputs=perturbation_domain_inputs,
+        )
+
+    @staticmethod
+    def get_standard_values_0d_box(n, batchsize=10):
         """A set of functions with their monotonic decomposition for testing the activations"""
-        w_u_ = np.ones(nb, dtype=keras_config.floatx())
-        b_u_ = np.zeros(nb, dtype=keras_config.floatx())
-        w_l_ = np.ones(nb, dtype=keras_config.floatx())
-        b_l_ = np.zeros(nb, dtype=keras_config.floatx())
+        w_u_ = np.ones(batchsize)
+        b_u_ = np.zeros(batchsize)
+        w_l_ = np.ones(batchsize)
+        b_l_ = np.zeros(batchsize)
 
         if n == 0:
             # identity
-            y_ = np.linspace(-2, -1, nb)
-            x_ = np.linspace(-2, -1, nb)
-            h_ = np.linspace(-2, -1, nb)
-            g_ = np.zeros_like(x_)
+            y_ = np.linspace(-2, -1, batchsize)
+            x_ = np.linspace(-2, -1, batchsize)
 
         elif n == 1:
-            y_ = np.linspace(1, 2, nb)
-            x_ = np.linspace(1, 2, nb)
-            h_ = np.linspace(1, 2, nb)
-            g_ = np.zeros_like(x_)
+            y_ = np.linspace(1, 2, batchsize)
+            x_ = np.linspace(1, 2, batchsize)
 
         elif n == 2:
-            y_ = np.linspace(-1, 1, nb)
-            x_ = np.linspace(-1, 1, nb)
-            h_ = np.linspace(-1, 1, nb)
-            g_ = np.zeros_like(x_)
+            y_ = np.linspace(-1, 1, batchsize)
+            x_ = np.linspace(-1, 1, batchsize)
 
         elif n == 3:
             # identity
-            y_ = np.linspace(-2, -1, nb)
-            x_ = np.linspace(-2, -1, nb)
-            h_ = 2 * np.linspace(-2, -1, nb)
-            g_ = -np.linspace(-2, -1, nb)
+            y_ = np.linspace(-2, -1, batchsize)
+            x_ = np.linspace(-2, -1, batchsize)
 
         elif n == 4:
-            y_ = np.linspace(1, 2, nb)
-            x_ = np.linspace(1, 2, nb)
-            h_ = 2 * np.linspace(1, 2, nb)
-            g_ = -np.linspace(1, 2, nb)
+            y_ = np.linspace(1, 2, batchsize)
+            x_ = np.linspace(1, 2, batchsize)
 
         elif n == 5:
-            y_ = np.linspace(-1, 1, nb)
-            x_ = np.linspace(-1, 1, nb)
-            h_ = 2 * np.linspace(-1, 1, nb)
-            g_ = -np.linspace(-1, 1, nb)
+            y_ = np.linspace(-1, 1, batchsize)
+            x_ = np.linspace(-1, 1, batchsize)
 
         elif n == 6:
-            assert nb == 100, "expected nb=100 samples"
             # cosine function
-            x_ = np.linspace(-np.pi, np.pi, 100)
+            x_ = np.linspace(-np.pi, np.pi, batchsize)
             y_ = np.cos(x_)
-            h_ = np.concatenate([y_[:50], np.ones((50,))]) - 0.5
-            g_ = np.concatenate([np.ones((50,)), y_[50:]]) - 0.5
             w_u_ = np.zeros_like(x_)
             w_l_ = np.zeros_like(x_)
             b_u_ = np.ones_like(x_)
@@ -283,24 +484,24 @@ class Helpers:
 
         elif n == 7:
             # h and g >0
-            h_ = np.linspace(0.5, 2, nb)
-            g_ = np.linspace(1, 2, nb)[::-1]
+            h_ = np.linspace(0.5, 2, batchsize)
+            g_ = np.linspace(1, 2, batchsize)[::-1]
             x_ = h_ + g_
             y_ = h_ + g_
 
         elif n == 8:
             # h <0 and g <0
             # h_max+g_max <=0
-            h_ = np.linspace(-2, -1, nb)
-            g_ = np.linspace(-2, -1, nb)[::-1]
+            h_ = np.linspace(-2, -1, batchsize)
+            g_ = np.linspace(-2, -1, batchsize)[::-1]
             y_ = h_ + g_
             x_ = h_ + g_
 
         elif n == 9:
             # h >0 and g <0
             # h_min+g_min >=0
-            h_ = np.linspace(4, 5, nb)
-            g_ = np.linspace(-2, -1, nb)[::-1]
+            h_ = np.linspace(4, 5, batchsize)
+            g_ = np.linspace(-2, -1, batchsize)[::-1]
             y_ = h_ + g_
             x_ = h_ + g_
 
@@ -312,207 +513,26 @@ class Helpers:
 
         x_0_ = np.concatenate([x_min_[:, None], x_max_[:, None]], 1)
 
-        u_c_ = np.max(y_) * np.ones((nb,))
-        l_c_ = np.min(y_) * np.ones((nb,))
+        u_c_ = np.max(y_) * np.ones((batchsize,))
+        l_c_ = np.min(y_) * np.ones((batchsize,))
 
-        if dc_decomp:
-            output = [
-                x_[:, None],
-                y_[:, None],
-                x_0_[:, :, None],
-                u_c_[:, None],
-                w_u_[:, None, None],
-                b_u_[:, None],
-                l_c_[:, None],
-                w_l_[:, None, None],
-                b_l_[:, None],
-                h_[:, None],
-                g_[:, None],
-            ]
-        else:
-            output = [
-                x_[:, None],
-                y_[:, None],
-                x_0_[:, :, None],
-                u_c_[:, None],
-                w_u_[:, None, None],
-                b_u_[:, None],
-                l_c_[:, None],
-                w_l_[:, None, None],
-                b_l_[:, None],
-            ]
+        output = [
+            x_[:, None],
+            y_[:, None],
+            x_0_[:, :, None],
+            u_c_[:, None],
+            w_u_[:, None, None],
+            b_u_[:, None],
+            l_c_[:, None],
+            w_l_[:, None, None],
+            b_l_[:, None],
+        ]
 
         # cast element
         return [e.astype(keras_config.floatx()) for e in output]
 
     @staticmethod
-    def get_inputs_for_mode_from_full_inputs(
-        inputs: Union[List[Tensor], List[npt.NDArray[np.float_]]],
-        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        dc_decomp: bool = True,
-    ) -> Union[List[Tensor], List[npt.NDArray[np.float_]]]:
-        """Extract from full inputs the ones corresponding to the selected mode.
-
-        Args:
-            inputs: inputs from `get_standard_values_xxx()` or `get_tensor_decomposition_xxx()`
-            mode:
-            dc_decomp:
-
-        Returns:
-
-        """
-        mode = ForwardMode(mode)
-        if dc_decomp:
-            x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
-            if mode == ForwardMode.HYBRID:
-                return inputs[2:]
-            elif mode == ForwardMode.AFFINE:
-                return [z, W_u, b_u, W_l, b_l, h, g]
-            elif mode == ForwardMode.IBP:
-                return [u_c, l_c, h, g]
-            else:
-                raise ValueError("Unknown mode.")
-        else:
-            x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
-            if mode == ForwardMode.HYBRID:
-                return inputs[2:]
-            elif mode == ForwardMode.AFFINE:
-                return [z, W_u, b_u, W_l, b_l]
-            elif mode == ForwardMode.IBP:
-                return [u_c, l_c]
-            else:
-                raise ValueError("Unknown mode.")
-
-    @staticmethod
-    def get_inputs_np_for_decomon_model_from_full_inputs(
-        inputs: List[npt.NDArray[np.float_]],
-    ) -> npt.NDArray[np.float_]:
-        """Extract from full numpy inputs the ones for a decomon model prediction.
-
-        Args:
-            inputs:  inputs from `get_standard_values_xxx()`
-
-        Returns:
-
-        """
-        l_c_, u_c_ = Helpers.get_input_ref_bounds_from_full_inputs(inputs=inputs)
-        return np.concatenate((l_c_[:, None], u_c_[:, None]), axis=1)
-
-    @staticmethod
-    def get_input_ref_bounds_from_full_inputs(
-        inputs: Union[List[Tensor], List[npt.NDArray[np.float_]]],
-    ) -> Union[List[Tensor], List[npt.NDArray[np.float_]]]:
-        """Extract lower and upper bound for input ref from full inputs
-
-        Args:
-            inputs: inputs from `get_standard_values_xxx()` or `get_tensor_decomposition_xxx()`
-
-        Returns:
-
-        """
-        u_c_, l_c_ = inputs[3], inputs[6]
-        return [l_c_, u_c_]
-
-    @staticmethod
-    def prepare_full_np_inputs_for_convert_model(
-        inputs: List[npt.NDArray[np.float_]],
-        dc_decomp: bool = True,
-    ) -> List[npt.NDArray[np.float_]]:
-        """Prepare full numpy inputs for convert_forward or convert_backward.
-
-        W_u and W_l will be idendity matrices, and b_u, b_l zeros vectors.
-
-        Args:
-            inputs: inputs from `get_standard_values_xxx()` or `get_tensor_decomposition_xxx()`
-
-        Returns:
-
-        """
-        if dc_decomp:
-            x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
-        else:
-            x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
-
-        b_u = np.zeros_like(b_u)
-        b_l = np.zeros_like(b_l)
-        W_u = np.repeat(np.identity(n=W_u.shape[-1])[None, :, :], repeats=W_u.shape[0], axis=0)
-        W_l = np.repeat(np.identity(n=W_l.shape[-1])[None, :, :], repeats=W_l.shape[0], axis=0)
-
-        if dc_decomp:
-            return [x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g]
-        else:
-            return [x, y, z, u_c, W_u, b_u, l_c, W_l, b_l]
-
-    @staticmethod
-    def get_input_tensors_for_decomon_convert_from_full_inputs(
-        inputs: List[Tensor],
-        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        dc_decomp: bool = True,
-    ) -> List[Tensor]:
-        """Extract from full tensor inputs the ones for a conversion to decomon model.
-
-        Args:
-            inputs:  inputs from `get_tensor_decomposition_xxx()`
-            mode:
-            dc_decomp:
-
-        Returns:
-
-        """
-        mode = ForwardMode(mode)
-        if dc_decomp:
-            x, y, z, u_c, W_u, b_u, l_c, W_l, b_l, h, g = inputs
-            input_box_tensor = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
-            if mode == ForwardMode.HYBRID:
-                return [input_box_tensor, u_c, W_u, b_u, l_c, W_l, b_l, h, g]
-            elif mode == ForwardMode.AFFINE:
-                return [input_box_tensor, W_u, b_u, W_l, b_l, h, g]
-            elif mode == ForwardMode.IBP:
-                return [u_c, l_c, h, g]
-            else:
-                raise ValueError("Unknown mode.")
-        else:
-            x, y, z, u_c, W_u, b_u, l_c, W_l, b_l = inputs
-            input_box_tensor = K.concatenate([K.expand_dims(l_c, 1), K.expand_dims(u_c, 1)], 1)
-            if mode == ForwardMode.HYBRID:
-                return [input_box_tensor, u_c, W_u, b_u, l_c, W_l, b_l]
-            elif mode == ForwardMode.AFFINE:
-                return [input_box_tensor, W_u, b_u, W_l, b_l]
-            elif mode == ForwardMode.IBP:
-                return [u_c, l_c]
-            else:
-                raise ValueError("Unknown mode.")
-
-    @staticmethod
-    def get_input_ref_from_full_inputs(
-        inputs: Union[List[Tensor], List[npt.NDArray[np.float_]]]
-    ) -> Union[Tensor, npt.NDArray[np.float_]]:
-        """Extract from full inputs the input of reference for the original Keras layer.
-
-        Args:
-            inputs: inputs from `get_standard_values_xxx()` or `get_tensor_decomposition_xxx()`
-
-        Returns:
-
-        """
-        return inputs[1]
-
-    @staticmethod
-    def get_tensor_decomposition_1d_box(dc_decomp=True):
-        if dc_decomp:
-            return [
-                Input((1,), dtype=keras_config.floatx()),
-                Input((1,), dtype=keras_config.floatx()),
-                Input((2, 1), dtype=keras_config.floatx()),
-                Input((1,), dtype=keras_config.floatx()),
-                Input((1, 1), dtype=keras_config.floatx()),
-                Input((1,), dtype=keras_config.floatx()),
-                Input((1,), dtype=keras_config.floatx()),
-                Input((1, 1), dtype=keras_config.floatx()),
-                Input((1,), dtype=keras_config.floatx()),
-                Input((1,), dtype=keras_config.floatx()),
-                Input((1,), dtype=keras_config.floatx()),
-            ]
+    def get_tensor_decomposition_0d_box():
         return [
             Input((1,), dtype=keras_config.floatx()),
             Input((1,), dtype=keras_config.floatx()),
@@ -526,154 +546,32 @@ class Helpers:
         ]
 
     @staticmethod
-    def get_full_outputs_from_outputs_for_mode(
-        outputs_for_mode: Union[List[Tensor], List[npt.NDArray[np.float_]]],
-        mode: Union[str, ForwardMode] = ForwardMode.HYBRID,
-        dc_decomp: bool = True,
-        full_inputs: Optional[Union[List[Tensor], List[npt.NDArray[np.float_]]]] = None,
-    ) -> Union[List[Tensor], List[npt.NDArray[np.float_]]]:
-        mode = ForwardMode(mode)
-        if dc_decomp:
-            if mode == ForwardMode.HYBRID:
-                z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = outputs_for_mode
-            elif mode == ForwardMode.AFFINE:
-                z_, w_u_, b_u_, w_l_, b_l_, h_, g_ = outputs_for_mode
-                u_c_, l_c_ = None, None
-            elif mode == ForwardMode.IBP:
-                u_c_, l_c_, h_, g_ = outputs_for_mode
-                z_, w_u_, b_u_, w_l_, b_l_ = None, None, None, None, None
-                if full_inputs is not None:
-                    z_ = full_inputs[2]
-            else:
-                raise ValueError("Unknown mode.")
-        else:
-            if mode == ForwardMode.HYBRID:
-                z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = outputs_for_mode
-            elif mode == ForwardMode.AFFINE:
-                z_, w_u_, b_u_, w_l_, b_l_ = outputs_for_mode
-                u_c_, l_c_ = None, None
-            elif mode == ForwardMode.IBP:
-                u_c_, l_c_ = outputs_for_mode
-                z_, w_u_, b_u_, w_l_, b_l_ = None, None, None, None, None
-                if full_inputs is not None:
-                    z_ = full_inputs[2]
-            else:
-                raise ValueError("Unknown mode.")
-            h_, g_ = None, None
-        return [z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
-
-    @staticmethod
-    def get_input_dim_multid_box(odd):
-        if odd:
-            return 3
-        else:
-            return 2
-
-    @staticmethod
-    def get_input_dim_images_box(odd):
-        if odd:
-            return 7
-        else:
-            return 6
-
-    @staticmethod
-    def get_input_dim_from_full_inputs(inputs: Union[List[Tensor], List[npt.NDArray[np.float_]]]) -> int:
-        """Get input_dim for to_decomon or to_backward from full inputs
-
-        Args:
-            inputs: inputs from `get_standard_values_xxx()` or `get_tensor_decomposition_xxx()`
-
-        Returns:
-
-        """
-        return inputs[0].shape[-1]
-
-    @staticmethod
-    def get_tensor_decomposition_multid_box(odd=1, dc_decomp=True):
-        n = Helpers.get_input_dim_multid_box(odd)
-
-        if dc_decomp:
-            # x, y, z, u, w_u, b_u, l, w_l, b_l, h, g
-            return [
-                Input((n,), dtype=keras_config.floatx()),
-                Input((n,), dtype=keras_config.floatx()),
-                Input((2, n), dtype=keras_config.floatx()),
-                Input((n,), dtype=keras_config.floatx()),
-                Input((n, n), dtype=keras_config.floatx()),
-                Input((n,), dtype=keras_config.floatx()),
-                Input((n,), dtype=keras_config.floatx()),
-                Input((n, n), dtype=keras_config.floatx()),
-                Input((n,), dtype=keras_config.floatx()),
-                Input((n,), dtype=keras_config.floatx()),
-                Input((n,), dtype=keras_config.floatx()),
-            ]
-        return [
-            Input((n,), dtype=keras_config.floatx()),
-            Input((n,), dtype=keras_config.floatx()),
-            Input((2, n), dtype=keras_config.floatx()),
-            Input((n,), dtype=keras_config.floatx()),
-            Input((n, n), dtype=keras_config.floatx()),
-            Input((n,), dtype=keras_config.floatx()),
-            Input((n,), dtype=keras_config.floatx()),
-            Input((n, n), dtype=keras_config.floatx()),
-            Input((n,), dtype=keras_config.floatx()),
-        ]
-
-    @staticmethod
-    def get_standard_values_multid_box(odd=1, dc_decomp=True):
-        if dc_decomp:
-            (
-                x_0,
-                y_0,
-                z_0,
-                u_c_0,
-                w_u_0,
-                b_u_0,
-                l_c_0,
-                w_l_0,
-                b_l_0,
-                h_0,
-                g_0,
-            ) = Helpers.get_standard_values_1d_box(0, dc_decomp)
-            (
-                x_1,
-                y_1,
-                z_1,
-                u_c_1,
-                w_u_1,
-                b_u_1,
-                l_c_1,
-                w_l_1,
-                b_l_1,
-                h_1,
-                g_1,
-            ) = Helpers.get_standard_values_1d_box(1, dc_decomp)
-        else:
-            (
-                x_0,
-                y_0,
-                z_0,
-                u_c_0,
-                w_u_0,
-                b_u_0,
-                l_c_0,
-                w_l_0,
-                b_l_0,
-            ) = Helpers.get_standard_values_1d_box(0, dc_decomp)
-            (
-                x_1,
-                y_1,
-                z_1,
-                u_c_1,
-                w_u_1,
-                b_u_1,
-                l_c_1,
-                w_l_1,
-                b_l_1,
-            ) = Helpers.get_standard_values_1d_box(1, dc_decomp)
+    def get_standard_values_1d_box(odd=1, batchsize=10):
+        (
+            x_0,
+            y_0,
+            z_0,
+            u_c_0,
+            w_u_0,
+            b_u_0,
+            l_c_0,
+            w_l_0,
+            b_l_0,
+        ) = Helpers.get_standard_values_0d_box(n=0, batchsize=batchsize)
+        (
+            x_1,
+            y_1,
+            z_1,
+            u_c_1,
+            w_u_1,
+            b_u_1,
+            l_c_1,
+            w_l_1,
+            b_l_1,
+        ) = Helpers.get_standard_values_0d_box(n=1, batchsize=batchsize)
 
         if not odd:
-            # output (x_0+x_1, x_0+2*x_0)
+            # output (x_0+x_1, x_0+2*x_1)
             x_ = np.concatenate([x_0, x_1], -1)
             z_min_ = np.concatenate([z_0[:, 0], z_1[:, 0]], -1)
             z_max_ = np.concatenate([z_0[:, 1], z_1[:, 1]], -1)
@@ -683,10 +581,6 @@ class Helpers:
             u_c_ = np.concatenate([u_c_0 + u_c_1, u_c_0 + 2 * u_c_1], -1)
             b_l_ = np.concatenate([b_l_0 + b_l_1, b_l_0 + 2 * b_l_1], -1)
             l_c_ = np.concatenate([l_c_0 + l_c_1, l_c_0 + 2 * l_c_1], -1)
-
-            if dc_decomp:
-                h_ = np.concatenate([h_0 + h_1, h_0 + 2 * h_1], -1)
-                g_ = np.concatenate([g_0 + g_1, g_0 + 2 * g_1], -1)
 
             w_u_ = np.zeros((len(x_), 2, 2))
             w_u_[:, 0, 0] = w_u_0[:, 0, 0]
@@ -711,9 +605,7 @@ class Helpers:
                 l_c_2,
                 w_l_2,
                 b_l_2,
-                h_2,
-                g_2,
-            ) = Helpers.get_standard_values_1d_box(2)
+            ) = Helpers.get_standard_values_0d_box(n=2, batchsize=batchsize)
 
             # output (x_0+x_1, x_0+2*x_0, x_2)
             x_ = np.concatenate([x_0, x_1, x_2], -1)
@@ -725,10 +617,6 @@ class Helpers:
             b_l_ = np.concatenate([b_l_0 + b_l_1, b_l_0 + 2 * b_l_1, b_l_2], -1)
             u_c_ = np.concatenate([u_c_0 + u_c_1, u_c_0 + 2 * u_c_1, u_c_2], -1)
             l_c_ = np.concatenate([l_c_0 + l_c_1, l_c_0 + 2 * l_c_1, l_c_2], -1)
-
-            if dc_decomp:
-                h_ = np.concatenate([h_0 + h_1, h_0 + 2 * h_1, h_2], -1)
-                g_ = np.concatenate([g_0 + g_1, g_0 + 2 * g_1, g_2], -1)
 
             w_u_ = np.zeros((len(x_), 3, 3))
             w_u_[:, 0, 0] = w_u_0[:, 0, 0]
@@ -744,148 +632,36 @@ class Helpers:
             w_l_[:, 1, 1] = 2 * w_l_1[:, 0, 0]
             w_l_[:, 2, 2] = w_l_2[:, 0, 0]
 
-        if dc_decomp:
-            return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
         return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
     @staticmethod
-    def build_image_from_1D_box(odd=0, m=0, dc_decomp=True):
-        n = Helpers.get_input_dim_images_box(odd)
+    def get_tensor_decomposition_1d_box(odd=1):
+        n = Helpers.get_input_dim_1d_box(odd)
 
-        if dc_decomp:
-            (
-                x_,
-                y_0,
-                z_,
-                u_c_0,
-                w_u_0,
-                b_u_0,
-                l_c_0,
-                w_l_0,
-                b_l_0,
-                h_0,
-                g_0,
-            ) = Helpers.get_standard_values_1d_box(m, dc_decomp=dc_decomp)
+        return [
+            Input((n,), dtype=keras_config.floatx()),
+            Input((n,), dtype=keras_config.floatx()),
+            Input((2, n), dtype=keras_config.floatx()),
+            Input((n,), dtype=keras_config.floatx()),
+            Input((n, n), dtype=keras_config.floatx()),
+            Input((n,), dtype=keras_config.floatx()),
+            Input((n,), dtype=keras_config.floatx()),
+            Input((n, n), dtype=keras_config.floatx()),
+            Input((n,), dtype=keras_config.floatx()),
+        ]
+
+    @staticmethod
+    def get_input_dim_1d_box(odd):
+        if odd:
+            return 3
         else:
-            (
-                x_,
-                y_0,
-                z_,
-                u_c_0,
-                w_u_0,
-                b_u_0,
-                l_c_0,
-                w_l_0,
-                b_l_0,
-            ) = Helpers.get_standard_values_1d_box(m, dc_decomp=dc_decomp)
-
-        y_ = np.concatenate([(i + 1) * y_0 for i in range(n * n)], -1).reshape((-1, n, n))
-        b_u_ = np.concatenate([(i + 1) * b_u_0 for i in range(n * n)], -1).reshape((-1, n, n))
-        b_l_ = np.concatenate([(i + 1) * b_l_0 for i in range(n * n)], -1).reshape((-1, n, n))
-
-        if dc_decomp:
-            h_ = np.concatenate([(i + 1) * h_0 for i in range(n * n)], -1).reshape((-1, n, n))
-            g_ = np.concatenate([(i + 1) * g_0 for i in range(n * n)], -1).reshape((-1, n, n))
-
-        u_c_ = np.concatenate([(i + 1) * u_c_0 for i in range(n * n)], -1).reshape((-1, n, n))
-        l_c_ = np.concatenate([(i + 1) * l_c_0 for i in range(n * n)], -1).reshape((-1, n, n))
-
-        w_u_ = np.zeros((len(x_), 1, n * n))
-        w_l_ = np.zeros((len(x_), 1, n * n))
-
-        for i in range(n * n):
-            w_u_[:, 0, i] = (i + 1) * w_u_0[:, 0, 0]
-            w_l_[:, 0, i] = (i + 1) * w_l_0[:, 0, 0]
-
-        w_u_ = w_u_.reshape((-1, 1, n, n))
-        w_l_ = w_l_.reshape((-1, 1, n, n))
-
-        if dc_decomp:
-            return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
-        return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+            return 2
 
     @staticmethod
-    def build_image_from_2D_box(odd=0, m0=0, m1=1, dc_decomp=True):
-        if dc_decomp:
-            (
-                x_0,
-                y_0,
-                z_0,
-                u_c_0,
-                w_u_0,
-                b_u_0,
-                l_c_0,
-                w_l_0,
-                b_l_0,
-                h_0,
-                g_0,
-            ) = Helpers.build_image_from_1D_box(odd, m0, dc_decomp)
-            (
-                x_1,
-                y_1,
-                z_1,
-                u_c_1,
-                w_u_1,
-                b_u_1,
-                l_c_1,
-                w_l_1,
-                b_l_1,
-                h_1,
-                g_1,
-            ) = Helpers.build_image_from_1D_box(odd, m1, dc_decomp)
-        else:
-            (
-                x_0,
-                y_0,
-                z_0,
-                u_c_0,
-                w_u_0,
-                b_u_0,
-                l_c_0,
-                w_l_0,
-                b_l_0,
-            ) = Helpers.build_image_from_1D_box(odd, m0, dc_decomp)
-            (
-                x_1,
-                y_1,
-                z_1,
-                u_c_1,
-                w_u_1,
-                b_u_1,
-                l_c_1,
-                w_l_1,
-                b_l_1,
-            ) = Helpers.build_image_from_1D_box(odd, m1, dc_decomp)
-
-        x_ = np.concatenate([x_0, x_1], -1)
-        z_min_ = np.concatenate([z_0[:, 0], z_1[:, 0]], -1)
-        z_max_ = np.concatenate([z_0[:, 1], z_1[:, 1]], -1)
-        z_ = np.concatenate([z_min_[:, None], z_max_[:, None]], 1)
-        y_ = y_0 + y_1
-        b_u_ = b_u_0 + b_u_1
-        b_l_ = b_l_0 + b_l_1
-
-        u_c_ = u_c_0 + u_c_1
-        l_c_ = l_c_0 + l_c_1
-
-        w_u_ = np.concatenate([w_u_0, w_u_1], 1)
-        w_l_ = np.concatenate([w_l_0, w_l_1], 1)
-
-        if dc_decomp:
-            h_ = h_0 + h_1
-            g_ = g_0 + g_1
-
-            return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
-        return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
-
-    @staticmethod
-    def get_standard_values_images_box(data_format="channels_last", odd=0, m0=0, m1=1, dc_decomp=True):
+    def get_standard_values_images_box(data_format="channels_last", odd=0, m0=0, m1=1, batchsize=10):
         if data_format == "channels_last":
-            output = Helpers.build_image_from_2D_box(odd, m0, m1, dc_decomp)
-            if dc_decomp:
-                x_0, y_0, z_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0, h_0, g_0 = output
-            else:
-                x_0, y_0, z_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0 = output
+            output = Helpers.build_image_from_2D_box(odd=odd, m0=m0, m1=m1, batchsize=batchsize)
+            x_0, y_0, z_0, u_c_0, w_u_0, b_u_0, l_c_0, w_l_0, b_l_0 = output
 
             x_ = x_0
             z_ = z_0
@@ -905,22 +681,12 @@ class Helpers:
             w_u_ = np.concatenate([w_u_0, w_u_0], -1)
             w_l_ = np.concatenate([w_l_0, w_l_0], -1)
 
-            if dc_decomp:
-                h_0 = h_0[:, :, :, None]
-                g_0 = g_0[:, :, :, None]
-                h_ = np.concatenate([h_0, h_0], -1)
-                g_ = np.concatenate([g_0, g_0], -1)
-
         else:
             output = Helpers.get_standard_values_images_box(
-                data_format="channels_last", odd=odd, m0=m0, m1=m1, dc_decomp=dc_decomp
+                data_format="channels_last", odd=odd, m0=m0, m1=m1, batchsize=batchsize
             )
 
-            x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = output[:9]
-            if dc_decomp:
-                h_, g_ = output[-2:]
-                h_ = np.transpose(h_, (0, 3, 1, 2))
-                g_ = np.transpose(g_, (0, 3, 1, 2))
+            x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = output
             y_ = np.transpose(y_, (0, 3, 1, 2))
             u_c_ = np.transpose(u_c_, (0, 3, 1, 2))
             l_c_ = np.transpose(l_c_, (0, 3, 1, 2))
@@ -929,13 +695,10 @@ class Helpers:
             w_u_ = np.transpose(w_u_, (0, 1, 4, 2, 3))
             w_l_ = np.transpose(w_l_, (0, 1, 4, 2, 3))
 
-        if dc_decomp:
-            return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
-        else:
-            return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+        return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
     @staticmethod
-    def get_tensor_decomposition_images_box(data_format, odd, dc_decomp=True):
+    def get_tensor_decomposition_images_box(data_format, odd):
         n = Helpers.get_input_dim_images_box(odd)
 
         if data_format == "channels_last":
@@ -953,8 +716,6 @@ class Helpers:
                 Input((n, n, 2), dtype=keras_config.floatx()),
             ]
 
-            if dc_decomp:
-                output += [Input((n, n, 2), dtype=keras_config.floatx()), Input((n, n, 2), dtype=keras_config.floatx())]
         else:
             output = [
                 Input((2,), dtype=keras_config.floatx()),
@@ -967,475 +728,454 @@ class Helpers:
                 Input((2, 2, n, n), dtype=keras_config.floatx()),
                 Input((2, n, n), dtype=keras_config.floatx()),
             ]
-            if dc_decomp:
-                output += [Input((2, n, n), dtype=keras_config.floatx()), Input((2, n, n), dtype=keras_config.floatx())]
 
         return output
 
     @staticmethod
-    def assert_output_properties_box(x_, y_, h_, g_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=4):
-        if y_ is None:
-            y_ = h_ + g_
-        if h_ is not None:
-            assert_almost_equal(h_ + g_, y_, decimal=decimal, err_msg="decomposition error")
-
-        assert np.min(x_min_ <= x_max_), "x_min >x_max"
-
-        assert_almost_equal(np.clip(x_min_ - x_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_min >x_")
-        assert_almost_equal(np.clip(x_ - x_max_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_max < x_")
-        if w_u_ is not None or w_l_ is not None:
-            x_expand = x_ + np.zeros_like(x_)
-            n_expand = len(w_u_.shape) - len(x_expand.shape)
-            for i in range(n_expand):
-                x_expand = np.expand_dims(x_expand, -1)
-
-            if w_l_ is not None:
-                lower_ = np.sum(w_l_ * x_expand, 1) + b_l_
-            if w_u_ is not None:
-                upper_ = np.sum(w_u_ * x_expand, 1) + b_u_
-
-        # check that the functions h_ and g_ remains monotonic
-        if h_ is not None:
-            assert_almost_equal(
-                np.clip(h_[:-1] - h_[1:], 0, np.inf),
-                np.zeros_like(h_[1:]),
-                decimal=decimal,
-                err_msg="h is not increasing",
-            )
-            assert_almost_equal(
-                np.clip(g_[1:] - g_[:-1], 0, np.inf),
-                np.zeros_like(g_[1:]),
-                decimal=decimal,
-                err_msg="g is not increasing",
-            )
-
-        #
-        if w_u_ is not None:
-            if keras_config.floatx() == "float32":
-                assert_almost_equal(
-                    np.clip(y_ - upper_, 0.0, 1e6),
-                    np.zeros_like(y_),
-                    decimal=decimal,
-                    err_msg="upper <y",
-                )
-        if w_l_ is not None:
-            if keras_config.floatx() == "float32":
-                assert_almost_equal(
-                    np.clip(lower_ - y_, 0.0, np.inf),
-                    np.zeros_like(y_),
-                    decimal=decimal,
-                    err_msg="lower_ >y",
-                )
-
-        if l_c_ is not None:
-            assert_almost_equal(
-                np.clip(l_c_ - y_, 0.0, np.inf),
-                np.zeros_like(y_),
-                decimal=decimal,
-                err_msg="l_c >y",
-            )
-            assert_almost_equal(
-                np.clip(y_ - u_c_, 0.0, 1e6),
-                np.zeros_like(y_),
-                decimal=decimal,
-                err_msg="u_c <y",
-            )
-
-    @staticmethod
-    def assert_decomon_model_output_properties_box(
-        full_inputs, output_ref, outputs_for_mode, mode=ForwardMode.HYBRID, dc_decomp=True, decimal=4
-    ):
-        input_ref_ = Helpers.get_input_ref_from_full_inputs(full_inputs)
-        input_ref_min_, input_ref_max_ = Helpers.get_input_ref_bounds_from_full_inputs(inputs=full_inputs)
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = Helpers.get_full_outputs_from_outputs_for_mode(
-            outputs_for_mode=outputs_for_mode, mode=mode, dc_decomp=dc_decomp, full_inputs=full_inputs
-        )
-
-        Helpers.assert_output_properties_box(
-            input_ref_,
-            output_ref,
-            h_,
-            g_,
-            input_ref_min_,
-            input_ref_max_,
-            u_c_,
-            w_u_,
-            b_u_,
-            l_c_,
-            w_l_,
-            b_l_,
-            decimal=decimal,
-        )
-
-    @staticmethod
-    def assert_decomon_layer_output_properties_box(
-        full_inputs, output_ref, outputs_for_mode, mode=ForwardMode.HYBRID, dc_decomp=True, decimal=4
-    ):
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = Helpers.get_full_outputs_from_outputs_for_mode(
-            outputs_for_mode=outputs_for_mode, mode=mode, dc_decomp=dc_decomp, full_inputs=full_inputs
-        )
-        x_ = full_inputs[0]
-        Helpers.assert_output_properties_box(
-            x_,
-            output_ref,
-            h_,
-            g_,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            w_u_,
-            b_u_,
-            l_c_,
-            w_l_,
-            b_l_,
-            decimal=decimal,
-        )
-
-    @staticmethod
-    def assert_decomon_layer_output_properties_box_linear(
-        full_inputs, output_ref, outputs_for_mode, mode=ForwardMode.HYBRID, dc_decomp=True, decimal=4
-    ):
-        z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = Helpers.get_full_outputs_from_outputs_for_mode(
-            outputs_for_mode=outputs_for_mode, mode=mode, dc_decomp=dc_decomp, full_inputs=full_inputs
-        )
-        x_ = full_inputs[0]
-        Helpers.assert_output_properties_box_linear(
-            x_,
-            output_ref,
-            z_[:, 0],
-            z_[:, 1],
-            u_c_,
-            w_u_,
-            b_u_,
-            l_c_,
-            w_l_,
-            b_l_,
-            decimal=decimal,
-        )
-
-    @staticmethod
-    def assert_backward_layer_output_properties_box_linear(
-        full_inputs, backward_outputs, output_ref=None, upper_constant_bound=None, lower_constant_bound=None, decimal=4
-    ):
-        w_u_, b_u_, w_l_, b_l_ = backward_outputs
-        x_, y_, z_, u_c_, W_u_, B_u_, l_c_, W_l_, B_l_ = full_inputs
-
-        # backward recomposition
-        w_u_b = np.sum(np.maximum(w_u_, 0) * W_u_ + np.minimum(w_u_, 0) * W_l_, 1)[:, :, None]
-        b_u_b = (
-            b_u_ + np.sum(np.maximum(w_u_, 0) * B_u_[:, :, None], 1) + np.sum(np.minimum(w_u_, 0) * B_l_[:, :, None], 1)
-        )
-        w_l_b = np.sum(np.maximum(w_l_, 0) * W_l_ + np.minimum(w_l_, 0) * W_u_, 1)[:, :, None]
-        b_l_b = (
-            b_l_ + np.sum(np.maximum(w_l_, 0) * B_l_[:, :, None], 1) + np.sum(np.minimum(w_l_, 0) * B_u_[:, :, None], 1)
-        )
-
-        Helpers.assert_output_properties_box_linear(
-            x_,
-            output_ref,
-            z_[:, 0],
-            z_[:, 1],
-            upper_constant_bound,
-            w_u_b,
-            b_u_b,
-            lower_constant_bound,
-            w_l_b,
-            b_l_b,
-            decimal=decimal,
-        )
-
-    @staticmethod
-    def assert_output_properties_box_linear(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=4):
-        # flatten everyting
-        n = len(x_)
-        if y_ is not None:
-            n = len(y_)
-            y_ = y_.reshape((n, -1))
-        if l_c_ is not None:
-            u_c_ = u_c_.reshape((n, -1))
-            l_c_ = l_c_.reshape((n, -1))
-        if w_u_ is not None:
-            w_u_ = w_u_.reshape((n, w_u_.shape[1], -1))
-            w_l_ = w_l_.reshape((n, w_l_.shape[1], -1))
-            b_u_ = b_u_.reshape((n, -1))
-            b_l_ = b_l_.reshape((n, -1))
-
-        assert np.min(x_min_ <= x_max_), "x_min >x_max"
-
-        assert_almost_equal(np.clip(x_min_ - x_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_min >x_")
-        assert_almost_equal(np.clip(x_ - x_max_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_max < x_")
-        if w_u_ is not None:
-            x_expand = x_ + np.zeros_like(x_)
-            n_expand = len(w_u_.shape) - len(x_expand.shape)
-            for i in range(n_expand):
-                x_expand = np.expand_dims(x_expand, -1)
-
-            lower_ = np.sum(w_l_ * x_expand, 1) + b_l_
-            upper_ = np.sum(w_u_ * x_expand, 1) + b_u_
-
-        if y_ is not None:
-            if l_c_ is not None:
-                assert_almost_equal(
-                    np.clip(l_c_ - y_, 0.0, np.inf), np.zeros_like(y_), decimal=decimal, err_msg="l_c >y"
-                )
-                assert_almost_equal(np.clip(y_ - u_c_, 0.0, 1e6), np.zeros_like(y_), decimal=decimal, err_msg="u_c <y")
-            if w_u_ is not None:
-                assert_almost_equal(
-                    np.clip(lower_ - y_, 0.0, np.inf), np.zeros_like(y_), decimal=decimal, err_msg="lower_ >y"
-                )
-                assert_almost_equal(
-                    np.clip(y_ - upper_, 0.0, 1e6), np.zeros_like(y_), decimal=decimal, err_msg="upper <y"
-                )
-
-        # computer lower bounds on the domain
-        if w_u_ is not None:
-            x_expand_min = x_min_ + np.zeros_like(x_)
-            x_expand_max = x_max_ + np.zeros_like(x_)
-            n_expand = len(w_u_.shape) - len(x_expand_min.shape)
-            for i in range(n_expand):
-                x_expand_min = np.expand_dims(x_expand_min, -1)
-                x_expand_max = np.expand_dims(x_expand_max, -1)
-
-            lower_ = (
-                np.sum(np.maximum(0, w_l_) * x_expand_min, 1) + np.sum(np.minimum(0, w_l_) * x_expand_max, 1) + b_l_
-            )
-            upper_ = (
-                np.sum(np.maximum(0, w_u_) * x_expand_max, 1) + np.sum(np.minimum(0, w_u_) * x_expand_min, 1) + b_u_
-            )
-
-            if y_ is not None:
-                assert_almost_equal(
-                    np.clip(lower_ - y_, 0.0, np.inf), np.zeros_like(y_), decimal=decimal, err_msg="l_c >y"
-                )
-                assert_almost_equal(
-                    np.clip(y_ - upper_, 0.0, 1e6), np.zeros_like(y_), decimal=decimal, err_msg="u_c <y"
-                )
-
-    # multi decomposition for convert
-    @staticmethod
-    def get_standard_values_multid_box_convert(odd=1, dc_decomp=True):
-        if dc_decomp:
-            (
-                x_0,
-                y_0,
-                z_0,
-                u_c_0,
-                w_u_0,
-                b_u_0,
-                l_c_0,
-                w_l_0,
-                b_l_0,
-                h_0,
-                g_0,
-            ) = Helpers.get_standard_values_1d_box(0, dc_decomp)
-            (
-                x_1,
-                y_1,
-                z_1,
-                u_c_1,
-                w_u_1,
-                b_u_1,
-                l_c_1,
-                w_l_1,
-                b_l_1,
-                h_1,
-                g_1,
-            ) = Helpers.get_standard_values_1d_box(3, dc_decomp)
+    def get_input_dim_images_box(odd):
+        if odd:
+            return 7
         else:
-            (
-                x_0,
-                y_0,
-                z_0,
-                u_c_0,
-                w_u_0,
-                b_u_0,
-                l_c_0,
-                w_l_0,
-                b_l_0,
-            ) = Helpers.get_standard_values_1d_box(0, dc_decomp)
-            (
-                x_1,
-                y_1,
-                z_1,
-                u_c_1,
-                w_u_1,
-                b_u_1,
-                l_c_1,
-                w_l_1,
-                b_l_1,
-            ) = Helpers.get_standard_values_1d_box(1, dc_decomp)
+            return 6
 
-        if not odd:
-            # output (x_0+x_1, x_0+2*x_0) (x_0, x_1)
-            x_ = np.concatenate([x_0, x_1], -1)
-            z_min_ = np.concatenate([z_0[:, 0], z_1[:, 0]], -1)
-            z_max_ = np.concatenate([z_0[:, 1], z_1[:, 1]], -1)
-            z_ = np.concatenate([z_min_[:, None], z_max_[:, None]], 1)
-            y_ = np.concatenate([y_0, y_1], -1)
-            b_u_ = np.concatenate([b_u_0, b_u_1], -1)
-            u_c_ = np.concatenate([u_c_0, u_c_1], -1)
-            b_l_ = np.concatenate([b_l_0, b_l_1], -1)
-            l_c_ = np.concatenate([l_c_0, l_c_1], -1)
+    @staticmethod
+    def build_image_from_2D_box(odd=0, m0=0, m1=1, batchsize=10):
+        (
+            x_0,
+            y_0,
+            z_0,
+            u_c_0,
+            w_u_0,
+            b_u_0,
+            l_c_0,
+            w_l_0,
+            b_l_0,
+        ) = Helpers.build_image_from_1D_box(odd=odd, m=m0, batchsize=batchsize)
+        (
+            x_1,
+            y_1,
+            z_1,
+            u_c_1,
+            w_u_1,
+            b_u_1,
+            l_c_1,
+            w_l_1,
+            b_l_1,
+        ) = Helpers.build_image_from_1D_box(odd=odd, m=m1, batchsize=batchsize)
 
-            if dc_decomp:
-                h_ = np.concatenate([h_0, h_1], -1)
-                g_ = np.concatenate([g_0, g_1], -1)
+        x_ = np.concatenate([x_0, x_1], -1)
+        z_min_ = np.concatenate([z_0[:, 0], z_1[:, 0]], -1)
+        z_max_ = np.concatenate([z_0[:, 1], z_1[:, 1]], -1)
+        z_ = np.concatenate([z_min_[:, None], z_max_[:, None]], 1)
+        y_ = y_0 + y_1
+        b_u_ = b_u_0 + b_u_1
+        b_l_ = b_l_0 + b_l_1
 
-            w_u_ = np.zeros((len(x_), 2, 2))
-            w_u_[:, 0, 0] = w_u_0[:, 0, 0]
-            w_u_[:, 1, 1] = w_u_1[:, 0, 0]
+        u_c_ = u_c_0 + u_c_1
+        l_c_ = l_c_0 + l_c_1
 
-            w_l_ = np.zeros((len(x_), 2, 2))
-            w_l_[:, 0, 0] = w_l_0[:, 0, 0]
-            w_l_[:, 1, 1] = w_l_1[:, 0, 0]
+        w_u_ = np.concatenate([w_u_0, w_u_1], 1)
+        w_l_ = np.concatenate([w_l_0, w_l_1], 1)
 
-        else:
-            if dc_decomp:
-                (
-                    x_2,
-                    y_2,
-                    z_2,
-                    u_c_2,
-                    w_u_2,
-                    b_u_2,
-                    l_c_2,
-                    w_l_2,
-                    b_l_2,
-                    h_2,
-                    g_2,
-                ) = Helpers.get_standard_values_1d_box(2, dc_decomp)
-            else:
-                (x_2, y_2, z_2, u_c_2, w_u_2, b_u_2, l_c_2, w_l_2, b_l_2) = Helpers.get_standard_values_1d_box(
-                    2, dc_decomp
-                )
-            x_ = np.concatenate([x_0, x_1, x_2], -1)
-            z_min_ = np.concatenate([z_0[:, 0], z_1[:, 0], z_2[:, 0]], -1)
-            z_max_ = np.concatenate([z_0[:, 1], z_1[:, 1], z_2[:, 1]], -1)
-            z_ = np.concatenate([z_min_[:, None], z_max_[:, None]], 1)
-            y_ = np.concatenate([y_0, y_1, y_2], -1)
-            b_u_ = np.concatenate([b_u_0, b_u_1, b_u_2], -1)
-            b_l_ = np.concatenate([b_l_0, b_l_1, b_l_2], -1)
-            u_c_ = np.concatenate([u_c_0, u_c_1, u_c_2], -1)
-            l_c_ = np.concatenate([l_c_0, l_c_1, l_c_2], -1)
-
-            if dc_decomp:
-                h_ = np.concatenate([h_0, h_1, h_2], -1)
-                g_ = np.concatenate([g_0, g_1, g_2], -1)
-
-            w_u_ = np.zeros((len(x_), 3, 3))
-            w_u_[:, 0, 0] = w_u_0[:, 0, 0]
-            w_u_[:, 1, 1] = w_u_1[:, 0, 0]
-            w_u_[:, 2, 2] = w_u_2[:, 0, 0]
-
-            w_l_ = np.zeros((len(x_), 3, 3))
-            w_l_[:, 0, 0] = w_l_0[:, 0, 0]
-            w_l_[:, 1, 1] = w_l_1[:, 0, 0]
-            w_l_[:, 2, 2] = w_l_2[:, 0, 0]
-
-        if dc_decomp:
-            return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_]
         return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
 
     @staticmethod
-    def assert_output_properties_box_nodc(x_, y_, x_min_, x_max_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, decimal=4):
-        assert np.min(x_min_ <= x_max_), "x_min >x_max"
+    def build_image_from_1D_box(odd=0, m=0, batchsize=10):
+        n = Helpers.get_input_dim_images_box(odd)
 
-        assert_almost_equal(np.clip(x_min_ - x_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_min >x_")
-        assert_almost_equal(np.clip(x_ - x_max_, 0, np.inf), 0.0, decimal=decimal, err_msg="x_max < x_")
+        (
+            x_,
+            y_0,
+            z_,
+            u_c_0,
+            w_u_0,
+            b_u_0,
+            l_c_0,
+            w_l_0,
+            b_l_0,
+        ) = Helpers.get_standard_values_0d_box(n=m, batchsize=batchsize)
 
-        x_expand = x_ + np.zeros_like(x_)
-        n_expand = len(w_u_.shape) - len(x_expand.shape)
-        for i in range(n_expand):
-            x_expand = np.expand_dims(x_expand, -1)
+        y_ = np.concatenate([(i + 1) * y_0 for i in range(n * n)], -1).reshape((-1, n, n))
+        b_u_ = np.concatenate([(i + 1) * b_u_0 for i in range(n * n)], -1).reshape((-1, n, n))
+        b_l_ = np.concatenate([(i + 1) * b_l_0 for i in range(n * n)], -1).reshape((-1, n, n))
 
-        lower_ = np.sum(w_l_ * x_expand, 1) + b_l_
-        upper_ = np.sum(w_u_ * x_expand, 1) + b_u_
+        u_c_ = np.concatenate([(i + 1) * u_c_0 for i in range(n * n)], -1).reshape((-1, n, n))
+        l_c_ = np.concatenate([(i + 1) * l_c_0 for i in range(n * n)], -1).reshape((-1, n, n))
 
-        # check that the functions h_ and g_ remains monotonic
+        w_u_ = np.zeros((len(x_), 1, n * n))
+        w_l_ = np.zeros((len(x_), 1, n * n))
 
-        assert_almost_equal(
-            np.clip(l_c_ - y_, 0.0, np.inf),
-            np.zeros_like(y_),
+        for i in range(n * n):
+            w_u_[:, 0, i] = (i + 1) * w_u_0[:, 0, 0]
+            w_l_[:, 0, i] = (i + 1) * w_l_0[:, 0, 0]
+
+        w_u_ = w_u_.reshape((-1, 1, n, n))
+        w_l_ = w_l_.reshape((-1, 1, n, n))
+
+        return [x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_]
+
+    @staticmethod
+    def assert_decomon_outputs_equal(output_1, output_2, decimal=5):
+        assert len(output_1) == len(output_2)
+        for i in range(len(output_1)):
+            Helpers.assert_almost_equal(
+                output_1[i],
+                output_2[i],
+                decimal=decimal,
+            )
+
+    @staticmethod
+    def assert_ordered(lower: BackendTensor, upper: BackendTensor, decimal: int = 5, err_msg: str = ""):
+        lower_np = K.convert_to_numpy(lower)
+        upper_np = K.convert_to_numpy(upper)
+        np.testing.assert_almost_equal(
+            np.clip(lower_np - upper_np, 0.0, np.inf),
+            np.zeros_like(lower_np),
             decimal=decimal,
-            err_msg="l_c >y",
-        )
-        assert_almost_equal(
-            np.clip(y_ - u_c_, 0.0, 1e6),
-            np.zeros_like(y_),
-            decimal=decimal,
-            err_msg="u_c <y",
-        )
-
-        #
-
-        assert_almost_equal(
-            np.clip(lower_ - y_, 0.0, np.inf),
-            np.zeros_like(y_),
-            decimal=decimal,
-            err_msg="lower_ >y",
-        )
-        assert_almost_equal(
-            np.clip(y_ - upper_, 0.0, 1e6),
-            np.zeros_like(y_),
-            decimal=decimal,
-            err_msg="upper <y",
-        )
-
-        # computer lower bounds on the domain
-
-        x_expand_min = x_min_ + np.zeros_like(x_)
-        x_expand_max = x_max_ + np.zeros_like(x_)
-        n_expand = len(w_u_.shape) - len(x_expand_min.shape)
-        for i in range(n_expand):
-            x_expand_min = np.expand_dims(x_expand_min, -1)
-            x_expand_max = np.expand_dims(x_expand_max, -1)
-
-        lower_ = np.sum(np.maximum(0, w_l_) * x_expand_min, 1) + np.sum(np.minimum(0, w_l_) * x_expand_max, 1) + b_l_
-        upper_ = np.sum(np.maximum(0, w_u_) * x_expand_max, 1) + np.sum(np.minimum(0, w_u_) * x_expand_min, 1) + b_u_
-
-        assert_almost_equal(
-            np.clip(lower_.min(0) - l_c_.max(0), 0.0, np.inf),
-            np.zeros_like(y_.min(0)),
-            decimal=decimal,
-            err_msg="lower_ >l_c",
-        )
-        assert_almost_equal(
-            np.clip(u_c_.min(0) - upper_.max(0), 0.0, 1e6),
-            np.zeros_like(y_.min(0)),
-            decimal=decimal,
-            err_msg="upper <u_c",
+            err_msg=err_msg,
         )
 
     @staticmethod
-    def toy_network_tutorial(dtype="float32"):
+    def assert_almost_equal(x: BackendTensor, y: BackendTensor, decimal: int = 5, err_msg: str = ""):
+        np.testing.assert_almost_equal(
+            K.convert_to_numpy(x),
+            K.convert_to_numpy(y),
+            decimal=decimal,
+            err_msg=err_msg,
+        )
+
+    @staticmethod
+    def assert_decomon_output_compare_with_keras_input_output_single_layer(
+        decomon_output, keras_output, keras_input, ibp, affine, propagation, decimal=5
+    ):
+        Helpers.assert_decomon_output_compare_with_keras_input_output_layer(
+            decomon_output,
+            keras_layer_output=keras_output,
+            keras_layer_input=keras_input,
+            keras_model_input=keras_input,
+            keras_model_output=keras_output,
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            decimal=decimal,
+        )
+
+    @staticmethod
+    def assert_decomon_output_compare_with_keras_input_output_layer(
+        decomon_output,
+        keras_layer_output,
+        keras_layer_input,
+        keras_model_input,
+        keras_model_output,
+        ibp,
+        affine,
+        propagation,
+        decimal=5,
+        is_merging_layer=False,
+    ):
+        if is_merging_layer and not isinstance(keras_layer_input, KerasTensor):
+            # merging layer, except degenerated case with a single input
+            layer_input_shape = [tuple(t.shape[1:]) for t in keras_layer_input]
+        else:
+            layer_input_shape = tuple(keras_layer_input.shape[1:])
+        inputs_outputs_spec = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            layer_input_shape=layer_input_shape,
+            model_output_shape=tuple(keras_model_output.shape[1:]),
+            is_merging_layer=is_merging_layer,
+        )
+        affine_bounds_propagated, constant_bounds_propagated = inputs_outputs_spec.split_outputs(outputs=decomon_output)
+
+        if propagation == Propagation.FORWARD:
+            keras_input = keras_model_input
+            keras_output = keras_layer_output
+        else:
+            keras_input = keras_layer_input
+            keras_output = keras_model_output
+
+        if affine or propagation == Propagation.BACKWARD:
+            if is_merging_layer and propagation == Propagation.BACKWARD:
+                # one list of affine bounds by keras (layer) input
+                lower_affine = 0.0
+                upper_affine = 0.0
+                for keras_input_i, affine_bounds_propagated_i in zip(keras_input, affine_bounds_propagated):
+                    if len(affine_bounds_propagated_i) == 0:
+                        # identity case
+                        lower_affine += keras_input_i
+                        upper_affine += keras_input_i
+                    else:
+                        w_l, b_l, w_u, b_u = affine_bounds_propagated_i
+                        diagonal = (False, w_l.shape == b_l.shape)
+                        missing_batchsize = (False, len(b_l.shape) < len(keras_output.shape))
+                        lower_affine += (
+                            batch_multid_dot(keras_input_i, w_l, diagonal=diagonal, missing_batchsize=missing_batchsize)
+                            + b_l
+                        )
+                        upper_affine += (
+                            batch_multid_dot(keras_input_i, w_u, diagonal=diagonal, missing_batchsize=missing_batchsize)
+                            + b_u
+                        )
+                Helpers.assert_ordered(lower_affine, keras_output, decimal=decimal, err_msg="lower_affine not ok")
+                Helpers.assert_ordered(keras_output, upper_affine, decimal=decimal, err_msg="upper_affine not ok")
+
+            else:
+                # generic case: one single list of affine bounds and single one keras input (layer or model input according to propagation)
+                if len(affine_bounds_propagated) == 0:
+                    # identity case
+                    lower_affine = keras_input
+                    upper_affine = keras_input
+                else:
+                    w_l, b_l, w_u, b_u = affine_bounds_propagated
+                    diagonal = (False, w_l.shape == b_l.shape)
+                    missing_batchsize = (False, len(b_l.shape) < len(keras_output.shape))
+                    lower_affine = (
+                        batch_multid_dot(keras_input, w_l, diagonal=diagonal, missing_batchsize=missing_batchsize) + b_l
+                    )
+                    upper_affine = (
+                        batch_multid_dot(keras_input, w_u, diagonal=diagonal, missing_batchsize=missing_batchsize) + b_u
+                    )
+                Helpers.assert_ordered(lower_affine, keras_output, decimal=decimal, err_msg="lower_affine not ok")
+                Helpers.assert_ordered(keras_output, upper_affine, decimal=decimal, err_msg="upper_affine not ok")
+
+        if ibp and propagation == Propagation.FORWARD:
+            lower_ibp, upper_ibp = constant_bounds_propagated
+            Helpers.assert_ordered(lower_ibp, keras_output, decimal=decimal, err_msg="lower_ibp not ok")
+            Helpers.assert_ordered(keras_output, upper_ibp, decimal=decimal, err_msg="upper_ibp not ok")
+
+    @staticmethod
+    def assert_decomon_output_compare_with_keras_input_output_model(
+        decomon_output,
+        keras_input,
+        keras_output,
+        ibp,
+        affine,
+        propagation=Propagation.FORWARD,
+        decimal=5,
+    ):
+        keras_input_shape = tuple(keras_input.shape[1:])
+        keras_output_shape = tuple(keras_output.shape[1:])
+        inputs_outputs_spec = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            layer_input_shape=keras_input_shape,
+            model_input_shape=keras_input_shape,
+            model_output_shape=keras_output_shape,
+        )
+        affine_bounds_propagated, constant_bounds_propagated = inputs_outputs_spec.split_outputs(outputs=decomon_output)
+
+        if affine or propagation == Propagation.BACKWARD:
+            if len(affine_bounds_propagated) == 0:
+                # identity case
+                lower_affine = keras_input
+                upper_affine = keras_input
+            else:
+                w_l, b_l, w_u, b_u = affine_bounds_propagated
+                diagonal = (False, w_l.shape == b_l.shape)
+                missing_batchsize = (False, len(b_l.shape) < len(keras_output.shape))
+                lower_affine = (
+                    batch_multid_dot(keras_input, w_l, diagonal=diagonal, missing_batchsize=missing_batchsize) + b_l
+                )
+                upper_affine = (
+                    batch_multid_dot(keras_input, w_u, diagonal=diagonal, missing_batchsize=missing_batchsize) + b_u
+                )
+            Helpers.assert_ordered(lower_affine, keras_output, decimal=decimal, err_msg="lower_affine not ok")
+            Helpers.assert_ordered(keras_output, upper_affine, decimal=decimal, err_msg="upper_affine not ok")
+
+        if ibp and propagation == Propagation.FORWARD:
+            lower_ibp, upper_ibp = constant_bounds_propagated
+            Helpers.assert_ordered(lower_ibp, keras_output, decimal=decimal, err_msg="lower_ibp not ok")
+            Helpers.assert_ordered(keras_output, upper_ibp, decimal=decimal, err_msg="upper_ibp not ok")
+
+    @staticmethod
+    def assert_decomon_output_lower_equal_upper(
+        decomon_output,
+        ibp,
+        affine,
+        propagation,
+        decimal=5,
+        is_merging_layer=False,
+        check_ibp=True,
+        check_affine=True,
+    ):
+        if is_merging_layer:
+            layer_input_shape = [tuple()]
+        else:
+            layer_input_shape = tuple()
+        inputs_outputs_spec = InputsOutputsSpec(
+            ibp=ibp,
+            affine=affine,
+            propagation=propagation,
+            layer_input_shape=layer_input_shape,
+            model_output_shape=tuple(),
+            is_merging_layer=is_merging_layer,
+        )
+        affine_bounds_propagated, constant_bounds_propagated = inputs_outputs_spec.split_outputs(outputs=decomon_output)
+        if check_affine and (propagation == Propagation.BACKWARD or affine):
+            if is_merging_layer and propagation == Propagation.BACKWARD:
+                # one list of affine bounds by keras layer input
+                for affine_bounds_propagated_i in affine_bounds_propagated:
+                    w_l, b_l, w_u, b_u = affine_bounds_propagated_i
+                    Helpers.assert_almost_equal(w_l, w_u, decimal=decimal)
+                    Helpers.assert_almost_equal(b_l, b_u, decimal=decimal)
+            else:
+                # generic case: one single list of affine bounds
+                w_l, b_l, w_u, b_u = affine_bounds_propagated
+                Helpers.assert_almost_equal(w_l, w_u, decimal=decimal)
+                Helpers.assert_almost_equal(b_l, b_u, decimal=decimal)
+
+        if check_ibp and propagation == Propagation.FORWARD and ibp:
+            lower_ibp, upper_ibp = constant_bounds_propagated
+            Helpers.assert_almost_equal(lower_ibp, upper_ibp, decimal=decimal)
+
+    @staticmethod
+    def replace_none_by_batchsize(shapes: list[tuple[Optional[int], ...]], batchsize: int) -> list[tuple[int]]:
+        return [tuple(dim if dim is not None else batchsize for dim in shape) for shape in shapes]
+
+    @staticmethod
+    def predict_on_small_numpy(
+        model: Model, x: Union[np.ndarray, list[np.ndarray]]
+    ) -> Union[np.ndarray, list[np.ndarray]]:
+        """Make predictions for model directly on small numpy arrays
+
+        Avoid using `model.predict()` known to be not designed for small arrays,
+        and leading to memory leaks when used in loops.
+
+        See https://keras.io/api/models/model_training_apis/#predict-method and
+        https://github.com/tensorflow/tensorflow/issues/44711
+
+        Args:
+            model:
+            x:
+
+        Returns:
+
+        """
+        output_tensors = model(x)
+        if isinstance(output_tensors, list):
+            return [K.convert_to_numpy(output) for output in output_tensors]
+        else:
+            return K.convert_to_numpy(output_tensors)
+
+    @staticmethod
+    def toy_network_tutorial(
+        input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None, activation: Optional[str] = "relu"
+    ) -> Model:
+        if dtype is None:
+            dtype = keras_config.floatx()
         layers = []
-        layers.append(Input((1,), dtype=dtype))
-        layers.append(Dense(100, dtype=dtype))
-        layers.append(Activation("relu", dtype=dtype))
-        layers.append(Dense(100, dtype=dtype))
+        layers.append(Input(input_shape, dtype=dtype))
+        layers.append(Dense(10, dtype=dtype))
+        if activation is not None:
+            layers.append(Activation(activation, dtype=dtype))
+        layers.append(Dense(10, dtype=dtype))
         layers.append(Dense(1, activation="linear", dtype=dtype))
         model = Sequential(layers)
         return model
 
     @staticmethod
-    def toy_network_tutorial_with_embedded_activation(dtype="float32"):
+    def toy_network_2outputs(
+        input_shape: tuple[int, ...] = (1,),
+        dtype: Optional[str] = None,
+        activation: Optional[str] = "relu",
+        same_output_shape=False,
+    ) -> Model:
+        if dtype is None:
+            dtype = keras_config.floatx()
+        if same_output_shape:
+            n1, n2, n3 = 10, 10, 10
+        else:
+            n1, n2, n3 = 10, 11, 12
+        input_tensor = Input(input_shape, dtype=dtype)
+        output_tensor = Dense(n1, dtype=dtype, activation=activation)(input_tensor)
+        output_tensor_1 = Dense(n2, dtype=dtype, activation=activation)(output_tensor)
+        output_tensor_2 = Dense(n3, dtype=dtype, activation=activation)(output_tensor)
+        model = Model(input_tensor, [output_tensor_1, output_tensor_2])
+        return model
+
+    @staticmethod
+    def toy_network_submodel(
+        input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None, activation: Optional[str] = "relu"
+    ) -> Model:
+        if dtype is None:
+            dtype = keras_config.floatx()
+        submodel_input_shape = input_shape[:-1] + (10,)
         layers = []
-        layers.append(Input((1,), dtype=dtype))
-        layers.append(Dense(100, activation="relu", dtype=dtype))
-        layers.append(Dense(100, dtype=dtype))
+        layers.append(Input(input_shape, dtype=dtype))
+        layers.append(Dense(10, dtype=dtype))
+        if activation is not None:
+            layers.append(Activation(activation, dtype=dtype))
+        layers.append(Helpers.toy_network_tutorial(submodel_input_shape, dtype=dtype, activation=activation))
+        layers.append(Dense(10, dtype=dtype))
         layers.append(Dense(1, activation="linear", dtype=dtype))
         model = Sequential(layers)
         return model
 
     @staticmethod
-    def toy_embedded_sequential(dtype="float32"):
+    def toy_network_add(
+        input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None, activation: Optional[str] = "relu"
+    ) -> Model:
+        if dtype is None:
+            dtype = keras_config.floatx()
+        input_tensor = Input(input_shape, dtype=dtype)
+        output = Dense(10, dtype=dtype)(input_tensor)
+        if activation is not None:
+            output = Activation(activation, dtype=dtype)(output)
+        output = Add()([output, output])
+        output = Dense(10, dtype=dtype)(output)
+        if activation is not None:
+            output = Activation(activation, dtype=dtype)(output)
+        model = Model(inputs=input_tensor, outputs=output)
+        return model
+
+    @staticmethod
+    def toy_network_add_monolayer(
+        input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None, activation: Optional[str] = "relu"
+    ) -> Model:
+        if dtype is None:
+            dtype = keras_config.floatx()
+        input_tensor = Input(input_shape, dtype=dtype)
+        output = Dense(10, dtype=dtype)(input_tensor)
+        if activation is not None:
+            output = Activation(activation, dtype=dtype)(output)
+        output = Add()([output])
+        output = Dense(10, dtype=dtype)(output)
+        if activation is not None:
+            output = Activation(activation, dtype=dtype)(output)
+        model = Model(inputs=input_tensor, outputs=output)
+        return model
+
+    @staticmethod
+    def toy_network_tutorial_with_embedded_activation(input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None):
+        if dtype is None:
+            dtype = keras_config.floatx()
+        layers = []
+        layers.append(Input(input_shape, dtype=dtype))
+        layers.append(Dense(10, activation="relu", dtype=dtype))
+        layers.append(Dense(10, dtype=dtype))
+        layers.append(Dense(1, activation="linear", dtype=dtype))
+        model = Sequential(layers)
+        return model
+
+    @staticmethod
+    def toy_embedded_sequential(input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None):
+        if dtype is None:
+            dtype = keras_config.floatx()
         layers = []
         units = 10
-        layers.append(Input((1,), dtype=dtype))
+        submodel_input_shape = input_shape[:-1] + (units,)
+        layers.append(Input(input_shape, dtype=dtype))
         layers.append(Dense(units, activation="relu", dtype=dtype))
         layers.append(
-            Helpers.dense_NN_1D(
-                dtype=dtype, archi=[2, 3, 2], sequential=True, input_dim=units, activation="relu", use_bias=False
+            Helpers.dense_NN(
+                dtype=dtype,
+                archi=[2, 3, 2],
+                sequential=True,
+                input_shape=submodel_input_shape,
+                activation="relu",
+                use_bias=False,
             )
         )
         layers.append(Dense(1, activation="linear", dtype=dtype))
@@ -1443,8 +1183,12 @@ class Helpers:
         return model
 
     @staticmethod
-    def dense_NN_1D(input_dim, archi, sequential, activation, use_bias, dtype="float32"):
-        layers = [Input((input_dim,), dtype=dtype)]
+    def dense_NN(
+        archi, sequential, activation, use_bias, input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None
+    ):
+        if dtype is None:
+            dtype = keras_config.floatx()
+        layers = [Input(input_shape, dtype=dtype)]
         layers += [Dense(n_i, use_bias=use_bias, activation=activation, dtype=dtype) for n_i in archi]
 
         if sequential:
@@ -1457,13 +1201,22 @@ class Helpers:
             return Model(input, output)
 
     @staticmethod
-    def toy_struct_v0_1D(input_dim, archi, activation, use_bias, merge_op=Add, dtype="float32"):
-        nnet_0 = Helpers.dense_NN_1D(
-            input_dim=input_dim, archi=archi, sequential=False, activation=activation, use_bias=use_bias, dtype=dtype
+    def toy_struct_v0(
+        archi, activation, use_bias, merge_op=Add, input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None
+    ):
+        if dtype is None:
+            dtype = keras_config.floatx()
+        nnet_0 = Helpers.dense_NN(
+            input_shape=input_shape,
+            archi=archi,
+            sequential=False,
+            activation=activation,
+            use_bias=use_bias,
+            dtype=dtype,
         )
         nnet_1 = Dense(archi[-1], use_bias=use_bias, activation="linear", name="toto", dtype=dtype)
 
-        x = Input((input_dim,), dtype=dtype)
+        x = Input(input_shape, dtype=dtype)
         h_0 = nnet_0(x)
         h_1 = nnet_1(x)
 
@@ -1472,9 +1225,19 @@ class Helpers:
         return Model(x, y)
 
     @staticmethod
-    def toy_struct_v1_1D(input_dim, archi, sequential, activation, use_bias, merge_op=Add, dtype="float32"):
-        nnet_0 = Helpers.dense_NN_1D(
-            input_dim=input_dim,
+    def toy_struct_v1(
+        archi,
+        sequential,
+        activation,
+        use_bias,
+        merge_op=Add,
+        input_shape: tuple[int, ...] = (1,),
+        dtype: Optional[str] = None,
+    ):
+        if dtype is None:
+            dtype = keras_config.floatx()
+        nnet_0 = Helpers.dense_NN(
+            input_shape=input_shape,
             archi=archi,
             sequential=sequential,
             activation=activation,
@@ -1482,7 +1245,7 @@ class Helpers:
             dtype=dtype,
         )
 
-        x = Input((input_dim,), dtype=dtype)
+        x = Input(input_shape, dtype=dtype)
         h_0 = nnet_0(x)
         h_1 = nnet_0(x)
         y = merge_op(dtype=dtype)([h_0, h_1])
@@ -1490,17 +1253,27 @@ class Helpers:
         return Model(x, y)
 
     @staticmethod
-    def toy_struct_v2_1D(input_dim, archi, sequential, activation, use_bias, merge_op=Add, dtype="float32"):
-        nnet_0 = Helpers.dense_NN_1D(
-            input_dim=input_dim,
+    def toy_struct_v2(
+        archi,
+        sequential,
+        activation,
+        use_bias,
+        merge_op=Add,
+        input_shape: tuple[int, ...] = (1,),
+        dtype: Optional[str] = None,
+    ):
+        if dtype is None:
+            dtype = keras_config.floatx()
+        nnet_0 = Helpers.dense_NN(
+            input_shape=input_shape,
             archi=archi,
             sequential=sequential,
             activation=activation,
             use_bias=use_bias,
             dtype=dtype,
         )
-        nnet_1 = Helpers.dense_NN_1D(
-            input_dim=input_dim,
+        nnet_1 = Helpers.dense_NN(
+            input_shape=input_shape,
             archi=archi,
             sequential=sequential,
             activation=activation,
@@ -1509,7 +1282,7 @@ class Helpers:
         )
         nnet_2 = Dense(archi[-1], use_bias=use_bias, activation="linear", dtype=dtype)
 
-        x = Input((input_dim,), dtype=dtype)
+        x = Input(input_shape, dtype=dtype)
         nnet_0(x)
         nnet_1(x)
         nnet_1.set_weights([-p for p in nnet_0.get_weights()])  # be sure that the produced output will differ
@@ -1520,16 +1293,18 @@ class Helpers:
         return Model(x, y)
 
     @staticmethod
-    def toy_struct_cnn(dtype="float32", image_data_shape=(6, 6, 2)):
-        input_dim = int(np.prod(image_data_shape))
+    def toy_struct_cnn(
+        input_shape: tuple[int, ...] = (6, 6, 2), dtype: Optional[str] = None, data_format="channels_last"
+    ):
+        if dtype is None:
+            dtype = keras_config.floatx()
         layers = [
-            Input((input_dim,)),
-            Reshape(target_shape=image_data_shape),
+            Input(input_shape),
             Conv2D(
                 10,
                 kernel_size=(3, 3),
                 activation="relu",
-                data_format="channels_last",
+                data_format=data_format,
                 dtype=dtype,
             ),
             Flatten(dtype=dtype),
@@ -1538,33 +1313,47 @@ class Helpers:
         return Sequential(layers)
 
     @staticmethod
-    def toy_model(model_name, dtype="float32"):
+    def toy_model(model_name, input_shape: tuple[int, ...] = (1,), dtype: Optional[str] = None):
+        if dtype is None:
+            dtype = keras_config.floatx()
         if model_name == "tutorial":
-            return Helpers.toy_network_tutorial(dtype=dtype)
+            return Helpers.toy_network_tutorial(input_shape=input_shape, dtype=dtype)
         elif model_name == "tutorial_activation_embedded":
-            return Helpers.toy_network_tutorial_with_embedded_activation(dtype=dtype)
+            return Helpers.toy_network_tutorial_with_embedded_activation(input_shape=input_shape, dtype=dtype)
+        elif model_name == "add":
+            return Helpers.toy_network_add(input_shape=input_shape, dtype=dtype)
         elif model_name == "merge_v0":
-            return Helpers.toy_struct_v0_1D(dtype=dtype, input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True)
+            return Helpers.toy_struct_v0(
+                dtype=dtype, input_shape=input_shape, archi=[2, 3, 2], activation="relu", use_bias=True
+            )
         elif model_name == "merge_v1":
-            return Helpers.toy_struct_v1_1D(
-                dtype=dtype, input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
+            return Helpers.toy_struct_v1(
+                dtype=dtype,
+                input_shape=input_shape,
+                archi=[2, 3, 2],
+                activation="relu",
+                use_bias=True,
+                sequential=False,
             )
         elif model_name == "merge_v1_seq":
-            return Helpers.toy_struct_v1_1D(
-                dtype=dtype, input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=True
-            )
-        elif model_name == "merge_v1_2":
-            return Helpers.toy_struct_v1_1D(
-                dtype=dtype, input_dim=2, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
+            return Helpers.toy_struct_v1(
+                dtype=dtype, input_shape=input_shape, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=True
             )
         elif model_name == "merge_v2":
-            return Helpers.toy_struct_v2_1D(
-                dtype=dtype, input_dim=1, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
+            return Helpers.toy_struct_v2(
+                dtype=dtype,
+                input_shape=input_shape,
+                archi=[2, 3, 2],
+                activation="relu",
+                use_bias=True,
+                sequential=False,
             )
         elif model_name == "cnn":
-            return Helpers.toy_struct_cnn(dtype=dtype)
-        elif model_name == "embedded_model":
-            return Helpers.toy_embedded_sequential(dtype=dtype)
+            return Helpers.toy_struct_cnn(input_shape=input_shape, dtype=dtype)
+        elif model_name == "embedded_model_v1":
+            return Helpers.toy_embedded_sequential(input_shape=input_shape, dtype=dtype)
+        elif model_name == "embedded_model_v2":
+            return Helpers.toy_network_submodel(input_shape=input_shape, dtype=dtype)
         else:
             raise ValueError(f"model_name {model_name} unknown")
 
@@ -1574,98 +1363,491 @@ def helpers():
     return Helpers
 
 
-@pytest.fixture(
-    params=[
+@fixture
+def simple_layer_input_functions(
+    ibp, affine, propagation, perturbation_domain, batchsize, input_shape, equal_ibp, empty, diag, nobatch, helpers
+):
+    keras_symbolic_model_input_fn = lambda: Input(input_shape)
+    keras_symbolic_layer_input_fn = lambda keras_symbolic_model_input: keras_symbolic_model_input
+
+    decomon_symbolic_input_fn = lambda output_shape, linear: helpers.get_decomon_symbolic_inputs(
+        model_input_shape=input_shape,
+        model_output_shape=output_shape,
+        layer_input_shape=input_shape,
+        layer_output_shape=output_shape,
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        perturbation_domain=perturbation_domain,
+        empty=empty,
+        diag=diag,
+        nobatch=nobatch,
+        for_linear_layer=linear,
+    )
+
+    keras_model_input_fn = lambda: helpers.generate_random_tensor(input_shape, batchsize=batchsize)
+    keras_layer_input_fn = lambda keras_model_input: keras_model_input
+
+    decomon_input_fn = lambda keras_model_input, keras_layer_input, output_shape, linear: helpers.generate_simple_decomon_layer_inputs_from_keras_input(
+        keras_input=keras_layer_input,
+        layer_output_shape=output_shape,
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        perturbation_domain=perturbation_domain,
+        empty=empty,
+        diag=diag,
+        nobatch=nobatch,
+        for_linear_layer=linear,
+        equal_ibp=equal_ibp,
+    )
+
+    return (
+        keras_symbolic_model_input_fn,
+        keras_symbolic_layer_input_fn,
+        decomon_symbolic_input_fn,
+        keras_model_input_fn,
+        keras_layer_input_fn,
+        decomon_input_fn,
+        equal_ibp,
+        True,
+    )
+
+
+def convert_standard_input_functions_for_single_layer(
+    get_tensor_decomposition_fn, get_standard_values_fn, ibp, affine, propagation, perturbation_domain, helpers
+):
+    keras_symbolic_model_input_fn = lambda: get_tensor_decomposition_fn()[0]
+    keras_symbolic_layer_input_fn = lambda _: get_tensor_decomposition_fn()[1]
+    keras_model_input_fn = lambda: K.convert_to_tensor(get_standard_values_fn()[0])
+    keras_layer_input_fn = lambda _: K.convert_to_tensor(get_standard_values_fn()[1])
+
+    if propagation == Propagation.FORWARD:
+
+        def decomon_symbolic_input_fn(output_shape, linear):
+            x, y, z, u_c, w_u, b_u, l_c, w_l, b_l = get_tensor_decomposition_fn()
+            layer_input_shape = y.shape[1:]
+            model_input_shape = x.shape[1:]
+
+            inputs_outputs_spec = InputsOutputsSpec(
+                ibp=ibp,
+                affine=affine,
+                propagation=propagation,
+                layer_input_shape=layer_input_shape,
+                model_input_shape=model_input_shape,
+                model_output_shape=output_shape,
+                linear=linear,
+            )
+
+            if affine:
+                affine_bounds_to_propagate = [w_l, b_l, w_u, b_u]
+            else:
+                affine_bounds_to_propagate = []
+
+            if ibp:
+                constant_oracle_bounds = [l_c, u_c]
+            else:
+                constant_oracle_bounds = []
+
+            if inputs_outputs_spec.needs_perturbation_domain_inputs():
+                if isinstance(perturbation_domain, BoxDomain):
+                    perturbation_domain_inputs = [z]
+                else:
+                    raise NotImplementedError
+            else:
+                perturbation_domain_inputs = []
+
+            return inputs_outputs_spec.flatten_inputs(
+                affine_bounds_to_propagate=affine_bounds_to_propagate,
+                constant_oracle_bounds=constant_oracle_bounds,
+                perturbation_domain_inputs=perturbation_domain_inputs,
+            )
+
+        def decomon_input_fn(keras_model_input, keras_layer_input, output_shape, linear):
+            x, y, z, u_c, w_u, b_u, l_c, w_l, b_l = get_standard_values_fn()
+            layer_input_shape = tuple(y.shape[1:])
+            model_input_shape = tuple(x.shape[1:])
+
+            inputs_outputs_spec = InputsOutputsSpec(
+                ibp=ibp,
+                affine=affine,
+                propagation=propagation,
+                layer_input_shape=layer_input_shape,
+                model_input_shape=model_input_shape,
+                model_output_shape=output_shape,
+                linear=linear,
+            )
+
+            if affine:
+                affine_bounds_to_propagate = [K.convert_to_tensor(a) for a in (w_l, b_l, w_u, b_u)]
+            else:
+                affine_bounds_to_propagate = []
+
+            if ibp:
+                constant_oracle_bounds = [K.convert_to_tensor(a) for a in (l_c, u_c)]
+            else:
+                constant_oracle_bounds = []
+
+            if inputs_outputs_spec.needs_perturbation_domain_inputs():
+                if isinstance(perturbation_domain, BoxDomain):
+                    perturbation_domain_inputs = [K.convert_to_tensor(z)]
+                else:
+                    raise NotImplementedError
+            else:
+                perturbation_domain_inputs = []
+
+            return inputs_outputs_spec.flatten_inputs(
+                affine_bounds_to_propagate=affine_bounds_to_propagate,
+                constant_oracle_bounds=constant_oracle_bounds,
+                perturbation_domain_inputs=perturbation_domain_inputs,
+            )
+
+    else:  # backward
+
+        def decomon_symbolic_input_fn(output_shape, linear):
+            x, y, z, u_c, w_u, b_u, l_c, w_l, b_l = get_tensor_decomposition_fn()
+            layer_input_shape = y.shape[1:]
+            model_input_shape = x.shape[1:]
+
+            inputs_outputs_spec = InputsOutputsSpec(
+                ibp=ibp,
+                affine=affine,
+                propagation=propagation,
+                layer_input_shape=layer_input_shape,
+                model_input_shape=model_input_shape,
+                model_output_shape=output_shape,
+                linear=linear,
+            )
+
+            if inputs_outputs_spec.needs_constant_bounds_inputs():
+                constant_oracle_bounds = [l_c, u_c]
+            else:
+                constant_oracle_bounds = []
+
+            if inputs_outputs_spec.needs_perturbation_domain_inputs():
+                if isinstance(perturbation_domain, BoxDomain):
+                    perturbation_domain_inputs = [z]
+                else:
+                    raise NotImplementedError
+            else:
+                perturbation_domain_inputs = []
+
+            # take identity affine bounds
+            if inputs_outputs_spec.needs_affine_bounds_inputs():
+                simple_decomon_inputs = helpers.get_decomon_symbolic_inputs(
+                    model_input_shape=model_input_shape,
+                    model_output_shape=output_shape,
+                    layer_input_shape=layer_input_shape,
+                    layer_output_shape=output_shape,
+                    ibp=ibp,
+                    affine=affine,
+                    propagation=propagation,
+                    perturbation_domain=perturbation_domain,
+                    empty=empty,
+                    diag=diag,
+                    nobatch=nobatch,
+                )
+                affine_bounds_to_propagate, _, _ = inputs_outputs_spec.split_inputs(simple_decomon_inputs)
+            else:
+                affine_bounds_to_propagate = []
+
+            return inputs_outputs_spec.flatten_inputs(
+                affine_bounds_to_propagate=affine_bounds_to_propagate,
+                constant_oracle_bounds=constant_oracle_bounds,
+                perturbation_domain_inputs=perturbation_domain_inputs,
+            )
+
+        def decomon_input_fn(keras_model_input, keras_layer_input, output_shape, linear):
+            x, y, z, u_c, w_u, b_u, l_c, w_l, b_l = get_standard_values_fn()
+            layer_input_shape = tuple(y.shape[1:])
+            model_input_shape = tuple(x.shape[1:])
+
+            inputs_outputs_spec = InputsOutputsSpec(
+                ibp=ibp,
+                affine=affine,
+                propagation=propagation,
+                layer_input_shape=layer_input_shape,
+                model_input_shape=model_input_shape,
+                model_output_shape=output_shape,
+                linear=linear,
+            )
+
+            if inputs_outputs_spec.needs_constant_bounds_inputs():
+                constant_oracle_bounds = [K.convert_to_tensor(a) for a in (l_c, u_c)]
+            else:
+                constant_oracle_bounds = []
+
+            if inputs_outputs_spec.needs_perturbation_domain_inputs():
+                if isinstance(perturbation_domain, BoxDomain):
+                    perturbation_domain_inputs = [K.convert_to_tensor(z)]
+                else:
+                    raise NotImplementedError
+            else:
+                perturbation_domain_inputs = []
+
+            #  take identity affine bounds
+            if inputs_outputs_spec.needs_affine_bounds_inputs():
+                simple_decomon_inputs = helpers.generate_simple_decomon_layer_inputs_from_keras_input(
+                    keras_input=keras_layer_input,
+                    layer_output_shape=output_shape,
+                    ibp=ibp,
+                    affine=affine,
+                    propagation=propagation,
+                    perturbation_domain=perturbation_domain,
+                    empty=empty,
+                    diag=diag,
+                    nobatch=nobatch,
+                    for_linear_layer=linear,
+                )
+                affine_bounds_to_propagate, _, _ = inputs_outputs_spec.split_inputs(simple_decomon_inputs)
+            else:
+                affine_bounds_to_propagate = []
+
+            return inputs_outputs_spec.flatten_inputs(
+                affine_bounds_to_propagate=affine_bounds_to_propagate,
+                constant_oracle_bounds=constant_oracle_bounds,
+                perturbation_domain_inputs=perturbation_domain_inputs,
+            )
+
+    return (
+        keras_symbolic_model_input_fn,
+        keras_symbolic_layer_input_fn,
+        decomon_symbolic_input_fn,
+        keras_model_input_fn,
+        keras_layer_input_fn,
+        decomon_input_fn,
+        False,
+        False,
+    )
+
+
+@fixture
+def standard_layer_input_functions_0d(n, ibp, affine, propagation, batchsize, helpers):
+    perturbation_domain = BoxDomain()
+    get_tensor_decomposition_fn = helpers.get_tensor_decomposition_0d_box
+    get_standard_values_fn = lambda: helpers.get_standard_values_0d_box(n=n, batchsize=batchsize)
+    return convert_standard_input_functions_for_single_layer(
+        get_tensor_decomposition_fn, get_standard_values_fn, ibp, affine, propagation, perturbation_domain, helpers
+    )
+
+
+@fixture
+def standard_layer_input_functions_1d(odd, ibp, affine, propagation, batchsize, helpers):
+    perturbation_domain = BoxDomain()
+    get_tensor_decomposition_fn = lambda: helpers.get_tensor_decomposition_1d_box(odd=odd)
+    get_standard_values_fn = lambda: helpers.get_standard_values_1d_box(odd=odd, batchsize=batchsize)
+    return convert_standard_input_functions_for_single_layer(
+        get_tensor_decomposition_fn, get_standard_values_fn, ibp, affine, propagation, perturbation_domain, helpers
+    )
+
+
+@fixture
+def standard_layer_input_functions_multid(data_format, ibp, affine, propagation, batchsize, helpers):
+    perturbation_domain = BoxDomain()
+    odd, m0, m1 = 0, 0, 1
+    get_tensor_decomposition_fn = lambda: helpers.get_tensor_decomposition_images_box(data_format=data_format, odd=odd)
+    get_standard_values_fn = lambda: helpers.get_standard_values_images_box(
+        data_format=data_format, odd=odd, m0=m0, m1=m1, batchsize=batchsize
+    )
+    return convert_standard_input_functions_for_single_layer(
+        get_tensor_decomposition_fn, get_standard_values_fn, ibp, affine, propagation, perturbation_domain, helpers
+    )
+
+
+layer_input_functions = fixture_union(
+    "layer_input_functions",
+    [
+        simple_layer_input_functions,
+        standard_layer_input_functions_0d,
+        standard_layer_input_functions_1d,
+        standard_layer_input_functions_multid,
+    ],
+    unpack_into="keras_symbolic_model_input_fn, keras_symbolic_layer_input_fn, decomon_symbolic_input_fn, keras_model_input_fn, keras_layer_input_fn, decomon_input_fn, equal_ibp_bounds, equal_affine_bounds",
+)
+
+(
+    simple_keras_symbolic_model_input_fn,
+    simple_keras_symbolic_layer_input_fn,
+    simple_decomon_symbolic_input_fn,
+    simple_keras_model_input_fn,
+    simple_keras_layer_input_fn,
+    simple_decomon_input_fn,
+    simple_equal_ibp_bounds,
+    simple_equal_affine_bounds,
+) = unpack_fixture(
+    "simple_keras_symbolic_model_input_fn, simple_keras_symbolic_layer_input_fn, simple_decomon_symbolic_input_fn, simple_keras_model_input_fn, simple_keras_layer_input_fn, simple_decomon_input_fn, simple_equal_ibp_bounds, simple_equal_affine_bounds",
+    simple_layer_input_functions,
+)
+
+
+# keras/decomon model inputs
+@fixture
+def simple_model_input_functions(perturbation_domain, equal_ibp, batchsize, helpers):
+    decomon_symbolic_input_fn = lambda keras_symbolic_input: Input(
+        perturbation_domain.get_x_input_shape_wo_batchsize(keras_symbolic_input.shape[1:])
+    )
+    keras_input_fn = lambda keras_symbolic_input: helpers.generate_random_tensor(
+        keras_symbolic_input.shape[1:], batchsize=batchsize
+    )
+    decomon_input_fn = lambda keras_input: helpers.generate_simple_perturbation_domain_inputs_from_keras_input(
+        keras_input=keras_input, perturbation_domain=perturbation_domain, equal_bounds=equal_ibp
+    )
+
+    return (
+        decomon_symbolic_input_fn,
+        keras_input_fn,
+        decomon_input_fn,
+    )
+
+
+(
+    simple_model_decomon_symbolic_input_fn,
+    simple_model_keras_input_fn,
+    simple_model_decomon_input_fn,
+) = unpack_fixture(
+    "simple_model_decomon_symbolic_input_fn, simple_model_keras_input_fn, simple_model_decomon_input_fn",
+    simple_model_input_functions,
+)
+
+
+@fixture
+def simple_model_inputs(simple_model_input_functions, input_shape):
+    (
+        decomon_symbolic_input_fn,
+        keras_input_fn,
+        decomon_input_fn,
+    ) = simple_model_input_functions
+
+    keras_symbolic_input = Input(input_shape)
+    decomon_symbolic_input = decomon_symbolic_input_fn(keras_symbolic_input)
+    keras_input = keras_input_fn(keras_symbolic_input)
+    decomon_input = decomon_input_fn(keras_input)
+    metadata = dict(name="simple")
+
+    return keras_symbolic_input, decomon_symbolic_input, keras_input, decomon_input, metadata
+
+
+(
+    simple_model_keras_symbolic_input,
+    simple_model_decomon_symbolic_input,
+    simple_model_keras_input,
+    simple_model_decomon_input,
+    simple_model_decomon_input_metadata,
+) = unpack_fixture(
+    "simple_model_keras_symbolic_input, simple_model_decomon_symbolic_input, simple_model_keras_input, simple_model_decomon_input, simple_model_decomon_input_metadata",
+    simple_model_inputs,
+)
+
+
+def convert_standard_inputs_for_model(get_tensor_decomposition_fn, get_standard_values_fn, metadata):
+    x, y, z, u_c, w_u, b_u, l_c, w_l, b_l = get_tensor_decomposition_fn()
+    x_, y_, z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_ = get_standard_values_fn()
+
+    keras_symbolic_input = y
+    keras_input = K.convert_to_tensor(y_)
+    decomon_symbolic_input = K.concatenate([l_c[:, None], u_c[:, None]], axis=1)
+    decomon_input = K.convert_to_tensor(np.concatenate((l_c_[:, None], u_c_[:, None]), axis=1))
+
+    return keras_symbolic_input, decomon_symbolic_input, keras_input, decomon_input, metadata
+
+
+@fixture
+def standard_model_inputs_0d(n, batchsize, helpers):
+    get_tensor_decomposition_fn = helpers.get_tensor_decomposition_0d_box
+    get_standard_values_fn = lambda: helpers.get_standard_values_0d_box(n=n, batchsize=batchsize)
+    metadata = dict(name="standard-0d", n=n)
+    return convert_standard_inputs_for_model(get_tensor_decomposition_fn, get_standard_values_fn, metadata)
+
+
+@fixture
+def standard_model_inputs_1d(odd, batchsize, helpers):
+    get_tensor_decomposition_fn = lambda: helpers.get_tensor_decomposition_1d_box(odd=odd)
+    get_standard_values_fn = lambda: helpers.get_standard_values_1d_box(odd=odd, batchsize=batchsize)
+    metadata = dict(name="standard-1d", odd=odd)
+    return convert_standard_inputs_for_model(get_tensor_decomposition_fn, get_standard_values_fn, metadata)
+
+
+@fixture
+def standard_model_inputs_multid(data_format, batchsize, helpers):
+    odd, m0, m1 = 0, 0, 1
+    get_tensor_decomposition_fn = lambda: helpers.get_tensor_decomposition_images_box(data_format=data_format, odd=odd)
+    get_standard_values_fn = lambda: helpers.get_standard_values_images_box(
+        data_format=data_format, odd=odd, m0=m0, m1=m1, batchsize=batchsize
+    )
+    metadata = dict(name="standard-multid", data_format=data_format)
+    return convert_standard_inputs_for_model(get_tensor_decomposition_fn, get_standard_values_fn, metadata)
+
+
+model_inputs = fixture_union(
+    "model_inputs",
+    [
+        simple_model_inputs,
+        standard_model_inputs_0d,
+        standard_model_inputs_1d,
+        standard_model_inputs_multid,
+    ],
+    unpack_into="model_keras_symbolic_input, model_decomon_symbolic_input, model_keras_input, model_decomon_input, model_decomon_input_metadata",
+)
+
+
+# keras toy models
+toy_model_name = param_fixture(
+    "toy_model_name",
+    [
         "tutorial",
+        "tutorial_linear",
         "tutorial_activation_embedded",
+        "add",
+        "add_linear",
         "merge_v0",
         "merge_v1",
         "merge_v1_seq",
-        "merge_v1_2",
         "merge_v2",
         "cnn",
-        "embedded_model",
-    ]
+        "embedded_model_v1",
+        "embedded_model_v2",
+    ],
 )
-def toy_model(request, helpers):
-    model_name = request.param
-    return helpers.toy_model(model_name, dtype=keras_config.floatx())
 
 
-@pytest.fixture(
-    params=[
-        "tutorial",
-        "tutorial_activation_embedded",
-        "merge_v0",
-        "merge_v1",
-        "merge_v1_seq",
-        "merge_v2",
-        "embedded_model",
-    ]
-)
-def toy_model_1d(request, helpers):
-    model_name = request.param
-    return helpers.toy_model(model_name, dtype=keras_config.floatx())
-
-
-@fixture()
-def decomon_inputs_1d(n, mode, dc_decomp, helpers):
-    # tensors inputs
-    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
-    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
-    input_ref = helpers.get_input_ref_from_full_inputs(inputs)
-
-    # numpy inputs
-    inputs_ = helpers.get_standard_values_1d_box(n=n, dc_decomp=dc_decomp)
-    inputs_for_mode_ = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_, mode=mode, dc_decomp=dc_decomp)
-    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
-
-    # inputs metadata worth to pass to the layer
-    inputs_metadata = dict()
-
-    return inputs, inputs_for_mode, input_ref, inputs_, inputs_for_mode_, input_ref_, inputs_metadata
-
-
-@fixture()
-def decomon_inputs_multid(odd, mode, dc_decomp, helpers):
-    # tensors inputs
-    inputs = helpers.get_tensor_decomposition_multid_box(odd=odd, dc_decomp=dc_decomp)
-    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
-    input_ref = helpers.get_input_ref_from_full_inputs(inputs)
-
-    # numpy inputs
-    inputs_ = helpers.get_standard_values_multid_box(odd=odd, dc_decomp=dc_decomp)
-    inputs_for_mode_ = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_, mode=mode, dc_decomp=dc_decomp)
-    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
-
-    # inputs metadata worth to pass to the layer
-    inputs_metadata = dict()
-
-    return inputs, inputs_for_mode, input_ref, inputs_, inputs_for_mode_, input_ref_, inputs_metadata
-
-
-@fixture()
-def decomon_inputs_images(data_format, mode, dc_decomp, helpers):
-    odd, m_0, m_1 = 0, 0, 1
-
-    # tensors inputs
-    inputs = helpers.get_tensor_decomposition_images_box(data_format=data_format, odd=odd, dc_decomp=dc_decomp)
-    inputs_for_mode = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs, mode=mode, dc_decomp=dc_decomp)
-    input_ref = helpers.get_input_ref_from_full_inputs(inputs)
-
-    # numpy inputs
-    inputs_ = helpers.get_standard_values_images_box(data_format=data_format, odd=odd, dc_decomp=dc_decomp)
-    inputs_for_mode_ = helpers.get_inputs_for_mode_from_full_inputs(inputs=inputs_, mode=mode, dc_decomp=dc_decomp)
-    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
-
-    # inputs metadata worth to pass to the layer
-    inputs_metadata = dict(data_format=data_format)
-
-    return inputs, inputs_for_mode, input_ref, inputs_, inputs_for_mode_, input_ref_, inputs_metadata
-
-
-decomon_inputs = fixture_union(
-    "decomon_inputs",
-    [decomon_inputs_1d, decomon_inputs_multid, decomon_inputs_images],
-    unpack_into="inputs, inputs_for_mode, input_ref, inputs_, inputs_for_mode_, input_ref_, inputs_metadata",
-)
+@fixture
+def toy_model_fn(toy_model_name, helpers):
+    """Return a function generating a keras model from (input_shape, dtype)."""
+    if toy_model_name == "tutorial":
+        return Helpers.toy_network_tutorial
+    elif toy_model_name == "tutorial_linear":
+        return lambda input_shape, dtype=None: Helpers.toy_network_tutorial(
+            input_shape=input_shape, dtype=dtype, activation=None
+        )
+    elif toy_model_name == "tutorial_activation_embedded":
+        return Helpers.toy_network_tutorial_with_embedded_activation
+    elif toy_model_name == "add":
+        return Helpers.toy_network_add
+    elif toy_model_name == "add_linear":
+        return lambda input_shape, dtype=None: Helpers.toy_network_add(
+            input_shape=input_shape, dtype=dtype, activation=None
+        )
+    elif toy_model_name == "merge_v0":
+        return lambda input_shape, dtype=None: Helpers.toy_struct_v0(
+            dtype=dtype, input_shape=input_shape, archi=[2, 3, 2], activation="relu", use_bias=True
+        )
+    elif toy_model_name == "merge_v1":
+        return lambda input_shape, dtype=None: Helpers.toy_struct_v1(
+            dtype=dtype, input_shape=input_shape, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
+        )
+    elif toy_model_name == "merge_v1_seq":
+        return lambda input_shape, dtype=None: Helpers.toy_struct_v1(
+            dtype=dtype, input_shape=input_shape, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=True
+        )
+    elif toy_model_name == "merge_v2":
+        return lambda input_shape, dtype=None: Helpers.toy_struct_v2(
+            dtype=dtype, input_shape=input_shape, archi=[2, 3, 2], activation="relu", use_bias=True, sequential=False
+        )
+    elif toy_model_name == "cnn":
+        return Helpers.toy_struct_cnn
+    elif toy_model_name == "embedded_model_v1":
+        return Helpers.toy_embedded_sequential
+    elif toy_model_name == "embedded_model_v2":
+        return Helpers.toy_network_submodel
+    else:
+        raise ValueError(f"model_name {toy_model_name} unknown")

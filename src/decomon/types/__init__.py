@@ -1,7 +1,7 @@
 """Typing module"""
 
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Union
 
 import keras
 
@@ -20,4 +20,4 @@ Tensor = Union[keras.KerasTensor, BackendTensor]
 """Type for any tensor, from keras or backend."""
 
 
-DecomonInputs = List[Tensor]
+DecomonInputs = list[Tensor]

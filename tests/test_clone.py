@@ -1,25 +1,19 @@
-# creating toy network and assess that the decomposition is correct
-
-
-import keras.config as keras_config
 import keras.ops as K
 import numpy as np
 import pytest
-from keras.layers import Activation, Dense, Flatten, Input, Reshape
-from keras.models import Model, Sequential
+from keras.layers import Activation, Dense, Input
+from keras.models import Model
+from pytest_cases import parametrize
 
-from decomon.core import ForwardMode, Slope, get_affine, get_ibp, get_mode
-from decomon.layers.decomon_reshape import DecomonReshape
-from decomon.models import clone
-from decomon.models.convert import FeedDirection, get_direction
-from decomon.models.utils import (
-    ConvertMethod,
-    get_ibp_affine_from_method,
-    has_merge_layers,
-)
+from decomon.constants import ConvertMethod, Propagation, Slope
+from decomon.layers import DecomonDense, DecomonLayer
+from decomon.layers.input import IdentityInput
+from decomon.layers.utils.symbolify import LinkToPerturbationDomainInput
+from decomon.models.convert import clone
+from decomon.perturbation_domain import BoxDomain
 
 
-def test_convert_nok_several_inputs():
+def test_clone_nok_several_inputs():
     a = Input((1,))
     b = Input((2,))
     model = Model([a, b], a)
@@ -28,260 +22,586 @@ def test_convert_nok_several_inputs():
         clone(model)
 
 
-def test_convert_nok_unflattened_input():
-    a = Input((1, 2))
-    model = Model(a, a)
+@parametrize(
+    "toy_model_name",
+    [
+        "tutorial",
+        "tutorial_linear",
+        "tutorial_activation_embedded",
+        "add",
+        "add_linear",
+        "merge_v0",
+        "merge_v1",
+        "merge_v1_seq",
+        "merge_v2",
+        # "cnn",  # DecomonConv2D not yet implemented
+        "embedded_model_v1",
+        "embedded_model_v2",
+    ],
+)
+def test_clone(
+    toy_model_name,
+    toy_model_fn,
+    method,
+    perturbation_domain,
+    model_keras_symbolic_input,
+    model_keras_input,
+    model_decomon_input,
+    model_decomon_input_metadata,
+    helpers,
+):
+    # input shape?
+    input_shape = model_keras_symbolic_input.shape[1:]
 
-    with pytest.raises(ValueError, match="flattened input"):
-        clone(model)
+    # skip cnn on 0d or 1d input_shape
+    if toy_model_name == "cnn" and len(input_shape) == 1:
+        pytest.skip("cnn not possible on 0d or 1d input.")
 
-
-def test_clone_with_backbounds(method, helpers):
-    dc_decomp = False
-    n = 0
-    ibp, affine = get_ibp_affine_from_method(method)
-    mode = get_mode(ibp, affine)
-
-    # numpy inputs
-    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
-    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
-    input_decomon_wo_backbounds = helpers.get_inputs_np_for_decomon_model_from_full_inputs(inputs=inputs_)
-
-    #  keras model and output of reference
-    ref_nn = helpers.toy_network_tutorial()
-    output_ref_ = helpers.predict_on_small_numpy(ref_nn, input_ref_)
-
-    # create back_bounds for adversarial robustness like studies
-    output_dim = int(np.prod(ref_nn.output_shape[1:]))
-    C = Input((output_dim, output_dim))
-    batchsize = input_decomon_wo_backbounds.shape[0]
-    C_ = np.repeat(np.identity(output_dim), repeats=batchsize, axis=0)
-    inputs_decomon_ = [input_decomon_wo_backbounds, C_]
-
-    # decomon conversion
-    decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine, back_bounds=[C])
-
-    #  decomon outputs
-    outputs_ = helpers.predict_on_small_numpy(decomon_model, inputs_decomon_)
-
-    #  check bounds consistency
-    helpers.assert_decomon_model_output_properties_box(
-        full_inputs=inputs_,
-        output_ref=output_ref_,
-        outputs_for_mode=outputs_,
-        mode=mode,
-        dc_decomp=dc_decomp,
-    )
-
-
-def test_convert_1D(n, method, mode, floatx, decimal, helpers):
-    if not helpers.is_method_mode_compatible(method=method, mode=mode):
-        # skip method=ibp/crown-ibp with mode=affine/hybrid
-        pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
-
-    dc_decomp = False
-    ibp = get_ibp(mode=mode)
-    affine = get_affine(mode=mode)
-
-    # numpy inputs
-    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
-    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
-    input_decomon_ = helpers.get_inputs_np_for_decomon_model_from_full_inputs(inputs=inputs_)
-
-    #  keras model and output of reference
-    ref_nn = helpers.toy_network_tutorial(dtype=keras_config.floatx())
-    output_ref_ = helpers.predict_on_small_numpy(ref_nn, input_ref_)
-
-    # decomon conversion
-    decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
-
-    #  decomon outputs
-    outputs_ = helpers.predict_on_small_numpy(decomon_model, input_decomon_)
-
-    #  check bounds consistency
-    helpers.assert_decomon_model_output_properties_box(
-        full_inputs=inputs_,
-        output_ref=output_ref_,
-        outputs_for_mode=outputs_,
-        mode=mode,
-        dc_decomp=dc_decomp,
-        decimal=decimal,
-    )
-
-
-def test_convert_1D_forward_slope(slope, helpers):
-    ibp = True
-    affine = True
-    dc_decomp = False
-
-    n, method, mode = 0, "forward-hybrid", "hybrid"
-    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
-    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
-
-    ref_nn = helpers.toy_network_tutorial(dtype=keras_config.floatx())
-    ref_nn(input_ref)
-
-    decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine, slope=slope)
-
-    # check slope of activation layers
-    for layer in decomon_model.layers:
-        if layer.__class__.__name__.endswith("Activation"):
-            assert layer.slope == Slope(slope)
-
-
-def test_convert_1D_backward_slope(slope, helpers):
-    n, method, mode = 0, "crown-forward-hybrid", "hybrid"
-    ibp = True
-    affine = True
-    dc_decomp = False
-
-    inputs = helpers.get_tensor_decomposition_1d_box(dc_decomp=dc_decomp)
-    input_ref = helpers.get_input_ref_from_full_inputs(inputs=inputs)
-
-    ref_nn = helpers.toy_network_tutorial(dtype=keras_config.floatx())
-    ref_nn(input_ref)
-
-    decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine, slope=slope)
-
-    # check slope of layers with activation
-    for layer in decomon_model.layers:
-        layer_class_name = layer.__class__.__name__
-        if layer_class_name.endswith("Activation"):
-            assert layer.slope == Slope(slope)
-
-
-def test_name_forward():
-    layers = []
-    layers.append(Input((1,)))
-    layers.append(Dense(1))
-    layers.append(Dense(1, name="superman"))  # specify the dimension of the input space
-    layers.append(Activation("relu"))
-    layers.append(Dense(1, activation="relu", name="batman"))
-    model = Sequential(layers)
-
-    decomon_model_f = clone(model=model, method=ConvertMethod.FORWARD_HYBRID)
-    nb_superman_layers = len([layer for layer in decomon_model_f.layers if layer.name.startswith("superman_")])
-    assert nb_superman_layers == 1
-    nb_batman_layers = len([layer for layer in decomon_model_f.layers if layer.name.startswith("batman_")])
-    assert nb_batman_layers == 2
-
-
-def test_name_backward():
-    layers = []
-    layers.append(Input((1,)))
-    layers.append(Dense(1))
-    layers.append(Dense(1, name="superman"))  # specify the dimension of the input space
-    layers.append(Activation("relu"))
-    layers.append(Dense(1, activation="relu", name="batman"))
-    model = Sequential(layers)
-
-    decomon_model_b = clone(model=model, method=ConvertMethod.CROWN_FORWARD_HYBRID)
-    nb_superman_layers = len([layer for layer in decomon_model_b.layers if layer.name.startswith("superman_")])
-    assert nb_superman_layers == 2
-    nb_batman_layers = len([layer for layer in decomon_model_b.layers if layer.name.startswith("batman_")])
-    assert nb_batman_layers == 3
-
-
-def test_convert_toy_models_1d(toy_model_1d, method, mode, helpers):
-    if not helpers.is_method_mode_compatible(method=method, mode=mode):
-        # skip method=ibp/crown-ibp with mode=affine/hybrid
-        pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
-
+    slope = Slope.Z_SLOPE
     decimal = 4
-    n = 6
-    dc_decomp = False
-    ibp = get_ibp(mode=mode)
-    affine = get_affine(mode=mode)
 
-    # numpy inputs
-    inputs_ = helpers.get_standard_values_1d_box(n, dc_decomp=dc_decomp)
-    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
-    input_decomon_ = helpers.get_inputs_np_for_decomon_model_from_full_inputs(inputs=inputs_)
+    # keras model to convert
+    if toy_model_name == "cnn":
+        kwargs_toy_model = dict(data_format=model_decomon_input_metadata["data_format"])
+    else:
+        kwargs_toy_model = {}
+    keras_model = toy_model_fn(input_shape=input_shape, **kwargs_toy_model)
 
-    #  keras model and output of reference
-    ref_nn = toy_model_1d
-    output_ref_ = helpers.predict_on_small_numpy(ref_nn, input_ref_)
+    # conversion
+    decomon_model = clone(model=keras_model, slope=slope, perturbation_domain=perturbation_domain, method=method)
 
-    # decomon conversion
-    if (get_direction(method) == FeedDirection.BACKWARD) and has_merge_layers(ref_nn):
-        # skip models with merge layers in backward direction as not yet implemented
-        with pytest.raises(NotImplementedError):
-            decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
-        return
+    # call on actual outputs
+    keras_output = keras_model(model_keras_input)
+    decomon_output = decomon_model(model_decomon_input)
 
-    decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
+    ibp = decomon_model.ibp
+    affine = decomon_model.affine
 
-    #  decomon outputs
-    outputs_ = helpers.predict_on_small_numpy(decomon_model, input_decomon_)
+    if method in (ConvertMethod.FORWARD_IBP, ConvertMethod.FORWARD_HYBRID):
+        assert ibp
+    else:
+        assert not ibp
 
-    #  check bounds consistency
-    helpers.assert_decomon_model_output_properties_box(
-        full_inputs=inputs_,
-        output_ref=output_ref_,
-        outputs_for_mode=outputs_,
-        mode=mode,
-        dc_decomp=dc_decomp,
+    if method == ConvertMethod.FORWARD_IBP:
+        assert not affine
+    else:
+        assert affine
+
+    # check ibp and affine bounds well ordered w.r.t. keras inputs/outputs
+    helpers.assert_decomon_output_compare_with_keras_input_output_model(
+        decomon_output=decomon_output,
+        keras_input=model_keras_input,
+        keras_output=keras_output,
         decimal=decimal,
+        ibp=ibp,
+        affine=affine,
     )
 
+    # check that we added a layer to insert batch axis
+    if toy_model_name.endswith("_linear") and str(method).lower().startswith("crown"):
+        assert isinstance(decomon_model.layers[-1], LinkToPerturbationDomainInput)
+    else:
+        assert not isinstance(decomon_model.layers[-1], LinkToPerturbationDomainInput)
 
-def test_convert_cnn(method, mode, helpers):
-    if not helpers.is_method_mode_compatible(method=method, mode=mode):
-        # skip method=ibp/crown-ibp with mode=affine/hybrid
-        pytest.skip(f"output mode {mode} is not compatible with convert method {method}")
 
-    if get_direction(method) == FeedDirection.BACKWARD:
-        # skip as BackwardConv2D not yet ready
-        pytest.skip(f"BackwardConv2D not yet fully implemented")
+@parametrize(
+    "toy_model_name",
+    [
+        "tutorial",
+    ],
+)
+def test_clone_final_mode(
+    toy_model_name,
+    toy_model_fn,
+    method,
+    final_ibp,
+    final_affine,
+    perturbation_domain,
+    simple_model_keras_symbolic_input,
+    simple_model_keras_input,
+    simple_model_decomon_input,
+    helpers,
+):
+    # input shape?
+    input_shape = simple_model_keras_symbolic_input.shape[1:]
 
+    # skip cnn on 0d or 1d input_shape
+    if toy_model_name == "cnn" and len(input_shape) == 1:
+        pytest.skip("cnn not possible on 0d or 1d input.")
+
+    slope = Slope.Z_SLOPE
     decimal = 4
-    data_format = "channels_last"
-    odd, m_0, m_1 = 0, 0, 1
 
-    dc_decomp = False
-    ibp = get_ibp(mode=mode)
-    affine = get_affine(mode=mode)
+    # keras model to convert
+    keras_model = toy_model_fn(input_shape=input_shape)
 
-    # numpy inputs
-    inputs_ = helpers.get_standard_values_images_box(data_format, odd, m0=m_0, m1=m_1, dc_decomp=dc_decomp)
-    input_ref_ = helpers.get_input_ref_from_full_inputs(inputs_)
-    input_ref_min_, input_ref_max_ = helpers.get_input_ref_bounds_from_full_inputs(inputs_)
-
-    # flatten inputs
-    preprocess_layer = Flatten(data_format=data_format)
-    input_ref_reshaped_ = K.convert_to_numpy(preprocess_layer(input_ref_))
-    input_ref_min_reshaped_ = K.convert_to_numpy(preprocess_layer(input_ref_min_))
-    input_ref_max_reshaped_ = K.convert_to_numpy(preprocess_layer(input_ref_max_))
-
-    input_decomon_ = np.concatenate((input_ref_min_reshaped_[:, None], input_ref_max_reshaped_[:, None]), axis=1)
-
-    #  keras model and output of reference
-    image_data_shape = input_ref_.shape[1:]  # image shape: before flattening
-    ref_nn = helpers.toy_struct_cnn(dtype=keras_config.floatx(), image_data_shape=image_data_shape)
-    output_ref_ = helpers.predict_on_small_numpy(ref_nn, input_ref_reshaped_)
-
-    # decomon conversion
-    decomon_model = clone(ref_nn, method=method, final_ibp=ibp, final_affine=affine)
-
-    #  decomon outputs
-    outputs_ = helpers.predict_on_small_numpy(decomon_model, input_decomon_)
-
-    #  check bounds consistency
-    z_, u_c_, w_u_, b_u_, l_c_, w_l_, b_l_, h_, g_ = helpers.get_full_outputs_from_outputs_for_mode(
-        outputs_for_mode=outputs_, mode=mode, dc_decomp=dc_decomp, full_inputs=inputs_
+    # conversion
+    decomon_model = clone(
+        model=keras_model,
+        slope=slope,
+        perturbation_domain=perturbation_domain,
+        method=method,
+        final_ibp=final_ibp,
+        final_affine=final_affine,
     )
-    helpers.assert_output_properties_box(
-        input_ref_reshaped_,
-        output_ref_,
-        h_,
-        g_,
-        input_ref_min_reshaped_,
-        input_ref_max_reshaped_,
-        u_c_,
-        w_u_,
-        b_u_,
-        l_c_,
-        w_l_,
-        b_l_,
+
+    # call on actual outputs
+    keras_output = keras_model(simple_model_keras_input)
+    decomon_output = decomon_model(simple_model_decomon_input)
+
+    assert final_ibp == decomon_model.ibp
+    assert final_affine == decomon_model.affine
+
+    # check ibp and affine bounds well ordered w.r.t. keras inputs/outputs
+    helpers.assert_decomon_output_compare_with_keras_input_output_model(
+        decomon_output=decomon_output,
+        keras_input=simple_model_keras_input,
+        keras_output=keras_output,
         decimal=decimal,
+        ibp=final_ibp,
+        affine=final_affine,
     )
+
+
+@parametrize(
+    "toy_model_name",
+    [
+        "tutorial",
+    ],
+)
+@parametrize("equal_ibp, input_shape", [(False, (5, 6, 2))], ids=["multid"])  # fix some parameters of inputs
+def test_clone_w_backwardbounds(
+    toy_model_name,
+    toy_model_fn,
+    method,
+    perturbation_domain,
+    equal_ibp,
+    input_shape,
+    simple_model_keras_symbolic_input,
+    simple_model_keras_input,
+    simple_model_decomon_input,
+    helpers,
+):
+    # input shape?
+    input_shape = simple_model_keras_symbolic_input.shape[1:]
+
+    slope = Slope.Z_SLOPE
+    decimal = 4
+
+    # keras model to convert: chaining 2 models
+    keras_model_1 = toy_model_fn(input_shape=input_shape)
+    output_shape_1 = keras_model_1.outputs[0].shape  # only 1 output
+
+    keras_model_2 = toy_model_fn(input_shape=output_shape_1[1:])
+
+    input_tot = keras_model_1.inputs[0]
+    output_tot = keras_model_2(keras_model_1(input_tot))
+    keras_model_tot = Model(input_tot, output_tot)
+
+    # perturbation domain for 2nd model: computed by foward conversion of first model
+    forward_model_1 = clone(
+        model=keras_model_1,
+        slope=slope,
+        perturbation_domain=perturbation_domain,
+        method=ConvertMethod.FORWARD_HYBRID,
+    )
+    decomon_input_1 = simple_model_decomon_input
+    decomon_output_1 = forward_model_1(decomon_input_1)
+    _, _, _, _, lower_ibp, upper_ibp = decomon_output_1
+    decomon_input_2 = K.concatenate([lower_ibp[:, None], upper_ibp[:, None]], axis=1)
+
+    # backward_bounds: crown on 2nd model
+    crown_model_2 = clone(
+        model=keras_model_2,
+        slope=slope,
+        perturbation_domain=BoxDomain(),
+        method=ConvertMethod.CROWN,
+    )
+    symbolic_backward_bounds = crown_model_2.outputs
+    backward_bounds = crown_model_2(decomon_input_2)
+
+    # conversion of first model with backward_bounds
+    decomon_model = clone(
+        model=keras_model_1,
+        slope=slope,
+        perturbation_domain=perturbation_domain,
+        method=method,
+        backward_bounds=symbolic_backward_bounds,
+    )
+
+    # call on actual outputs
+    keras_output = keras_model_tot(simple_model_keras_input)
+    decomon_output = decomon_model([simple_model_decomon_input] + backward_bounds)
+
+    # check output mode
+    ibp = decomon_model.ibp
+    affine = decomon_model.affine
+
+    if method in (ConvertMethod.FORWARD_IBP, ConvertMethod.FORWARD_HYBRID):
+        assert ibp
+    else:
+        assert not ibp
+
+    if method == ConvertMethod.FORWARD_IBP:
+        assert not affine
+    else:
+        assert affine
+
+    # check ibp and affine bounds well ordered w.r.t. keras inputs/outputs
+    helpers.assert_decomon_output_compare_with_keras_input_output_model(
+        decomon_output=decomon_output,
+        keras_input=simple_model_keras_input,
+        keras_output=keras_output,
+        decimal=decimal,
+        ibp=ibp,
+        affine=affine,
+    )
+
+
+def test_clone_2outputs(
+    method,
+    final_ibp,
+    final_affine,
+    perturbation_domain,
+    simple_model_keras_symbolic_input,
+    simple_model_keras_input,
+    simple_model_decomon_input,
+    helpers,
+):
+    # input shape?
+    input_shape = simple_model_keras_symbolic_input.shape[1:]
+
+    slope = Slope.Z_SLOPE
+    decimal = 4
+
+    # keras model to convert
+    keras_model = helpers.toy_network_2outputs(input_shape=input_shape)
+
+    # conversion
+    decomon_model = clone(
+        model=keras_model,
+        slope=slope,
+        perturbation_domain=perturbation_domain,
+        method=method,
+        final_ibp=final_ibp,
+        final_affine=final_affine,
+    )
+
+    assert final_ibp == decomon_model.ibp
+    assert final_affine == decomon_model.affine
+
+    nb_decomon_output_tensor_per_keras_output = 0
+    if decomon_model.ibp:
+        nb_decomon_output_tensor_per_keras_output += 2
+    if decomon_model.affine:
+        nb_decomon_output_tensor_per_keras_output += 4
+    assert len(decomon_model.outputs) == len(keras_model.outputs) * nb_decomon_output_tensor_per_keras_output
+
+    # call on actual inputs
+    keras_output = keras_model(simple_model_keras_input)
+    decomon_output = decomon_model(simple_model_decomon_input)
+
+    # check ibp and affine bounds well ordered w.r.t. keras inputs/outputs
+    for i in range(len(keras_model.outputs)):
+        keras_output_i = keras_output[i]
+        decomon_output_i = decomon_output[
+            i * nb_decomon_output_tensor_per_keras_output : (i + 1) * nb_decomon_output_tensor_per_keras_output
+        ]
+        helpers.assert_decomon_output_compare_with_keras_input_output_model(
+            decomon_output=decomon_output_i,
+            keras_input=simple_model_keras_input,
+            keras_output=keras_output_i,
+            decimal=decimal,
+            ibp=final_ibp,
+            affine=final_affine,
+        )
+
+
+@parametrize(
+    "toy_model_name",
+    [
+        "tutorial",
+    ],
+)
+@parametrize("equal_ibp, input_shape", [(False, (5, 6, 2))], ids=["multid"])  # fix some parameters of inputs
+def test_clone_w_backwardbounds_2outputs(
+    toy_model_name,
+    toy_model_fn,
+    method,
+    perturbation_domain,
+    equal_ibp,
+    input_shape,
+    simple_model_keras_symbolic_input,
+    simple_model_keras_input,
+    simple_model_decomon_input,
+    helpers,
+):
+    # input shape?
+    input_shape = simple_model_keras_symbolic_input.shape[1:]
+
+    slope = Slope.Z_SLOPE
+    decimal = 4
+
+    # keras model to convert: chaining 2 models (second one can be different for each output of the first one)
+    keras_model_1 = helpers.toy_network_2outputs(input_shape=input_shape)
+    keras_models_2 = [toy_model_fn(input_shape=output.shape[1:]) for output in keras_model_1.outputs]
+
+    input_tot = keras_model_1.inputs[0]
+    outputs_tmp = keras_model_1(input_tot)
+    output_tot = [keras_models_2[i](outputs_tmp[i]) for i in range(len(outputs_tmp))]
+    keras_model_tot = Model(input_tot, output_tot)
+
+    # perturbation domain for 2nd model: computed by forward conversion of first model
+    forward_model_1 = clone(
+        model=keras_model_1,
+        slope=slope,
+        perturbation_domain=perturbation_domain,
+        method=ConvertMethod.FORWARD_HYBRID,
+    )
+    decomon_input_1 = simple_model_decomon_input
+    decomon_output_1 = forward_model_1(decomon_input_1)
+    _, _, _, _, lower_ibp_1, upper_ibp_1, _, _, _, _, lower_ibp_2, upper_ibp_2 = decomon_output_1
+    decomon_inputs_2 = [
+        K.concatenate([lower_ibp_1[:, None], upper_ibp_1[:, None]], axis=1),
+        K.concatenate([lower_ibp_2[:, None], upper_ibp_2[:, None]], axis=1),
+    ]
+
+    # backward_bounds: crown on 2nd model
+    crown_models_2 = [
+        clone(
+            model=keras_model_2,
+            slope=slope,
+            perturbation_domain=BoxDomain(),
+            method=ConvertMethod.CROWN_FORWARD_IBP,
+        )
+        for keras_model_2 in keras_models_2
+    ]
+    symbolic_backward_bounds_flattened = [t for crown_model_2 in crown_models_2 for t in crown_model_2.outputs]
+    backward_bounds_flattened = [
+        t
+        for crown_model_2, decomon_input_2 in zip(crown_models_2, decomon_inputs_2)
+        for t in crown_model_2(decomon_input_2)
+    ]
+
+    # conversion of first model with backward_bounds
+    decomon_model = clone(
+        model=keras_model_1,
+        slope=slope,
+        perturbation_domain=perturbation_domain,
+        method=method,
+        backward_bounds=symbolic_backward_bounds_flattened,
+    )
+
+    # check output mode
+    ibp = decomon_model.ibp
+    affine = decomon_model.affine
+
+    if method in (ConvertMethod.FORWARD_IBP, ConvertMethod.FORWARD_HYBRID):
+        assert ibp
+    else:
+        assert not ibp
+
+    if method == ConvertMethod.FORWARD_IBP:
+        assert not affine
+    else:
+        assert affine
+
+    # check number of outputs
+    nb_decomon_output_tensor_per_keras_output = 0
+    if decomon_model.ibp:
+        nb_decomon_output_tensor_per_keras_output += 2
+    if decomon_model.affine:
+        nb_decomon_output_tensor_per_keras_output += 4
+    assert len(decomon_model.outputs) == len(keras_model_1.outputs) * nb_decomon_output_tensor_per_keras_output
+
+    # call on actual inputs
+    keras_output = keras_model_tot(simple_model_keras_input)
+    decomon_output = decomon_model([simple_model_decomon_input] + backward_bounds_flattened)
+
+    # check ibp and affine bounds well ordered w.r.t. keras inputs/outputs
+    for i in range(len(keras_model_1.outputs)):
+        keras_output_i = keras_output[i]
+        decomon_output_i = decomon_output[
+            i * nb_decomon_output_tensor_per_keras_output : (i + 1) * nb_decomon_output_tensor_per_keras_output
+        ]
+        helpers.assert_decomon_output_compare_with_keras_input_output_model(
+            decomon_output=decomon_output_i,
+            keras_input=simple_model_keras_input,
+            keras_output=keras_output_i,
+            decimal=decimal,
+            ibp=ibp,
+            affine=affine,
+        )
+
+
+@parametrize("equal_ibp, input_shape", [(False, (5,))], ids=["1d"])  # fix some parameters of inputs
+def test_clone_2outputs_with_backwardbounds_for_adv_box(
+    method,
+    final_ibp,
+    final_affine,
+    perturbation_domain,
+    equal_ibp,
+    input_shape,
+    simple_model_keras_symbolic_input,
+    simple_model_keras_input,
+    simple_model_decomon_input,
+    helpers,
+):
+    # input shape?
+    input_shape = simple_model_keras_symbolic_input.shape[1:]
+
+    slope = Slope.Z_SLOPE
+    decimal = 4
+
+    # keras model to convert
+    keras_model = helpers.toy_network_2outputs(input_shape=input_shape, same_output_shape=True)
+    output_shape = keras_model.outputs[0].shape[1:]
+    output_dim = int(np.prod(output_shape))
+
+    # create C for adversarial robustnedd
+    symbolic_C = Input(output_shape + output_shape)
+    batchsize = simple_model_decomon_input.shape[0]
+    C = K.reshape(
+        K.eye(output_dim)[None] - K.eye(batchsize, output_dim)[:, :, None], (-1,) + output_shape + output_shape
+    )
+
+    # conversion
+    decomon_model = clone(
+        model=keras_model,
+        slope=slope,
+        perturbation_domain=perturbation_domain,
+        method=method,
+        final_ibp=final_ibp,
+        final_affine=final_affine,
+        backward_bounds=symbolic_C,
+    )
+
+    assert final_ibp == decomon_model.ibp
+    assert final_affine == decomon_model.affine
+
+    nb_decomon_output_tensor_per_keras_output = 0
+    if decomon_model.ibp:
+        nb_decomon_output_tensor_per_keras_output += 2
+    if decomon_model.affine:
+        nb_decomon_output_tensor_per_keras_output += 4
+    assert len(decomon_model.outputs) == len(keras_model.outputs) * nb_decomon_output_tensor_per_keras_output
+
+    # call on actual inputs
+    keras_output = keras_model(simple_model_keras_input)
+    decomon_output = decomon_model([simple_model_decomon_input, C])
+
+    # todo: check to perform on bounds?
+
+
+def test_clone_identity_model(
+    method,
+    perturbation_domain,
+    model_keras_symbolic_input,
+    model_keras_input,
+    model_decomon_input,
+    helpers,
+):
+    slope = Slope.Z_SLOPE
+    decimal = 4
+
+    # identity model
+    output_tensor = Activation(activation=None)(model_keras_symbolic_input)
+    keras_model = Model(model_keras_symbolic_input, output_tensor)
+
+    # conversion
+    decomon_model = clone(model=keras_model, slope=slope, perturbation_domain=perturbation_domain, method=method)
+
+    # call on actual outputs
+    keras_output = keras_model(model_keras_input)
+    decomon_output = decomon_model(model_decomon_input)
+
+    ibp = decomon_model.ibp
+    affine = decomon_model.affine
+
+    if method in (ConvertMethod.FORWARD_IBP, ConvertMethod.FORWARD_HYBRID):
+        assert ibp
+    else:
+        assert not ibp
+
+    if method == ConvertMethod.FORWARD_IBP:
+        assert not affine
+    else:
+        assert affine
+
+    # check ibp and affine bounds well ordered w.r.t. keras inputs/outputs
+    helpers.assert_decomon_output_compare_with_keras_input_output_model(
+        decomon_output=decomon_output,
+        keras_input=model_keras_input,
+        keras_output=keras_output,
+        decimal=decimal,
+        ibp=ibp,
+        affine=affine,
+    )
+
+    # check exact bounds
+    if affine:
+        # identity
+        w_l, b_l, w_u, b_u = decomon_output[:4]
+        helpers.assert_almost_equal(b_l, 0.0)
+        helpers.assert_almost_equal(b_u, 0.0)
+        helpers.assert_almost_equal(w_l, 1.0)
+        helpers.assert_almost_equal(w_u, 1.0)
+    if ibp:
+        # perturbation domain bounds
+        lower, upper = decomon_output[-2:]
+        helpers.assert_almost_equal(lower, perturbation_domain.get_lower_x(model_decomon_input))
+        helpers.assert_almost_equal(upper, perturbation_domain.get_upper_x(model_decomon_input))
+
+    # check that we added a layer to insert batch axis
+    if method.lower().startswith("crown"):
+        assert isinstance(decomon_model.layers[-1], IdentityInput)
+
+
+class MyDenseDecomonLayer(DecomonLayer):
+    def __init__(
+        self,
+        layer,
+        perturbation_domain=None,
+        ibp: bool = True,
+        affine: bool = True,
+        propagation=Propagation.FORWARD,
+        model_input_shape=None,
+        model_output_shape=None,
+        my_super_attribute=0.0,
+        **kwargs,
+    ):
+        super().__init__(
+            layer, perturbation_domain, ibp, affine, propagation, model_input_shape, model_output_shape, **kwargs
+        )
+        self.my_super_attribute = my_super_attribute
+
+
+def test_clone_custom_layer(
+    method,
+    perturbation_domain,
+    helpers,
+):
+    decimal = 4
+
+    input_shape = (5,)
+
+    mapping_keras2decomon_classes = {Dense: MyDenseDecomonLayer}
+
+    # keras model
+    keras_model = helpers.toy_network_tutorial(input_shape=input_shape)
+
+    # conversion
+    decomon_model = clone(
+        model=keras_model,
+        perturbation_domain=perturbation_domain,
+        method=method,
+        mapping_keras2decomon_classes=mapping_keras2decomon_classes,
+        my_super_attribute=12.5,
+    )
+
+    # check layers
+    assert any([isinstance(l, MyDenseDecomonLayer) for l in decomon_model.layers])
+    assert not any([isinstance(l, DecomonDense) for l in decomon_model.layers])
+    for l in decomon_model.layers:
+        if isinstance(l, MyDenseDecomonLayer):
+            assert l.my_super_attribute == 12.5
