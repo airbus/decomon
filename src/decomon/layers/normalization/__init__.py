@@ -1,1 +1,6 @@
-from .batch_normalization import DecomonBatchNormalization, DecomonGroupNormalization, UnitNormalization, LayerNormalization, DecomonSpectralNormalization
+from .batch_normalization import DecomonBatchNormalization
+from .group_normalization import DecomonGroupNormalization
+from .unit_normalization import DecomonUnitNormalization
+from .layer_normalization import DecomonLayerNormalization
+from .spectral_normalization import DecomonSpectralNormalization
+
