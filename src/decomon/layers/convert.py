@@ -9,7 +9,8 @@ from keras.layers import (Activation,
                           ZeroPadding1D, 
                           ZeroPadding2D, 
                           ZeroPadding3D, 
-                          Cropping1D
+                          Cropping1D,
+                          Cropping2D
 )
 
 import decomon.layers
@@ -23,7 +24,8 @@ from decomon.layers import (
     DecomonZeroPadding1D,
     DecomonZeroPadding2D,
     DecomonZeroPadding3D,
-    DecommonCropping1D
+    DecommonCropping1D,
+    DecomonCropping2D
 )
 from decomon.perturbation_domain import PerturbationDomain
 
@@ -40,7 +42,8 @@ default_mapping_keras2decomon_classes: dict[type[Layer], type[DecomonLayer]] = {
     ZeroPadding1D: DecomonZeroPadding1D,
     ZeroPadding2D: DecomonZeroPadding2D,
     ZeroPadding3D: DecomonZeroPadding3D,
-    Cropping1D: DecommonCropping1D
+    Cropping1D: DecommonCropping1D,
+    Cropping2D: DecommonCropping2D
 }
 """Default mapping between keras layers and decomon layers."""
 
