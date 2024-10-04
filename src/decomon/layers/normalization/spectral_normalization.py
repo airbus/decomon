@@ -2,8 +2,8 @@ from keras.layers import Layer, SpectralNormalization
 from decomon.layers import DecomonLayer
 
 from decomon.types import Tensor
-from decomon.layers.convert import to_decomon
 from decomon.constants import Propagation, Slope
+#from .utils import to_decomon
 
 from typing import Optional, Any
 
@@ -13,7 +13,7 @@ from decomon.perturbation_domain import PerturbationDomain
 from decomon.layers.layer import DecomonLayer
 
 
-class DecomonSpectral(DecomonLayer):
+class DecomonSpectralNormalization(DecomonLayer):
 
     layer: SpectralNormalization
 
@@ -37,7 +37,6 @@ class DecomonSpectral(DecomonLayer):
             propagation=propagation,
             model_input_shape=model_input_shape,
             model_output_shape=model_output_shape,
-            slope: Slope = Slope.V_SLOPE,
             **kwargs,
         )
 
@@ -52,6 +51,7 @@ class DecomonSpectral(DecomonLayer):
         """
 
         self.sub_layer:Layer = self.layer.layer
+        """
         self.decomon_layer:DecomonLayer = to_decomon(
                                             layer=self.sub_layer,
                                             perturbation_domain=perturbation_domain,
@@ -63,6 +63,9 @@ class DecomonSpectral(DecomonLayer):
                                             slope = slope,
                                             **kwargs
                                         )
+        """
+        self.decomon_layer = self.layer
+        
     def get_affine_representation(self) -> tuple[Tensor, Tensor]:
         return self.decomon_layer.get_affine_representation()
     
