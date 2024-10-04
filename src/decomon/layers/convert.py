@@ -20,7 +20,8 @@ from keras.layers import (
     UpSampling1D,
     UpSampling2D,
     UpSampling3D,
-    BatchNormalization
+    BatchNormalization,
+    GroupNormalization
 )
 
 import decomon.layers
@@ -44,7 +45,8 @@ from decomon.layers import (
     DecomonUpSampling1D,
     DecomonUpSampling2D,
     DecomonUpSampling3D,
-    DecomonBatchNormalization
+    DecomonBatchNormalization,
+    DecomonGroupNormalization
 )
 from decomon.perturbation_domain import PerturbationDomain
 
@@ -71,7 +73,8 @@ default_mapping_keras2decomon_classes: dict[type[Layer], type[DecomonLayer]] = {
     UpSampling1D: DecomonUpSampling1D,
     UpSampling2D: DecomonUpSampling2D,
     UpSampling3D: DecomonUpSampling3D,
-    BatchNormalization: DecomonBatchNormalization
+    BatchNormalization: DecomonBatchNormalization,
+    GroupNormalization: DecomonGroupNormalization
 }
 """Default mapping between keras layers and decomon layers."""
 

@@ -18,4 +18,4 @@ from .reshaping import (
     DecomonUpSampling2D,
     DecomonUpSampling3D
 )
-from .normalization import DecomonBatchNormalization
+from .normalization import DecomonBatchNormalization, DecomonGroupNormalization
