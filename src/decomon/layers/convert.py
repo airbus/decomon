@@ -18,7 +18,7 @@ from keras.layers import (
     Reshape,
     Permute,
     UpSampling1D,
-    Upsampling2D,
+    UpSampling2D,
     UpSampling3D
 )
 
@@ -33,7 +33,7 @@ from decomon.layers import (
     DecomonZeroPadding1D,
     DecomonZeroPadding2D,
     DecomonZeroPadding3D,
-    DecommonCropping1D,
+    DecomonCropping1D,
     DecomonCropping2D,
     DecomonCropping3D,
     DecomonFlatten,
@@ -59,8 +59,8 @@ default_mapping_keras2decomon_classes: dict[type[Layer], type[DecomonLayer]] = {
     ZeroPadding1D: DecomonZeroPadding1D,
     ZeroPadding2D: DecomonZeroPadding2D,
     ZeroPadding3D: DecomonZeroPadding3D,
-    Cropping1D: DecommonCropping1D,
-    Cropping2D: DecommonCropping2D,
+    Cropping1D: DecomonCropping1D,
+    Cropping2D: DecomonCropping2D,
     Cropping3D: DecomonCropping3D,
     Flatten: DecomonFlatten,
     RepeatVector: DecomonRepeatVector,
