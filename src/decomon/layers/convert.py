@@ -23,7 +23,8 @@ from keras.layers import (
     BatchNormalization,
     GroupNormalization,
     UnitNormalization,
-    LayerNormalization
+    LayerNormalization,
+    SpectralNormalization
 )
 
 import decomon.layers
@@ -50,7 +51,8 @@ from decomon.layers import (
     DecomonBatchNormalization,
     DecomonGroupNormalization,
     DecomonUnitNormalization,
-    DecomonLayerNormalization
+    DecomonLayerNormalization,
+    DecomonSpectralNormalization
 )
 from decomon.perturbation_domain import PerturbationDomain
 
@@ -80,7 +82,8 @@ default_mapping_keras2decomon_classes: dict[type[Layer], type[DecomonLayer]] = {
     BatchNormalization: DecomonBatchNormalization,
     GroupNormalization: DecomonGroupNormalization,
     UnitNormalization: DecomonUnitNormalization,
-    LayerNormalization: DecomonLayerNormalization
+    LayerNormalization: DecomonLayerNormalization,
+    SpectralNormalization: DecomonSpectralNormalization
 }
 """Default mapping between keras layers and decomon layers."""
 
