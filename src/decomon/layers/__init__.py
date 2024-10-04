@@ -15,5 +15,6 @@ from .reshaping import (
     DecomonReshape,
     DecomonPermute,
     DecomonUpSampling1D,
-    DecomonUpSampling2D
+    DecomonUpSampling2D,
+    DecomonUpSampling3D
 )
