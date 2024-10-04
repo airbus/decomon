@@ -24,7 +24,8 @@ from keras.layers import (
     GroupNormalization,
     UnitNormalization,
     LayerNormalization,
-    SpectralNormalization
+    SpectralNormalization,
+    LeakyReLU
 )
 
 import decomon.layers
@@ -52,7 +53,8 @@ from decomon.layers import (
     DecomonGroupNormalization,
     DecomonUnitNormalization,
     DecomonLayerNormalization,
-    DecomonSpectralNormalization
+    DecomonSpectralNormalization,
+    DecomonLeakyReLU
 )
 from decomon.perturbation_domain import PerturbationDomain
 
@@ -65,6 +67,7 @@ default_mapping_keras2decomon_classes: dict[type[Layer], type[DecomonLayer]] = {
     Add: DecomonAdd,
     Dense: DecomonDense,
     Activation: DecomonActivation,
+    LeakyReLU: DecomonLeakyReLU,
     Conv2D: DecomonConv2D,
     ZeroPadding1D: DecomonZeroPadding1D,
     ZeroPadding2D: DecomonZeroPadding2D,
