@@ -1,4 +1,4 @@
-from keras.layers import Upsampling1D
+from keras.layers import UpSampling1D
 from decomon.layers import DecomonLayer
 
 from decomon.types import Tensor
@@ -6,7 +6,7 @@ from decomon.layers.utils import get_affine_representation_wo_bias
 
 
 class DecomonUpSampling1D(DecomonLayer):
-    layer: Upsampling1D
+    layer: UpSampling1D
     linear = True
 
     def get_affine_representation(self) -> tuple[Tensor, Tensor]:
