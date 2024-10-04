@@ -5,3 +5,4 @@ from .cropping1d import DecomonCropping1D
 from .cropping2d import DecomonCropping2D
 from .cropping3d import DecomonCropping3D
 from .flatten import DecomonFlatten
+from .repeat_vector import DecomonRepeatVector
