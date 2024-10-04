@@ -1,1 +1,1 @@
-from .batch_normalization import DecomonBatchNormalization, DecomonGroupNormalization
+from .batch_normalization import DecomonBatchNormalization, DecomonGroupNormalization, UnitNormalization
