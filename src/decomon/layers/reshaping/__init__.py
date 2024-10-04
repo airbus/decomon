@@ -3,3 +3,4 @@ from .zero_padding2d import DecomonZeroPadding2D
 from .zero_padding3d import DecomonZeroPadding3D
 from .cropping1d import DecomonCropping1D
 from .cropping2d import DecomonCropping2D
+from .cropping3d import DecomonCropping3D
