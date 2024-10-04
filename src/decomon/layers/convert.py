@@ -14,7 +14,8 @@ from keras.layers import (
     Cropping2D,
     Cropping3D,
     Flatten,
-    RepeatVector
+    RepeatVector,
+    Reshape
 )
 
 import decomon.layers
@@ -32,7 +33,8 @@ from decomon.layers import (
     DecomonCropping2D,
     DecomonCropping3D,
     DecomonFlatten,
-    DecomonRepeatVector
+    DecomonRepeatVector,
+    DecomonReshape
 )
 from decomon.perturbation_domain import PerturbationDomain
 
@@ -52,8 +54,9 @@ default_mapping_keras2decomon_classes: dict[type[Layer], type[DecomonLayer]] = {
     Cropping1D: DecommonCropping1D,
     Cropping2D: DecommonCropping2D,
     Cropping3D: DecomonCropping3D,
-    Flatten: DecomonFlatten
-    RepeatVector: DecomonRepeatVector
+    Flatten: DecomonFlatten,
+    RepeatVector: DecomonRepeatVector,
+    Reshape: DecomonReshape
 }
 """Default mapping between keras layers and decomon layers."""
 
