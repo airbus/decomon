@@ -10,3 +10,4 @@ from .reshape import DecomonReshape
 from .permute import DecomonPermute
 from .upsampling1d import DecomonUpSampling1D
 from .upsampling2d import DecomonUpSampling2D
+from .upsampling3d import DecomonUpSampling3D
