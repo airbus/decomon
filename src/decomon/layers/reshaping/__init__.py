@@ -8,3 +8,4 @@ from .flatten import DecomonFlatten
 from .repeat_vector import DecomonRepeatVector
 from .reshape import DecomonReshape
 from .permute import DecomonPermute
+from .upsampling1d import DecomonUpSampling1D

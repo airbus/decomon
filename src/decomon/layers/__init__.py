@@ -13,5 +13,6 @@ from .reshaping import (
     DecomonFlatten,
     DecomonRepeatVector,
     DecomonReshape,
-    DecomonPermute
+    DecomonPermute,
+    DecomonUpSampling1D
 )

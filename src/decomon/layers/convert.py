@@ -16,7 +16,8 @@ from keras.layers import (
     Flatten,
     RepeatVector,
     Reshape,
-    Permute
+    Permute,
+    UpSampling1D
 )
 
 import decomon.layers
@@ -36,7 +37,8 @@ from decomon.layers import (
     DecomonFlatten,
     DecomonRepeatVector,
     DecomonReshape,
-    DecomonPermute
+    DecomonPermute,
+    DecomonUpSampling1D
 )
 from decomon.perturbation_domain import PerturbationDomain
 
@@ -59,7 +61,8 @@ default_mapping_keras2decomon_classes: dict[type[Layer], type[DecomonLayer]] = {
     Flatten: DecomonFlatten,
     RepeatVector: DecomonRepeatVector,
     Reshape: DecomonReshape,
-    Permute: DecomonPermute
+    Permute: DecomonPermute,
+    UpSampling1D: DecomonUpSampling1D
 }
 """Default mapping between keras layers and decomon layers."""
 
