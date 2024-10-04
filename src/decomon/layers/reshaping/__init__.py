@@ -7,3 +7,4 @@ from .cropping3d import DecomonCropping3D
 from .flatten import DecomonFlatten
 from .repeat_vector import DecomonRepeatVector
 from .reshape import DecomonReshape
+from .permute import DecomonPermute

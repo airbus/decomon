@@ -12,5 +12,6 @@ from .reshaping import (
     DecomonZeroPadding3D,
     DecomonFlatten,
     DecomonRepeatVector,
-    DecomonReshape
+    DecomonReshape,
+    DecomonPermute
 )
