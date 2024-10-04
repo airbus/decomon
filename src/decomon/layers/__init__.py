@@ -17,6 +17,20 @@ from .reshaping import (
     DecomonPermute,
     DecomonUpSampling1D,
     DecomonUpSampling2D,
-    DecomonUpSampling3D
+    DecomonUpSampling3D,
 )
-from .normalization import DecomonBatchNormalization, DecomonGroupNormalization, DecomonUnitNormalization, DecomonLayerNormalization, DecomonSpectralNormalization
+from .normalization import (
+    DecomonBatchNormalization,
+    DecomonGroupNormalization,
+    DecomonUnitNormalization,
+    DecomonLayerNormalization,
+    DecomonSpectralNormalization,
+)
+from .pooling import (
+    DecomonAveragePooling1D,
+    DecomonAveragePooling2D,
+    DecomonAveragePooling3D,
+    DecomonGlobalAveragePooling1D,
+    DecomonGlobalAveragePooling2D,
+    DecomonGlobalAveragePooling3D,
+)

@@ -25,7 +25,13 @@ from keras.layers import (
     UnitNormalization,
     LayerNormalization,
     SpectralNormalization,
-    LeakyReLU
+    LeakyReLU,
+    AveragePooling1D,
+    AveragePooling2D,
+    AveragePooling3D,
+    GlobalAveragePooling1D,
+    GlobalAveragePooling2D,
+    GlobalAveragePooling3D,
 )
 
 import decomon.layers
@@ -54,7 +60,13 @@ from decomon.layers import (
     DecomonUnitNormalization,
     DecomonLayerNormalization,
     DecomonSpectralNormalization,
-    DecomonLeakyReLU
+    DecomonLeakyReLU,
+    DecomonAveragePooling1D,
+    DecomonAveragePooling2D,
+    DecomonAveragePooling3D,
+    DecomonGlobalAveragePooling1D,
+    DecomonGlobalAveragePooling2D,
+    DecomonGlobalAveragePooling3D,
 )
 from decomon.perturbation_domain import PerturbationDomain
 
@@ -86,7 +98,14 @@ default_mapping_keras2decomon_classes: dict[type[Layer], type[DecomonLayer]] = {
     GroupNormalization: DecomonGroupNormalization,
     UnitNormalization: DecomonUnitNormalization,
     LayerNormalization: DecomonLayerNormalization,
-    SpectralNormalization: DecomonSpectralNormalization
+    SpectralNormalization: DecomonSpectralNormalization,
+    AveragePooling1D: DecomonAveragePooling1D,
+    AveragePooling2D: DecomonAveragePooling2D,
+    AveragePooling3D: DecomonAveragePooling3D,
+    GlobalAveragePooling1D: DecomonGlobalAveragePooling1D,
+    GlobalAveragePooling2D: DecomonGlobalAveragePooling2D,
+    GlobalAveragePooling3D: DecomonGlobalAveragePooling3D
+
 }
 """Default mapping between keras layers and decomon layers."""
 

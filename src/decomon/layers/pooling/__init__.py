@@ -1,0 +1,6 @@
+from .average_pooling1d import DecomonAveragePooling1D
+from .average_pooling2d import DecomonAveragePooling2D
+from .average_pooling3d import DecomonAveragePooling3D
+from .global_average_pooling1d import DecomonGlobalAveragePooling1D
+from .global_average_pooling2d import DecomonGlobalAveragePooling2D
+from .global_average_pooling3d import DecomonGlobalAveragePooling3D
