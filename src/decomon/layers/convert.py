@@ -1,16 +1,18 @@
 import logging
 from typing import Any, Optional
 
-from keras.layers import (Activation, 
-                          Add, 
-                          Dense, 
-                          Layer, 
-                          Conv2D,
-                          ZeroPadding1D, 
-                          ZeroPadding2D, 
-                          ZeroPadding3D, 
-                          Cropping1D,
-                          Cropping2D
+from keras.layers import (
+    Activation,
+    Add,
+    Dense,
+    Layer,
+    Conv2D,
+    ZeroPadding1D,
+    ZeroPadding2D,
+    ZeroPadding3D,
+    Cropping1D,
+    Cropping2D,
+    Cropping3D,
 )
 
 import decomon.layers
@@ -25,7 +27,8 @@ from decomon.layers import (
     DecomonZeroPadding2D,
     DecomonZeroPadding3D,
     DecommonCropping1D,
-    DecomonCropping2D
+    DecomonCropping2D,
+    DecomonCropping3D,
 )
 from decomon.perturbation_domain import PerturbationDomain
 
@@ -43,7 +46,8 @@ default_mapping_keras2decomon_classes: dict[type[Layer], type[DecomonLayer]] = {
     ZeroPadding2D: DecomonZeroPadding2D,
     ZeroPadding3D: DecomonZeroPadding3D,
     Cropping1D: DecommonCropping1D,
-    Cropping2D: DecommonCropping2D
+    Cropping2D: DecommonCropping2D,
+    Cropping3D: DecomonCropping3D,
 }
 """Default mapping between keras layers and decomon layers."""
 
