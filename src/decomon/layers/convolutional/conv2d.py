@@ -4,7 +4,7 @@ from keras.layers import Conv2D, Conv2DTranspose
 from keras.layers import Layer
 from decomon.constants import Propagation
 from decomon.perturbation_domain import BoxDomain, PerturbationDomain
-from decomon.layers.convolutional.utils import get_toeplitz
+from decomon.layers.convolutional.utils import get_toeplitz_from_layer as get_toeplitz
 from decomon.layers.utils import get_bias
 
 from decomon.layers.layer import DecomonLayer
