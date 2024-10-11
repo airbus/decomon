@@ -33,6 +33,7 @@ from .pooling import (
     DecomonGlobalAveragePooling1D,
     DecomonGlobalAveragePooling2D,
     DecomonGlobalAveragePooling3D,
+    DecomonMaxPooling2D
 )
 
 from .custom import DecomonMin, DecomonMax
