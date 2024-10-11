@@ -34,7 +34,7 @@ from keras.layers import (
     GlobalAveragePooling3D,
 )
 
-from custom import Max, Min
+from decomon.layers.custom import Max, Min
 
 import decomon.layers
 from decomon.constants import Propagation, Slope
