@@ -151,6 +151,7 @@ class DecomonActivation(DecomonBaseActivation):
 
 class DecomonLinear(DecomonBaseActivation):
     linear = True
+    increasing = True
 
     def call(self, inputs: list[Tensor]) -> list[Tensor]:
         (
@@ -182,6 +183,7 @@ class DecomonLinear(DecomonBaseActivation):
 
 class DecomonReLU(DecomonBaseActivation):
     diagonal = True
+    increasing = True
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         w_u, b_u, w_l, b_l = get_linear_hull_relu(upper=upper, lower=lower, slope=self.slope)
@@ -190,6 +192,7 @@ class DecomonReLU(DecomonBaseActivation):
 
 class DecomonSoftSign(DecomonBaseActivation):
     diagonal = True
+    increasing = True
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         func = softsign

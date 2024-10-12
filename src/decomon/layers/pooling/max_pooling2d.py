@@ -22,6 +22,7 @@ class DecomonMaxPooling2D(DecomonLayer):
 
     layer: MaxPooling2D
     linear: False
+    increasing = True
 
     def __init__(
         self,
