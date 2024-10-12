@@ -6,6 +6,8 @@ from keras_custom.layers import Min, Max, MulConstant, Linear
 from keras.layers import (
     Activation,
     Add,
+    Average,
+    Subtract,
     Dense,
     Layer,
     Conv2D,
@@ -43,6 +45,8 @@ from decomon.constants import Propagation, Slope
 from decomon.layers import (
     DecomonActivation,
     DecomonAdd,
+    DecomonSubtract,
+    DecomonAverage,
     DecomonDense,
     DecomonLayer,
     DecomonConv2D,
@@ -85,6 +89,8 @@ DECOMON_PREFIX = "Decomon"
 
 default_mapping_keras2decomon_classes: dict[type[Layer], type[DecomonLayer]] = {
     Add: DecomonAdd,
+    Average: DecomonAverage,
+    Subtract: DecomonSubtract,
     Dense: DecomonDense,
     Activation: DecomonActivation,
     LeakyReLU: DecomonLeakyReLU,
