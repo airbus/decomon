@@ -3,4 +3,3 @@ from .group_normalization import DecomonGroupNormalization
 from .unit_normalization import DecomonUnitNormalization
 from .layer_normalization import DecomonLayerNormalization
 from .spectral_normalization import DecomonSpectralNormalization
-

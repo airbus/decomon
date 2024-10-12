@@ -1,6 +1,5 @@
 """Adding batchsize to batch-independent outputs."""
 
-
 from typing import Optional
 
 import keras.ops as K

@@ -1,6 +1,5 @@
 """Layers needed by crown algorithm."""
 
-
 from typing import Any, Optional
 
 import keras.ops as K

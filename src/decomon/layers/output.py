@@ -1,6 +1,5 @@
 """Convert decomon outputs to the specified format."""
 
-
 from typing import Any, Optional
 
 import keras.ops as K

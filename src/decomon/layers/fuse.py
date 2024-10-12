@@ -1,6 +1,5 @@
 """Layers specifying constant oracle bounds on keras layer input."""
 
-
 from typing import Any, Optional
 
 from keras import ops as K

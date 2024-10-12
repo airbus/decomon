@@ -1,6 +1,5 @@
 """Typing module"""
 
-
 from typing import Any, Union
 
 import keras
