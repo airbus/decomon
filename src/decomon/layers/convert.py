@@ -1,6 +1,8 @@
 import logging
 from typing import Any, Optional
 
+from keras_custom.layers import Min, Max, MulConstant, Linear
+
 from keras.layers import (
     Activation,
     Add,
@@ -32,10 +34,9 @@ from keras.layers import (
     GlobalAveragePooling1D,
     GlobalAveragePooling2D,
     GlobalAveragePooling3D,
-    MaxPooling2D
+    MaxPooling2D,
 )
 
-from decomon.layers.custom import Max, Min
 
 import decomon.layers
 from decomon.constants import Propagation, Slope
@@ -71,7 +72,9 @@ from decomon.layers import (
     DecomonGlobalAveragePooling2D,
     DecomonGlobalAveragePooling3D,
     DecomonMax, DecomonMin,
-    DecomonMaxPooling2D
+    DecomonMaxPooling2D,
+    DecomonMulConstant,
+    DecomonLinear
 )
 from decomon.perturbation_domain import PerturbationDomain
 
@@ -112,8 +115,9 @@ default_mapping_keras2decomon_classes: dict[type[Layer], type[DecomonLayer]] = {
     GlobalAveragePooling3D: DecomonGlobalAveragePooling3D,
     Max:DecomonMax,
     Min:DecomonMin,
-    MaxPooling2D:DecomonMaxPooling2D
-
+    MaxPooling2D:DecomonMaxPooling2D,
+    MulConstant:DecomonMulConstant,
+    Linear: DecomonLinear
 }
 """Default mapping between keras layers and decomon layers."""
 
