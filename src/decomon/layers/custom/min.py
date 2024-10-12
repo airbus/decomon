@@ -20,6 +20,7 @@ class DecomonMin(DecomonLayer):
 
     layer: Min
     linear = False
+    increasing = True
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
 

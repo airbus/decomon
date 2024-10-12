@@ -72,6 +72,18 @@ class DecomonLayer(Wrapper):
 
     """
 
+    increasing: bool = False
+    """
+    Flag telling that the layer is monotonic increasing thus \max_{x\in [lower, upper]} layer(x) = layer(upper) and \min_{x\in [lower, upper]} layer(x) = layer(lower)
+    This is useful to computer upper and lower bounds at minimum cost
+    """
+
+    decreasing: bool = False
+    """
+    Flag telling that the layer is monotonic decreasing thus \max_{x\in [lower, upper]} layer(x) = layer(lower) and \min_{x\in [lower, upper]} layer(x) = layer(upper)
+    This is useful to computer upper and lower bounds at minimum cost
+    """
+
     _is_merging_layer: bool = False  # set to True in child class DecomonMerge
 
     def __init__(
@@ -310,6 +322,12 @@ class DecomonLayer(Wrapper):
             l_c, u_c ~ (batchsize,) + self.layer.output.shape[1:]
 
         """
+        if self.increasing:
+            return [self.layer(lower), self.layer(upper)]
+
+        if self.decreasing:
+            return [self.layer(upper), self.layer(lower)]
+
         if self.linear:
             w, b = self.get_affine_representation()
             affine_bounds = [w, b, w, b]

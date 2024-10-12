@@ -8,6 +8,7 @@ from decomon.layers.utils import get_affine_representation_wo_bias
 class DecomonAveragePooling1D(DecomonLayer):
     layer: AveragePooling1D
     linear = True
+    increasing = True
 
     def get_affine_representation(self) -> tuple[Tensor, Tensor]:
 

@@ -7,6 +7,7 @@ from decomon.types import Tensor
 
 class DecomonLeakyReLU(DecomonBaseActivation):
     diagonal = True
+    increasing = True
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
 

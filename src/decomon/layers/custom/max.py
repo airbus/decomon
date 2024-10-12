@@ -16,6 +16,7 @@ class DecomonMax(DecomonLayer):
 
     layer: Max
     linear = False
+    increasing = True
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
 
