@@ -3,7 +3,8 @@ from decomon.layers import DecomonLayer
 
 from decomon.types import Tensor
 from decomon.constants import Propagation, Slope
-#from .utils import to_decomon
+
+# from .utils import to_decomon
 
 from typing import Optional, Any
 
@@ -50,7 +51,7 @@ class DecomonSpectralNormalization(DecomonLayer):
         Warning: we only support so fast sub layer that are native Keras layer which can be found automatically
         """
 
-        self.sub_layer:Layer = self.layer.layer
+        self.sub_layer: Layer = self.layer.layer
         """
         self.decomon_layer:DecomonLayer = to_decomon(
                                             layer=self.sub_layer,
@@ -65,44 +66,57 @@ class DecomonSpectralNormalization(DecomonLayer):
                                         )
         """
         self.decomon_layer = self.layer
-        
+
     def get_affine_representation(self) -> tuple[Tensor, Tensor]:
         return self.decomon_layer.get_affine_representation()
-    
+
     def forward_ibp_propagate(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor]:
         return self.decomon_layer.forward_ibp_propagate(lower, upper)
-    
+
     def forward_affine_propagate(
         self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        return self.decomon_layer.forward_affine_propagate(input_affine_bounds=input_affine_bounds,
-                                                           input_constant_bounds=input_constant_bounds)
-    
+        return self.decomon_layer.forward_affine_propagate(
+            input_affine_bounds=input_affine_bounds, input_constant_bounds=input_constant_bounds
+        )
+
     def backward_affine_propagate(
         self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        return self.decomon_layer.backward_affine_propagate(output_affine_bounds=output_affine_bounds, input_constant_bounds=input_constant_bounds)
-    
+        return self.decomon_layer.backward_affine_propagate(
+            output_affine_bounds=output_affine_bounds, input_constant_bounds=input_constant_bounds
+        )
+
     def get_forward_oracle(
         self,
         input_affine_bounds: list[Tensor],
         input_constant_bounds: list[Tensor],
         perturbation_domain_inputs: list[Tensor],
     ) -> list[Tensor]:
-        return self.decomon_layer.get_forward_oracle(input_affine_bounds=input_affine_bounds, input_constant_bounds=input_constant_bounds, perturbation_domain_inputs=perturbation_domain_inputs)
-    
+        return self.decomon_layer.get_forward_oracle(
+            input_affine_bounds=input_affine_bounds,
+            input_constant_bounds=input_constant_bounds,
+            perturbation_domain_inputs=perturbation_domain_inputs,
+        )
+
     def call_forward(
         self,
         affine_bounds_to_propagate: list[Tensor],
         input_bounds_to_propagate: list[Tensor],
         perturbation_domain_inputs: list[Tensor],
     ) -> tuple[list[Tensor], list[Tensor]]:
-        return self.call_forward(affine_bounds_to_propagate=affine_bounds_to_propagate, input_bounds_to_propagate=input_bounds_to_propagate, perturbation_domain_inputs=perturbation_domain_inputs)
-    
+        return self.call_forward(
+            affine_bounds_to_propagate=affine_bounds_to_propagate,
+            input_bounds_to_propagate=input_bounds_to_propagate,
+            perturbation_domain_inputs=perturbation_domain_inputs,
+        )
+
     def call_backward(
         self, affine_bounds_to_propagate: list[Tensor], constant_oracle_bounds: list[Tensor]
     ) -> list[Tensor]:
-        return self.decomon_layer.call_backward(affine_bounds_to_propagate=affine_bounds_to_propagate, constant_oracle_bounds=constant_oracle_bounds)
-    
+        return self.decomon_layer.call_backward(
+            affine_bounds_to_propagate=affine_bounds_to_propagate, constant_oracle_bounds=constant_oracle_bounds
+        )
+
     def call(self, inputs: list[Tensor]) -> list[Tensor]:
         return self.decomon_layer.call(inputs)

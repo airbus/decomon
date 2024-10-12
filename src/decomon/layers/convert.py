@@ -75,10 +75,11 @@ from decomon.layers import (
     DecomonGlobalAveragePooling1D,
     DecomonGlobalAveragePooling2D,
     DecomonGlobalAveragePooling3D,
-    DecomonMax, DecomonMin,
+    DecomonMax,
+    DecomonMin,
     DecomonMaxPooling2D,
     DecomonMulConstant,
-    DecomonLinear
+    DecomonLinear,
 )
 from decomon.perturbation_domain import PerturbationDomain
 
@@ -119,11 +120,11 @@ default_mapping_keras2decomon_classes: dict[type[Layer], type[DecomonLayer]] = {
     GlobalAveragePooling1D: DecomonGlobalAveragePooling1D,
     GlobalAveragePooling2D: DecomonGlobalAveragePooling2D,
     GlobalAveragePooling3D: DecomonGlobalAveragePooling3D,
-    Max:DecomonMax,
-    Min:DecomonMin,
-    MaxPooling2D:DecomonMaxPooling2D,
-    MulConstant:DecomonMulConstant,
-    Linear: DecomonLinear
+    Max: DecomonMax,
+    Min: DecomonMin,
+    MaxPooling2D: DecomonMaxPooling2D,
+    MulConstant: DecomonMulConstant,
+    Linear: DecomonLinear,
 }
 """Default mapping between keras layers and decomon layers."""
 

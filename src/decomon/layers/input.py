@@ -1,6 +1,5 @@
 """Generate decomon inputs from perturbation domain input."""
 
-
 from typing import Any, Optional, Union
 
 import keras

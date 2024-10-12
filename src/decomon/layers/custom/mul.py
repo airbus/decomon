@@ -4,9 +4,10 @@ from decomon.layers import DecomonLayer
 from decomon.types import Tensor
 from decomon.layers.utils.affine import get_affine_representation_wo_bias
 
+
 class DecomonMulConstant(DecomonLayer):
     layer: MulConstant
-    linear=True
+    linear = True
     diagonal = True
 
     def get_affine_representation(self) -> tuple[Tensor, Tensor]:

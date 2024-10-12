@@ -15,7 +15,7 @@ def get_toeplitz_from_layer(conv_layer: Conv2D) -> Tensor:
     input_shape = list(conv_layer.input.shape[1:])
     output_shape = list(conv_layer.output.shape[1:])
     config = conv_layer.get_config()
-    
+
     return get_toeplitz(kernel, input_shape, output_shape, config)
 
     """Express formally the affine component of the convolution
@@ -66,6 +66,7 @@ def get_toeplitz_from_layer(conv_layer: Conv2D) -> Tensor:
 
     return result
 
+
 def get_toeplitz(kernel, input_shape, output_shape, config) -> Tensor:
     """Express formally the affine component of the convolution
     Conv is a linear operator but its affine component is implicit
@@ -82,8 +83,8 @@ def get_toeplitz(kernel, input_shape, output_shape, config) -> Tensor:
          the affine operator W: conv(x)= Wx + bias
     """
 
-    #input_shape = list(conv_layer.input.shape[1:])
-    #output_shape = list(conv_layer.output.shape[1:])
+    # input_shape = list(conv_layer.input.shape[1:])
+    # output_shape = list(conv_layer.output.shape[1:])
     N = np.prod(input_shape)
 
     diag = K.reshape(K.eye(N), [-1] + input_shape)

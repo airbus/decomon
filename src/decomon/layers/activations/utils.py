@@ -39,65 +39,67 @@ def tanh_prime(x: Tensor) -> Tensor:
     s_x = K.tanh(x)
     return K.cast(1, dtype=x.dtype) - K.power(s_x, K.cast(2, dtype=x.dtype))
 
-def get_convex_lower_affine_bound_at(x, func, func_prime) -> tuple[Tensor, Tensor]: 
+
+def get_convex_lower_affine_bound_at(x, func, func_prime) -> tuple[Tensor, Tensor]:
     # affine lower bound for convex diagonal function
     # w = f'(x)
     # b = f(x) - f'(y)*y
     w = func_prime(x)
-    axis = [i+1 for i in range(len(w.shape)-1)]
-    b = func(x) - w*x
+    axis = [i + 1 for i in range(len(w.shape) - 1)]
+    b = func(x) - w * x
 
     return w, b
 
-def get_convex_upper_affine_bound_unary(lower:Tensor, upper:Tensor, func:Callable, func_prime:Callable) -> tuple[Tensor, Tensor]: 
+
+def get_convex_upper_affine_bound_unary(
+    lower: Tensor, upper: Tensor, func: Callable, func_prime: Callable
+) -> tuple[Tensor, Tensor]:
     # affine lower bound for convex diagonal function
     # w = f'(x)
     # b = f(x) - f'(y)*y
 
     f_u = func(upper)
     f_l = func(lower)
-    axis = [i+1 for i in range(len(lower.shape)-1)]
-    w = (f_u - f_l)/K.maximum(upper-lower, keras.backend.epsilon())
-    b = 0.5*(f_u + f_l - w*(upper+lower))
+    axis = [i + 1 for i in range(len(lower.shape) - 1)]
+    w = (f_u - f_l) / K.maximum(upper - lower, keras.backend.epsilon())
+    b = 0.5 * (f_u + f_l - w * (upper + lower))
 
     return w, b
 
 
-def get_convex_lower_affine_bound_unary(lower, upper, func, func_prime, slope=Slope.V_SLOPE) -> tuple[Tensor, Tensor]: 
+def get_convex_lower_affine_bound_unary(lower, upper, func, func_prime, slope=Slope.V_SLOPE) -> tuple[Tensor, Tensor]:
     # affine lower bound for convex diagonal function
     # w = f'(x)
     # b = f(x) - f'(y)*y
-    if slope== Slope.V_SLOPE:
+    if slope == Slope.V_SLOPE:
         w_lower, b_lower = get_convex_lower_affine_bound_at(lower, func, func_prime)
         w_upper, b_upper = get_convex_lower_affine_bound_at(upper, func, func_prime)
 
         # compute integrals over [lower, upper]
-        err_lower = w_lower*(upper+lower)/2 + b_lower
-        err_upper = w_upper*(upper+lower)/2 + b_upper
+        err_lower = w_lower * (upper + lower) / 2 + b_lower
+        err_upper = w_upper * (upper + lower) / 2 + b_upper
         mask_u = K.relu(K.sign(err_upper - err_lower))
 
-        w = mask_u*w_upper + (1-mask_u)*w_lower
-        b = mask_u*b_upper + (1-mask_u)*b_lower
+        w = mask_u * w_upper + (1 - mask_u) * w_lower
+        b = mask_u * b_upper + (1 - mask_u) * b_lower
 
-    elif slope== Slope.S_SLOPE:
+    elif slope == Slope.S_SLOPE:
         w_u, _ = get_convex_upper_affine_bound_unary(lower, upper, func, func_prime)
-        y = (lower+upper)/2.
+        y = (lower + upper) / 2.0
         w_l, b_l = get_convex_lower_affine_bound_at(y, func, func_prime)
-        w= w_u
-        b = K.minimum((w_l-w_u)*lower, (w_l-w_u)*upper) + b_l
+        w = w_u
+        b = K.minimum((w_l - w_u) * lower, (w_l - w_u) * upper) + b_l
 
-    elif slope== Slope.Z_SLOPE:
+    elif slope == Slope.Z_SLOPE:
         w, b = get_convex_lower_affine_bound_at(lower, func, func_prime)
 
-    elif slope== Slope.O_SLOPE:
+    elif slope == Slope.O_SLOPE:
         w, b = get_convex_lower_affine_bound_at(lower, func, func_prime)
 
     else:
         raise NotImplementedError("adaptative slope is not yet implemented")
 
     return w, b
-
-
 
 
 def get_linear_hull_relu(
