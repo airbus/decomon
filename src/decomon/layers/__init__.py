@@ -36,4 +36,4 @@ from .pooling import (
     DecomonMaxPooling2D
 )
 
-from .custom import DecomonMin, DecomonMax
+from .custom import DecomonMin, DecomonMax, DecomonMulConstant, DecomonLinear
