@@ -1,5 +1,5 @@
 import keras
-from keras.layers import MaxPooling2D, DepthwiseConv2D
+from keras.layers import Layer, MaxPooling2D, DepthwiseConv2D, Conv2DTranspose
 
 import numpy as np
 
@@ -56,10 +56,43 @@ def get_conv_op(layer: MaxPooling2D) -> DepthwiseConv2D:
     data_format: str = config["data_format"]
 
     layer_conv: DepthwiseConv2D = DepthwiseConv2D(
-        depth_multiplier=filters, kernel_size=pool_size, strides=strides, padding=padding, use_bias=False
+        depth_multiplier=filters, kernel_size=pool_size, strides=strides, padding=padding, use_bias=False, data_format=data_format
     )
     layer_conv.trainable = False
     layer_conv.kernel = kernel
     layer_conv.built = True
+    # layer_conv.output.shape = (batch, in_channels*out_channel, w, h) if data_format=='channel_first
+    # layer_conv.output.shape = (batch, w, h, in_channels*out_channel) if data_format=='channel_last
 
     return layer_conv, kernel
+
+def get_backward_layer(layer: DepthwiseConv2D) -> Layer:
+
+    dico_conv = layer.get_config()
+    #dico_conv.pop("groups")
+    input_shape = list(layer.input.shape[1:])
+    # update filters to match input, pay attention to data_format
+    if layer.data_format == "channels_first":  # better to use enum than raw str
+        dico_conv["filters"] = 1 #input_shape[0]
+    else:
+        dico_conv["filters"] = 1#input_shape[-1]
+
+    dico_conv["use_bias"] = False
+
+    # temporary fix
+
+    # discard keys that start by depth
+    #depth_keys = [e for e[:5]=='depth' for e in dico_conv.keys()]
+    dico_conv.pop('depth_multiplier')
+    dico_conv.pop('depthwise_initializer')
+    dico_conv.pop('depthwise_regularizer')
+    dico_conv.pop('depthwise_constraint')
+
+
+
+
+    layer_backward = Conv2DTranspose.from_config(dico_conv)
+    layer_backward.kernel = layer.kernel[:,:,:1,:]
+    layer_backward.built = True
+
+    return layer_backward

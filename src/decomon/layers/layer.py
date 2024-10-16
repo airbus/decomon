@@ -1,10 +1,13 @@
 from inspect import Parameter, signature
 from typing import Any, Optional, Union
+import numpy as np
 
 import keras
 import keras.ops as K
 from keras.layers import Layer, Wrapper
 from keras.utils import serialize_keras_object
+from keras.src.backend import rnn
+
 
 from decomon.constants import Propagation
 from decomon.layers.fuse import (
@@ -15,6 +18,7 @@ from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.layers.oracle import get_forward_oracle
 from decomon.perturbation_domain import BoxDomain, PerturbationDomain
 from decomon.types import Tensor
+from decomon.utils import memory_limit
 
 _keras_base_layer_keyword_parameters = [
     name for name, param in signature(Layer.__init__).parameters.items() if param.kind == Parameter.KEYWORD_ONLY
@@ -86,6 +90,9 @@ class DecomonLayer(Wrapper):
 
     _is_merging_layer: bool = False  # set to True in child class DecomonMerge
 
+    layer_pos:Layer = None
+    layer_neg:Layer = None
+
     def __init__(
         self,
         layer: Layer,
@@ -95,6 +102,7 @@ class DecomonLayer(Wrapper):
         propagation: Propagation = Propagation.FORWARD,
         model_input_shape: Optional[tuple[int, ...]] = None,
         model_output_shape: Optional[tuple[int, ...]] = None,
+        layer_backward:Layer = None,
         **kwargs: Any,
     ):
         """
@@ -145,6 +153,31 @@ class DecomonLayer(Wrapper):
             model_input_shape=model_input_shape,
             model_output_shape=model_output_shape,
         )
+
+        self.layer_backward = layer_backward
+            
+        # define affine_shape to check if we do explicitely or implicit affine propagation
+        self.affine_shape = int(np.prod(self.layer.input.shape[1:])*np.prod(self.layer.output.shape[1:]))
+        if self.affine_shape>memory_limit and self.linear:
+
+            if self.increasing or self.decreasing:
+                def step_f(x: Tensor, _: list[Tensor]) -> tuple[Tensor, list[Tensor]]:
+                    return self.layer(x), []
+            else:
+                def step_f(x: Tensor, _: list[Tensor]) -> tuple[Tensor, list[Tensor]]:
+                    return self.layer_pos(x[:, 0]) + self.layer_neg(x[:, 1]), []
+            
+            self.step_f = step_f
+
+            # define backward call
+            def step_b(x: Tensor, _: list[Tensor]) -> tuple[Tensor, list[Tensor]]:
+                return self.layer_backward(x), []
+            
+            self.step_b = step_b
+
+
+
+            
 
     def create_inputs_outputs_spec(
         self,
@@ -204,6 +237,7 @@ class DecomonLayer(Wrapper):
             }
         )
         return config
+
 
     def get_affine_representation(self) -> tuple[Tensor, Tensor]:
         """Get affine representation of the layer
@@ -367,6 +401,26 @@ class DecomonLayer(Wrapper):
             w_l_in * x + b_l_in <= z <= w_u_in * x + b_u_in
 
         """
+        if self.affine_shape >= memory_limit:
+                [w_l_in, b_l_in, w_u_in, b_u_in] = input_affine_bounds
+                input_shape = list(self.layer.input.shape[1:])
+                input_shape_flatten = int(np.prod(input_shape))
+                output_shape = list(self.layer.output.shape[1:])
+                w_u_flat = K.reshape(w_u,[-1, input_shape_flatten]+output_shape)
+                w_l_flat = K.reshape(w_l,[-1, input_shape_flatten]+output_shape)
+                # remove bias
+
+                if self.increasing:
+                    w_u_out = (
+                        rnn(step_function=self.step, inputs= w_u_flat, initial_states=[], unroll=False)[1]
+                    )
+                    w_l_out = (
+                        rnn(step_function=self.step, inputs= w_l_flat, initial_states=[], unroll=False)[1]
+                    )                    
+
+
+                import pdb; pdb.set_trace()
+
         if self.linear:
             w, b = self.get_affine_representation()
             layer_affine_bounds = [w, b, w, b]

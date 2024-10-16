@@ -115,7 +115,9 @@ def get_affine_upper_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims
     to use the CPU as a fallback for this op. WARNING: this will be slower than running natively on MPS
     """
     w_hull: Tensor
+    w_hull = K.solve(a=corners_collapse, b=corners_pred)  # (batch, shape_prev, shape_after, n_dim+1)
 
+    """
     try:
         w_hull = K.solve(a=corners_collapse, b=corners_pred)  # (batch, shape_prev, shape_after, n_dim+1)
     except:
@@ -124,7 +126,8 @@ def get_affine_upper_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims
         corners_pred_cpu: array.array = corners_pred.to("cpu").numpy()
         w_hull_cpu: array.array = np.linalg.solve(a=corners_collapse_cpu, b=corners_pred_cpu)
         w_hull = keras.Variable(w_hull_cpu, trainable=False)
-
+    """
+    
     if dtype != dtype32:
         w_hull = K.cast(w_hull, dtype=dtype)
 
@@ -151,7 +154,7 @@ def get_affine_upper_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims
         z_value,
         K.cast(corners_pred, dtype=dtype) - (K.sum(K.expand_dims(w_u, -1) * corners, axis_) + K.expand_dims(b_u, -1)),
     )
-    b_u += K.max(error, -1)
+    b_u = b_u+ K.max(error, -1)
 
     if keepdims:
         b_u = K.expand_dims(b_u, axis_)
