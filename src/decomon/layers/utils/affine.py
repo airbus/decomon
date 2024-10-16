@@ -72,14 +72,15 @@ def get_affine_representation_with_bias(layer: Layer, diagonal: bool = False) ->
     w_b: Tensor = K.zeros([1] + input_shape_wo_batch)
     bias: Tensor = layer(w_b)[0]  # output_shape_wo_batch
 
-    N: int = K.prod(input_shape_wo_batch)
-    w: Tensor = K.reshape(K.eye(N), [-1] + input_shape_wo_batch)
-    # apply the layer on w
-    w = layer(w) - bias[None]  # (N, output_shape_wo_batch)
-
     if diagonal:
-        w = K.reshape(K.diag(K.reshape(w, (N, N))), input_shape_wo_batch)
+        w = layer(K.ones([1] + input_shape_wo_batch))[0] - bias
     else:
+
+        N: int = K.prod(input_shape_wo_batch)
+        w: Tensor = K.reshape(K.eye(N), [-1] + input_shape_wo_batch)
+        # apply the layer on w
+        w = layer(w) - bias[None]  # (N, output_shape_wo_batch)
+
         w = K.reshape(w, input_shape_wo_batch + output_shape_wo_batch)
 
     return w, bias
