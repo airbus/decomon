@@ -35,5 +35,6 @@ from .pooling import (
     DecomonGlobalAveragePooling3D,
     DecomonMaxPooling2D,
 )
+from .regularization import DecomonDropout
 
 from .custom import DecomonMin, DecomonMax, DecomonMulConstant, DecomonLinear
