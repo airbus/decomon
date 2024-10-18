@@ -4,15 +4,25 @@ from typing import Any, Optional
 import keras
 import keras.ops as K
 from keras import Layer
-from keras.activations import linear, relu, softsign
+from keras.activations import linear, relu, softsign, sigmoid, tanh, exponential, elu, leaky_relu, selu, softplus
 from keras.config import epsilon
 from keras.layers import Activation
 
 from decomon.constants import Propagation, Slope
 from decomon.layers.activations.utils import (
+    get_convex_upper_affine_bound_unary,
+    get_convex_lower_affine_bound_unary,
     get_linear_hull_relu,
     get_linear_hull_s_shape,
+)
+from decomon.layers.activations.prime import (
     softsign_prime,
+    sigmoid_prime,
+    tanh_prime,
+    leaky_relu_prime,
+    elu_prime,
+    selu_prime,
+    softplus_prime
 )
 from decomon.layers.layer import DecomonLayer
 from decomon.perturbation_domain import PerturbationDomain
@@ -22,6 +32,9 @@ from decomon.types import Tensor
 class DecomonBaseActivation(DecomonLayer):
     """Base class for decomon layers corresponding to activation layers."""
 
+    convex:bool=False
+    concave:bool=False
+    
     def __init__(
         self,
         layer: Layer,
@@ -74,6 +87,7 @@ class DecomonActivation(DecomonBaseActivation):
 
     layer: Activation
     decomon_activation: DecomonBaseActivation
+    diagonal=True
 
     def __init__(
         self,
@@ -153,6 +167,7 @@ class DecomonLinear(DecomonBaseActivation):
     linear = True
     increasing = True
 
+
     def call(self, inputs: list[Tensor]) -> list[Tensor]:
         (
             affine_bounds_to_propagate,
@@ -181,7 +196,7 @@ class DecomonLinear(DecomonBaseActivation):
         )
 
 
-class DecomonReLU(DecomonBaseActivation):
+class DecomonActivationReLU(DecomonBaseActivation):
     diagonal = True
     increasing = True
 
@@ -190,7 +205,7 @@ class DecomonReLU(DecomonBaseActivation):
         return w_l, b_l, w_u, b_u
 
 
-class DecomonSoftSign(DecomonBaseActivation):
+class DecomonActivationSoftSign(DecomonBaseActivation):
     diagonal = True
     increasing = True
 
@@ -234,12 +249,110 @@ class DecomonSoftSign(DecomonBaseActivation):
         )
 
         return w_l, b_l, w_u, b_u
+    
+class DecomonActivationSigmoid(DecomonBaseActivation):
+    diagonal = True
+    increasing = True
+
+    def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        func = sigmoid
+        func_prime = sigmoid_prime
+
+        w_l, b_l, w_u, b_u = get_linear_hull_s_shape(lower, upper, func, f_prime)
+
+        return w_l, b_l, w_u, b_u
+
+class DecomonActivationTanh(DecomonBaseActivation):
+    diagonal = True
+    increasing = True
+
+    def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        func = tanh
+        func_prime = tanh_prime
+
+        w_l, b_l, w_u, b_u = get_linear_hull_s_shape(lower, upper, func, f_prime)
+
+        return w_l, b_l, w_u, b_u
+
+class DecomonActivationExponential(DecomonBaseActivation):
+    diagonal = True
+    increasing = True
+
+    def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        func = exponential
+        func_prime = exponential
+
+        w_u, b_u = get_convex_upper_affine_bound_unary(lower, upper, func, func_prime)
+        w_l, b_l = get_convex_lower_affine_bound_unary(lower, upper, func, func_prime, slope=self.slope)
+
+        return w_l, b_l, w_u, b_u
+    
+class DecomonActivationELU(DecomonBaseActivation):
+    diagonal = True
+    increasing = True
+
+    def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        func = elu
+        func_prime = elu_prime
+
+        w_u, b_u = get_convex_upper_affine_bound_unary(lower, upper, func, func_prime)
+        w_l, b_l = get_convex_lower_affine_bound_unary(lower, upper, func, func_prime, slope=self.slope)
+
+        return w_l, b_l, w_u, b_u
+    
+class DecomonActivationLeakyReLU(DecomonBaseActivation):
+    diagonal = True
+    increasing = True
+
+    def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        func = leaky_relu
+        func_prime = leaky_relu_prime
+
+        w_u, b_u = get_convex_upper_affine_bound_unary(lower, upper, func, func_prime)
+        w_l, b_l = get_convex_lower_affine_bound_unary(lower, upper, func, func_prime, slope=self.slope)
+
+        return w_l, b_l, w_u, b_u
+
+
+class DecomonActivationSeLU(DecomonBaseActivation):
+    diagonal = True
+    increasing = True
+
+    def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        func = selu
+        func_prime = selu_prime
+
+        w_u, b_u = get_convex_upper_affine_bound_unary(lower, upper, func, func_prime)
+        w_l, b_l = get_convex_lower_affine_bound_unary(lower, upper, func, func_prime, slope=self.slope)
+
+        return w_l, b_l, w_u, b_u
+    
+class DecomonActivationSoftplus(DecomonBaseActivation):
+    diagonal = True
+    increasing = True
+
+    def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        func = softplus
+        func_prime = softplus_prime
+
+        w_u, b_u = get_convex_upper_affine_bound_unary(lower, upper, func, func_prime)
+        w_l, b_l = get_convex_lower_affine_bound_unary(lower, upper, func, func_prime, slope=self.slope)
+
+        return w_l, b_l, w_u, b_u
 
 
 MAPPING_KERAS_ACTIVATION_TO_DECOMON_ACTIVATION: dict[Callable[[Tensor], Tensor], type[DecomonBaseActivation]] = {
     linear: DecomonLinear,
-    relu: DecomonReLU,
-    softsign: DecomonSoftSign,
+    relu: DecomonActivationReLU,
+    softsign: DecomonActivationSoftSign,
+    sigmoid: DecomonActivationSigmoid,
+    tanh: DecomonActivationTanh,
+    exponential: DecomonActivationExponential,
+    elu: DecomonActivationELU,
+    leaky_relu: DecomonActivationLeakyReLU,
+    selu: DecomonActivationSeLU,
+    softplus: DecomonActivationSoftplus
+
 }
 
 
@@ -249,3 +362,4 @@ def get(identifier: Any) -> type[DecomonBaseActivation]:
         return MAPPING_KERAS_ACTIVATION_TO_DECOMON_ACTIVATION[identifier]
     except KeyError:
         raise NotImplementedError(f"No decomon layer existing for activation function {identifier}")
+

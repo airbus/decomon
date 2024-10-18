@@ -1,4 +1,16 @@
-from .activations.activation import DecomonActivation, DecomonReLU
+from .activations.activation import (
+    DecomonActivation,
+    DecomonActivationReLU,
+    DecomonActivationELU,
+    DecomonActivationExponential,
+    DecomonActivationLeakyReLU,
+    DecomonActivationSeLU,
+    DecomonActivationSigmoid,
+    DecomonActivationSoftplus,
+    DecomonActivationSoftSign,
+    DecomonActivationTanh,
+    DecomonLinear,
+)
 from .activations.leaky_relu import DecomonLeakyReLU
 from .core.dense import DecomonDense
 from .layer import DecomonLayer
