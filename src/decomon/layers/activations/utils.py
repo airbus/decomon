@@ -12,34 +12,6 @@ from decomon.types import Tensor
 TensorFunction = Callable[[Tensor], Tensor]
 
 
-def sigmoid_prime(x: Tensor) -> Tensor:
-    """Derivative of sigmoid
-
-    Args:
-        x
-
-    Returns:
-
-    """
-
-    s_x = K.sigmoid(x)
-    return s_x * (K.cast(1, dtype=x.dtype) - s_x)
-
-
-def tanh_prime(x: Tensor) -> Tensor:
-    """Derivative of tanh
-
-    Args:
-        x
-
-    Returns:
-
-    """
-
-    s_x = K.tanh(x)
-    return K.cast(1, dtype=x.dtype) - K.power(s_x, K.cast(2, dtype=x.dtype))
-
-
 def get_convex_lower_affine_bound_at(x, func, func_prime) -> tuple[Tensor, Tensor]:
     # affine lower bound for convex diagonal function
     # w = f'(x)
@@ -232,37 +204,13 @@ def get_linear_softplus_hull(upper: Tensor, lower: Tensor, slope: Union[str, Slo
     return [w_u, b_u, w_l, b_l]
 
 
-def relu_prime(x: Tensor) -> Tensor:
-    """Derivative of relu
-
-    Args:
-        x
-
-    Returns:
-
-    """
-
-    return K.clip(K.sign(x), K.cast(0, dtype=x.dtype), K.cast(1, dtype=x.dtype))
-
-
-def softsign_prime(x: Tensor) -> Tensor:
-    """Derivative of softsign
-
-    Args:
-        x
-
-    Returns:
-
-    """
-
-    return K.cast(1.0, dtype=x.dtype) / K.power(K.cast(1.0, dtype=x.dtype) + K.abs(x), K.cast(2, dtype=x.dtype))
 
 
 def get_linear_hull_s_shape(
     lower: Tensor,
     upper: Tensor,
-    func: TensorFunction = K.sigmoid,
-    f_prime: TensorFunction = sigmoid_prime,
+    func: TensorFunction,
+    f_prime: TensorFunction,
 ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
     """Computing the linear hull of shape functions  given the pre activation neurons
 
@@ -339,8 +287,8 @@ def get_t_upper(
     u_c_flat: Tensor,
     l_c_flat: Tensor,
     s_l: Tensor,
-    func: TensorFunction = K.sigmoid,
-    f_prime: TensorFunction = sigmoid_prime,
+    func: TensorFunction,
+    f_prime: TensorFunction,
 ) -> tuple[Tensor, Tensor]:
     """linear interpolation between lower and upper bounds on the function func to have a symbolic approximation of the best
     coefficient for the affine upper bound
@@ -397,8 +345,8 @@ def get_t_lower(
     u_c_flat: Tensor,
     l_c_flat: Tensor,
     s_u: Tensor,
-    func: TensorFunction = K.sigmoid,
-    f_prime: TensorFunction = sigmoid_prime,
+    func: TensorFunction,
+    f_prime: TensorFunction,
 ) -> tuple[Tensor, Tensor]:
     """linear interpolation between lower and upper bounds on the function func to have a symbolic approximation of the best
     coefficient for the affine lower bound
