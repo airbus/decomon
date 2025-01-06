@@ -89,22 +89,26 @@ class DecomonMaxPooling2D(DecomonLayer):
             config = self.conv_op.get_config()
             config["kernel_size"] = self.layer.pool_size
 
-            self.matrix = get_toeplitz(self.kernel, input_shape_toeplitz, output_shape_toeplitz, config)
-            var = K.eye(in_channels)
+            if self.affine and self.propagation == Propagation.BACKWARD:
+                # check propagation ...
+                if self.fit_memory():
 
-            if self.layer.data_format == "channels_first":
-                var = K.reshape(
-                    var,
-                    [in_channels]
-                    + [1] * (len(input_shape_toeplitz) - 1)
-                    + [in_channels]
-                    + [1] * len(output_shape_toeplitz),
-                )
-                self.matrix = K.reshape(self.matrix, input_shape_toeplitz + [1] + output_shape_toeplitz)
-            else:
-                raise NotImplementedError()
+                    self.matrix = get_toeplitz(self.kernel, input_shape_toeplitz, output_shape_toeplitz, config)
+                    var = K.eye(in_channels)
 
-            self.matrix = K.expand_dims(self.matrix * var, 0)
+                    if self.layer.data_format == "channels_first":
+                        var = K.reshape(
+                            var,
+                            [in_channels]
+                            + [1] * (len(input_shape_toeplitz) - 1)
+                            + [in_channels]
+                            + [1] * len(output_shape_toeplitz),
+                        )
+                        self.matrix = K.reshape(self.matrix, input_shape_toeplitz + [1] + output_shape_toeplitz)
+                    else:
+                        raise NotImplementedError()
+
+                    self.matrix = K.expand_dims(self.matrix * var, 0)
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
 

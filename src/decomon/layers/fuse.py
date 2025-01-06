@@ -573,7 +573,7 @@ def _combine_affine_bounds_both_from_linear(
         missing_batchsize=missing_batchsize,
         diagonal=(False, diagonal[1]),
     )
-
+    
     w = batch_multid_dot(w_1, w_2, **kwargs_dot_w)
     b = batch_multid_dot(b_1, w_2, **kwargs_dot_b) + b_2
 
