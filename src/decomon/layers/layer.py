@@ -18,7 +18,8 @@ from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.layers.oracle import get_forward_oracle
 from decomon.perturbation_domain import BoxDomain, PerturbationDomain
 from decomon.types import Tensor
-from decomon.utils import memory_limit
+from decomon.utils import memory_limit, fit_memory
+from decomon.layers.utils import get_bias
 
 _keras_base_layer_keyword_parameters = [
     name for name, param in signature(Layer.__init__).parameters.items() if param.kind == Parameter.KEYWORD_ONLY
@@ -89,6 +90,12 @@ class DecomonLayer(Wrapper):
     """
 
     _is_merging_layer: bool = False  # set to True in child class DecomonMerge
+
+    use_bias:bool = True
+    """
+    Flag telling that the layer - which is linear- as a bias component. Meaning layer(x)= A*x+b with b!=0
+    This flag is used to reduce computation for affine propagation
+    """
 
     layer_pos:Layer = None
     layer_neg:Layer = None
@@ -335,7 +342,13 @@ class DecomonLayer(Wrapper):
                 "`get_affine_bounds()` needs to be implemented to get the forward and backward propagation of affine bounds. "
                 "Alternatively, you can also directly override `forward_affine_propagate()` and `backward_affine_propagate()`"
             )
-
+        
+    def fit_memory(self)->bool:
+        """Assert if the affine relaxations can be expressed explicitely
+            We have an internal user threshold defined in decomon.utils and check that the matrix of size (N,M) with N the input dimension of the layer and M the output dimension is under the treshold
+        """
+        return fit_memory(input_shape=self.layer.input.shape[1:], output_shape=self.layer.output.shape[1:])
+    
     def forward_ibp_propagate(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor]:
         """Propagate ibp bounds through the layer.
 
@@ -752,3 +765,88 @@ class DecomonLayer(Wrapper):
             return self.inputs_outputs_spec.flatten_outputs_shape(
                 affine_bounds_propagated_shape=affine_bounds_propagated_shape
             )
+        
+    def implicit_linear_backward_affine_propagate(
+        self, backward_layer, output_affine_bounds: list[Tensor]) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+
+        """Propagate model affine bounds in backward direction without explicitely formulate the affine components of layer.
+
+        We use backward_layer such that if layer(x)=A*x+b  backward_layer(y)= A^T*y with A^T the transposed matrix of A
+
+        See the backward_affine_propagate for more general information
+
+        Args:
+            output_affine_bounds: [w_l, b_l, w_u, b_u]
+                partial affine bounds on model output w.r.t underlying keras layer output
+            input_constant_bounds: [l_c_in, u_c_in]
+                constant oracle bounds on underlying keras layer input
+
+        Returns:
+            w_l_new, b_l_new, w_u_new, b_u_new: partial affine bounds on model output w.r.t. underlying keras layer *input*
+
+        """
+
+        if not self.linear:
+            raise ValueError("this function is sound for linear layers only")
+        
+        # use backward layer
+        input_shape = list(self.layer.input.shape[1:])  # (in_channel, in_w, in_h) if data_format=='channel_first'
+        output_shape = list(self.layer.output.shape[1:])  # (out_channel, out_w, out_h)
+
+        is_output_linear = self.inputs_outputs_spec.is_wo_batch_bounds((output_affine_bounds))
+
+        if is_output_linear:
+            [w_l_wo_batch, b_l_wo_batch, w_u_wo_batch, b_u_wo_batch] = output_affine_bounds
+            # add a broadcast dimension
+            w_l = K.expand_dims(w_l_wo_batch, 0)  # (1, output_shape, n_out_shape)
+            b_l = K.expand_dims(b_l_wo_batch, 0)  # (1, n_out_shape)
+            w_u = K.expand_dims(w_u_wo_batch, 0)  # (1, output_shape, n_out_shape)
+            b_u = K.expand_dims(b_u_wo_batch, 0)  # (1, n_out_shape)
+        else:
+            [w_l, b_l, w_u, b_u] = output_affine_bounds
+
+        n_out_shape = list(b_l.shape[1:])
+        n_out_shape_flat = int(np.prod(n_out_shape))
+
+        # reshape and permute
+        index_in = [i+1 for i in range(len(output_shape))]
+        index_out = [i+ len(output_shape)+1 for i in range(len(n_out_shape))]
+        # example: if (batch, w_in, h_in, c_in, w_out, h_out, c_out) 
+        # output_shape = (w_in, h_in, c_in); len(output_shape)=3
+        # index_in=[1, 2, 3]=[0+1, 1+1, 2+1], index_out = [4, 5, 6]=[0+4, 1+4, 2+4]
+
+        w_l_permute = K.transpose(w_l, [0]+index_out+index_in) # (batch, [index_out], [index_in])
+        w_u_permute = K.transpose(w_u, [0]+index_out+index_in) # (batch, [index_out], [index_in])
+
+        # reshape
+        w_l_p_flat = K.reshape(w_l_permute, [-1]+output_shape) #(batch*n_out_shape_flat, [output_shape])
+        w_u_p_flat = K.reshape(w_u_permute, [-1]+output_shape) #(batch*n_out_shape_flat, [output_shape])
+
+        # apply backward layer
+        
+        w_l_ = backward_layer(w_l_p_flat) #(batch*n_out_shape_flat, [input_shape])
+        w_u_ = backward_layer(w_u_p_flat) #(batch*n_out_shape_flat, [input_shape])
+
+        # reshape and permute
+        # reshape
+        w_l_ = K.reshape(w_l_, [-1]+n_out_shape+input_shape) # (-1, [n_out_shape], [input_shape])
+        w_u_ = K.reshape(w_u_, [-1]+n_out_shape+input_shape) # (-1, [n_out_shape], [input_shape])
+        # permute
+        index_in_back = [i+1 for i in range(len(n_out_shape))]
+        index_out_back = [i+1+len(n_out_shape) for i in range(len(input_shape))]
+        w_l_out = K.transpose(w_l_, [0]+index_out_back+index_in_back) # (batch, [input_shape], [n_out_shape])
+        w_u_out = K.transpose(w_u_, [0]+index_out_back+index_in_back) # (batch, [input_shape], [n_out_shape])
+
+        # propagate bias
+        if self.use_bias:
+            bias = get_bias(self.layer)
+            b_u_out = b_u + K.sum(w_u*K.reshape(bias, [-1]+output_shape+[1]*len(n_out_shape)), axis=index_in)
+            b_l_out = b_l + K.sum(w_l*K.reshape(bias, [-1]+output_shape+[1]*len(n_out_shape)), axis=index_in)
+        else:
+            b_u_out = b_u
+            b_l_out = b_l
+
+        if is_output_linear:
+            return [w_l_out[0], b_l_out[0], w_u_out[0], b_u_out[0]]
+        else:
+            return [w_l_out, b_l_out, w_u_out, b_u_out]

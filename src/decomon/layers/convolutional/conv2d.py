@@ -68,10 +68,11 @@ class DecomonConv2D(DecomonLayer):
         )
 
         self.b = get_bias(layer)
-
+        
         if self.affine and self.propagation == Propagation.BACKWARD:
             # check propagation ...
-            self.w = get_toeplitz(self.layer)
+            if self.fit_memory():
+                self.w = get_toeplitz(self.layer)
 
         # conv_pos = Conv2D.from_config(self.layer.get_config())
         # conv_pos._kernel = K.relu(self.layer.kernel)
@@ -79,8 +80,7 @@ class DecomonConv2D(DecomonLayer):
     def get_affine_representation(self) -> tuple[Tensor, Tensor]:
 
         # b = get_bias(self.layer)
-        # w = get_toeplitz(self.layer)
-
+        # w = get_toeplitz(self.layer)            
         return self.w, self.b
 
     # override backward propagation
@@ -201,6 +201,7 @@ class DecomonConv2D(DecomonLayer):
         bias = get_bias(self.layer)  # retrieve bias component with shape output_shape
         # w_u*bias (batch_size, output_shape, n_out_shape) * (output_shape,)
         # reshape bias
+
         bias_ = K.reshape(bias, [-1] + output_shape + [1] * len(n_out_shape))
         # axis_sum = [i + 1 for i in range(len(output_shape))]
         axis_sum = output_shape_index

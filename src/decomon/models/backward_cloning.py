@@ -1,7 +1,10 @@
 from collections.abc import Callable
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, List
+
+import numpy as np
 
 import keras
+import keras.ops as K
 from keras.layers import Layer
 from keras.models import Model
 from keras.src.ops.node import Node
@@ -15,6 +18,7 @@ from decomon.layers.oracle import DecomonOracle
 from decomon.models.utils import ensure_functional_model, get_output_nodes
 from decomon.perturbation_domain import BoxDomain, PerturbationDomain
 from decomon.types import Tensor
+from decomon.utils import memory_limit, fit_memory
 
 
 def crown(
@@ -182,6 +186,7 @@ def crown(
         raise RuntimeError("Node with multiple parents should have been converted to a DecomonMerge layer.")
     else:
         # unary layer
+
         crown_bounds = crown(
             node=parents[0],
             layer_fn=layer_fn,
@@ -278,39 +283,147 @@ def get_oracle(
 
             # affine bounds on parents from sub-crowns
             crown_bounds = []
+            is_split:bool=False
+            parents_split= []
+
+
             for parent in parents:
                 if id(parent) in crown_output_map:
                     # already computed sub-crown?
                     crown_bounds_parent = crown_output_map[id(parent)]
                 else:
                     subcrown_output_shape = get_model_output_shape(node=parent, backward_bounds=[])
-                    crown_bounds_parent = crown(
-                        node=parent,
-                        layer_fn=layer_fn,
-                        model_output_shape=subcrown_output_shape,
-                        backward_bounds=[],
-                        backward_map={},  # new output node, thus new backward_map
-                        oracle_map=oracle_map,
-                        forward_output_map=forward_output_map,
-                        forward_layer_map=forward_layer_map,
-                        crown_output_map=crown_output_map,
-                        submodels_stack=submodels_stack,
-                        perturbation_domain_input=perturbation_domain_input,
-                        perturbation_domain=perturbation_domain,
-                    )
-                    # store sub-crown output
-                    crown_output_map[id(parent)] = crown_bounds_parent
+                    # for scalability issue we can split the input of crown, thus it increases the number of calls of crown on submodels
+                    # do it if no other option for scalability has been set
+                    input_layer_dim: int = int(np.prod(parent.operation.input.shape[1:]))
+                    output_layer_shape: List[int] = list(parent.operation.output.shape[1:])
+                    output_layer_dim: int = int(np.prod(parent.operation.output.shape[1:]))
+                    crown_inner_dim: int = output_layer_dim * input_layer_dim
+                    memory_limit_ = max(memory_limit, input_layer_dim)
+                    is_first_layer:bool = max([len(node_i.parent_nodes) for node_i in parent.parent_nodes])==0
+
+
+                    if not fit_memory(parent.operation.input.shape[1:], parent.operation.output.shape[1:]):
+
+                        if is_first_layer:
+                            oracle_bounds = [
+                                perturbation_domain.get_lower_x(x=perturbation_domain_input),
+                                perturbation_domain.get_upper_x(x=perturbation_domain_input),
+                            ]
+                            backward_layer = layer_fn(parent.operation, model_output_shape=output_layer_shape)
+                            lower, upper = backward_layer.forward_ibp_propagate(lower=perturbation_domain.get_lower_x(x=perturbation_domain_input),
+                                                                                upper=perturbation_domain.get_lower_x(x=perturbation_domain_input))
+                            
+                            oracle_map[id(node)] = [lower, upper]
+                            return oracle_map[id(node)]
+
+
+                        is_split=True
+
+                        crown_bounds_parent=[]
+                        # split input with backward bounds ...
+                        split_backward = (
+                            dict()
+                        )  # share backward layers between the splits for sharing crown's hyperparameters: alpha, beta
+                        n_split = int(crown_inner_dim / memory_limit_)
+                        n_split=4
+                        #splits = [n_split] * (output_layer_dim // n_split)
+                        splits = [output_layer_dim//n_split]*n_split
+                        # add extra dimension
+                        if output_layer_dim % n_split:
+                            splits.append(output_layer_dim % n_split)
+                        # create backward bounds
+
+                        for i, split_dim_i in enumerate(splits):
+                            # create backward_weights and biases
+                            bias_i: Tensor = K.zeros(split_dim_i)
+                            n_0: int = sum(splits[:i])
+                            n_1: int = output_layer_dim - split_dim_i - n_0
+                            weights_list = []
+                            if n_0:
+                                weights_list.append(K.zeros((n_0, split_dim_i)))
+                            print(split_dim_i)
+                            weights_list.append(K.eye(split_dim_i))
+                            if n_1:
+                                weights_list.append(K.zeros((n_1, split_dim_i)))
+                            weights_i: Tensor = K.concatenate(weights_list, axis=0)  # (output_layer_dim, split_dim_1)
+
+                            weights_i = K.reshape(weights_i, output_layer_shape + [split_dim_i])
+
+                            # crown on sub output
+                            crown_bounds_parent_split = crown(
+                                node=parent,
+                                layer_fn=layer_fn,
+                                model_output_shape=(split_dim_i,),
+                                backward_bounds=[weights_i, bias_i, weights_i, bias_i],
+                                backward_map=split_backward,
+                                oracle_map=oracle_map,
+                                forward_output_map=forward_output_map,
+                                forward_layer_map=forward_layer_map,
+                                crown_output_map=crown_output_map,
+                                submodels_stack=submodels_stack,
+                                perturbation_domain_input=perturbation_domain_input,
+                                perturbation_domain=perturbation_domain,
+                            ) # (batch, input_shape, split_dim_i) (batch, split_dim_i), (batch, input_shape, split_dim_i) (batch, split_dim_i)
+                            crown_bounds_parent+=crown_bounds_parent_split
+
+                        print("kikou")
+                    else:
+                        crown_bounds_parent = crown(
+                            node=parent,
+                            layer_fn=layer_fn,
+                            model_output_shape=subcrown_output_shape,
+                            backward_bounds=[],
+                            backward_map={},  # new output node, thus new backward_map
+                            oracle_map=oracle_map,
+                            forward_output_map=forward_output_map,
+                            forward_layer_map=forward_layer_map,
+                            crown_output_map=crown_output_map,
+                            submodels_stack=submodels_stack,
+                            perturbation_domain_input=perturbation_domain_input,
+                            perturbation_domain=perturbation_domain,
+                        )
+                        # store sub-crown output
+                        crown_output_map[id(parent)] = crown_bounds_parent
                 crown_bounds += crown_bounds_parent
 
-            oracle_input = crown_bounds + [perturbation_domain_input]
-            oracle_layer = DecomonOracle(
-                perturbation_domain=backward_layer.perturbation_domain,
-                ibp=False,
-                affine=True,
-                layer_input_shape=backward_layer.layer_input_shape,
-                is_merging_layer=backward_layer.is_merging_layer,
-            )  # crown bounds contains only affine bounds => ibp=False, affine=True
-            oracle_bounds = oracle_layer(oracle_input)
+            # call DecomonOracle multiple times if the subcrown_output has been split
+            if is_split:
+                print('splitting')
+                if len(parents)>1:
+                    raise NotImplementedError()
+                # special processing
+                n_split = len(crown_bounds)//4
+                oracle_lower_bounds = []
+                oracle_upper_bounds = []
+                for i in range(n_split):
+                    crown_bounds_i = crown_bounds[4*i:4*(i+1)]
+                    oracle_input_i = crown_bounds_i + [perturbation_domain_input]
+
+                    oracle_layer = DecomonOracle(
+                        perturbation_domain=backward_layer.perturbation_domain,
+                        ibp=False,
+                        affine=True,
+                        layer_input_shape=backward_layer.layer_input_shape,
+                        is_merging_layer=False, # propgate split bounds
+                    )  # crown bounds contains only affine bounds => ibp=False, affine=True
+                    lower_split_i, upper_split_i = oracle_layer(oracle_input_i)
+                    oracle_lower_bounds.append(lower_split_i)
+                    oracle_upper_bounds.append(upper_split_i)
+
+                target_shape = [-1]+output_layer_shape
+                oracle_bounds = [K.reshape(K.concatenate(oracle_lower_bounds, -1), target_shape), K.reshape(K.concatenate(oracle_upper_bounds, -1), target_shape)]
+            else:
+                oracle_input = crown_bounds + [perturbation_domain_input]
+
+                oracle_layer = DecomonOracle(
+                    perturbation_domain=backward_layer.perturbation_domain,
+                    ibp=False,
+                    affine=True,
+                    layer_input_shape=backward_layer.layer_input_shape,
+                    is_merging_layer=backward_layer.is_merging_layer,
+                )  # crown bounds contains only affine bounds => ibp=False, affine=True
+                oracle_bounds = oracle_layer(oracle_input)
 
     # store oracle
     oracle_map[id(node)] = oracle_bounds
@@ -379,7 +492,8 @@ def crown_model(
             node=node, backward_bounds=backward_bounds_node, from_linear=from_linear
         )
         backward_map_node: dict[int, DecomonLayer] = {}
-
+        # exception: if the model has one layer and final_affine = False, apply ibp is enough
+        
         output_crown = crown(
             node=node,
             layer_fn=layer_fn,
