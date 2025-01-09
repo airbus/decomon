@@ -82,6 +82,13 @@ def _test_backward_zeropadding2d(input_shape, method):
     torch_layer = torch.nn.ZeroPad2d(2)
     check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
 
+def _test_backward_zeropadding1d(input_shape, method):
+
+    # data_format == 'channels_first'
+    keras_layer = ZeroPadding1D(2)  
+    torch_layer = torch.nn.ZeroPad1d(2)
+    check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
+
 def _test_backward_cropping1d(input_shape, method):
 
     # data_format == 'channels_first'
@@ -142,6 +149,10 @@ def test_backward_ZeroPadding2D(method):
     input_shape = (2, 10, 10)
     _test_backward_zeropadding2d(input_shape, method)
 
+@pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
+def test_backward_ZeroPadding1D(method):
+    input_shape = (2, 10)
+    _test_backward_zeropadding1d(input_shape, method)
 
 
 def test_backward_ZeroPadding1D():
