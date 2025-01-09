@@ -75,6 +75,13 @@ def _test_backward_cropping2d(input_shape, method):
     torch_layer = keras_layer
     check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
 
+def _test_backward_cropping3d(input_shape, method):
+
+    # data_format == 'channels_first'
+    keras_layer = Cropping3D()  
+    torch_layer = keras_layer
+    check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
+
 @pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
 def test_backward_reshape(method):
 
@@ -106,11 +113,15 @@ def test_backward_Cropping2D(method):
     input_shape = (2, 10, 10)
     _test_backward_cropping2d(input_shape, method)
 
+@pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
+def test_backward_Cropping3D(method):
+    input_shape = (2, 10, 10, 11)
+    _test_backward_cropping3d(input_shape, method)
+
 def test_backward_ZeroPadding2D():
     pass
 
-def test_backward_Cropping1D():
-    pass
+
 
 def test_backward_ZeroPadding1D():
     pass
