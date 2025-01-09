@@ -39,6 +39,14 @@ def _test_backward_reshape(input_shape, target_shape, method):
     torch_layer = TorchReshape(target_shape)
     check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=6)
 
+
+def _test_backward_flatten(input_shape, method):
+
+    # data_format == 'channels_first'
+    keras_layer = Flatten(data_format='channels_last')
+    torch_layer = torch.nn.Flatten()
+    check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=6)
+
 @pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
 def test_backward_reshape(method):
 
@@ -46,6 +54,11 @@ def test_backward_reshape(method):
     target_shape = (2, 50)
     _test_backward_reshape(input_shape, target_shape, method)
 
+@pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
+def test_backward_flatten(method):
+
+    input_shape = (2, 5, 10)
+    _test_backward_flatten(input_shape, method)
 
 def test_backward_RepeatVector():
     pass
@@ -55,6 +68,7 @@ def test_backward_Permute():
     pass
 
 def test_backward_Flatten():
+
     pass
 
 def test_backward_Cropping2D():

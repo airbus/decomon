@@ -401,7 +401,7 @@ class DecomonLayer(Wrapper):
         But this could be overridden for better performance. See `DecomonConv2D` for an example.
 
         Args:
-            input_affine_bounds: [w_l_in, b_l_in, w_u_in, b_u_in]
+            input_affine_boundl_in, b_l_in, w_u_in, b_u_in]
                 affine bounds on underlying keras layer input w.r.t. model input
             input_constant_bounds: [l_c_in, u_c_in]
                 constant oracle bounds on underlying keras layer input (already deduced from affine ones if necessary)
