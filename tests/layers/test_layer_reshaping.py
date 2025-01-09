@@ -10,6 +10,7 @@ from keras.layers import (
     Permute,
     RepeatVector,
     Cropping3D,
+    ZeroPadding3D
 )
 import torch
 
@@ -89,6 +90,13 @@ def _test_backward_zeropadding1d(input_shape, method):
     torch_layer = torch.nn.ZeroPad1d(2)
     check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
 
+def _test_backward_zeropadding3d(input_shape, method):
+
+    # data_format == 'channels_first'
+    keras_layer = ZeroPadding3D(2)  
+    torch_layer = torch.nn.ZeroPad3d(2)
+    check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
+
 def _test_backward_cropping1d(input_shape, method):
 
     # data_format == 'channels_first'
@@ -101,6 +109,27 @@ def _test_backward_cropping3d(input_shape, method):
     # data_format == 'channels_first'
     keras_layer = Cropping3D()  
     torch_layer = keras_layer
+    check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
+
+def _test_backward_repeatvector(input_shape, n, method):
+
+    # data_format == 'channels_first'
+    keras_layer = RepeatVector(n) 
+    class TorchRepeat(torch.nn.Module):
+
+        def __init__(self, n) -> None:
+            super().__init__()
+            self.n = n
+
+        def forward(self, x):
+            """
+            In the forward function we accept a Tensor of input data and we must return
+            a Tensor of output data. We can use Modules defined in the constructor as
+            well as arbitrary operators on Tensors.
+            """
+            return x.repeat(1, self.n)
+        
+    torch_layer = TorchRepeat(n) 
     check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
 
 @pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
@@ -116,8 +145,11 @@ def test_backward_flatten(method):
     input_shape = (2, 5, 10)
     _test_backward_flatten(input_shape, method)
 
-def test_backward_RepeatVector():
+@pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
+def test_backward_RepeatVector(method):
+    # not implemented in auto lirpa
     pass
+
 
 @pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
 def test_backward_Permute(method):
@@ -141,7 +173,7 @@ def test_backward_Cropping1D(method):
 
 @pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
 def test_backward_Cropping3D(method):
-    input_shape = (2, 10, 10, 11)
+    input_shape = (2, 10, 10, 10)
     _test_backward_cropping3d(input_shape, method)
 
 @pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
@@ -151,14 +183,12 @@ def test_backward_ZeroPadding2D(method):
 
 @pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
 def test_backward_ZeroPadding1D(method):
-    input_shape = (2, 10)
-    _test_backward_zeropadding1d(input_shape, method)
-
-
-def test_backward_ZeroPadding1D():
+    # not implemented in auto lirpa
     pass
 
-def test_backward_Cropping3D():
+@pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
+def test_backward_ZeroPadding3D(method):
+    # not implemented in auto lirpa
     pass
 
 
