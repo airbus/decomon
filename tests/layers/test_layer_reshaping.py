@@ -75,6 +75,13 @@ def _test_backward_cropping2d(input_shape, method):
     torch_layer = keras_layer
     check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
 
+def _test_backward_cropping1d(input_shape, method):
+
+    # data_format == 'channels_first'
+    keras_layer = Cropping1D()  
+    torch_layer = keras_layer
+    check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
+
 def _test_backward_cropping3d(input_shape, method):
 
     # data_format == 'channels_first'
@@ -112,6 +119,11 @@ def test_backward_Permute(method):
 def test_backward_Cropping2D(method):
     input_shape = (2, 10, 10)
     _test_backward_cropping2d(input_shape, method)
+
+@pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
+def test_backward_Cropping1D(method):
+    input_shape = (3, 2)
+    _test_backward_cropping1d(input_shape, method)
 
 @pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
 def test_backward_Cropping3D(method):
