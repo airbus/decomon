@@ -13,7 +13,7 @@ from .activations.activation import (
 )
 from .activations.leaky_relu import DecomonLeakyReLU
 from .core.dense import DecomonDense
-from .layer import DecomonLayer
+from .layer import DecomonLayer, DecomonLinearLayer
 from .merging import DecomonAdd, DecomonAverage, DecomonSubtract
 from .convolutional import DecomonConv2D
 from .reshaping import (
