@@ -47,9 +47,9 @@ def build_torch_model(keras_layer, torch_layer, keras_model, input_shape, input_
 
         def forward(self, x):
             y_0 = self.dense_0(x)
-            y_1 = y_0.view([-1]+list(input_shape))
+            y_1 = y_0.reshape([-1]+list(input_shape))
             y_2 = self.torch_layer(y_1)
-            y_3 = y_2.view([-1, self.inner_dim])
+            y_3 = y_2.reshape([-1, self.inner_dim])
             y_4 = self.relu(y_3)
             y_5 = self.dense_1(y_4)
             return y_5
@@ -113,11 +113,11 @@ def check_layer(keras_layer, torch_layer, input_shape, method, decimal=6):
         k_lA = K.transpose(k_lA, (0, 2, 1))
         k_uA = K.transpose(k_uA, (0, 2, 1))
 
-        np.testing.assert_almost_equal(k_lA.detach().cpu().numpy(), t_lA.detach().cpu().numpy(), decimal=6)
-        np.testing.assert_almost_equal(k_uA.detach().cpu().numpy(), t_uA.detach().cpu().numpy(), decimal=6)
+        np.testing.assert_almost_equal(k_lA.detach().cpu().numpy(), t_lA.detach().cpu().numpy(), decimal=decimal)
+        np.testing.assert_almost_equal(k_uA.detach().cpu().numpy(), t_uA.detach().cpu().numpy(), decimal=decimal)
     
-        np.testing.assert_almost_equal(k_lbias.detach().cpu().numpy(), t_lbias.detach().cpu().numpy(), decimal=6)
-        np.testing.assert_almost_equal(k_ubias.detach().cpu().numpy(), t_ubias.detach().cpu().numpy(), decimal=6)
+        np.testing.assert_almost_equal(k_lbias.detach().cpu().numpy(), t_lbias.detach().cpu().numpy(), decimal=decimal)
+        np.testing.assert_almost_equal(k_ubias.detach().cpu().numpy(), t_ubias.detach().cpu().numpy(), decimal=decimal)
     else:
         # IBP only
         t_lb, t_ub = auto_lirpa_model.compute_bounds(x=(bounded_input,), method=auto_lirpa_method)
@@ -126,7 +126,7 @@ def check_layer(keras_layer, torch_layer, input_shape, method, decimal=6):
         bounds = K.concatenate([torch_input[:,None]-eps, torch_input[:,None]+eps], 1)
         k_lb, k_ub = decomon_model(bounds)
 
-    np.testing.assert_almost_equal(k_lb.detach().cpu().numpy(), t_lb.detach().cpu().numpy(), decimal=6)
-    np.testing.assert_almost_equal(k_ub.detach().cpu().numpy(), t_ub.detach().cpu().numpy(), decimal=6)
+    np.testing.assert_almost_equal(k_lb.detach().cpu().numpy(), t_lb.detach().cpu().numpy(), decimal=decimal)
+    np.testing.assert_almost_equal(k_ub.detach().cpu().numpy(), t_ub.detach().cpu().numpy(), decimal=decimal)
     
     
