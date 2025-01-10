@@ -1,7 +1,7 @@
 import pytest
 
 from keras.layers import (
-    Conv2D
+    Conv2D, Conv1D
 
 )
 import torch
@@ -17,6 +17,17 @@ def _test_backward_conv2d(filters, kernel_size, strides, padding, input_shape, m
     else:
         padding_t = 0
     torch_layer = torch.nn.Conv2d(input_shape[0], filters, kernel_size=kernel_size, stride=strides, padding=padding_t)
+    check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
+
+def _test_backward_conv1d(filters, kernel_size, strides, padding, input_shape, method):
+
+    # data_format == 'channels_first'
+    keras_layer = Conv1D(filters,kernel_size,padding=padding, data_format='channels_first')
+    if padding == 'same':
+        padding_t = 1
+    else:
+        padding_t = 0
+    torch_layer = torch.nn.Conv1d(input_shape[0], filters, kernel_size=kernel_size, stride=strides, padding=padding_t)
     check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
 
 
@@ -35,4 +46,16 @@ def test_backward_Conv2D(method):
     strides = 1
     padding='valid'
     _test_backward_conv2d(filters, kernel_size, strides, padding, input_shape, method)
+
+@pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
+def test_backward_Conv1D(method):
+    input_shape = (2, 10)
+    filters = 32
+    kernel_size = 3
+    strides = 1
+    padding='same'
+    _test_backward_conv1d(filters, kernel_size, strides, padding, input_shape, method)
+
+    padding='valid'
+    _test_backward_conv1d(filters, kernel_size, strides, padding, input_shape, method)
 
