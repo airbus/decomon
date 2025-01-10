@@ -27,6 +27,8 @@ _keras_base_layer_keyword_parameters = [
     name for name, param in signature(Layer.__init__).parameters.items() if param.kind == Parameter.KEYWORD_ONLY
 ] + ["input_shape", "input_dim"]
 
+# utils function
+
 
 class DecomonLayer(Wrapper):
     """Base class for decomon layers.
@@ -99,9 +101,6 @@ class DecomonLayer(Wrapper):
     This flag is used to reduce computation for affine propagation
     """
 
-    layer_pos:Layer = None
-    layer_neg:Layer = None
-
     def __init__(
         self,
         layer: Layer,
@@ -112,6 +111,8 @@ class DecomonLayer(Wrapper):
         model_input_shape: Optional[tuple[int, ...]] = None,
         model_output_shape: Optional[tuple[int, ...]] = None,
         layer_backward:Layer = None,
+        layer_pos:Layer = None,
+        layer_neg:Layer=None,
         **kwargs: Any,
     ):
         """
@@ -166,6 +167,8 @@ class DecomonLayer(Wrapper):
         self.output_shape_wo_batch = list(self.layer.output.shape[1:])
 
         self.layer_backward = layer_backward
+        self.layer_pos = layer_pos
+        self.layer_neg = layer_neg
             
         # define affine_shape to check if we do explicitely or implicit affine propagation
         self.affine_shape = int(np.prod(self.layer.input.shape[1:])*np.prod(self.layer.output.shape[1:]))
@@ -380,6 +383,10 @@ class DecomonLayer(Wrapper):
 
         if self.decreasing:
             return [self.layer(upper), self.layer(lower)]
+        
+        if not (self.layer_pos is None) and not (self.layer_neg is None):
+
+            return [self.layer_pos(lower) + self.layer_neg(upper), self.layer_pos(upper) + self.layer_neg(lower)]
 
         if self.linear:
             w, b = self.get_affine_representation()
