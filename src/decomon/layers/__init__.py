@@ -15,7 +15,7 @@ from .activations.leaky_relu import DecomonLeakyReLU
 from .core.dense import DecomonDense
 from .layer import DecomonLayer, DecomonLinearLayer
 from .merging import DecomonAdd, DecomonAverage, DecomonSubtract
-from .convolutional import DecomonConv2D, DecomonConv1D
+from .convolutional import DecomonConv2D, DecomonConv1D, DecomonConv3D, DecomonDepthwiseConv2D
 from .reshaping import (
     DecomonCropping1D,
     DecomonCropping2D,
