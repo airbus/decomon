@@ -7,9 +7,34 @@ from keras.layers import Conv2D, Input
 from keras.ops.image import extract_patches
 from keras.layers import Wrapper
 from keras.src.layers.convolutional.base_conv import BaseConv
+from keras.src.layers.convolutional.base_depthwise_conv import BaseDepthwiseConv
 
 from typing import Optional, Any
 from decomon.types import Tensor
+
+
+class Depthwise_kernel_constraint(Wrapper):
+    def __init__(self, layer:BaseDepthwiseConv, ops=K.maximum, add_bias=True, **kwargs:Any):
+        super().__init__(layer=layer, **kwargs)
+        self.ops = ops
+        self.add_bias = add_bias
+    
+    def call(self, inputs: list[Tensor]) -> list[Tensor]:
+
+        y:Tensor =  K.depthwise_conv(
+            inputs,
+            kernel = self.ops(0, self.layer.kernel),
+            strides=list(self.layer.strides),
+            padding=self.layer.padding,
+            dilation_rate=self.layer.dilation_rate,
+            data_format=self.layer.data_format,
+        ) 
+
+        if self.add_bias:
+            y += self.layer(0*inputs)
+
+        return y
+
 
 class Conv_kernel_constraint(Wrapper):
 
