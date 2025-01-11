@@ -34,7 +34,7 @@ def build_torch_model(keras_layer, torch_layer, keras_model, input_shape, input_
     
             self.torch_layer = torch_layer
             self.dense_0 = Linear(input_dim, np.prod(input_shape))
-            self.inner_dim = keras_model.layers[-1].input.shape[-1]
+            self.inner_dim = np.prod(keras_layer.output.shape[1:])
             self.dense_1 = Linear(self.inner_dim, 2)
     
     
@@ -58,7 +58,7 @@ def build_torch_model(keras_layer, torch_layer, keras_model, input_shape, input_
     return torch_model
 
     
-def check_layer(keras_layer, torch_layer, input_shape, method, decimal=6):
+def check_layer(keras_layer, torch_layer, input_shape, method, axis_to_permute_kernel=(2, 3, 1, 0), decimal=6):
 
     input_dim = 30
     batch_size = 2
@@ -72,8 +72,11 @@ def check_layer(keras_layer, torch_layer, input_shape, method, decimal=6):
         t_w, t_b = layer.state_dict().values()
         if len(t_w.shape)==2:
             keras_params.append(t_w.T)
+        elif len(t_w.shape)==4:
+            w = K.transpose(t_w, axis_to_permute_kernel)
+            keras_params.append(w)
         else:
-            keras_params.append(K.transpose(t_w, (2, 3, 1, 0)))
+            keras_params.append(K.transpose(t_w, (2, 1, 0)))
             
         keras_params.append(t_b)
     
@@ -85,7 +88,6 @@ def check_layer(keras_layer, torch_layer, input_shape, method, decimal=6):
     output_torch = torch_model(torch_input)
     output_keras = keras_model(torch_input)
     np.testing.assert_almost_equal(output_keras.detach().cpu().numpy(), output_torch.detach().cpu().numpy(), decimal=decimal)
-
     auto_lirpa_model = BoundedModule(torch_model, torch_input)
     ptb = PerturbationLpNorm(norm=np.inf, eps=0.5)
     bounded_input = BoundedTensor(torch_input, ptb)
