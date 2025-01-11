@@ -76,7 +76,8 @@ def check_layer(keras_layer, torch_layer, input_shape, method, axis_to_permute_k
             w = K.transpose(t_w, axis_to_permute_kernel)
             keras_params.append(w)
         else:
-            keras_params.append(K.transpose(t_w, (2, 1, 0)))
+            #keras_params.append(K.transpose(t_w, (2, 1, 0)))
+            keras_params.append(K.transpose(t_w, axis_to_permute_kernel))
             
         keras_params.append(t_b)
     
