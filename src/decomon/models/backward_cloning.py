@@ -295,7 +295,10 @@ def get_oracle(
                     subcrown_output_shape = get_model_output_shape(node=parent, backward_bounds=[])
                     # for scalability issue we can split the input of crown, thus it increases the number of calls of crown on submodels
                     # do it if no other option for scalability has been set
-                    input_layer_dim: int = int(np.prod(parent.operation.input.shape[1:]))
+                    try:
+                        input_layer_dim: int = int(np.prod(parent.operation.input.shape[1:]))
+                    except AttributeError:
+                        import pdb; pdb.set_trace()
                     output_layer_shape: List[int] = list(parent.operation.output.shape[1:])
                     output_layer_dim: int = int(np.prod(parent.operation.output.shape[1:]))
                     crown_inner_dim: int = output_layer_dim * input_layer_dim

@@ -796,6 +796,7 @@ class DecomonLayer(Wrapper):
                     w_out_shape_wo_batchsize = b_out_shape_wo_batchsize
                 else:
                     w_out_shape_wo_batchsize = model_input_shape_wo_batchsize + keras_layer_output_shape_wo_batchsize
+                
                 if self.linear and self.inputs_outputs_spec.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
                     # no batch in propagated bounds
                     w_out_shape = w_out_shape_wo_batchsize
