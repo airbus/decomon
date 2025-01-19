@@ -10,7 +10,10 @@ from keras.layers import (
     Permute,
     RepeatVector,
     Cropping3D,
-    ZeroPadding3D
+    ZeroPadding3D,
+    UpSampling2D,
+    UpSampling1D
+
 )
 import torch
 
@@ -81,6 +84,20 @@ def _test_backward_zeropadding2d(input_shape, method):
     # data_format == 'channels_first'
     keras_layer = ZeroPadding2D(2)  
     torch_layer = torch.nn.ZeroPad2d(2)
+    check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
+
+def _test_backward_upsampling2d(input_shape, method):
+
+    # data_format == 'channels_first'
+    keras_layer = UpSampling2D(2) 
+    torch_layer = torch.nn.Upsample(scale_factor=2)
+    check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
+
+def _test_backward_upsampling1d(input_shape, method):
+
+    # data_format == 'channels_first'
+    keras_layer = UpSampling1D(2) 
+    torch_layer = torch.nn.Upsample(scale_factor=2)
     check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
 
 def _test_backward_zeropadding1d(input_shape, method):
@@ -190,5 +207,16 @@ def test_backward_ZeroPadding1D(method):
 def test_backward_ZeroPadding3D(method):
     # not implemented in auto lirpa
     pass
+
+@pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
+def test_backward_UpSampling2D(method):
+    input_shape = (2, 10, 10)
+    _test_backward_upsampling2d(input_shape, method)
+
+@pytest.mark.parametrize("method", ["forward-ibp", "crown-forward-ibp", "crown"])
+def test_backward_UpSampling1D(method):
+    pass
+    input_shape = (2, 10)
+    _test_backward_upsampling1d(input_shape, method)
 
 
