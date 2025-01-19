@@ -9,7 +9,7 @@ from decomon.types import Tensor
 from .utils import Dense_kernel_constraint
 
 
-class DecomonDense(DecomonLayer):
+class DecomonDense(DecomonLinearLayer):
 
     def __init__(
         self,
