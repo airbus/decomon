@@ -258,7 +258,7 @@ class DecomonActivationSigmoid(DecomonBaseActivation):
         func = sigmoid
         func_prime = sigmoid_prime
 
-        w_l, b_l, w_u, b_u = get_linear_hull_s_shape(lower, upper, func, f_prime)
+        w_l, b_l, w_u, b_u = get_linear_hull_s_shape(lower, upper, func, func_prime)
 
         return w_l, b_l, w_u, b_u
 
@@ -270,7 +270,7 @@ class DecomonActivationTanh(DecomonBaseActivation):
         func = tanh
         func_prime = tanh_prime
 
-        w_l, b_l, w_u, b_u = get_linear_hull_s_shape(lower, upper, func, f_prime)
+        w_l, b_l, w_u, b_u = get_linear_hull_s_shape(lower, upper, func, func_prime)
 
         return w_l, b_l, w_u, b_u
 

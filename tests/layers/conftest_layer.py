@@ -19,14 +19,29 @@ def map_decomon_methods_2_lirpa(method:str):
     elif method.lower()=='crown-forward-ibp': return 'CROWN-IBP'
     else: raise ValueError('unrecognized method {}'.format(method))
 
-def build_keras_model(keras_layer, input_shape, input_dim):
-    keras_layers = [Dense(np.prod(input_shape)), Reshape(input_shape), keras_layer, Reshape((-1,)), Activation('relu'), Dense(2)]
+def build_keras_model(keras_layer, input_shape, input_dim, wo_linearity=False):
+    keras_layers = [Dense(np.prod(input_shape)), Reshape(input_shape), keras_layer, Reshape((-1,))]
+    if wo_linearity:
+        keras_layers+=[Dense(2)]
+    else:
+        keras_layers+=[Activation('relu'), Dense(2)]
     keras_model = Sequential(keras_layers)
     _ = keras_model(np.ones((1, input_dim)))
 
     return keras_model
 
-def build_torch_model(keras_layer, torch_layer, keras_model, input_shape, input_dim):
+def build_keras_model_activation(keras_layer, input_dim, wo_linearity=False):
+    keras_layers = [keras_layer]
+    if wo_linearity:
+        keras_layers+=[Dense(2)]
+    else:
+        keras_layers+=[Activation('relu'), Dense(2)]
+    keras_model = Sequential(keras_layers)
+    _ = keras_model(np.ones((1, input_dim)))
+
+    return keras_model
+
+def build_torch_model(keras_layer, torch_layer, keras_model, input_shape, input_dim, wo_linearity=False):
 
     class TorchModel(nn.Module):
         def __init__(self) -> None:
@@ -50,21 +65,47 @@ def build_torch_model(keras_layer, torch_layer, keras_model, input_shape, input_
             y_1 = y_0.reshape([-1]+list(input_shape))
             y_2 = self.torch_layer(y_1)
             y_3 = y_2.reshape([-1, self.inner_dim])
-            y_4 = self.relu(y_3)
+            if wo_linearity:
+                y_4 = y_3
+            else:
+                y_4 = self.relu(y_3)
             y_5 = self.dense_1(y_4)
             return y_5
 
     torch_model = TorchModel().to('cpu')
     return torch_model
 
+def check_layer_linear(keras_layer, input_shape,method, decimal=6 ):
+    input_dim = 30
+    batch_size = 1
     
-def check_layer(keras_layer, torch_layer, input_shape, method, axis_to_permute_kernel=(2, 3, 1, 0), decimal=6):
+    keras_model = build_keras_model(keras_layer, input_shape, input_dim, wo_linearity=True)
+    np_input = np.reshape(5*np.random.rand(batch_size*input_dim)-2, (batch_size, input_dim))
+    torch_input = torch.Tensor(np_input)
+    eps = 0.5
+    decomon_model = clone(keras_model,final_ibp=True, final_affine=True, method=method)
+    bounds = K.concatenate([torch_input[:,None]-eps, torch_input[:,None]+eps], 1)
+    k_lA, k_lbias, k_uA, k_ubias, k_lb, k_ub = decomon_model(bounds)
+
+    # compute bias
+    bias = keras_model.predict(0*torch_input)[0]
+    np.testing.assert_almost_equal(bias, k_ubias.detach().cpu().numpy(), decimal=decimal)
+    np.testing.assert_almost_equal(bias, k_lbias.detach().cpu().numpy(), decimal=decimal)
+
+    # compute weights
+    weights = keras_model.predict(np.diag([1.]*30))
+    np.testing.assert_almost_equal(weights, k_lA.detach().cpu().numpy(), decimal=decimal)
+    np.testing.assert_almost_equal(weights, k_uA.detach().cpu().numpy(), decimal=decimal)
+
+
+
+def check_layer(keras_layer, torch_layer, input_shape, method, axis_to_permute_kernel=(2, 3, 1, 0), wo_linearity=False, decimal=6):
 
     input_dim = 30
     batch_size = 2
     
-    keras_model = build_keras_model(keras_layer, input_shape, input_dim)
-    torch_model = build_torch_model(keras_layer, torch_layer, keras_model, input_shape, input_dim)
+    keras_model = build_keras_model(keras_layer, input_shape, input_dim, wo_linearity=wo_linearity)
+    torch_model = build_torch_model(keras_layer, torch_layer, keras_model, input_shape, input_dim, wo_linearity=wo_linearity)
 
     # copy weights from torch to keras
     keras_params=[]
@@ -83,6 +124,75 @@ def check_layer(keras_layer, torch_layer, input_shape, method, axis_to_permute_k
     
     keras_model.set_weights(keras_params)
     
+    # compare the output on the same random inputs
+    np_input = np.reshape(5*np.random.rand(batch_size*input_dim)-2, (batch_size, input_dim))
+    torch_input = torch.Tensor(np_input)
+    output_torch = torch_model(torch_input)
+    output_keras = keras_model(torch_input)
+    np.testing.assert_almost_equal(output_keras.detach().cpu().numpy(), output_torch.detach().cpu().numpy(), decimal=decimal)
+
+    auto_lirpa_model = BoundedModule(torch_model, torch_input)
+    ptb = PerturbationLpNorm(norm=np.inf, eps=0.5)
+    bounded_input = BoundedTensor(torch_input, ptb)
+    
+    auto_lirpa_method = map_decomon_methods_2_lirpa(method)
+    if method in ['crown-forward-ibp', 'crown']:
+
+        # Compute LiRPA bounds using the backward mode bound propagation (CROWN).
+        # Getting the linear bound coefficients (A matrix).    
+        required_A = defaultdict(set)
+        required_A[auto_lirpa_model.output_name[0]].add(auto_lirpa_model.input_name[0])
+        t_lb, t_ub, A = auto_lirpa_model.compute_bounds(x=(bounded_input,), method=auto_lirpa_method, return_A=True, needed_A_dict=required_A)
+        # CROWN linear (symbolic) bounds: lA x + lbias <= f(x) <= uA x + ubias
+        t_lA = A[auto_lirpa_model.output_name[0]][auto_lirpa_model.input_name[0]]['lA']
+        t_lbias = A[auto_lirpa_model.output_name[0]][auto_lirpa_model.input_name[0]]['lbias']
+        t_uA = A[auto_lirpa_model.output_name[0]][auto_lirpa_model.input_name[0]]['uA']
+        t_ubias = A[auto_lirpa_model.output_name[0]][auto_lirpa_model.input_name[0]]['ubias']
+        
+        eps = 0.5
+        decomon_model = clone(keras_model,final_ibp=True, final_affine=True, method=method)
+        
+        bounds = K.concatenate([torch_input[:,None]-eps, torch_input[:,None]+eps], 1)
+        k_lA, k_lbias, k_uA, k_ubias, k_lb, k_ub = decomon_model(bounds)
+        
+        if wo_linearity:
+            k_lA=k_lA[None]
+            k_uA = k_uA[None]
+            k_lbias=k_lbias[None]
+            k_ubias=k_ubias[None]
+            t_lA = t_lA[:1]
+            t_lbias = t_lbias[:1]
+            t_uA = t_uA[:1]
+            t_ubias = t_ubias[:1]
+        k_lA = K.transpose(k_lA, (0, 2, 1))
+        k_uA = K.transpose(k_uA, (0, 2, 1))
+
+        np.testing.assert_almost_equal(k_lA.detach().cpu().numpy(), t_lA.detach().cpu().numpy(), decimal=decimal)
+        np.testing.assert_almost_equal(k_uA.detach().cpu().numpy(), t_uA.detach().cpu().numpy(), decimal=decimal)
+    
+        np.testing.assert_almost_equal(k_lbias.detach().cpu().numpy(), t_lbias.detach().cpu().numpy(), decimal=decimal)
+        np.testing.assert_almost_equal(k_ubias.detach().cpu().numpy(), t_ubias.detach().cpu().numpy(), decimal=decimal)
+    else:
+        # IBP only
+        t_lb, t_ub = auto_lirpa_model.compute_bounds(x=(bounded_input,), method=auto_lirpa_method)
+        eps = 0.5
+        decomon_model = clone(keras_model,final_ibp=True, final_affine=False, method=method)
+        bounds = K.concatenate([torch_input[:,None]-eps, torch_input[:,None]+eps], 1)
+        k_lb, k_ub = decomon_model(bounds)
+
+    np.testing.assert_almost_equal(k_lb.detach().cpu().numpy(), t_lb.detach().cpu().numpy(), decimal=decimal)
+    np.testing.assert_almost_equal(k_ub.detach().cpu().numpy(), t_ub.detach().cpu().numpy(), decimal=decimal)
+
+def check_layer_activation(keras_layer, torch_layer, input_dim, method, decimal=6):
+
+    batch_size = 2
+
+    keras_model = Sequential([keras_layer])
+    _ = keras_model(np.ones((1, input_dim)))
+    
+    torch_model = nn.Sequential(torch_layer).to('cpu')
+    _ = torch_model(torch.ones((1, input_dim)))
+
     # compare the output on the same random inputs
     np_input = np.reshape(5*np.random.rand(batch_size*input_dim)-2, (batch_size, input_dim))
     torch_input = torch.Tensor(np_input)

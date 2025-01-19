@@ -1,7 +1,7 @@
 from typing import Any, Optional, Union
 
 from keras.layers import AveragePooling2D
-from decomon.layers import DecomonLayer
+from decomon.layers import DecomonLayer, DecomonLinearLayer
 from keras_custom.backward import get_backward
 
 
@@ -9,11 +9,11 @@ from decomon.types import Tensor
 from decomon.layers.utils import get_affine_representation_wo_bias
 
 
-class DecomonAveragePooling2D(DecomonLayer):
+class DecomonAveragePooling2D(DecomonLinearLayer):
+    
     layer: AveragePooling2D
-    linear = True
     increasing = True
-
+    """
     def get_affine_representation(self) -> tuple[Tensor, Tensor]:
 
         return get_affine_representation_wo_bias(self.layer, diagonal=self.diagonal)
@@ -54,3 +54,4 @@ class DecomonAveragePooling2D(DecomonLayer):
         # we optimize the propagation of affine bounds using the backward layers of conv
         # to do so we need to create a new batch of affine bounds
         return self.implicit_linear_backward_affine_propagate(self.layer_backward , output_affine_bounds)
+    """
