@@ -2,7 +2,7 @@ from decomon.types import Tensor
 from keras.layers import Layer
 import keras.ops as K
 import numpy as np
-from typing import List
+from typing import List, Union
 
 
 def get_affine_representation_wo_bias(layer: Layer, diagonal: bool = False) -> tuple[Tensor, Tensor]:
@@ -84,3 +84,82 @@ def get_affine_representation_with_bias(layer: Layer, diagonal: bool = False) ->
         w = K.reshape(w, input_shape_wo_batch + output_shape_wo_batch)
 
     return w, bias
+
+def apply_backward_layer(output_affine_bounds: list[Tensor],
+                         layer_backward: Layer,
+                         is_output_linear:bool, 
+                         output_shape_wo_batch: list[int], 
+                         input_shape_wo_batch:list[int],
+                         has_bias:bool=True,
+                        layer: Union[None, Layer]=None)-> tuple[Tensor, Tensor, Tensor, Tensor]:
+    """
+    
+    """
+    [w_l, b_l, w_u, b_u] = output_affine_bounds
+
+    if is_output_linear:
+        w_l = w_l[None]
+        w_u = w_u[None]
+        b_l = b_l[None]
+        b_u = b_u[None]
+
+    n_out_shape = list(b_l.shape[1:])
+    n_out_shape_flat = int(np.prod(n_out_shape))
+
+    w_l_flat_0 = K.reshape(w_l, [-1] + output_shape_wo_batch + [n_out_shape_flat])  # (batch, output_shape, n_out_flat)
+    w_u_flat_0 = K.reshape(w_u, [-1] + output_shape_wo_batch + [n_out_shape_flat])  # (batch, output_shape, n_out_flat)
+
+    # permute dimension
+    N_output_shape = len(output_shape_wo_batch)  # number of dimensions without batch size
+    output_shape_index = [i + 1 for i in range(N_output_shape)]
+
+    w_l_flat = K.transpose(
+        w_l_flat_0, [0, N_output_shape + 1] + output_shape_index
+    )  # (batch, n_out_flat, output_shape)
+    w_u_flat = K.transpose(
+        w_u_flat_0, [0, N_output_shape + 1] + output_shape_index
+    )  # (batch, n_out_flat, output_shape)
+
+    w_l_flat_ = K.reshape(w_l_flat, [-1] + output_shape_wo_batch)  # (batch*n_out_flat, output_shape)
+    w_u_flat_ = K.reshape(w_u_flat, [-1] + output_shape_wo_batch)  # (batch*n_out_flat, output_shape)
+
+    # apply backward layer
+    w_l_conv = layer_backward(w_l_flat_)  # (batch*n_out_flat, input_shape)
+    w_u_conv = layer_backward(w_u_flat_)  # (batch*n_out_flat, input_shape)
+
+    # reshape to (batch, n_out_flat, input_shape)
+    w_l_conv = K.reshape(w_l_conv, [-1, n_out_shape_flat] + input_shape_wo_batch)
+    w_u_conv = K.reshape(w_u_conv, [-1, n_out_shape_flat] + input_shape_wo_batch)
+
+    # permute dimensions: (batch, input_shape, n_out_flat)
+    # (0, 1, 2, 3, 4) -> (0, 2, 3, 4, 1)
+    input_shape_index = [0] + [i + 2 for i in range(len(input_shape_wo_batch))] + [1]
+    w_l_conv = K.transpose(w_l_conv, input_shape_index)
+    w_u_conv = K.transpose(w_u_conv, input_shape_index)
+
+    # reshape to (batch, input_shape, n_out)
+    w_l_conv = K.reshape(w_l_conv, [-1] + input_shape_wo_batch + n_out_shape)
+    w_u_conv = K.reshape(w_u_conv, [-1] + input_shape_wo_batch + n_out_shape)
+
+    if has_bias:
+        # convert bias to an additive term
+        bias = get_bias(layer)  # retrieve bias component with shape output_shape
+        # w_u*bias (batch_size, output_shape, n_out_shape) * (output_shape,)
+        # reshape bias
+
+        bias_ = K.reshape(bias, [-1] + output_shape_wo_batch + [1] * len(n_out_shape))
+        # axis_sum = [i + 1 for i in range(len(output_shape))]
+        axis_sum = output_shape_index
+        bias_conv_u = K.sum(w_u * bias_, axis_sum) + b_u  # (batch_size, n_out_shape)
+        bias_conv_l = K.sum(w_l * bias_, axis_sum) + b_l  # (batch_size, n_out_shape)
+    else:
+        bias_conv_u = b_u  # (batch_size, n_out_shape)
+        bias_conv_l = b_l  # (batch_size, n_out_shape)
+
+    if is_output_linear:
+        output = [w_l_conv[0], bias_conv_l[0], w_u_conv[0], bias_conv_u[0]]
+    else:
+        output = [w_l_conv, bias_conv_l, w_u_conv, bias_conv_u]
+
+    return output
+
