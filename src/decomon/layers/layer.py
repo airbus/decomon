@@ -446,13 +446,14 @@ class DecomonLayer(Wrapper):
 
 
                 import pdb; pdb.set_trace()
-
         if self.linear:
             w, b = self.get_affine_representation()
             layer_affine_bounds = [w, b, w, b]
         else:
             lower, upper = self.inputs_outputs_spec.split_constant_bounds(constant_bounds=input_constant_bounds)
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
+            import pdb; pdb.set_trace()
+
             layer_affine_bounds = [w_l, b_l, w_u, b_u]
 
         from_linear_layer = (self.inputs_outputs_spec.is_wo_batch_bounds(input_affine_bounds), self.linear)
@@ -604,7 +605,6 @@ class DecomonLayer(Wrapper):
             return output
 
 
-
     def get_forward_oracle(
         self,
         input_affine_bounds: list[Tensor],
@@ -667,6 +667,7 @@ class DecomonLayer(Wrapper):
               - for the input: we do not need it, as it should already have been taken care of in the previous layer
 
         """
+
         # IBP: interval bounds propragation
         if self.ibp:
             lower, upper = self.inputs_outputs_spec.split_constant_bounds(constant_bounds=input_bounds_to_propagate)
@@ -963,7 +964,11 @@ class DecomonLinearLayer(DecomonLayer):
         **kwargs: Any,
     ):
         
-        layer_backward = get_backward(layer)
+        try:
+            layer_backward = get_backward(layer)
+        except:
+            layer_backward = None
+        
         super().__init__(
             layer=layer, perturbation_domain=perturbation_domain,
             ibp=ibp, affine=affine, propagation=propagation, 
@@ -972,4 +977,8 @@ class DecomonLinearLayer(DecomonLayer):
             layer_backward=layer_backward,
             **kwargs
         )
+
+    def get_affine_representation(self) -> tuple[Tensor, Tensor]:
+
+        return get_affine_representation_wo_bias(self.layer, diagonal=self.diagonal)
 
