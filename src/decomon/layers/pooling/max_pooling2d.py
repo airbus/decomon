@@ -1,15 +1,14 @@
 from decomon.layers import DecomonLayer
 from decomon.types import Tensor
 
-import keras
-from keras.layers import Layer, Reshape, MaxPooling2D
-from keras.models import Sequential
-import keras.ops as K
-import numpy as np
+from keras.layers import Layer, Reshape, MaxPooling2D #type:ignore
+from keras.models import Sequential #type:ignore
+import keras.ops as K #type:ignore
+import numpy as np #type:ignore
 
 from decomon.layers.custom.utils import get_affine_lower_bound_max, get_affine_upper_bound_max
 from decomon.layers.convolutional.utils import get_toeplitz
-from decomon.layers.utils.affine import get_bias, apply_backward_layer
+from decomon.layers.utils.affine import get_bias
 from decomon.layers.fuse import (
     combine_affine_bounds,
 )
@@ -21,7 +20,8 @@ from decomon.perturbation_domain import PerturbationDomain
 from decomon.utils import memory_limit
 
 from .utils_conv import get_conv_op, get_in_channels
-from jacobinet.layers.convert import get_backward
+from jacobinet.layers.convert import get_backward #type:ignore
+from jacobinet.layers.pooling.utils_max import get_linear_block_max #type:ignore
 
 
 
@@ -59,28 +59,51 @@ class DecomonMaxPooling2D(DecomonLayer):
 
         self.linear_block = layer_backward_maxpool.linear_block
         self.linear_block_backward = layer_backward_maxpool.linear_block_backward
+
+        input_dim_wo_batch_wo_channel = list(self.layer.input.shape[1:])
+        if self.layer.data_format=='channels_last':
+            input_dim_wo_batch_wo_channel[-1]=1
+        else:
+            input_dim_wo_batch_wo_channel[0]=1
+        self.linear_block_backward_single_channel = get_linear_block_max(self.layer, input_dim_wo_batch_wo_channel)
         self.axis = layer_backward_maxpool.axis
 
     
     def get_affine_bounds_with_linear_block_inputs(self, lower_max:Tensor, upper_max:Tensor, axis=int)->tuple[Tensor, Tensor, Tensor, Tensor]:
         
         w_l_max, b_l_max = get_affine_lower_bound_max(lower_max, upper_max, axis=axis, keepdims=False)
+        w_u_max, b_u_max = get_affine_upper_bound_max(lower_max, upper_max, axis=axis, keepdims=False)
 
-        #w_u_max, b_u_max = get_affine_upper_bound_max(lower_max, upper_max, axis=axis, keepdims=False)
 
-        #output_affine_bounds = [w_l_max, b_l_max, w_u_max, b_u_max]
-        output_affine_bounds = [w_l_max, b_l_max, w_l_max, b_l_max] # temporary fix
+        output_shape_wo_batch = list(self.linear_block.output.shape[1:])
 
-        output_shape_wo_batch = list(b_l_max.shape[1:])
-        output = apply_backward_layer(output_affine_bounds=output_affine_bounds,
-                         layer_backward=self.linear_block_backward,
-                         is_output_linear=False, 
-                         output_shape_wo_batch= output_shape_wo_batch, 
-                         input_shape_wo_batch=self.input_shape_wo_batch,
-                         has_bias=False,
-                        layer=None)
+        # derive n_out
+        N_out = len(output_shape_wo_batch)
+        N_in = self.input_shape_wo_batch
+        n_out = list(w_l_max.shape[1:])[N_out:]
         
-        return output
+        w_l_max_reshape = K.transpose(w_l_max, [0]+[N_out+1+i for i in range(len(n_out))]+[i+1 for i in range(N_out)])
+        w_u_max_reshape = K.transpose(w_u_max, [0]+[N_out+1+i for i in range(len(n_out))]+[i+1 for i in range(N_out)])
+
+        # because max is increasing, we know that w_u_max and w_l_max contain only positive values
+        # thus we do not need to split to follow backward propagation rule
+        # note that we should do this optimization in the general case
+        w_l_reshape = self.linear_block_backward(w_l_max_reshape)
+        w_u_reshape = self.linear_block_backward(w_u_max_reshape)
+
+        w_l = K.transpose(w_l_reshape, [0]+[len(n_out)+1+i for i in range(len(N_in))]+[i+1 for i in range(len(n_out))])
+        w_u = K.transpose(w_u_reshape, [0]+[len(n_out)+1+i for i in range(len(N_in))]+[i+1 for i in range(len(n_out))])
+
+        if len(n_out):
+            
+            b_u = K.sum(b_u_max, axis=[i+1 for i in range(N_out-1)])
+            b_l = K.sum(b_l_max, axis=[i+1 for i in range(N_out-1)])
+        else:
+            b_u = b_u_max
+            b_l = b_l_max
+        
+        
+        return [w_l, b_l, w_u, b_u]
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
 
@@ -89,7 +112,224 @@ class DecomonMaxPooling2D(DecomonLayer):
 
         return self.get_affine_bounds_with_linear_block_inputs(lower_max=lower_max, upper_max=upper_max, axis=self.axis)
 
+    def call_forward(
+            self,
+            affine_bounds_to_propagate: list[Tensor],
+            input_bounds_to_propagate: list[Tensor],
+            perturbation_domain_inputs: list[Tensor],
+        ) -> tuple[list[Tensor], list[Tensor]]:
+            """Propagate forward affine and constant bounds through the layer.
+
+            Args:
+                affine_bounds_to_propagate: affine bounds on keras layer input w.r.t model input.
+                Can be empty if not in affine mode.
+                Can also be empty in case of identity affine bounds => we simply return layer affine bounds.
+                input_bounds_to_propagate: ibp constant bounds on keras layer input. Can be empty if not in ibp mode.
+                perturbation_domain_inputs: perturbation domain input, wrapped in a list. Necessary only in affine mode, else empty.
+
+            Returns:
+                output_affine_bounds, output_constant_bounds: affine and constant bounds on the underlying keras layer output
+
+            Note:
+                In hybrid case (ibp+affine), the constant bounds are assumed to be already tight in input, and we will return
+                the tighter constant bounds in output. This means that
+                - for the output: we take the tighter constant bounds between the ibp ones and the ones deduced
+                    from the affine bounds given the considered perturbation domain, on the output.
+                - for the input: we do not need it, as it should already have been taken care of in the previous layer
+
+            """
+
+            # IBP: interval bounds propragation
+            if self.ibp:
+                lower, upper = self.inputs_outputs_spec.split_constant_bounds(constant_bounds=input_bounds_to_propagate)
+                output_constant_bounds = list(self.forward_ibp_propagate(lower=lower, upper=upper))
+            else:
+                output_constant_bounds = []
+
+            # Affine bounds propagation
+            if self.affine:
+                # forward propagation
+                output_affine_bounds = list(
+                    self.forward_affine_propagate(
+                        input_affine_bounds=affine_bounds_to_propagate, input_constant_bounds=perturbation_domain_inputs
+                    )
+                )
+            else:
+                output_affine_bounds = []
+
+            # Tighten constant bounds in hybrid mode (ibp+affine)
+            if self.ibp and self.affine:
+                if len(perturbation_domain_inputs) == 0:
+                    raise RuntimeError("keras model input is necessary for call_forward() in affine mode.")
+                x = perturbation_domain_inputs[0]
+                l_ibp, u_ibp = output_constant_bounds
+                w_l, b_l, w_u, b_u = output_affine_bounds
+                from_linear = self.linear and self.inputs_outputs_spec.is_wo_batch_bounds(
+                    affine_bounds=affine_bounds_to_propagate
+                )
+                l_affine = self.perturbation_domain.get_lower(x, w_l, b_l, missing_batchsize=from_linear)
+                u_affine = self.perturbation_domain.get_upper(x, w_u, b_u, missing_batchsize=from_linear)
+                u = K.minimum(u_ibp, u_affine)
+                l = K.maximum(l_ibp, l_affine)
+                output_constant_bounds = [l, u]
+
+            return output_affine_bounds, output_constant_bounds
+
+    def forward_affine_propagate(
+        self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        
+        is_from_linear = self.inputs_outputs_spec.is_wo_batch_bounds(input_affine_bounds)
+        layer_output_shape_wo_batchsize = list(self.linear_block.output.shape[1:])
+        linear_bounds = self._forward_affine_propagate_linear(self.linear_block, 
+                                                              None, None,
+                                                              self.layer_input_shape_wo_batchsize, 
+                                                              layer_output_shape_wo_batchsize,
+                                                              input_affine_bounds)
+        
+        # get input_constant_bounds after linear_block
+        if is_from_linear:
+            # add broadcast dimension for batch
+            linear_bounds = [K.expand_dims(e, 0) for e in linear_bounds]
+        w_l_out, b_l_out, w_u_out, b_u_out = linear_bounds
+        dim = np.prod([self.layer.pool_size])
+        broadcast_shape = [1]+[1]*len(self.model_input_shape)+[1]*len(layer_output_shape_wo_batchsize)
+        
+        if self.axis>0:
+            broadcast_shape[len(self.model_input_shape)+self.axis]=dim
+        else:
+            broadcast_shape[self.axis]=dim
+
+        x = input_constant_bounds[0]
+        lower = self.perturbation_domain.get_lower(x, w_l_out, b_l_out, missing_batchsize=False)
+        upper = self.perturbation_domain.get_upper(x, w_u_out, b_u_out, missing_batchsize=False)
+
+        w_u_max, b_u_max = get_affine_upper_bound_max(lower = lower, upper=upper, axis=self.axis, keepdims=False)
+        w_l_max, b_l_max = get_affine_lower_bound_max(lower = lower, upper=upper, axis=self.axis, keepdims=False)
+
+        N = len(self.model_input_shape)
+        w_u_max_ = K.reshape(w_u_max, [-1]+[1]*N+list(w_u_max.shape[1:]))
+        w_l_max_ = K.reshape(w_l_max, [-1]+[1]*N+list(w_u_max.shape[1:]))
+
+
+        w_u_out = K.sum(w_u_max_*w_u_out, self.axis+N)
+        w_l_out = K.sum(w_l_max_*w_l_out, self.axis+N)
+        b_u_out = K.sum(K.sum(w_u_max_*b_u_out, axis = tuple(np.arange(1, N+1))), self.axis) + b_u_max
+        b_l_out = K.sum(K.sum(w_l_max_*b_l_out, axis = tuple(np.arange(1, N+1))), self.axis) + b_l_max
+
+        return [w_l_out, b_l_out, w_u_out, b_u_out]
     
+    def backward_affine_propagate_single_channel(
+        self, lower, upper, output_affine_bounds: list[Tensor]
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        
+        is_output_linear = self.inputs_outputs_spec.is_wo_batch_bounds((output_affine_bounds))
+
+        from_linear_layer = (self.linear, self.inputs_outputs_spec.is_wo_batch_bounds((output_affine_bounds)))
+        
+        # if bounds are diagonal, call the affine bounds directly
+        # check diagonal
+        [w_, b_, _, _] = output_affine_bounds
+
+        if len(output_affine_bounds):
+            [w_, b_, _, _] = output_affine_bounds
+            if is_output_linear:
+                is_diagonal = w_.shape == b_.shape
+            else:
+                is_diagonal = w_.shape[1:] == b_.shape[1:]
+        else:
+            w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
+            layer_affine_bounds = [w_l, b_l, w_u, b_u]
+            return layer_affine_bounds
+        
+        if is_diagonal:
+            w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
+            layer_affine_bounds = [w_l, b_l, w_u, b_u]
+
+        
+        if is_diagonal or not len(output_affine_bounds):
+            diagonal = (
+                self.inputs_outputs_spec.is_diagonal_bounds(layer_affine_bounds),
+                self.inputs_outputs_spec.is_diagonal_bounds(output_affine_bounds),
+            )
+
+            return combine_affine_bounds(
+                affine_bounds_1=layer_affine_bounds,
+                affine_bounds_2=output_affine_bounds,
+                from_linear_layer=from_linear_layer,
+                diagonal=diagonal,
+            )
+        
+        #######
+
+        if is_output_linear:
+            output_affine_bounds = [K.expand_dims(e, 0) for e in output_affine_bounds]
+        
+        [w_l_out, b_l_out, w_u_out, b_u_out] = output_affine_bounds
+
+        lower_max = self.linear_block(lower)
+        upper_max = self.linear_block(upper)
+
+        # HERE
+        # update w_u_out and w_l_out to have a broadcast dimension at axis
+        w_u_out_e = K.expand_dims(w_u_out, self.axis)
+        w_l_out_e = K.expand_dims(w_l_out, self.axis)
+
+        w_u_out_pos_e = K.relu(w_u_out_e)
+        w_l_out_pos_e = K.relu(w_l_out_e)
+        w_u_out_neg_e = w_u_out_e - w_u_out_pos_e
+        w_l_out_neg_e = w_l_out_e - w_l_out_pos_e
+
+
+        # reshape lower_max and upper_max and update axis if necessary
+
+
+        n_out = len(w_u_out_e.shape) - len(lower_max.shape)
+        expand_shape = [-1]+list(lower_max.shape)[1:]+[1]*n_out
+        lower_max_e = K.reshape(lower_max, expand_shape) # same shape as w_u_out_e
+        upper_max_e = K.reshape(upper_max, expand_shape) # same shape as w_u_out_e
+
+
+        if self.axis==-1:
+            axis_ = len(lower_max.shape)-1
+        else:
+            axis_ = self.axis
+        
+        lower_max_u_0 = lower_max_e*w_u_out_pos_e
+        upper_max_u_0 = upper_max_e*w_u_out_pos_e 
+        _, _, w_u_0, b_u_0 = self.get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_u_0, 
+                                                                             upper_max=upper_max_u_0, 
+                                                                             axis=axis_)
+
+        lower_max_u_1 = -upper_max_e*w_u_out_neg_e
+        upper_max_u_1 = -lower_max_e*w_u_out_neg_e
+        w_l_1, b_l_1, _, _ = self.get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_u_1, 
+                                                                             upper_max=upper_max_u_1, 
+                                                                             axis=axis_)
+
+        
+        w_u = w_u_0 - w_l_1
+        b_u = b_u_0 - b_l_1 + b_u_out
+
+        #### lower bound
+        lower_max_l_0 = lower_max_e*w_l_out_pos_e
+        upper_max_l_0 = upper_max_e*w_l_out_pos_e 
+        w_l_0, b_l_0, _, _ = self.get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_l_0, 
+                                                                             upper_max=upper_max_l_0, 
+                                                                             axis=axis_)
+        lower_max_l_1 = -upper_max_e*w_l_out_neg_e
+        upper_max_l_1 = -lower_max_e*w_l_out_neg_e 
+        _, _, w_u_1, b_u_1 = self.get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_l_1, 
+                                                                             upper_max=upper_max_l_1, 
+                                                                             axis=axis_)
+        
+ 
+        w_l = w_l_0 - w_u_1
+        b_l = b_l_0 - b_u_1 + b_l_out
+
+        return [w_l, b_l, w_u, b_u]
+        
+
     def backward_affine_propagate(
         self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
@@ -128,13 +368,23 @@ class DecomonMaxPooling2D(DecomonLayer):
               <= Sum_{others layers i}(w_u_i * h_i(x) + b_u_i) +  w_u_new * z + b_u_new
 
         """
+
         is_output_linear = self.inputs_outputs_spec.is_wo_batch_bounds((output_affine_bounds))
         lower, upper = self.inputs_outputs_spec.split_constant_bounds(constant_bounds=input_constant_bounds)
+
+        if self.layer.data_format=='channels_first':
+            channel = lower.shape[1]
+            axis = 1
+        else:
+            channel = lower.shape[-1]
+            axis = 3
 
         from_linear_layer = (self.linear, self.inputs_outputs_spec.is_wo_batch_bounds((output_affine_bounds)))
         
         # if bounds are diagonal, call the affine bounds directly
         # check diagonal
+        [w_, b_, _, _] = output_affine_bounds
+
         if len(output_affine_bounds):
             [w_, b_, _, _] = output_affine_bounds
             if is_output_linear:
@@ -182,8 +432,7 @@ class DecomonMaxPooling2D(DecomonLayer):
         w_l_out_pos_e = K.relu(w_l_out_e)
         w_u_out_neg_e = w_u_out_e - w_u_out_pos_e
         w_l_out_neg_e = w_l_out_e - w_l_out_pos_e
-
-
+        
         # reshape lower_max and upper_max and update axis if necessary
         n_out = len(w_u_out_e.shape) - len(lower_max.shape)
         expand_shape = [-1]+list(lower_max.shape)[1:]+[1]*n_out
@@ -202,11 +451,12 @@ class DecomonMaxPooling2D(DecomonLayer):
                                                                              upper_max=upper_max_u_0, 
                                                                              axis=axis_)
 
-        lower_max_u_1 = -lower_max_e*w_u_out_neg_e
-        upper_max_u_1 = -upper_max_e*w_u_out_neg_e 
+        lower_max_u_1 = -upper_max_e*w_u_out_neg_e
+        upper_max_u_1 = -lower_max_e*w_u_out_neg_e
         w_l_1, b_l_1, _, _ = self.get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_u_1, 
                                                                              upper_max=upper_max_u_1, 
                                                                              axis=axis_)
+
         
         w_u = w_u_0 - w_l_1
         b_u = b_u_0 - b_l_1 + b_u_out
@@ -217,333 +467,14 @@ class DecomonMaxPooling2D(DecomonLayer):
         w_l_0, b_l_0, _, _ = self.get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_l_0, 
                                                                              upper_max=upper_max_l_0, 
                                                                              axis=axis_)
-        lower_max_l_1 = -lower_max_e*w_l_out_neg_e
-        upper_max_l_1 = -upper_max_e*w_l_out_neg_e 
+        lower_max_l_1 = -upper_max_e*w_l_out_neg_e
+        upper_max_l_1 = -lower_max_e*w_l_out_neg_e 
         _, _, w_u_1, b_u_1 = self.get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_l_1, 
                                                                              upper_max=upper_max_l_1, 
                                                                              axis=axis_)
         
+ 
         w_l = w_l_0 - w_u_1
         b_l = b_l_0 - b_u_1 + b_l_out
 
         return [w_l, b_l, w_u, b_u]
-    
-
-
-class DecomonMaxPooling2D_old(DecomonLayer):
-
-    layer: MaxPooling2D
-    linear: False
-    increasing = True
-
-    def __init__(
-        self,
-        layer: Layer,
-        perturbation_domain: Optional[PerturbationDomain] = None,
-        ibp: bool = True,
-        affine: bool = True,
-        propagation: Propagation = Propagation.FORWARD,
-        model_input_shape: Optional[tuple[int, ...]] = None,
-        model_output_shape: Optional[tuple[int, ...]] = None,
-        **kwargs: Any,
-    ):
-        super().__init__(
-            layer=layer,
-            perturbation_domain=perturbation_domain,
-            ibp=ibp,
-            affine=affine,
-            propagation=propagation,
-            model_input_shape=model_input_shape,
-            model_output_shape=model_output_shape,
-            **kwargs,
-        )
-
-        
-
-
-        # build kernel and depthwise
-
-        if self.affine and (self.propagation == Propagation.BACKWARD or self.affine_shape<memory_limit):
-            in_channels:int = get_in_channels(self.layer)
-            conv_op, kernel = get_conv_op(self.layer)
-            self.conv_op = conv_op
-            self.kernel = kernel[:, :, :1]
-
-            # build reshape layer
-            input_shape_wo_batch = list(self.layer.input.shape[1:])
-            output_shape_wo_batch = list(self.layer.output.shape[1:])
-
-            input_shape_toeplitz = [e for e in input_shape_wo_batch]
-            output_shape_toeplitz = [e for e in output_shape_wo_batch]
-
-            if self.layer.data_format == "channels_first":
-
-                in_channel = input_shape_wo_batch[0]
-                image_shape = list(self.conv_op(K.zeros([1]+input_shape_wo_batch)).shape[-2:])
-                target_shape = [in_channel, -1]+image_shape
-                #target_shape = [input_shape_wo_batch[0], -1] + input_shape_wo_batch[1:]
-                input_shape_toeplitz[0] = 1
-                output_shape_toeplitz[0] = self.conv_op.depth_multiplier
-                self.axis = 2
-            else:
-                raise ValueError()
-                target_shape = input_shape_wo_batch + [-1]
-                target_shape[-1] = -1
-                input_shape_toeplitz[-1] = 1
-                output_shape_toeplitz[-1] = self.conv_op.depth_multiplier
-                self.axis = -1
-
-            self.reshape_op = Reshape(target_shape)
-            self.inner_model = Sequential([self.conv_op, self.reshape_op])
-            _ = self.inner_model(self.layer.input)
-
-            self.layer_backward = get_backward_layer(self.conv_op)
-
-            config = self.conv_op.get_config()
-            config["kernel_size"] = self.layer.pool_size
-
-            if self.affine and self.propagation == Propagation.BACKWARD:
-                # check propagation ...
-                if self.fit_memory():
-
-                    self.matrix = get_toeplitz(self.kernel, input_shape_toeplitz, output_shape_toeplitz, config)
-                    var = K.eye(in_channels)
-
-                    if self.layer.data_format == "channels_first":
-                        var = K.reshape(
-                            var,
-                            [in_channels]
-                            + [1] * (len(input_shape_toeplitz) - 1)
-                            + [in_channels]
-                            + [1] * len(output_shape_toeplitz),
-                        )
-                        self.matrix = K.reshape(self.matrix, input_shape_toeplitz + [1] + output_shape_toeplitz)
-                    else:
-                        raise NotImplementedError()
-
-                    self.matrix = K.expand_dims(self.matrix * var, 0)
-
-    def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-
-        upper_max = self.reshape_op(self.conv_op(upper))
-        lower_max = self.reshape_op(self.conv_op(lower))
-        bias = 0.0 * self.layer(lower)
-
-        # compute affine bounds for max(x, axis)
-        w_l_max, _ = get_affine_lower_bound_max(lower_max, upper_max, axis=self.axis, keepdims=False)
-        w_u_max, b_u = get_affine_upper_bound_max(lower_max, upper_max, axis=self.axis, keepdims=False)
-
-        w_l_max = w_l_max[:, None, None, None]
-
-        w_u_max = w_u_max[:, None, None, None]
-
-        w_u = K.sum(self.matrix * w_u_max, axis=len(self.layer.input.shape) - 1 + self.axis)
-
-        w_l = K.sum(self.matrix * w_l_max, axis=len(self.layer.input.shape) - 1 + self.axis)
-        b_l = bias
-
-        return w_l, b_l, w_u, b_u
-    
-
-    # override backward propagation
-    def backward_affine_propagate(
-        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
-    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        
-        if self.layer.data_format=='channels_last':
-            return super().backward_affine_propagate(
-                output_affine_bounds=output_affine_bounds, input_constant_bounds=input_constant_bounds
-            )
-
-        if output_affine_bounds is None or len(output_affine_bounds) == 0:
-            # no backward affine bounds are propagated; call the affine bounds directly
-            return super().backward_affine_propagate(
-                output_affine_bounds=output_affine_bounds, input_constant_bounds=input_constant_bounds
-            )
-
-        is_output_linear = self.inputs_outputs_spec.is_wo_batch_bounds((output_affine_bounds))
-        # if bounds are diagonal, call the affine bounds directly
-        # check diagonal
-        [w_, b_, _, _] = output_affine_bounds
-        if is_output_linear:
-            is_diagonal = w_.shape == b_.shape
-        else:
-            is_diagonal = w_.shape[1:] == b_.shape[1:]
-
-        if is_diagonal:
-            return super().backward_affine_propagate(
-                output_affine_bounds=output_affine_bounds, input_constant_bounds=input_constant_bounds
-            )
-        
-        # compute linear relaxation of the max components
-        # for this we need to know the upper and lower bounds at the output of the inner model
-        # this model is increasing
-        lower, upper = self.inputs_outputs_spec.split_constant_bounds(constant_bounds=input_constant_bounds)
-
-        if is_output_linear:
-            [w_l_wo_batch, b_l_wo_batch, w_u_wo_batch, b_u_wo_batch] = output_affine_bounds
-            # add a broadcast dimension
-            w_l = K.expand_dims(w_l_wo_batch, 0)  # (1, output_shape, n_out_shape)
-            b_l = K.expand_dims(b_l_wo_batch, 0)  # (1, n_out_shape)
-            w_u = K.expand_dims(w_u_wo_batch, 0)  # (1, output_shape, n_out_shape)
-            b_u = K.expand_dims(b_u_wo_batch, 0)  # (1, n_out_shape)
-        else:
-            [w_l, b_l, w_u, b_u] = output_affine_bounds
-
-        # split into positive and negative components
-        w_u_pos = K.relu(w_u)
-        w_l_pos = K.relu(w_l)
-        w_u_neg = -K.relu(-w_u)
-        w_l_neg = -K.relu(-w_l)
-
-        # expand dims along axis
-        w_u_pos_expand = K.expand_dims(w_u_pos, self.axis)
-        w_l_pos_expand = K.expand_dims(w_l_pos, self.axis)
-        w_u_neg_expand = K.expand_dims(w_u_neg, self.axis)
-        w_l_neg_expand = K.expand_dims(w_l_neg, self.axis)
-
-        upper_max = self.reshape_op(self.conv_op(upper))
-        lower_max = self.reshape_op(self.conv_op(lower))
-
-        # compute affine bounds for max(x, axis)
-        w_l_max, _ = get_affine_lower_bound_max(lower_max, upper_max, axis=self.axis, keepdims=False) #()
-        #w_u_max, b_u_max = get_affine_upper_bound_max(lower_max, upper_max, axis=self.axis, keepdims=False)
-        w_u_max, b_u_max = get_affine_lower_bound_max(lower_max, upper_max, axis=self.axis, keepdims=False) #()
-
-        n_out_shape = list(b_l.shape[1:])
-        w_l_max = K.reshape(w_l_max, [-1]+list(w_l_max.shape[1:])+[1]*len(n_out_shape)) # broadcast dimension
-        w_u_max = K.reshape(w_u_max, [-1]+list(w_u_max.shape[1:])+[1]*len(n_out_shape))
-
-        w_u_ = w_u_pos_expand*w_u_max + w_u_neg_expand*w_l_max #(batch, channel_in, depth_mul, width, height, n_out_shape)
-        w_l_ = w_l_pos_expand*w_l_max + w_l_neg_expand*w_u_max #(batch, channel_in, depth_mul, width, height, n_out_shape)
-
-        index_output = [ i for i in range(len(b_u_max.shape))][1:]
-        b_u_ = K.sum(w_u_pos* K.reshape(b_u_max, [-1]+list(b_u_max.shape[1:])+[1]*len(n_out_shape)), index_output)
-        b_l_ = K.sum(w_l_neg* K.reshape(b_u_max, [-1]+list(b_u_max.shape[1:])+[1]*len(n_out_shape)), index_output)
-
-        b_u = b_u + b_u_
-        b_l = b_l + b_l_
-
-        # backward on reshape_op
-        # channel first
-        if self.layer.data_format=='channels_last':
-            raise NotImplementedError()
-        
-        conv_output_shape = list(self.reshape_op.output.shape[2:])
-        channel_in = self.layer.input.shape[1]
-        n_out_shape_prod = np.prod(n_out_shape)
-        w_u_reshape = K.reshape(w_u_, [-1]+conv_output_shape+[n_out_shape_prod]) #(batch*channel_in, depth_mul, width, height, #n_out_shape)
-        w_l_reshape = K.reshape(w_l_, [-1]+conv_output_shape+[n_out_shape_prod]) #(batch*channel_in, depth_mul, width, height, #n_out_shape)
-
-        # transpose last dimension to the first axis:
-        # (batch*channel_in, depth_mul, width, height, #n_out_shape) -> (batch*channel_in, #n_out_shape, depth_mul, width, height)
-        # (0, 1, 2, 3, 4) -> (0, 4, 1, 2, 3)
-        w_u_permute = K.transpose(w_u_reshape, (0, 4, 1, 2, 3)) #(batch*channel_in, #n_out_shape, depth_mul, width, height)
-        w_l_permute = K.transpose(w_l_reshape, (0, 4, 1, 2, 3)) #(batch*channel_in, #n_out_shape, depth_mul, width, height)
-
-        w_u_backward = K.reshape(w_u_permute, [-1]+conv_output_shape) #(batch*channel_in*#n_out_shape, depth_mul, width, height)
-        w_l_backward = K.reshape(w_l_permute, [-1]+conv_output_shape) #(batch*channel_in*#n_out_shape, depth_mul, width, height)
-
-        w_u_conv = self.layer_backward(w_u_backward) #(batch*channel_in*#n_out_shape, 1, in_width, in_height)
-        w_l_conv = self.layer_backward(w_l_backward) #(batch*channel_in*#n_out_shape, 1, in_width, in_height)
-
-        # reshape into (batch, channel_in, #n_out_shape, 1, in_width, in_height)
-        in_width, in_height = list(w_u_conv.shape[-2:])
-        w_u_conv = K.reshape(w_u_conv, [-1, channel_in, n_out_shape_prod, in_width, in_height])
-        w_l_conv = K.reshape(w_l_conv, [-1, channel_in, n_out_shape_prod, in_width, in_height])
-
-        # permute dimension
-        # [batch, channel_in, n_out_shape_prod, in_width, in_height] -> [batch, channel_in, in_width, in_height, n_out_shape_prod]
-        # (0, 1, 2, 3, 4) -> (0, 1, 3, 4, 2)
-        w_u_conv = K.transpose(w_u_conv, (0, 1, 3, 4, 2))
-        w_l_conv = K.transpose(w_l_conv, (0, 1, 3, 4, 2))
-
-        w_u = K.reshape(w_u_conv, [-1, channel_in, in_width, in_height]+n_out_shape)
-        w_l = K.reshape(w_l_conv, [-1, channel_in, in_width, in_height]+n_out_shape)
-
-        return [w_l, b_l, w_u, b_u]
-    
-
-        import pdb; pdb.set_trace()
-
-
-
-
-
-        import pdb; pdb.set_trace()
-
-
-        return super().backward_affine_propagate(
-                output_affine_bounds=output_affine_bounds, input_constant_bounds=input_constant_bounds
-            )
-
-        # we optimize the propagation of affine bounds using the backward layers of conv
-        # to do so we need to create a new batch of affine bounds
-
-        input_shape = list(self.layer.input.shape[1:])  # (in_channel, in_w, in_h) if data_format=='channel_first'
-        output_shape = list(self.layer.output.shape[1:])  # (out_channel, out_w, out_h)
-
-        if is_output_linear:
-            [w_l_wo_batch, b_l_wo_batch, w_u_wo_batch, b_u_wo_batch] = output_affine_bounds
-            # add a broadcast dimension
-            w_l = K.expand_dims(w_l_wo_batch, 0)  # (1, output_shape, n_out_shape)
-            b_l = K.expand_dims(b_l_wo_batch, 0)  # (1, n_out_shape)
-            w_u = K.expand_dims(w_u_wo_batch, 0)  # (1, output_shape, n_out_shape)
-            b_u = K.expand_dims(b_u_wo_batch, 0)  # (1, n_out_shape)
-        else:
-            [w_l, b_l, w_u, b_u] = output_affine_bounds
-
-        n_out_shape = list(b_l.shape[1:])
-        n_out_shape_flat = int(np.prod(n_out_shape))
-
-        w_l_flat_0 = K.reshape(w_l, [-1] + output_shape + [n_out_shape_flat])  # (batch, output_shape, n_out_flat)
-        w_u_flat_0 = K.reshape(w_u, [-1] + output_shape + [n_out_shape_flat])  # (batch, output_shape, n_out_flat)
-
-        # permute dimension
-        N_output_shape = len(output_shape)  # number of dimensions without batch size
-        output_shape_index = [i + 1 for i in range(N_output_shape)]
-
-        w_l_flat = K.transpose(
-            w_l_flat_0, [0, N_output_shape + 1] + output_shape_index
-        )  # (batch, n_out_flat, output_shape)
-        w_u_flat = K.transpose(
-            w_u_flat_0, [0, N_output_shape + 1] + output_shape_index
-        )  # (batch, n_out_flat, output_shape)
-
-        w_l_flat_ = K.reshape(w_l_flat, [-1] + output_shape)  # (batch*n_out_flat, output_shape)
-        w_u_flat_ = K.reshape(w_u_flat, [-1] + output_shape)  # (batch*n_out_flat, output_shape)
-
-        # apply backward layer
-        w_l_conv = self.layer_backward(w_l_flat_)  # (batch*n_out_flat, input_shape)
-        w_u_conv = self.layer_backward(w_u_flat_)  # (batch*n_out_flat, input_shape)
-
-        # reshape to (batch, n_out_flat, input_shape)
-        w_l_conv = K.reshape(w_l_conv, [-1, n_out_shape_flat] + input_shape)
-        w_u_conv = K.reshape(w_u_conv, [-1, n_out_shape_flat] + input_shape)
-
-        # permute dimensions: (batch, input_shape, n_out_flat)
-        # (0, 1, 2, 3, 4) -> (0, 2, 3, 4, 1)
-        input_shape_index = [0] + [i + 2 for i in range(len(input_shape))] + [1]
-        w_l_conv = K.transpose(w_l_conv, input_shape_index)
-        w_u_conv = K.transpose(w_u_conv, input_shape_index)
-
-        # reshape to (batch, input_shape, n_out)
-        w_l_conv = K.reshape(w_l_conv, [-1] + input_shape + n_out_shape)
-        w_u_conv = K.reshape(w_u_conv, [-1] + input_shape + n_out_shape)
-
-        # convert bias to an additive term
-        bias = get_bias(self.layer)  # retrieve bias component with shape output_shape
-        # w_u*bias (batch_size, output_shape, n_out_shape) * (output_shape,)
-        # reshape bias
-        bias_ = K.reshape(bias, [-1] + output_shape + [1] * len(n_out_shape))
-        # axis_sum = [i + 1 for i in range(len(output_shape))]
-        axis_sum = output_shape_index
-        bias_conv_u = K.sum(w_u * bias_, axis_sum) + b_u  # (batch_size, n_out_shape)
-        bias_conv_l = K.sum(w_l * bias_, axis_sum) + b_l  # (batch_size, n_out_shape)
-
-        if is_output_linear:
-            output = [w_l_conv[0], bias_conv_l[0], w_u_conv[0], bias_conv_u[0]]
-        else:
-            output = [w_l_conv, bias_conv_l, w_u_conv, bias_conv_u]
-
-        return output

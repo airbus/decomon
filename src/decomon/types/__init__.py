@@ -2,7 +2,7 @@
 
 from typing import Any, Union
 
-import keras
+import keras #type:ignore
 
 # create extra types for readability
 

@@ -1,4 +1,4 @@
-from keras.layers import GlobalAveragePooling3D
+from keras.layers import GlobalAveragePooling3D #type:ignore
 from decomon.layers import DecomonLayer
 
 from decomon.types import Tensor

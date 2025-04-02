@@ -1,8 +1,7 @@
 from typing import Optional
 
-import keras
-import keras.ops as K
-from keras.layers import Dot, Layer, Reshape
+import keras.ops as K #type:ignore
+from keras.layers import Dot, Layer, Reshape #type:ignore
 
 from decomon.types import BackendTensor, Tensor
 

@@ -1,14 +1,13 @@
 # define non native class Max
 # Decomon Custom for Max(axis...)
-import keras
 from decomon.layers.custom.utils import get_affine_lower_bound_max, get_affine_upper_bound_max
 from decomon.layers import DecomonLayer
 from decomon.types import Tensor
-import keras.ops as K
-import numpy as np
+import keras.ops as K # type:ignore
+import numpy as np # type:ignore
 
-from typing import Tuple, List
-from keras_custom.layers import Min
+from typing import List
+from keras_custom.layers import Min # type:ignore
 
 
 class DecomonMin(DecomonLayer):

@@ -1,9 +1,9 @@
 import logging
 from typing import Any, Optional
 
-from keras_custom.layers import Min, Max, MulConstant, Linear
+from keras_custom.layers import Min, Max, MulConstant #type:ignore
 
-from keras.layers import (
+from keras.layers import ( #type:ignore
     Activation,
     Add,
     Average,
@@ -88,13 +88,14 @@ from decomon.layers import (
     DecomonMin,
     DecomonMaxPooling2D,
     DecomonMulConstant,
-    DecomonLinear,
+    #DecomonLinear,
     DecomonDropout,
 )
 from decomon.perturbation_domain import PerturbationDomain
 
 logger = logging.getLogger(__name__)
 
+from decomon.layers.backward import default_mapping_jacobinet2decomon_classes
 
 DECOMON_PREFIX = "Decomon"
 
@@ -138,9 +139,9 @@ default_mapping_keras2decomon_classes: dict[type[Layer], type[DecomonLayer]] = {
     Min: DecomonMin,
     MaxPooling2D: DecomonMaxPooling2D,
     MulConstant: DecomonMulConstant,
-    Linear: DecomonLinear,
     Dropout: DecomonDropout,
 }
+default_mapping_keras2decomon_classes.update(default_mapping_jacobinet2decomon_classes)
 """Default mapping between keras layers and decomon layers."""
 
 default_mapping_kerasname2decomonclass: dict[str, type[DecomonLayer]] = {

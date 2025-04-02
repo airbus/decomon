@@ -1,4 +1,4 @@
-from keras.layers import GroupNormalization
+from keras.layers import GroupNormalization #type:ignore
 from decomon.layers import DecomonLayer
 
 from decomon.types import Tensor

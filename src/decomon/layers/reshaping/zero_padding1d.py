@@ -1,4 +1,4 @@
-from keras.layers import ZeroPadding1D
+from keras.layers import ZeroPadding1D #type:ignore
 from decomon.layers import DecomonLinearLayer
 
 

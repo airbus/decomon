@@ -545,6 +545,7 @@ class InputsOutputsSpec:
         else:
             if self.is_identity_bounds_shape(affine_bounds_shape, i=i):
                 return True
+            
             w_shape, b_shape = affine_bounds_shape[:2]
             return w_shape == b_shape
 

@@ -2,9 +2,9 @@
 
 from typing import Any, Optional
 
-import keras.ops as K
-from keras.layers import Layer
-from keras.utils import serialize_keras_object
+import keras.ops as K #type:ignore
+from keras.layers import Layer #type:ignore
+from keras.utils import serialize_keras_object #type:ignore
 
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.layers.oracle import get_forward_oracle
@@ -97,7 +97,6 @@ class ConvertOutput(Layer):
         affine_bounds_from, constant_bounds_from, perturbation_domain_inputs = self.inputs_outputs_spec.split_inputs(
             inputs
         )
-
         if self.ibp_to:
             if self.ibp_from:
                 constant_bounds_to = constant_bounds_from
@@ -115,6 +114,7 @@ class ConvertOutput(Layer):
                     is_merging_layer=True,
                     from_linear=from_linear,
                 )
+                
         else:
             constant_bounds_to = [[]] * self.nb_outputs_keras_model
 

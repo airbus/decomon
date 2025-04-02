@@ -49,4 +49,4 @@ from .pooling import (
 )
 from .regularization import DecomonDropout
 
-from .custom import DecomonMin, DecomonMax, DecomonMulConstant, DecomonLinear
+from .custom import DecomonMin, DecomonMax, DecomonMulConstant

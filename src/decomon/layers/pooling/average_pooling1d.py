@@ -1,4 +1,4 @@
-from keras.layers import AveragePooling1D
+from keras.layers import AveragePooling1D #type:ignore
 from decomon.layers import DecomonLinearLayer
 
 

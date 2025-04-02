@@ -1,10 +1,8 @@
-import warnings
+import keras.ops as K #type:ignore 
+from keras.layers import Dense #type:ignore
+from keras.layers import Wrapper #type:ignore
 
-import keras.ops as K
-from keras.layers import Dense
-from keras.layers import Wrapper
-
-from typing import Optional, Any
+from typing import Any
 from decomon.types import Tensor
 
 class Dense_kernel_constraint(Wrapper):
@@ -12,6 +10,10 @@ class Dense_kernel_constraint(Wrapper):
         super().__init__(layer=layer, **kwargs)
         self.ops = ops
         self.add_bias = add_bias
+
+    @property
+    def kernel(self):
+        return self.ops(0, self.layer.kernel)
     
     def call(self, inputs: list[Tensor]) -> list[Tensor]:
         y:Tensor =  K.matmul(inputs, self.ops(0, self.layer.kernel))

@@ -1,10 +1,9 @@
-import keras
-import keras.ops as K
-import numpy as np
+import keras # type:ignore
+import keras.ops as K # type:ignore
+import numpy as np # type:ignore
 
 from typing import Tuple, List
 from decomon.types import Tensor
-
 
 def get_affine_upper_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims: bool = True) -> Tuple[Tensor, Tensor]:
     """The get_affine_upper_bound_max function computes an affine upper bound approximation for the max function applied along a specified axis of tensors.
@@ -24,11 +23,9 @@ def get_affine_upper_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims
 
     """
 
-    dtype32: str = "float32"
     dtype: str = K.dtype(lower)
 
     o_value: Tensor = K.cast(1.0, dtype)
-    z_value: Tensor = K.cast(0.0, dtype)
 
     N: int = len(lower.shape)
     axis_: int
@@ -71,95 +68,48 @@ def get_affine_upper_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims
         u_reshaped
     )  # (batch, shape_prev, n_dim, shape_after, n_dim)
 
-    corners_collapse: Tensor = mask * l_reshaped + (o_value - mask) * (
-        u_reshaped + index_collapse
-    )  # ?????? right shape but right values ?
-    # add the corners containing all the upper bounds
-    corners_collapse = K.concatenate(
-        [corners_collapse, u_reshaped + index_collapse], axis=-1
-    )  # (batch, shape_prev, n_dim, shape_after, n_dim+1)
-    corners: Tensor = K.concatenate([corners_, u_reshaped], axis=-1)  # (batch, shape_prev, n_dim, shape_after, n_dim+1)
+    corners_pred: Tensor = K.max(corners_, axis=axis_, keepdims=keepdims)  # (batch, shape_prev, shape_after, n_dim)
 
-    corners_pred: Tensor = K.max(corners, axis=axis_)  # (batch, shape_prev, shape_after, n_dim+1)
+    max_pred = K.max(u_reshaped, axis=axis_, keepdims=keepdims) # (batch, shape_prev, shape_after, 1)
 
-    # include bias in corners
-    bias_corner: Tensor = o_value + K.sum(
-        z_value * corners, axis_, keepdims=True
-    )  # (batch, shape_prev, 1, shape_after, n_dim+1)
-    corners_collapse = K.concatenate(
-        [corners_collapse, bias_corner], axis=axis_
-    )  # (batch, shape_prev, n_dim+1, shape_after, n_dim+1)
 
-    dimensions: array.array = np.arange(
-        len(corners.shape)
-    )  # K.solve require that the matrix dimension is on the last two axis (-2, -1): A tensor of shape (..., M, M) representing the coefficients matrix. In our case M = n_dim+1
+    w_u_ = (max_pred - corners_pred)/K.maximum(K.sum(u_reshaped - corners_, axis_, keepdims=keepdims), keras.backend.epsilon())
+    # (batch, shape_prev, shape_after, n_dim)
+    #denum = K.maximum(upper - lower, keras.backend.epsilon())
+    #w_u_ = (max_pred - corners_pred)
 
-    dim_permutation: array.array = np.concatenate([dimensions[:axis_], dimensions[axis_ + 1 :], [dimensions[axis_]]])
 
-    corners_collapse = K.transpose(
-        corners_collapse, tuple(dim_permutation)
-    )  # (batch, shape_prev, shape_after, n_dim+1, n_dim+1)
-    # solve works only for float32
-    if dtype != dtype32:
-        corners_collapse = K.cast(corners_collapse, dtype32)
-        corners_pred = K.cast(corners_pred, dtype32)
+    # to do: permute axis 
+    n_dim = len(w_u_.shape)
+    perm_axis = [i for i in range(n_dim)]
 
-    # a: A tensor of shape (..., M, M) representing the coefficients matrix.
-    # b: A tensor of shape (..., M) or (..., M, N) represeting the right-hand side or "dependent variable" matrix.
-    #  PYTORCH_ENABLE_MPS_FALLBACK=1
-    """
-    The operator 'aten::_linalg_solve_ex.result' is not currently implemented for the MPS device. 
-    If you want this op to be added in priority during the prototype phase of this feature, 
-    please comment on https://github.com/pytorch/pytorch/issues/77764. 
-    As a temporary fix, you can set the environment variable `PYTORCH_ENABLE_MPS_FALLBACK=1` 
-    to use the CPU as a fallback for this op. WARNING: this will be slower than running natively on MPS
-    """
-    w_hull: Tensor
-    w_hull = K.solve(a=corners_collapse, b=corners_pred)  # (batch, shape_prev, shape_after, n_dim+1)
+    perm_axis = perm_axis[:axis_] + perm_axis[-1:]+ perm_axis[axis_:-1]
+    w_u = K.transpose(w_u_, perm_axis)
+    #w_u_ = K.transpose(w_u_, perm_axis)/denum
 
-    """
-    try:
-        w_hull = K.solve(a=corners_collapse, b=corners_pred)  # (batch, shape_prev, shape_after, n_dim+1)
-    except:
-        # move everything to cpu
-        corners_collapse_cpu: array.array = corners_collapse.to("cpu").numpy()
-        corners_pred_cpu: array.array = corners_pred.to("cpu").numpy()
-        w_hull_cpu: array.array = np.linalg.solve(a=corners_collapse_cpu, b=corners_pred_cpu)
-        w_hull = keras.Variable(w_hull_cpu, trainable=False)
-    """
-    
-    if dtype != dtype32:
-        w_hull = K.cast(w_hull, dtype=dtype)
+    b_u = - K.sum(w_u*upper, axis_, keepdims=keepdims) + K.max(upper, axis_, keepdims=keepdims) # (batch, shape_prev, shape_after)
 
-    # we need to split w_hull into weights and bias components
-    w_u: Tensor
-    b_u: Tensor
-
-    w_u, b_u = K.split(
-        w_hull, [n_dim], axis=-1
-    )  # w_u : (None, shape_prev, shape_after, n_dim), b_u: (batch, shape_prev, shape_after, 1)
-    b_u = K.reshape(b_u, [-1] + shape_prev + shape_after)  # b_u (batch, shape_prev, shape_after) == lower.shape
-
-    dim_permutation = np.concatenate(
-        [dimensions[:axis_], [len(lower.shape) - 1], [e - 1 for e in dimensions[axis_ + 1 : -1]]]
-    ).astype(
-        "int"
-    )  # to check
-    w_u = K.transpose(w_u, tuple(dim_permutation))
-
-    # due to numerical error in keras.ops.solve we need to assess that w_u, b_u
+    # due to numerical error we need to assess that w_u, b_u
     # is correct on the set of corners, else we will add the error inside the bias
 
-    error: Tensor = K.maximum(
-        z_value,
-        K.cast(corners_pred, dtype=dtype) - (K.sum(K.expand_dims(w_u, -1) * corners, axis_) + K.expand_dims(b_u, -1)),
-    )
+    error = corners_pred - K.sum(K.expand_dims(w_u, -1)*corners_, axis_, keepdims=keepdims) - K.expand_dims(b_u, -1)
     b_u = b_u+ K.max(error, -1)
 
-    if keepdims:
-        b_u = K.expand_dims(b_u, axis_)
+    # set w_l=0 and b_l = lower whenever lower=upper
+    mask_collapse = K.max(K.sign(upper- lower), axis=axis) # (None, shape_before, shape_after)
+    # mask_collapse[i] = 0 if upper == lower
+    w_u = K.expand_dims(mask_collapse, axis)*w_u
+    b_u = mask_collapse*b_u + (1-mask_collapse)*K.max(lower, axis=axis)
 
     return [w_u, b_u]
+
+
+def max_prime(inputs, axis:int):
+
+    indices = K.argmax(inputs, axis)
+    dim_i = inputs.shape[axis]
+    output= K.one_hot(indices, dim_i, axis=axis)
+    return output
 
 
 def get_affine_lower_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims: bool = True) -> Tuple[Tensor, Tensor]:
@@ -180,49 +130,31 @@ def get_affine_lower_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims
 
     """
 
-    dtype32: str = "float32"
-    dtype: str = K.dtype(lower)
+    # compute a solution for lower bound
+    w_l_lower = max_prime(lower, axis=axis) # (None, shape_before, axis, shape_after)
+    b_l_lower = K.max(lower, axis=axis) - K.sum(w_l_lower*lower, axis) # (None, shape_before, shape_after)
+    # compute a solution for upper bound
+    w_l_upper = max_prime(upper, axis=axis) # (None, shape_before, axis, shape_after)
+    b_l_upper = K.max(upper, axis=axis) - K.sum(w_l_upper*upper, axis) # (None, shape_before, shape_after)
 
-    o_value: Tensor = K.cast(1.0, dtype)
-    z_value: Tensor = K.cast(0.0, dtype)
+    # take the one that maximize the integral in the range [lower, upper]
+    score_lower = b_l_lower*K.sum(upper-lower, axis) + K.sum(w_l_lower*(upper-lower), axis)
+    score_upper = b_l_upper*K.sum(upper-lower, axis) + K.sum(w_l_upper*(upper-lower), axis)
 
-    N: int = len(lower.shape)
-    axis_: int
 
-    if axis < 0:
-        axis_ = len(lower.shape) + axis
-    else:
-        axis_ = axis
 
-    shape_prev: List[int] = list(lower.shape[1:axis_])
-    shape_after: List[int]
+    w_l = K.where(K.expand_dims(score_lower, axis)>=K.expand_dims(score_upper, axis=axis), w_l_lower, w_l_upper)
+    b_l = K.where(score_lower>=score_upper, b_l_lower, b_l_upper)
 
-    if axis_ == N - 1:
-        shape_after = []
-    else:
-        shape_after = list(lower.shape[axis_ + 1 :])
+    # set w_l=0 and b_l = lower whenever lower=upper
+    mask_collapse = K.max(K.sign(upper- lower), axis=axis) # (None, shape_before, shape_after)
+    # mask_collapse[i] = 0 if upper == lower
+    w_l = K.expand_dims(mask_collapse, axis)*w_l
+    b_l = mask_collapse*b_l + (1-mask_collapse)*K.max(lower, axis=axis)
+    
 
-    # permute data so that the operator is on the last dimension ... ?
-    input_shape: List[int] = list(lower.shape)  # (batch, shape_prev, n_dim, shape_after)
-    # get the shape of the dimension
-    n_dim: int = input_shape[axis_]  # n_dim
+    if keepdims:
+        raise NotImplementedError()
 
-    # expand dim/broadcast
-    mask: Tensor = K.eye(n_dim)  # (n_dim, n_dim)
+    return [w_l, b_l]
 
-    # detect collapsed dimensions: lower[i]==upper[i]
-    index_collapse = K.sign(lower - upper) + o_value  # 1 iff lower[i]==upper[i]
-    # index_collapse:Tensor = K.clip(2*K.sign(lower - upper) - o_value, z_value, o_value) #1 iff lower[i]==upper[i]
-
-    # consider V_slope uniquely
-    score = upper + lower - index_collapse * K.max(upper)
-    criterion = K.expand_dims(K.max(score, axis), axis)
-    mask = o_value + K.sign(score - criterion)
-
-    # if there is several maximum, mask.sum()>1, use the mean
-    denum_coeff = K.maximum(K.sum(mask, axis, keepdims=True), o_value)
-    mask /= denum_coeff
-
-    bias = z_value * K.max(upper, axis=axis_, keepdims=keepdims)
-
-    return mask, bias
