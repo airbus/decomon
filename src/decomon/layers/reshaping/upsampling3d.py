@@ -1,4 +1,4 @@
-from keras.layers import UpSampling3D
+from keras.layers import UpSampling3D #type:ignore
 from decomon.layers import DecomonLinearLayer
 
 

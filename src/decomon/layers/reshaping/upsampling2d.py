@@ -1,4 +1,4 @@
-from keras.layers import UpSampling2D
+from keras.layers import UpSampling2D #type:ignore
 from decomon.layers import DecomonLinearLayer
 
 

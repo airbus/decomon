@@ -2,9 +2,9 @@ import logging
 from collections.abc import Callable
 from typing import Any, Optional, Union
 
-import keras
-from keras.layers import Layer
-from keras.models import Model
+import keras #type:ignore
+from keras.layers import Layer #type:ignore
+from keras.models import Model #type:ignore
 
 from decomon.constants import ConvertMethod, Propagation, Slope
 from decomon.layers import DecomonLayer
@@ -34,6 +34,7 @@ from decomon.models.utils import (
     preprocess_layer,
     remove_last_softmax_layers,
     split_activation,
+    select_output
 )
 from decomon.perturbation_domain import BoxDomain, PerturbationDomain
 
@@ -116,8 +117,11 @@ def convert(
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
     final_ibp: bool = False,
     final_affine: bool = True,
+    final_upper:bool = True,
+    final_lower:bool = True,
     rm_last_softmax: bool = True,
     mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]] = None,
+    masks: Optional[dict[str, list[keras.KerasTensor]]] = None,
     **kwargs: Any,
 ) -> list[keras.KerasTensor]:
     """
@@ -141,6 +145,10 @@ def convert(
             To be recomputed if empty and needed by the method.
         final_ibp: specify if final outputs should include constant bounds.
         final_affine: specify if final outputs should include affine bounds.
+        final_upper: specify if upper bound information should be included.
+            Default to True.
+        final_lower: specify if lower bound information should be included.
+            Default to True. 
         rm_last_softmax: specify if last softmax layer (for each output) are removed during preprocessing
         **kwargs: keyword arguments to pass to layer_fn
 
@@ -165,6 +173,7 @@ def convert(
     ibp, affine = get_ibp_affine_from_method(method)
     output: list[keras.KerasTensor] = []
 
+    ibp_output_map={}
     if Propagation.FORWARD in propagations:
         output, forward_output_map, forward_layer_map = convert_forward(
             model=model,
@@ -177,6 +186,21 @@ def convert(
             mapping_keras2decomon_classes=mapping_keras2decomon_classes,
             **kwargs,
         )
+    """
+    else:
+        # compute IBP anyway use a tag
+        _, ibp_output_map, _ = convert_forward(
+            model=model,
+            perturbation_domain_input=perturbation_domain_input,
+            layer_fn=layer_fn,
+            slope=slope,
+            perturbation_domain=perturbation_domain,
+            ibp=True,
+            affine=False,
+            mapping_keras2decomon_classes=mapping_keras2decomon_classes,
+            **kwargs,
+        )
+    """
 
     if Propagation.BACKWARD in propagations:
         output = convert_backward(
@@ -189,7 +213,9 @@ def convert(
             slope=slope,
             forward_output_map=forward_output_map,
             forward_layer_map=forward_layer_map,
+            ibp_output_map=ibp_output_map,
             mapping_keras2decomon_classes=mapping_keras2decomon_classes,
+            masks=masks,
             **kwargs,
         )
         # output updated mode
@@ -213,6 +239,9 @@ def convert(
         ibp = fuse_layer.ibp_fused
 
     # Update output for final_ibp and final_affine
+    model_output_shapes=[t.shape[1:] for t in model.outputs]
+    if backward_bounds is not None:
+        model_output_shapes_ = [t.shape[1+len(e):] for (t,e) in zip(backward_bounds, model_output_shapes)]
     if final_ibp != ibp or final_affine != affine:
         convert_layer = ConvertOutput(
             ibp_from=ibp,
@@ -220,13 +249,14 @@ def convert(
             ibp_to=final_ibp,
             affine_to=final_affine,
             perturbation_domain=perturbation_domain,
-            model_output_shapes=[t.shape[1:] for t in model.outputs],
+            model_output_shapes=model_output_shapes, # warning this is wrong in case of backward_bounds
         )
         if convert_layer.needs_perturbation_domain_inputs():
             output.append(perturbation_domain_input)
         output = convert_layer(output)
 
     # build decomon model
+    output = select_output(output, final_lower, final_upper, final_affine, final_ibp)
     return output
 
 
@@ -239,6 +269,8 @@ def clone(
     from_linear_backward_bounds: Union[bool, list[bool]] = False,
     final_ibp: Optional[bool] = None,
     final_affine: Optional[bool] = None,
+    final_upper: Optional[bool] = True,
+    final_lower:Optional[bool] = True,
     layer_fn: Callable[..., DecomonLayer] = to_decomon,
     forward_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
@@ -261,6 +293,10 @@ def clone(
             Default to False except for forward-ibp and forward-hybrid.
         final_affine: specify if final outputs should include affine bounds.
             Default to True all methods except forward-ibp.
+        final_upper: specify if upper bound information should be included.
+            Default to True.
+        final_lower: specify if lower bound information should be included.
+            Default to True.  
         layer_fn: callable converting a layer and a model_output_shape into a decomon layer
         mapping_keras2decomon_classes: user-defined mapping between keras and decomon layers classes, to be passed to `layer_fn`
         forward_output_map: forward outputs per node from a previously performed forward conversion.
@@ -356,6 +392,8 @@ def clone(
         forward_layer_map=forward_layer_map,
         final_ibp=final_ibp,
         final_affine=final_affine,
+        final_upper = final_upper,
+        final_lower = final_lower,
         mapping_keras2decomon_classes=mapping_keras2decomon_classes,
         rm_last_softmax=rm_last_softmax,
         **kwargs,
@@ -386,5 +424,7 @@ def clone(
         method=method,
         ibp=final_ibp,
         affine=final_affine,
+        upper = final_upper,
+        lower = final_lower,
         model=model,
     )

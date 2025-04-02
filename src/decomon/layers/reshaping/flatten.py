@@ -1,4 +1,4 @@
-from keras.layers import Flatten
+from keras.layers import Flatten #type:ignore
 from decomon.layers import DecomonLinearLayer
 
 

@@ -1,9 +1,9 @@
-import keras
-from keras.layers import Layer, MaxPooling2D, DepthwiseConv2D, Conv2DTranspose
+import keras #type:ignore
+from keras.layers import Layer, MaxPooling2D, DepthwiseConv2D, Conv2DTranspose #type:ignore
+import keras.ops as K #type:ignore
+import numpy as np #type:ignore
 
-import numpy as np
-
-from typing import Dict
+from typing import Dict, Tuple
 
 
 def get_in_channels(layer) -> int:
@@ -20,16 +20,12 @@ def get_conv_op_config(config: Dict, in_channels: int) -> keras.Variable:
 
     pool_size_x: int
     pool_size_y: int
-    padding: str
     pooling: int
-    kernel_pool: array.array
+    kernel_pool: np.array.array
 
     pool_size_x, pool_size_y = config["pool_size"]
-    padding = config["padding"]
     pooling = pool_size_x * pool_size_y
 
-    # if padding=='same':
-    #    raise NotImplementedError()
     # create the convolution layer to extract the Toeplitz matrix
     kernel_pool = np.repeat(
         np.transpose(np.eye(pooling).reshape((pooling, pool_size_x, pool_size_y)), (1, 2, 0))[:, :, None, :], 1, -2
@@ -51,7 +47,7 @@ def get_conv_op(layer: MaxPooling2D) -> DepthwiseConv2D:
     # define convolution
     filters: int = np.prod(config["pool_size"])
     pool_size: tuple[int] = config["pool_size"]
-    strides: tule[int] = config["strides"]
+    strides: Tuple[int] = config["strides"]
     padding: str = config["padding"]
     data_format: str = config["data_format"]
 
@@ -70,7 +66,6 @@ def get_backward_layer(layer: DepthwiseConv2D) -> Layer:
 
     dico_conv = layer.get_config()
     #dico_conv.pop("groups")
-    input_shape = list(layer.input.shape[1:])
     # update filters to match input, pay attention to data_format
     if layer.data_format == "channels_first":  # better to use enum than raw str
         dico_conv["filters"] = 1 #input_shape[0]
@@ -96,3 +91,53 @@ def get_backward_layer(layer: DepthwiseConv2D) -> Layer:
     layer_backward.built = True
 
     return layer_backward
+
+
+def get_maxpool_backward_hull(w_u_out_e, w_u_out_pos_e, w_u_out_neg_e, w_l_out_pos_e, w_l_out_neg_e, 
+                              upper_max, lower_max, 
+                              axis, 
+                              get_affine_bounds_with_linear_block_inputs):
+    # reshape lower_max and upper_max and update axis if necessary
+        n_out = len(w_u_out_e.shape) - len(lower_max.shape)
+        expand_shape = [-1]+list(lower_max.shape)[1:]+[1]*n_out
+        lower_max_e = K.reshape(lower_max, expand_shape) # same shape as w_u_out_e
+        upper_max_e = K.reshape(upper_max, expand_shape) # same shape as w_u_out_e
+
+
+        if axis==-1:
+            axis_ = len(lower_max.shape)-1
+        else:
+            axis_ = axis
+        
+        lower_max_u_0 = lower_max_e*w_u_out_pos_e
+        upper_max_u_0 = upper_max_e*w_u_out_pos_e 
+        _, _, w_u_0, b_u_0 = get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_u_0, 
+                                                                             upper_max=upper_max_u_0, 
+                                                                             axis=axis_)
+
+        lower_max_u_1 = -upper_max_e*w_u_out_neg_e
+        upper_max_u_1 = -lower_max_e*w_u_out_neg_e
+        w_l_1, b_l_1, _, _ = get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_u_1, 
+                                                                             upper_max=upper_max_u_1, 
+                                                                             axis=axis_)
+
+        w_u = w_u_0 - w_l_1
+        b_u = b_u_0 - b_l_1
+
+        #### lower bound
+        lower_max_l_0 = lower_max_e*w_l_out_pos_e
+        upper_max_l_0 = upper_max_e*w_l_out_pos_e 
+        w_l_0, b_l_0, _, _ = get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_l_0, 
+                                                                             upper_max=upper_max_l_0, 
+                                                                             axis=axis_)
+        lower_max_l_1 = -upper_max_e*w_l_out_neg_e
+        upper_max_l_1 = -lower_max_e*w_l_out_neg_e 
+        _, _, w_u_1, b_u_1 = get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_l_1, 
+                                                                             upper_max=upper_max_l_1, 
+                                                                             axis=axis_)
+        
+ 
+        w_l = w_l_0 - w_u_1
+        b_l = b_l_0 - b_u_1
+
+        return [w_l, b_l, w_u, b_u] # add bias b_u_out, b_l_out

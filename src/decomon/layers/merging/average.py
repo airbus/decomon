@@ -1,5 +1,5 @@
-import keras.ops as K
-from keras.layers import Average
+import keras.ops as K #type:ignore
+from keras.layers import Average #type:ignore
 
 from decomon.layers.merging.base_merge import DecomonMerge
 from decomon.types import Tensor
@@ -9,6 +9,7 @@ class DecomonAverage(DecomonMerge):
     layer: Average
     linear = True
     diagonal = True
+    increasing = True
 
     def get_affine_representation(self) -> tuple[list[Tensor], Tensor]:
         coeff = 1.0 / len(self.keras_layer_input)

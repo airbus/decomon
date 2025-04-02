@@ -125,26 +125,43 @@ def get_linear_hull_relu(
 
     if "upper_grid" in kwargs:
         raise NotImplementedError()
-
-    gamma = o_value
-    if "finetune" in kwargs:
-        # retrieve variables to optimize the slopes
-        gamma = kwargs["finetune"][None]
-
-    w_l = gamma * w_l + (o_value - gamma) * (o_value - w_l)
-
+    
     # check inactive relu state: u<=0
     index_dead = -K.clip(K.sign(upper) - o_value, -o_value, z_value)  # =1 if inactive state
     index_linear = K.clip(K.sign(lower) + o_value, z_value, o_value)  # 1 if linear state
 
     w_u = (o_value - index_dead) * w_u
-    w_l = (o_value - index_dead) * w_l
+    #w_l = (o_value - index_dead) * w_l
     b_u = (o_value - index_dead) * b_u
-    b_l = (o_value - index_dead) * b_l
+    #b_l = (o_value - index_dead) * b_l
 
     w_u = (o_value - index_linear) * w_u + index_linear
-    w_l = (o_value - index_linear) * w_l + index_linear
+    #w_l = (o_value - index_linear) * w_l + index_linear
     b_u = (o_value - index_linear) * b_u
+    #b_l = (o_value - index_linear) * b_l
+
+    alpha = o_value
+    if "finetune" in kwargs:
+        # retrieve variables to optimize the slopes
+        alpha = kwargs["finetune"]['alpha_lower']
+        w_l = K.expand_dims(w_l, -1)
+        index_dead = K.expand_dims(index_dead, -1)
+        index_linear = K.expand_dims(index_linear, -1)
+        b_l = 0*w_l
+        w_u = K.expand_dims(w_u, -1)
+        b_u = K.expand_dims(b_u, -1)
+    
+
+    w_l = alpha * w_l + (o_value - alpha) * (o_value - w_l)
+
+    #w_u = (o_value - index_dead) * w_u
+    w_l = (o_value - index_dead) * w_l
+    #b_u = (o_value - index_dead) * b_u
+    b_l = (o_value - index_dead) * b_l
+
+    #w_u = (o_value - index_linear) * w_u + index_linear
+    w_l = (o_value - index_linear) * w_l + index_linear
+    #b_u = (o_value - index_linear) * b_u
     b_l = (o_value - index_linear) * b_l
 
     return [w_u, b_u, w_l, b_l]

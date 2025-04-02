@@ -1,9 +1,9 @@
 from collections.abc import Callable, Sequence
 from typing import Optional, Union
 
-import keras
-import numpy as np
-import numpy.typing as npt
+import keras #type:ignore
+import numpy as np #type:ignore
+import numpy.typing as npt #type:ignore
 
 from decomon.constants import ConvertMethod
 from decomon.models.convert import clone

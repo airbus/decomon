@@ -1,10 +1,10 @@
 from typing import Any, Union
 
-import keras
-import keras.ops as K
-import numpy as np
-from keras import Model
-from keras.utils import serialize_keras_object
+import keras #type:ignore
+import keras.ops as K #type:ignore
+import numpy as np #type:ignore
+from keras import Model #type:ignore
+from keras.utils import serialize_keras_object #type:ignore
 
 from decomon.constants import ConvertMethod
 from decomon.layers.output import ConvertOutput
@@ -69,6 +69,10 @@ class DecomonModel(keras.Model):
         self.method = method
         self.ibp = ibp
         self.affine = affine
+        if 'upper' in kwargs:
+            self.upper = kwargs['upper']
+        if 'lower' in kwargs:
+            self.lower = kwargs['lower']
 
     def get_config(self) -> dict[str, Any]:
         # force having functional config which is skipped by default

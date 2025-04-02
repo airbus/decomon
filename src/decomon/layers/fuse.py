@@ -2,8 +2,8 @@
 
 from typing import Any, Optional
 
-from keras import ops as K
-from keras.layers import Layer
+from keras import ops as K #type:ignore
+from keras.layers import Layer #type:ignore
 
 from decomon.keras_utils import batch_multid_dot
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec

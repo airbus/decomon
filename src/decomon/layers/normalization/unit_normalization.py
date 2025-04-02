@@ -1,4 +1,4 @@
-from keras.layers import UnitNormalization
+from keras.layers import UnitNormalization #type:ignore
 from decomon.layers import DecomonLayer
 
 from decomon.types import Tensor
