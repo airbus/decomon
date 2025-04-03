@@ -7,9 +7,9 @@ It inherits from keras Sequential class.
 from collections.abc import Callable
 from typing import Any, Optional
 
-import keras #type:ignore
-from keras.layers import InputLayer, Layer #type:ignore
-from keras.models import Model #type:ignore
+import keras  # type:ignore
+from keras.layers import InputLayer, Layer  # type:ignore
+from keras.models import Model  # type:ignore
 
 from decomon.constants import Propagation, Slope
 from decomon.layers import DecomonLayer
@@ -181,16 +181,20 @@ def convert_forward_functional_model(
             if len(parents):
                 output = []
                 for parent in parents:
-                    if isinstance(parent.operation.output, list) and len(parent.operation.output)>1:
+                    if isinstance(parent.operation.output, list) and len(parent.operation.output) > 1:
                         # some part of the output of the parent can be unrelated to the layer
-                        output_list = [ e for (e, q) in zip(output_map[id(parent)], parent.operation.output) if q.name==layer.input.name]
+                        output_list = [
+                            e
+                            for (e, q) in zip(output_map[id(parent)], parent.operation.output)
+                            if q.name == layer.input.name
+                        ]
                         if isinstance(output_list[0], list):
                             for output_i in output_list:
-                                output+= output_i
+                                output += output_i
                         else:
-                            output+=output_list
+                            output += output_list
                     else:
-                        output += output_map[id(parent)] # should be a list of list
+                        output += output_map[id(parent)]  # should be a list of list
 
             if isinstance(layer, InputLayer):
                 # no conversion, propagate output unchanged
@@ -211,7 +215,7 @@ def convert_forward_functional_model(
                 else:
                     converted_layers = layer_fn(layer)
                     layer_map[id(node)] = converted_layers
-                for converted_layer in converted_layers: 
+                for converted_layer in converted_layers:
                     output = wrap_outputs_from_layer_in_list(
                         converted_layer(prepare_inputs_for_layer(output + common_inputs_part))
                     )
@@ -225,7 +229,6 @@ def convert_forward_functional_model(
             "whose embedded submodels have multiple outputs."
         )
     for node in output_nodes:
-
         # consider multiple output nodes and attribute them wisely
         output += output_map[id(node)]
 

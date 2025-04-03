@@ -2,8 +2,8 @@
 
 from typing import Any, Optional
 
-from keras import ops as K #type:ignore
-from keras.layers import Layer #type:ignore
+from keras import ops as K  # type:ignore
+from keras.layers import Layer  # type:ignore
 
 from decomon.keras_utils import batch_multid_dot
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
@@ -573,7 +573,7 @@ def _combine_affine_bounds_both_from_linear(
         missing_batchsize=missing_batchsize,
         diagonal=(False, diagonal[1]),
     )
-    
+
     w = batch_multid_dot(w_1, w_2, **kwargs_dot_w)
     b = batch_multid_dot(b_1, w_2, **kwargs_dot_b) + b_2
 

@@ -1,9 +1,9 @@
-from keras.layers import AveragePooling1D #type:ignore
+from keras.layers import AveragePooling1D  # type:ignore
+
 from decomon.layers import DecomonLinearLayer
 
 
 class DecomonAveragePooling1D(DecomonLinearLayer):
-    
     layer: AveragePooling1D
-    linear= True
+    linear = True
     increasing = True

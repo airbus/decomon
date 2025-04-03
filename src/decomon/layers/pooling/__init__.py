@@ -5,5 +5,4 @@ from .global_average_pooling1d import DecomonGlobalAveragePooling1D
 from .global_average_pooling2d import DecomonGlobalAveragePooling2D
 from .global_average_pooling3d import DecomonGlobalAveragePooling3D
 from .max_pooling2d import DecomonMaxPooling2D
-
-from .utils_conv import get_in_channels, get_conv_op, get_conv_op_config
+from .utils_conv import get_conv_op, get_conv_op_config, get_in_channels

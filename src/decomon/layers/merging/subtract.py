@@ -1,5 +1,5 @@
-import keras.ops as K #type:ignore
-from keras.layers import Subtract #type:ignore
+import keras.ops as K  # type:ignore
+from keras.layers import Subtract  # type:ignore
 
 from decomon.layers.merging.base_merge import DecomonMerge
 from decomon.types import Tensor
@@ -11,7 +11,6 @@ class DecomonSubtract(DecomonMerge):
     diagonal = True
 
     def get_affine_representation(self) -> tuple[list[Tensor], Tensor]:
-
         w = [K.ones(input_i.shape[1:]) for input_i in self.keras_layer_input]
         w[1] *= -1
         b = K.zeros(self.layer.output.shape[1:])

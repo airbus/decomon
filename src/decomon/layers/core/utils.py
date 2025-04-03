@@ -1,12 +1,14 @@
-import keras.ops as K #type:ignore 
-from keras.layers import Dense #type:ignore
-from keras.layers import Wrapper #type:ignore
-
 from typing import Any
+
+import keras.ops as K  # type:ignore
+from keras.layers import Dense  # type:ignore
+from keras.layers import Wrapper  # type:ignore
+
 from decomon.types import Tensor
 
+
 class Dense_kernel_constraint(Wrapper):
-    def __init__(self, layer:Dense, ops=K.maximum, add_bias=True, **kwargs:Any):
+    def __init__(self, layer: Dense, ops=K.maximum, add_bias=True, **kwargs: Any):
         super().__init__(layer=layer, **kwargs)
         self.ops = ops
         self.add_bias = add_bias
@@ -14,9 +16,9 @@ class Dense_kernel_constraint(Wrapper):
     @property
     def kernel(self):
         return self.ops(0, self.layer.kernel)
-    
+
     def call(self, inputs: list[Tensor]) -> list[Tensor]:
-        y:Tensor =  K.matmul(inputs, self.ops(0, self.layer.kernel))
+        y: Tensor = K.matmul(inputs, self.ops(0, self.layer.kernel))
 
         if self.layer.bias is not None and self.add_bias:
             y = K.add(y, self.layer.bias)

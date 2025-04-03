@@ -1,8 +1,9 @@
-from keras.layers import BatchNormalization #type:ignore
+import keras.ops as K  # type:ignore
+from keras.layers import BatchNormalization  # type:ignore
 
 from decomon.layers.layer import DecomonLinearLayer
 from decomon.layers.normalization.utils import BatchNormalization_kernel_constraint
-import keras.ops as K #type:ignore
+
 
 class DecomonBatchNormalization(DecomonLinearLayer):
     layer: BatchNormalization

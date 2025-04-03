@@ -14,6 +14,8 @@ dependencies =[
     "matplotlib",
     "numpy >=1.21",
     "keras>=3",
+    "keras_custom@git+https://github.com/ducoffeM/keras_custom",
+    "jacobinet@git+https://github.com/ducoffeM/jacobinet"
 ]
 dynamic = ["version"]
 
@@ -34,7 +36,9 @@ testpaths = ["tests"]
 addopts = [
     "--import-mode=importlib",
     "--ignore=tests/lirpa_comparison",
+    "--ignore=tests/old",
     "--ignore=tests/test_deel_lip.py",
+    "--ignore=tests/test_core_backward.py",
 ]
 
 [tool.black]

@@ -1,16 +1,14 @@
-from keras.layers import Layer, SpectralNormalization #type:ignore
-from decomon.layers import DecomonLayer
+from typing import Any, Optional
 
-from decomon.types import Tensor
+from keras.layers import Layer, SpectralNormalization  # type:ignore
+
 from decomon.constants import Propagation, Slope
-
-from typing import Optional, Any
-
+from decomon.layers import DecomonLayer
 from decomon.perturbation_domain import PerturbationDomain
+from decomon.types import Tensor
 
 
 class DecomonSpectralNormalization(DecomonLayer):
-
     layer: SpectralNormalization
 
     def __init__(

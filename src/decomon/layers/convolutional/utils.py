@@ -1,18 +1,20 @@
-import keras.ops as K #type:ignore
-import numpy as np #type:ignore
-from keras.layers import Conv2D #type:ignore
-from keras.ops.image import extract_patches #type:ignore
-from keras.layers import Wrapper #type:ignore
-from keras.src.layers.convolutional.base_conv import BaseConv #type:ignore
-from keras.src.layers.convolutional.base_depthwise_conv import BaseDepthwiseConv #type:ignore
-
 from typing import Any
+
+import keras.ops as K  # type:ignore
+import numpy as np  # type:ignore
+from keras.layers import Conv2D  # type:ignore
+from keras.layers import Wrapper  # type:ignore
+from keras.ops.image import extract_patches  # type:ignore
+from keras.src.layers.convolutional.base_conv import BaseConv  # type:ignore
+from keras.src.layers.convolutional.base_depthwise_conv import (
+    BaseDepthwiseConv,  # type:ignore
+)
+
 from decomon.types import Tensor
 
 
 class Conv_kernel_constraint(Wrapper):
-
-    def __init__(self, layer:BaseConv, ops=K.maximum, add_bias=True, **kwargs:Any):
+    def __init__(self, layer: BaseConv, ops=K.maximum, add_bias=True, **kwargs: Any):
         super().__init__(layer=layer, **kwargs)
         self.ops = ops
         self.add_bias = add_bias
@@ -30,38 +32,37 @@ class Conv_kernel_constraint(Wrapper):
     @property
     def kernel(self):
         return self.ops(self.kernel_, 0)
-    
+
     @property
     def bias(self):
         if self.layer.use_bias and self.add_bias:
             return self.bias_
         return None
 
-    
     def compute_output_shape(self, input_shape):
         return self.layer.compute_output_shape(input_shape)
 
     def call(self, inputs: list[Tensor]) -> list[Tensor]:
-        y:Tensor =  K.conv(
+        y: Tensor = K.conv(
             inputs,
-            kernel = self.kernel,
+            kernel=self.kernel,
             strides=list(self.strides),
             padding=self.padding,
             dilation_rate=self.dilation_rate,
             data_format=self.data_format,
-        ) 
+        )
 
         if self.add_bias:
-            y += self.layer(0*inputs)
+            y += self.layer(0 * inputs)
 
         return y
-    
+
     def get_config(self):
         return self.layer.get_config()
-    
-class DepthwiseConv_kernel_constraint(Wrapper):
 
-    def __init__(self, layer:BaseDepthwiseConv, ops=K.maximum, add_bias=True, **kwargs:Any):
+
+class DepthwiseConv_kernel_constraint(Wrapper):
+    def __init__(self, layer: BaseDepthwiseConv, ops=K.maximum, add_bias=True, **kwargs: Any):
         super().__init__(layer=layer, **kwargs)
         self.ops = ops
         self.add_bias = add_bias
@@ -79,22 +80,20 @@ class DepthwiseConv_kernel_constraint(Wrapper):
     @property
     def kernel(self):
         return self.ops(self.kernel_, 0)
-    
+
     @property
     def bias(self):
         if self.layer.use_bias and self.add_bias:
             return self.bias_
         return None
 
-    
     def compute_output_shape(self, input_shape):
         return self.layer.compute_output_shape(input_shape)
-    
+
     def _get_input_channel(self, input_shape):
         return self.layer._get_input_channel(input_shape)
 
     def call(self, inputs: list[Tensor]) -> list[Tensor]:
-
         y = K.depthwise_conv(
             inputs,
             kernel=self.kernel,
@@ -105,23 +104,21 @@ class DepthwiseConv_kernel_constraint(Wrapper):
         )
 
         if self.add_bias:
-            y += self.layer(0*inputs)
+            y += self.layer(0 * inputs)
 
         return y
-    
+
     def get_config(self):
         return self.layer.get_config()
 
 
 def get_toeplitz_from_layer(conv_layer: Conv2D) -> Tensor:
-
     kernel = conv_layer.kernel
     input_shape = list(conv_layer.input.shape[1:])
     output_shape = list(conv_layer.output.shape[1:])
     config = conv_layer.get_config()
 
     return get_toeplitz(kernel, input_shape, output_shape, config)
-
 
 
 def get_toeplitz(kernel, input_shape, output_shape, config) -> Tensor:

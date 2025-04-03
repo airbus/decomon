@@ -1,33 +1,35 @@
 # define non native class Max
 # Decomon Custom for Max(axis...)
-from decomon.layers.custom.utils import get_affine_lower_bound_max, get_affine_upper_bound_max
-from decomon.layers import DecomonLayer
-from decomon.types import Tensor
-import keras.ops as K #type:ignore
-import numpy as np #type:ignore
-
 from typing import List
 
-from keras_custom.layers import Max #type:ignore
+import keras.ops as K  # type:ignore
+import numpy as np  # type:ignore
+from keras_custom.layers import Max  # type:ignore
+
+from decomon.layers.custom.utils import (
+    get_affine_lower_bound_max,
+    get_affine_upper_bound_max,
+)
 from decomon.layers.fuse import combine_affine_bounds
+from decomon.layers.layer import DecomonLayer
+from decomon.types import Tensor
+
 
 class DecomonMax(DecomonLayer):
-
     layer: Max
     linear: False
     increasing = True
-    
-    def get_affine_bounds_with_linear_block_inputs(self, lower_max:Tensor, upper_max:Tensor, axis=int)->tuple[Tensor, Tensor, Tensor, Tensor]:
-        
+
+    def get_affine_bounds_with_linear_block_inputs(
+        self, lower_max: Tensor, upper_max: Tensor, axis=int
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         w_l, b_l = get_affine_lower_bound_max(lower_max, upper_max, axis=axis, keepdims=False)
         w_u, b_u = get_affine_upper_bound_max(lower_max, upper_max, axis=axis, keepdims=False)
-        
+
         return [w_l, b_l, w_u, b_u]
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-
         return self.get_affine_bounds_with_linear_block_inputs(lower_max=lower, upper_max=upper, axis=self.axis)
-
 
     def backward_affine_propagate(
         self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
@@ -71,7 +73,7 @@ class DecomonMax(DecomonLayer):
         lower, upper = self.inputs_outputs_spec.split_constant_bounds(constant_bounds=input_constant_bounds)
 
         from_linear_layer = (self.linear, self.inputs_outputs_spec.is_wo_batch_bounds((output_affine_bounds)))
-        
+
         # if bounds are diagonal, call the affine bounds directly
         # check diagonal
         if len(output_affine_bounds):
@@ -84,12 +86,11 @@ class DecomonMax(DecomonLayer):
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
             layer_affine_bounds = [w_l, b_l, w_u, b_u]
             return layer_affine_bounds
-        
+
         if is_diagonal:
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
             layer_affine_bounds = [w_l, b_l, w_u, b_u]
 
-        
         if is_diagonal or not len(output_affine_bounds):
             diagonal = (
                 self.inputs_outputs_spec.is_diagonal_bounds(layer_affine_bounds),
@@ -102,12 +103,12 @@ class DecomonMax(DecomonLayer):
                 from_linear_layer=from_linear_layer,
                 diagonal=diagonal,
             )
-        
+
         #######
 
         if is_output_linear:
             output_affine_bounds = [K.expand_dims(e, 0) for e in output_affine_bounds]
-        
+
         [w_l_out, b_l_out, w_u_out, b_u_out] = output_affine_bounds
 
         lower_max = self.linear_block(lower)
@@ -122,48 +123,45 @@ class DecomonMax(DecomonLayer):
         w_u_out_neg_e = w_u_out_e - w_u_out_pos_e
         w_l_out_neg_e = w_l_out_e - w_l_out_pos_e
 
-
         # reshape lower_max and upper_max and update axis if necessary
         n_out = len(w_u_out_e.shape) - len(lower_max.shape)
-        expand_shape = [-1]+list(lower_max.shape)[1:]+[1]*n_out
-        lower_max_e = K.reshape(lower_max, expand_shape) # same shape as w_u_out_e
-        upper_max_e = K.reshape(upper_max, expand_shape) # same shape as w_u_out_e
+        expand_shape = [-1] + list(lower_max.shape)[1:] + [1] * n_out
+        lower_max_e = K.reshape(lower_max, expand_shape)  # same shape as w_u_out_e
+        upper_max_e = K.reshape(upper_max, expand_shape)  # same shape as w_u_out_e
 
-
-        if self.axis==-1:
-            axis_ = len(lower_max.shape)-1
+        if self.axis == -1:
+            axis_ = len(lower_max.shape) - 1
         else:
             axis_ = self.axis
-        
-        lower_max_u_0 = lower_max_e*w_u_out_pos_e
-        upper_max_u_0 = upper_max_e*w_u_out_pos_e 
-        _, _, w_u_0, b_u_0 = self.get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_u_0, 
-                                                                             upper_max=upper_max_u_0, 
-                                                                             axis=axis_)
 
-        lower_max_u_1 = -lower_max_e*w_u_out_neg_e
-        upper_max_u_1 = -upper_max_e*w_u_out_neg_e 
-        w_l_1, b_l_1, _, _ = self.get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_u_1, 
-                                                                             upper_max=upper_max_u_1, 
-                                                                             axis=axis_)
-        
+        lower_max_u_0 = lower_max_e * w_u_out_pos_e
+        upper_max_u_0 = upper_max_e * w_u_out_pos_e
+        _, _, w_u_0, b_u_0 = self.get_affine_bounds_with_linear_block_inputs(
+            lower_max=lower_max_u_0, upper_max=upper_max_u_0, axis=axis_
+        )
+
+        lower_max_u_1 = -lower_max_e * w_u_out_neg_e
+        upper_max_u_1 = -upper_max_e * w_u_out_neg_e
+        w_l_1, b_l_1, _, _ = self.get_affine_bounds_with_linear_block_inputs(
+            lower_max=lower_max_u_1, upper_max=upper_max_u_1, axis=axis_
+        )
+
         w_u = w_u_0 - w_l_1
         b_u = b_u_0 - b_l_1 + b_u_out
 
         #### lower bound
-        lower_max_l_0 = lower_max_e*w_l_out_pos_e
-        upper_max_l_0 = upper_max_e*w_l_out_pos_e 
-        w_l_0, b_l_0, _, _ = self.get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_l_0, 
-                                                                             upper_max=upper_max_l_0, 
-                                                                             axis=axis_)
-        lower_max_l_1 = -lower_max_e*w_l_out_neg_e
-        upper_max_l_1 = -upper_max_e*w_l_out_neg_e 
-        _, _, w_u_1, b_u_1 = self.get_affine_bounds_with_linear_block_inputs(lower_max=lower_max_l_1, 
-                                                                             upper_max=upper_max_l_1, 
-                                                                             axis=axis_)
-        
+        lower_max_l_0 = lower_max_e * w_l_out_pos_e
+        upper_max_l_0 = upper_max_e * w_l_out_pos_e
+        w_l_0, b_l_0, _, _ = self.get_affine_bounds_with_linear_block_inputs(
+            lower_max=lower_max_l_0, upper_max=upper_max_l_0, axis=axis_
+        )
+        lower_max_l_1 = -lower_max_e * w_l_out_neg_e
+        upper_max_l_1 = -upper_max_e * w_l_out_neg_e
+        _, _, w_u_1, b_u_1 = self.get_affine_bounds_with_linear_block_inputs(
+            lower_max=lower_max_l_1, upper_max=upper_max_l_1, axis=axis_
+        )
+
         w_l = w_l_0 - w_u_1
         b_l = b_l_0 - b_u_1 + b_l_out
-
 
         return [w_l, b_l, w_u, b_u]

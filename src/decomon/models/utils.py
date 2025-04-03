@@ -1,11 +1,11 @@
 from typing import Optional, Union
 
-import keras #type:ignore
-import numpy as np #type:ignore
-from keras import Model, Sequential #type:ignore
-from keras.layers import Activation, Input, Layer #type:ignore
-from keras.src import Functional #type:ignore
-from keras.src.ops.node import Node #type:ignore
+import keras  # type:ignore
+import numpy as np  # type:ignore
+from keras import Model, Sequential  # type:ignore
+from keras.layers import Activation, Input, Layer  # type:ignore
+from keras.src import Functional  # type:ignore
+from keras.src.ops.node import Node  # type:ignore
 
 from decomon.constants import ConvertMethod, Propagation
 from decomon.keras_utils import share_weights_and_build
@@ -149,6 +149,7 @@ def get_output_nodes(model: Model) -> list[Node]:
     nodes_by_operation = {n.operation: n for subnodes in model._nodes_by_depth.values() for n in subnodes}
     return [nodes_by_operation[output._keras_history.operation] for output in model.outputs]
 
+
 def get_depth_dict(model: Model) -> dict[int, list[Node]]:
     depth_keys = list(model._nodes_by_depth.keys())
     depth_keys.sort(reverse=True)
@@ -199,10 +200,10 @@ def ensure_functional_model(model: Model) -> Functional:
     if isinstance(model, Functional):
         return model
     elif isinstance(model, Sequential):
-        if hasattr(model, 'inputs'):
+        if hasattr(model, "inputs"):
             model = Model(model.inputs, model.outputs)
         else:
-            model = Model([model.input], [model.output]) # BackwardSequential does not have attribute inputs
+            model = Model([model.input], [model.output])  # BackwardSequential does not have attribute inputs
         assert isinstance(model, Functional)  # should be the case after passage in Model.__init__()
         return model
     else:
@@ -243,6 +244,7 @@ def method2propagation(method: ConvertMethod) -> list[Propagation]:
         return [Propagation.FORWARD]
     else:
         return [Propagation.FORWARD, Propagation.BACKWARD]
+
 
 def select_output(output, final_lower, final_upper, final_affine, final_ibp):
     if final_lower and final_upper:
