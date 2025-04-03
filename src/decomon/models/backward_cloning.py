@@ -1,13 +1,12 @@
 from collections.abc import Callable
-from typing import Any, Optional, Union, List
+from typing import Any, List, Optional, Union
 
-import numpy as np #type:ignore
-
-import keras #type:ignore
-import keras.ops as K #type:ignore
-from keras.layers import Layer, InputLayer #type:ignore
-from keras.models import Model #type:ignore
-from keras.src.ops.node import Node #type:ignore
+import keras  # type:ignore
+import keras.ops as K  # type:ignore
+import numpy as np  # type:ignore
+from keras.layers import InputLayer, Layer  # type:ignore
+from keras.models import Model  # type:ignore
+from keras.src.ops.node import Node  # type:ignore
 
 from decomon.constants import Propagation, Slope
 from decomon.layers import DecomonLayer
@@ -91,7 +90,7 @@ def crown(
             perturbation_domain_input=perturbation_domain_input,
             perturbation_domain=perturbation_domain,
             ibp_output_map=ibp_output_map,
-            masks=masks
+            masks=masks,
         )
 
     parents = node.parent_nodes
@@ -108,11 +107,10 @@ def crown(
             backward_layer = backward_map[id(node)]
         else:
             backward_layer = layer_fn(node.operation, model_output_shape)
-            #backward_map[id(node)] = backward_layer # better not to store backward_layer if finetune is set to True
+            # backward_map[id(node)] = backward_layer # better not to store backward_layer if finetune is set to True
 
         # get oracle bounds if needed
         if backward_layer.inputs_outputs_spec.needs_oracle_bounds():
-
             constant_oracle_bounds = get_oracle(
                 node=node,
                 perturbation_domain_input=perturbation_domain_input,
@@ -125,17 +123,15 @@ def crown(
                 submodels_stack=submodels_stack,
                 layer_fn=layer_fn,
                 ibp_output_map=ibp_output_map,
-                masks = masks
+                masks=masks,
             )
             # tighten the bounds with forward_output_map
-            
+
             if id(node) in ibp_output_map.keys():
                 constants_bounds_ibp = ibp_output_map[id(node)]
                 lower = K.maximum(constants_bounds_ibp[0], constant_oracle_bounds[0])
                 upper = K.minimum(constants_bounds_ibp[1], constant_oracle_bounds[1])
                 constant_oracle_bounds = [lower, upper]
-            
-
 
         else:
             constant_oracle_bounds = []
@@ -190,7 +186,7 @@ def crown(
                     perturbation_domain_input=perturbation_domain_input,
                     perturbation_domain=perturbation_domain,
                     ibp_output_map=ibp_output_map,
-                    masks=masks
+                    masks=masks,
                 )
             )
         # reduce by summing all bounds together
@@ -218,7 +214,7 @@ def crown(
             perturbation_domain_input=perturbation_domain_input,
             perturbation_domain=perturbation_domain,
             ibp_output_map=ibp_output_map,
-            masks=masks
+            masks=masks,
         )
     return crown_bounds
 
@@ -274,9 +270,9 @@ def get_oracle(
     # Do not recompute if already existing
     if id(node) in oracle_map:
         return oracle_map[id(node)]
-    
+
     mask_layer = None
-    if not(masks is None) and node.operation.name in masks:
+    if not (masks is None) and node.operation.name in masks:
         mask_layer = masks[node.operation.name]
 
     parents = node.parent_nodes
@@ -313,8 +309,7 @@ def get_oracle(
 
             # affine bounds on parents from sub-crowns
             crown_bounds = []
-            is_split:bool=False
-
+            is_split: bool = False
 
             for parent in parents:
                 if id(parent) in crown_output_map:
@@ -326,17 +321,16 @@ def get_oracle(
                     # do it if no other option for scalability has been set
                     output_layer_shape: List[int] = list(parent.operation.output.shape[1:])
 
-                    
                     if not mask_layer is None:
                         input_dim_wo_batch = list(node.operation.input.shape[1:])
                         input_dim_wo_batch_flatten = np.prod(input_dim_wo_batch)
-                        index_to_compute = np.where(mask_layer.reshape((-1,))!=0)[0]
+                        index_to_compute = np.where(mask_layer.reshape((-1,)) != 0)[0]
                         backward_bounds_w = np.zeros([input_dim_wo_batch_flatten, len(index_to_compute)])
-                        backward_bounds_w[index_to_compute, np.arange(len(index_to_compute))]=1
+                        backward_bounds_w[index_to_compute, np.arange(len(index_to_compute))] = 1
 
                         # reshape
-                        backward_bounds_w = np.reshape([1]+backward_bounds_w, input_dim_wo_batch+[-1])
-                        backward_bounds = [backward_bounds_w, np.zeros((1,len(index_to_compute)))]*2
+                        backward_bounds_w = np.reshape([1] + backward_bounds_w, input_dim_wo_batch + [-1])
+                        backward_bounds = [backward_bounds_w, np.zeros((1, len(index_to_compute)))] * 2
                         crown_bounds_parent = crown(
                             node=parent,
                             layer_fn=layer_fn,
@@ -351,9 +345,9 @@ def get_oracle(
                             perturbation_domain_input=perturbation_domain_input,
                             perturbation_domain=perturbation_domain,
                             ibp_output_map=ibp_output_map,
-                            masks=masks
+                            masks=masks,
                         )
-                        raise NotImplementedError('raise a dedicated PR')
+                        raise NotImplementedError("raise a dedicated PR")
                     else:
                         crown_bounds_parent = crown(
                             node=parent,
@@ -369,7 +363,7 @@ def get_oracle(
                             perturbation_domain_input=perturbation_domain_input,
                             perturbation_domain=perturbation_domain,
                             ibp_output_map=ibp_output_map,
-                            masks=masks
+                            masks=masks,
                         )
                         # store sub-crown output
                         crown_output_map[id(parent)] = crown_bounds_parent
@@ -377,14 +371,14 @@ def get_oracle(
 
             # call DecomonOracle multiple times if the subcrown_output has been split
             if is_split:
-                if len(parents)>1:
+                if len(parents) > 1:
                     raise NotImplementedError()
                 # special processing
-                n_split = len(crown_bounds)//4
+                n_split = len(crown_bounds) // 4
                 oracle_lower_bounds = []
                 oracle_upper_bounds = []
                 for i in range(n_split):
-                    crown_bounds_i = crown_bounds[4*i:4*(i+1)]
+                    crown_bounds_i = crown_bounds[4 * i : 4 * (i + 1)]
                     oracle_input_i = crown_bounds_i + [perturbation_domain_input]
 
                     oracle_layer = DecomonOracle(
@@ -392,14 +386,17 @@ def get_oracle(
                         ibp=False,
                         affine=True,
                         layer_input_shape=backward_layer.layer_input_shape,
-                        is_merging_layer=False, # propgate split bounds
+                        is_merging_layer=False,  # propgate split bounds
                     )  # crown bounds contains only affine bounds => ibp=False, affine=True
                     lower_split_i, upper_split_i = oracle_layer(oracle_input_i)
                     oracle_lower_bounds.append(lower_split_i)
                     oracle_upper_bounds.append(upper_split_i)
 
-                target_shape = [-1]+output_layer_shape
-                oracle_bounds = [K.reshape(K.concatenate(oracle_lower_bounds, -1), target_shape), K.reshape(K.concatenate(oracle_upper_bounds, -1), target_shape)]
+                target_shape = [-1] + output_layer_shape
+                oracle_bounds = [
+                    K.reshape(K.concatenate(oracle_lower_bounds, -1), target_shape),
+                    K.reshape(K.concatenate(oracle_upper_bounds, -1), target_shape),
+                ]
             else:
                 oracle_input = crown_bounds + [perturbation_domain_input]
 
@@ -482,7 +479,7 @@ def crown_model(
         )
         backward_map_node: dict[int, DecomonLayer] = {}
         # exception: if the model has one layer and final_affine = False, apply ibp is enough
-        
+
         output_crown = crown(
             node=node,
             layer_fn=layer_fn,
@@ -497,7 +494,7 @@ def crown_model(
             submodels_stack=[],  # main model, not in any submodel
             perturbation_domain_input=perturbation_domain_input,
             perturbation_domain=perturbation_domain,
-            masks=masks
+            masks=masks,
         )
         output += output_crown
 
@@ -578,7 +575,7 @@ def convert_backward(
         forward_output_map=forward_output_map,
         forward_layer_map=forward_layer_map,
         ibp_output_map=ibp_output_map,
-        masks=masks
+        masks=masks,
     )
 
     return output

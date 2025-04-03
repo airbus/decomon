@@ -1,8 +1,8 @@
-from keras.layers import LayerNormalization #type:ignore
-from decomon.layers import DecomonLayer
+from keras.layers import LayerNormalization  # type:ignore
 
-from decomon.types import Tensor
+from decomon.layers import DecomonLayer
 from decomon.layers.utils import get_affine_representation_with_bias
+from decomon.types import Tensor
 
 
 class DecomonLayerNormalization(DecomonLayer):
@@ -11,5 +11,4 @@ class DecomonLayerNormalization(DecomonLayer):
     diagonal = True
 
     def get_affine_representation(self) -> tuple[Tensor, Tensor]:
-
         return get_affine_representation_with_bias(self.layer, diagonal=self.diagonal)

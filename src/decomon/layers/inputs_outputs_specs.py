@@ -177,7 +177,9 @@ class InputsOutputsSpec:
             lower, upper = constant_bounds
             return lower, upper
 
-    def split_inputs(self, inputs: list[Tensor]) -> Union[
+    def split_inputs(
+        self, inputs: list[Tensor]
+    ) -> Union[
         tuple[list[Tensor], list[Tensor], list[Tensor]],
         tuple[list[list[Tensor]], list[list[Tensor]], list[Tensor]],
         tuple[list[Tensor], list[list[Tensor]], list[Tensor]],
@@ -272,7 +274,9 @@ class InputsOutputsSpec:
 
         return affine_bounds_to_propagate, constant_oracle_bounds, perturbation_domain_inputs
 
-    def split_input_shape(self, input_shape: list[tuple[Optional[int], ...]]) -> Union[
+    def split_input_shape(
+        self, input_shape: list[tuple[Optional[int], ...]]
+    ) -> Union[
         tuple[list[tuple[Optional[int], ...]], list[tuple[Optional[int], ...]], list[tuple[Optional[int], ...]]],
         tuple[
             list[list[tuple[Optional[int], ...]]],
@@ -494,12 +498,14 @@ class InputsOutputsSpec:
     @overload
     def extract_shapes_from_affine_bounds(  # type:ignore
         self, affine_bounds: list[Tensor], i: int = -1
-    ) -> list[tuple[Optional[int], ...]]: ...
+    ) -> list[tuple[Optional[int], ...]]:
+        ...
 
     @overload
     def extract_shapes_from_affine_bounds(
         self, affine_bounds: list[list[Tensor]], i: int = -1
-    ) -> list[list[tuple[Optional[int], ...]]]: ...
+    ) -> list[list[tuple[Optional[int], ...]]]:
+        ...
 
     def extract_shapes_from_affine_bounds(
         self, affine_bounds: Union[list[Tensor], list[list[Tensor]]], i: int = -1
@@ -545,7 +551,7 @@ class InputsOutputsSpec:
         else:
             if self.is_identity_bounds_shape(affine_bounds_shape, i=i):
                 return True
-            
+
             w_shape, b_shape = affine_bounds_shape[:2]
             return w_shape == b_shape
 
@@ -580,13 +586,15 @@ class InputsOutputsSpec:
     def is_wo_batch_bounds_by_keras_input(  # type: ignore
         self,
         affine_bounds: list[Tensor],
-    ) -> bool: ...
+    ) -> bool:
+        ...
 
     @overload
     def is_wo_batch_bounds_by_keras_input(
         self,
         affine_bounds: list[list[Tensor]],
-    ) -> list[bool]: ...
+    ) -> list[bool]:
+        ...
 
     def is_wo_batch_bounds_by_keras_input(
         self,

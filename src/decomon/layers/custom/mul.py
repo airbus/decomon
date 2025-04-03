@@ -1,8 +1,9 @@
 # onnx should use a custom library of keras...
-from keras_custom.layers import MulConstant # type:ignore
-from decomon.layers import DecomonLayer
-from decomon.types import Tensor
+from keras_custom.layers import MulConstant  # type:ignore
+
+from decomon.layers.layer import DecomonLayer
 from decomon.layers.utils.affine import get_affine_representation_wo_bias
+from decomon.types import Tensor
 
 
 class DecomonMulConstant(DecomonLayer):
@@ -11,14 +12,12 @@ class DecomonMulConstant(DecomonLayer):
     diagonal = True
 
     def get_affine_representation(self) -> tuple[Tensor, Tensor]:
-
         return get_affine_representation_wo_bias(self.layer, diagonal=self.diagonal)
-    
+
     # override backward propagation
     def backward_affine_propagate(
         self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        
         if output_affine_bounds is None or len(output_affine_bounds) == 0:
             # no backward affine bounds are propagated; call the affine bounds directly
             return super().backward_affine_propagate(
@@ -41,5 +40,5 @@ class DecomonMulConstant(DecomonLayer):
 
         # we optimize the propagation of affine bounds using the backward layers of conv
         # to do so we need to create a new batch of affine bounds
-        backward_layer = self.layer # faux
+        backward_layer = self.layer  # faux
         return self.implicit_linear_backward_affine_propagate(backward_layer, output_affine_bounds)

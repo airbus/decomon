@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Union
 
-import numpy as np #type:ignore
-from keras import ops as K #type:ignore
+import numpy as np  # type:ignore
+from keras import ops as K  # type:ignore
 
 from decomon.keras_utils import batch_multid_dot
 from decomon.types import Tensor

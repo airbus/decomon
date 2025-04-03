@@ -1,30 +1,32 @@
 import keras.ops as K
+
 from decomon.types import Tensor
 
 
-def softplus_prime(x:Tensor)->Tensor:
+def softplus_prime(x: Tensor) -> Tensor:
+    # 1/ (1 +exp(−x ))
 
-    #1/ (1 +exp(−x ))
+    return 1 / (1 + K.exp(-x))
 
-    return 1/(1 + K.exp(-x))
 
-def elu_prime(x:Tensor, alpha:float=1.0)->Tensor:
+def elu_prime(x: Tensor, alpha: float = 1.0) -> Tensor:
     # Derivative of elu: x if x>=0 and alpha*(exp(x)-1) if x<0
     # 1 if x>=0
     # alpha*exp(x) = elu(x)+1 if x<=0
     mask = K.relu(K.sign(x))
-    return mask + (1 - mask) * (K.elu(x)+1)
+    return mask + (1 - mask) * (K.elu(x) + 1)
 
 
-def selu_prime(x:Tensor, alpha:float=1.0)->Tensor:
+def selu_prime(x: Tensor, alpha: float = 1.0) -> Tensor:
     # selu = scale*elu(x, alpha)
     # alpha=1.67326324` and `scale=1.05070098
     alpha = 1.67326324
     scale = 1.05070098
     mask = K.relu(K.sign(x))
-    return scale*(mask + (1 - mask) * (K.elu(x, alpha=alpha)+1))
-    
-def leaky_relu_prime(x: Tensor, negative_slope: float=0.3) -> Tensor:
+    return scale * (mask + (1 - mask) * (K.elu(x, alpha=alpha) + 1))
+
+
+def leaky_relu_prime(x: Tensor, negative_slope: float = 0.3) -> Tensor:
     # Derivative of leaky relu: 1 if x_i>=0 and negative_slope if x_i <= 0
     # 1 if x>=0
     # negative_slope if x<=0
@@ -84,5 +86,3 @@ def softsign_prime(x: Tensor) -> Tensor:
     """
 
     return K.cast(1.0, dtype=x.dtype) / K.power(K.cast(1.0, dtype=x.dtype) + K.abs(x), K.cast(2, dtype=x.dtype))
-
-

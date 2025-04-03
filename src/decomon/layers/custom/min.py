@@ -1,13 +1,17 @@
 # define non native class Max
 # Decomon Custom for Max(axis...)
-from decomon.layers.custom.utils import get_affine_lower_bound_max, get_affine_upper_bound_max
-from decomon.layers import DecomonLayer
-from decomon.types import Tensor
-import keras.ops as K # type:ignore
-import numpy as np # type:ignore
-
 from typing import List
-from keras_custom.layers import Min # type:ignore
+
+import keras.ops as K  # type:ignore
+import numpy as np  # type:ignore
+from keras_custom.layers import Min  # type:ignore
+
+from decomon.layers.custom.utils import (
+    get_affine_lower_bound_max,
+    get_affine_upper_bound_max,
+)
+from decomon.layers.layer import DecomonLayer
+from decomon.types import Tensor
 
 
 class DecomonMin(DecomonLayer):
@@ -22,7 +26,6 @@ class DecomonMin(DecomonLayer):
     increasing = True
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-
         w_l: Tensor
         b_l: Tensor
         w_u: Tensor
@@ -55,7 +58,6 @@ class DecomonMin(DecomonLayer):
         if self.layer.keepdims:
             diag_ = K.reshape(K.eye(input_shape_wo_axis), [1] + output_shape_wo_batch + output_shape_wo_batch)
         else:
-
             # output_shape_broadcast_axis = output_shape_wo_batch[:axis_-1]+[1]+output_shape_wo_batch[axis_:]
             output_shape_broadcast_axis: List[int] = input_shape_wo_batch[: axis_ - 1] + input_shape_wo_batch[axis_:]
             target_shape: List[int] = [1] + output_shape_broadcast_axis + output_shape_wo_batch

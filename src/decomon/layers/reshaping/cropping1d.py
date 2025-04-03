@@ -1,5 +1,6 @@
-from keras.layers import Cropping1D #type:ignore
-from decomon.layers import  DecomonLinearLayer
+from keras.layers import Cropping1D  # type:ignore
+
+from decomon.layers import DecomonLinearLayer
 
 
 class DecomonCropping1D(DecomonLinearLayer):

@@ -2,10 +2,10 @@
 
 from typing import Any, Optional, Union
 
-import keras #type:ignore
-import keras.ops as K #type:ignore
-from keras.layers import Layer #type:ignore
-from keras.utils import serialize_keras_object #type:ignore
+import keras  # type:ignore
+import keras.ops as K  # type:ignore
+from keras.layers import Layer  # type:ignore
+from keras.utils import serialize_keras_object  # type:ignore
 
 from decomon.constants import Propagation
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec

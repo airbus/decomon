@@ -2,8 +2,8 @@
 
 from typing import Any, Optional, Union, overload
 
-from keras.layers import Layer #type:ignore
-from keras.utils import serialize_keras_object #type:ignore
+from keras.layers import Layer  # type:ignore
+from keras.utils import serialize_keras_object  # type:ignore
 
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.perturbation_domain import PerturbationDomain

@@ -1,5 +1,5 @@
-import keras.ops as K #type:ignore
-from keras.layers import Add #type:ignore
+import keras.ops as K  # type:ignore
+from keras.layers import Add  # type:ignore
 
 from decomon.layers.merging.base_merge import DecomonMerge
 from decomon.types import Tensor

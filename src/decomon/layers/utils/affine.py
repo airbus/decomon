@@ -1,23 +1,35 @@
-from decomon.types import Tensor #type:ignore
-from keras.layers import Layer #type:ignore
-import keras.ops as K #type:ignore
-import numpy as np #type:ignore
 from typing import List, Union
 
-def combine_affine(layer, w_in, b_in, model_input_shape_wo_batchsize, 
-                   layer_input_shape_wo_batchsize, layer_output_shape_wo_batchsize, layer_has_multiple_outputs):
-    
+import keras.ops as K  # type:ignore
+import numpy as np  # type:ignore
+from keras.layers import Layer  # type:ignore
+
+from decomon.types import Tensor  # type:ignore
+
+
+def combine_affine(
+    layer,
+    w_in,
+    b_in,
+    model_input_shape_wo_batchsize,
+    layer_input_shape_wo_batchsize,
+    layer_output_shape_wo_batchsize,
+    layer_has_multiple_outputs,
+):
     # apply layer on w_in, b_in
     b_out = layer(b_in)
-    w_in_ = K.reshape([-1]+layer_input_shape_wo_batchsize)(w_in)
+    w_in_ = K.reshape([-1] + layer_input_shape_wo_batchsize)(w_in)
     w_out_ = layer(w_in_)
     if layer_has_multiple_outputs:
-        w_out = [K.reshape([-1]+model_input_shape_wo_batchsize+layer_output_shape_wo_batchsize)(w_out_i) for w_out_i in w_out_]
+        w_out = [
+            K.reshape([-1] + model_input_shape_wo_batchsize + layer_output_shape_wo_batchsize)(w_out_i)
+            for w_out_i in w_out_
+        ]
     else:
-        w_out = K.reshape([-1]+model_input_shape_wo_batchsize+layer_output_shape_wo_batchsize)(w_out_)
+        w_out = K.reshape([-1] + model_input_shape_wo_batchsize + layer_output_shape_wo_batchsize)(w_out_)
 
     return w_out, b_out
-    
+
 
 def get_affine_representation_wo_bias(layer: Layer, diagonal: bool = False) -> tuple[Tensor, Tensor]:
     """
@@ -88,7 +100,6 @@ def get_affine_representation_with_bias(layer: Layer, diagonal: bool = False) ->
     if diagonal:
         w = layer(K.ones([1] + input_shape_wo_batch))[0] - bias
     else:
-
         N: int = K.prod(input_shape_wo_batch)
         w: Tensor = K.reshape(K.eye(N), [-1] + input_shape_wo_batch)
         # apply the layer on w
@@ -98,16 +109,17 @@ def get_affine_representation_with_bias(layer: Layer, diagonal: bool = False) ->
 
     return w, bias
 
-def apply_backward_layer(output_affine_bounds: list[Tensor],
-                         layer_backward: Layer,
-                         is_output_linear:bool, 
-                         output_shape_wo_batch: list[int], 
-                         input_shape_wo_batch:list[int],
-                         has_bias:bool=True,
-                        layer: Union[None, Layer]=None)-> tuple[Tensor, Tensor, Tensor, Tensor]:
-    """
-    
-    """
+
+def apply_backward_layer(
+    output_affine_bounds: list[Tensor],
+    layer_backward: Layer,
+    is_output_linear: bool,
+    output_shape_wo_batch: list[int],
+    input_shape_wo_batch: list[int],
+    has_bias: bool = True,
+    layer: Union[None, Layer] = None,
+) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    """ """
     [w_l, b_l, w_u, b_u] = output_affine_bounds
 
     if is_output_linear:
@@ -117,9 +129,9 @@ def apply_backward_layer(output_affine_bounds: list[Tensor],
         b_u = b_u[None]
 
     n_out_shape = list(b_l.shape[1:])
-    n_out_shape = n_out_shape[len(output_shape_wo_batch):]
+    n_out_shape = n_out_shape[len(output_shape_wo_batch) :]
     n_out_shape_flat = int(np.prod(n_out_shape))
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     w_l_flat_0 = K.reshape(w_l, [-1] + output_shape_wo_batch + [n_out_shape_flat])  # (batch, output_shape, n_out_flat)
     w_u_flat_0 = K.reshape(w_u, [-1] + output_shape_wo_batch + [n_out_shape_flat])  # (batch, output_shape, n_out_flat)
 
@@ -176,4 +188,3 @@ def apply_backward_layer(output_affine_bounds: list[Tensor],
         output = [w_l_conv, bias_conv_l, w_u_conv, bias_conv_u]
 
     return output
-

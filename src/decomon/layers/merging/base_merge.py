@@ -29,7 +29,7 @@ class DecomonMerge(DecomonLayer):
     def nb_keras_inputs(self) -> int:
         """Number of inputs merged by the underlying layer."""
         return len(self.keras_layer_input)
-    
+
     @property
     def layer_input_shape_wo_batchsize(self) -> list[int]:
         return [list(e.shape[1:]) for e in self.layer.input]
@@ -157,7 +157,7 @@ class DecomonMerge(DecomonLayer):
             l_c = self.layer(lower)
             u_c = self.layer(upper)
             return l_c, u_c
-        
+
         if self.decreasing:
             l_c = self.layer(upper)
             u_c = self.layer(lower)
@@ -226,7 +226,6 @@ class DecomonMerge(DecomonLayer):
 
         is_from_linear = self.inputs_outputs_spec.is_wo_batch_bounds(input_affine_bounds)
         if self.linear:
-
             w_l_in_list = [e[0] for e in input_affine_bounds]
             b_l_in_list = [e[1] for e in input_affine_bounds]
             w_u_in_list = [e[2] for e in input_affine_bounds]
@@ -242,10 +241,16 @@ class DecomonMerge(DecomonLayer):
                 b_u_out = self.layer(b_u_in_list)[0]
 
                 return [w_l_out, b_l_out, w_u_out, b_u_out]
-            
+
             # reshape w
-            w_l_in_list_ = [K.reshape(w_l_i, [-1]+ list(self.model_input_shape)+e) for (w_l_i, e) in zip(w_l_in_list,self.layer_input_shape_wo_batchsize) ]
-            w_u_in_list_ = [K.reshape(w_u_i, [-1]+ list(self.model_input_shape)+e) for (w_u_i, e) in zip(w_u_in_list,self.layer_input_shape_wo_batchsize) ]
+            w_l_in_list_ = [
+                K.reshape(w_l_i, [-1] + list(self.model_input_shape) + e)
+                for (w_l_i, e) in zip(w_l_in_list, self.layer_input_shape_wo_batchsize)
+            ]
+            w_u_in_list_ = [
+                K.reshape(w_u_i, [-1] + list(self.model_input_shape) + e)
+                for (w_u_i, e) in zip(w_u_in_list, self.layer_input_shape_wo_batchsize)
+            ]
 
             if self.increasing:
                 w_l_out = self.layer(w_l_in_list_)
@@ -262,14 +267,12 @@ class DecomonMerge(DecomonLayer):
                 return [w_l_out, b_l_out, w_u_out, b_u_out]
 
             else:
-
                 w, b = self.get_affine_representation()
                 w_l, b_l, w_u, b_u = w, b, w, b
-            
+
         else:
             lower, upper = self.inputs_outputs_spec.split_constant_bounds(constant_bounds=input_constant_bounds)
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
-
 
         b_l_new, b_u_new = b_l, b_u
         from_linear_layer_new = self.linear
