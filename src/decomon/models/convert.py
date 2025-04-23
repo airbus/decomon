@@ -122,6 +122,7 @@ def convert(
     rm_last_softmax: bool = True,
     mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]] = None,
     masks: Optional[dict[str, list[keras.KerasTensor]]] = None,
+    finetune: bool = False,
     **kwargs: Any,
 ) -> list[keras.KerasTensor]:
     """
@@ -150,6 +151,7 @@ def convert(
         final_lower: specify if lower bound information should be included.
             Default to True.
         rm_last_softmax: specify if last softmax layer (for each output) are removed during preprocessing
+        finetune: specify if finetuning is allowed
         **kwargs: keyword arguments to pass to layer_fn
 
     Returns:
@@ -184,6 +186,7 @@ def convert(
             ibp=ibp,
             affine=affine,
             mapping_keras2decomon_classes=mapping_keras2decomon_classes,
+            finetune=finetune,
             **kwargs,
         )
     """
@@ -216,6 +219,7 @@ def convert(
             ibp_output_map=ibp_output_map,
             mapping_keras2decomon_classes=mapping_keras2decomon_classes,
             masks=masks,
+            finetune=finetune,
             **kwargs,
         )
         # output updated mode

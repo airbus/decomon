@@ -1,0 +1,1 @@
+from decomon.layers.finetune.diagonal import get_alpha_model_diagonal

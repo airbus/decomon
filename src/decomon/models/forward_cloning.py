@@ -35,6 +35,7 @@ def convert_forward(
     ibp: bool = True,
     affine: bool = True,
     mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]] = None,
+    finetune: bool = False,
     **kwargs: Any,
 ) -> tuple[list[keras.KerasTensor], dict[int, list[keras.KerasTensor]], dict[int, DecomonLayer]]:
     """Convert keras model via forward propagation.
@@ -52,6 +53,7 @@ def convert_forward(
         perturbation_domain: perturbation domain type for keras input
         ibp: specify if constant bounds are propagated
         affine: specify if affine bounds are propagated
+        finetune: specify if finetuning is allowed
         **kwargs: keyword arguments to pass to layer_fn
 
     Returns:
@@ -94,6 +96,7 @@ def convert_forward(
         affine=affine,
         propagation=propagation,
         mapping_keras2decomon_classes=mapping_keras2decomon_classes,
+        finetune=finetune,
         **kwargs,
     )
 
@@ -110,6 +113,7 @@ def convert_forward(
         common_inputs_part=perturbation_domain_inputs,
         output_map=output_map,
         layer_map=layer_list_map,
+        finetune=finetune,
     )
     layer_map: dict[int, DecomonLayer] = {k: v[0] for k, v in layer_list_map.items()}
 
@@ -124,6 +128,7 @@ def convert_forward_functional_model(
     output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     layer_map: Optional[dict[int, list[Layer]]] = None,
     submodel: bool = False,
+    finetune: bool = False,
 ) -> list[keras.KerasTensor]:
     """Convert a functional keras model via forward propagation.
 
@@ -149,6 +154,7 @@ def convert_forward_functional_model(
         layer_map: map between node and converted layers (to be used when called recursively on submodels)
             This map is updated during the conversion.
         submodel: specify if called from within another conversion to propagate through an embedded submodel
+        finetune: specify if finetuning is allowed
 
     Returns:
         concatenated outputs of the converted layers corresponding to the output nodes of the keras model
@@ -207,6 +213,7 @@ def convert_forward_functional_model(
                     layer_fn=layer_fn,
                     output_map=output_map,
                     layer_map=layer_map,
+                    finetune=finetune,
                 )
             else:
                 if id(node) in layer_map:
@@ -244,6 +251,7 @@ def include_kwargs_layer_fn(
     propagation: Propagation,
     slope: Slope,
     mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]],
+    finetune: bool = False,
     **kwargs: Any,
 ) -> Callable[[Layer], list[Layer]]:
     """Include external parameters in the function converting layers
@@ -258,6 +266,7 @@ def include_kwargs_layer_fn(
         affine:
         slope:
         mapping_keras2decomon_classes:
+        finetune: specify if finetuning is allowed
         **kwargs:
 
     Returns:
@@ -275,6 +284,7 @@ def include_kwargs_layer_fn(
                 affine=affine,
                 propagation=propagation,
                 mapping_keras2decomon_classes=mapping_keras2decomon_classes,
+                finetune=finetune,
                 **kwargs,
             )
         ]
