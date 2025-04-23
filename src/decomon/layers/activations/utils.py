@@ -24,7 +24,7 @@ def get_convex_lower_affine_bound_at(x, func, func_prime) -> tuple[Tensor, Tenso
 
 
 def get_convex_upper_affine_bound_unary(
-    lower: Tensor, upper: Tensor, func: Callable, func_prime: Callable
+    lower: Tensor, upper: Tensor, func: Callable, func_prime: Callable, **kwargs: Any
 ) -> tuple[Tensor, Tensor]:
     # affine lower bound for convex diagonal function
     # w = f'(x)
@@ -36,10 +36,25 @@ def get_convex_upper_affine_bound_unary(
     w = (f_u - f_l) / K.maximum(upper - lower, keras.backend.epsilon())
     b = 0.5 * (f_u + f_l - w * (upper + lower))
 
+    if "finetune_forward" in kwargs:
+        # retrieve variables to optimize the slopes
+        alpha = kwargs["finetune_forward"]["alpha_lower"]  # (batch, flat_model_shape, layer_shape)
+        # alpha is only used to broadcast w and b
+        w = K.expand_dims(w, 1) + 0 * alpha
+        b = K.expand_dims(b, 1) + 0 * alpha
+
+    if "finetune_backward" in kwargs:
+        # retrieve variables to optimize the slopes
+        alpha = kwargs["finetune_backward"]["alpha_lower"]  # (batch, flat_model_shape, layer_shape)
+        # alpha is only used to broadcast w and b
+        w = K.expand_dims(w, 1) + 0 * alpha
+        b = K.expand_dims(b, 1) + 0 * alpha
     return w, b
 
 
-def get_convex_lower_affine_bound_unary(lower, upper, func, func_prime, slope=Slope.V_SLOPE) -> tuple[Tensor, Tensor]:
+def get_convex_lower_affine_bound_unary(
+    lower, upper, func, func_prime, slope=Slope.V_SLOPE, **kwargs: Any
+) -> tuple[Tensor, Tensor]:
     # affine lower bound for convex diagonal function
     # w = f'(x)
     # b = f(x) - f'(y)*y
@@ -69,7 +84,39 @@ def get_convex_lower_affine_bound_unary(lower, upper, func, func_prime, slope=Sl
         w, b = get_convex_lower_affine_bound_at(lower, func, func_prime)
 
     else:
-        raise NotImplementedError("adaptative slope is not yet implemented")
+        raise NotImplementedError("adaptative slope is not yet implemented, raise a dedicated PR if needed")
+
+    if "finetune_forward" in kwargs:
+        # retrieve variables to optimize the slopes
+        alpha = kwargs["finetune_forward"]["alpha_lower"]  # (batch, flat_model_shape, layer_shape)
+        coeff = K.clip(kwargs["finetune_forward"]["coeff_lower"], 0, 1)
+
+        w = K.expand_dims(w, 1) + 0 * alpha
+        b = K.expand_dims(b, 1) + 0 * alpha
+        lower_ = K.expand_dims(lower, 1)
+        upper_ = K.expand_dims(upper, 1)
+        sample = alpha * lower_ + (1 - alpha) * upper_
+
+        w_alpha, b_alpha = get_convex_lower_affine_bound_at(sample, func, func_prime)
+
+        w = coeff * w + (1 - coeff) * w_alpha
+        b = coeff * b + (1 - coeff) * b_alpha
+
+    if "finetune_backward" in kwargs:
+        # retrieve variables to optimize the slopes
+        alpha = kwargs["finetune_backward"]["alpha_lower"]  # (batch, flat_model_shape, layer_shape)
+        coeff = K.clip(kwargs["finetune_backward"]["coeff_lower"], 0, 1)
+
+        w = K.expand_dims(w, -1) + 0 * alpha
+        b = K.expand_dims(b, -1) + 0 * alpha
+        lower_ = K.expand_dims(lower, -1)
+        upper_ = K.expand_dims(upper, -1)
+        sample = alpha * lower_ + (1 - alpha) * upper_
+
+        w_alpha, b_alpha = get_convex_lower_affine_bound_at(sample, func, func_prime)
+
+        w = coeff * w + (1 - coeff) * w_alpha
+        b = coeff * b + (1 - coeff) * b_alpha
 
     return w, b
 
@@ -133,35 +180,43 @@ def get_linear_hull_relu(
     w_u = (o_value - index_dead) * w_u
     # w_l = (o_value - index_dead) * w_l
     b_u = (o_value - index_dead) * b_u
-    # b_l = (o_value - index_dead) * b_l
+    b_l = (o_value - index_dead) * b_l
 
     w_u = (o_value - index_linear) * w_u + index_linear
     # w_l = (o_value - index_linear) * w_l + index_linear
     b_u = (o_value - index_linear) * b_u
-    # b_l = (o_value - index_linear) * b_l
+    b_l = (o_value - index_linear) * b_l
 
     alpha = o_value
-    if "finetune" in kwargs:
+    if "finetune_forward" in kwargs:
         # retrieve variables to optimize the slopes
-        alpha = kwargs["finetune"]["alpha_lower"]
+        alpha = kwargs["finetune_forward"]["alpha_lower"]  # (batch, flat_model_shape, layer_shape)
+        coeff = K.clip(kwargs["finetune_forward"]["coeff_lower"], 0, 1)
+        # w_l (batch, layer_shape)
+        w_l = K.expand_dims(w_l, 1)
+        # start with a combination of crown and alpha crown
+        w_l = coeff * w_l + (1 - coeff) * alpha
+        index_dead = K.expand_dims(index_dead, 1)
+        index_linear = K.expand_dims(index_linear, 1)
+        w_u = K.expand_dims(w_u, 1) + 0 * alpha
+
+    if "finetune_backward" in kwargs:
+        # retrieve variables to optimize the slopes
+        alpha = kwargs["finetune_backward"]["alpha_lower"]  # (batch, layer_shape, flat_crown_shape)
+        coeff = K.clip(kwargs["finetune_backward"]["coeff_lower"], 0, 1)
+        # w_l (batch, layer_shape)
         w_l = K.expand_dims(w_l, -1)
+        b_l = K.expand_dims(b_l, -1) + 0 * alpha
+        # start with a combination of crown and alpha crown
+        w_l = coeff * w_l + (1 - coeff) * alpha
         index_dead = K.expand_dims(index_dead, -1)
         index_linear = K.expand_dims(index_linear, -1)
-        b_l = 0 * w_l
-        w_u = K.expand_dims(w_u, -1)
-        b_u = K.expand_dims(b_u, -1)
+        w_u = K.expand_dims(w_u, -1) + 0 * alpha
+        b_u = K.expand_dims(b_u, -1) + 0 * alpha
 
-    w_l = alpha * w_l + (o_value - alpha) * (o_value - w_l)
-
-    # w_u = (o_value - index_dead) * w_u
     w_l = (o_value - index_dead) * w_l
-    # b_u = (o_value - index_dead) * b_u
-    b_l = (o_value - index_dead) * b_l
 
-    # w_u = (o_value - index_linear) * w_u + index_linear
     w_l = (o_value - index_linear) * w_l + index_linear
-    # b_u = (o_value - index_linear) * b_u
-    b_l = (o_value - index_linear) * b_l
 
     return [w_u, b_u, w_l, b_l]
 

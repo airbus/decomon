@@ -34,6 +34,7 @@ def crown(
     perturbation_domain_input: keras.KerasTensor,
     perturbation_domain: PerturbationDomain,
     masks: Optional[dict[str, list[keras.KerasTensor]]] = None,
+    finetune: bool = False,
 ) -> list[keras.KerasTensor]:
     """
 
@@ -61,6 +62,7 @@ def crown(
             Used to carry on the propagation through the outer model when reaching the input of a submodel.
         backward_map: stores converted layer by node for the current crown
             (should depend on the proper model output and thus change for each sub-crown)
+        finetune: specify if finetuning is allowed
 
     Returns:
         propagated backward bounds until model input for the proper output node
@@ -91,6 +93,7 @@ def crown(
             perturbation_domain=perturbation_domain,
             ibp_output_map=ibp_output_map,
             masks=masks,
+            finetune=finetune,
         )
 
     parents = node.parent_nodes
@@ -124,6 +127,7 @@ def crown(
                 layer_fn=layer_fn,
                 ibp_output_map=ibp_output_map,
                 masks=masks,
+                finetune=finetune,
             )
             # tighten the bounds with forward_output_map
 
@@ -187,6 +191,7 @@ def crown(
                     perturbation_domain=perturbation_domain,
                     ibp_output_map=ibp_output_map,
                     masks=masks,
+                    finetune=finetune,
                 )
             )
         # reduce by summing all bounds together
@@ -215,6 +220,7 @@ def crown(
             perturbation_domain=perturbation_domain,
             ibp_output_map=ibp_output_map,
             masks=masks,
+            finetune=finetune,
         )
     return crown_bounds
 
@@ -232,6 +238,7 @@ def get_oracle(
     submodels_stack: list[Node],
     layer_fn: Callable[[Layer, tuple[int, ...]], DecomonLayer],
     masks: Optional[dict[str, list[keras.KerasTensor]]] = None,
+    finetune: bool = False,
 ) -> Union[list[keras.KerasTensor], list[list[keras.KerasTensor]]]:
     """Get oracle bounds "on demand".
 
@@ -262,6 +269,7 @@ def get_oracle(
             To be used for crown oracle.
         layer_fn: callable converting a layer and a model_output_shape into a (backward) decomon layer.
             To be used for crown oracle.
+        finetune: specify if finetuning is allowed
 
     Returns:
         oracle bounds on node inputs
@@ -346,6 +354,7 @@ def get_oracle(
                             perturbation_domain=perturbation_domain,
                             ibp_output_map=ibp_output_map,
                             masks=masks,
+                            finetune=finetune,
                         )
                         raise NotImplementedError("raise a dedicated PR")
                     else:
@@ -364,6 +373,7 @@ def get_oracle(
                             perturbation_domain=perturbation_domain,
                             ibp_output_map=ibp_output_map,
                             masks=masks,
+                            finetune=finetune,
                         )
                         # store sub-crown output
                         crown_output_map[id(parent)] = crown_bounds_parent
@@ -428,6 +438,7 @@ def crown_model(
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
     crown_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     masks: Optional[dict[str, list[keras.KerasTensor]]] = None,
+    finetune: bool = False,
 ) -> list[keras.KerasTensor]:
     """Convert a functional keras model via crown algorithm (backward propagation)
 
@@ -450,6 +461,7 @@ def crown_model(
             Avoids relaunching a crown if several nodes share parents.
             To be used for crown oracle.
         model_output_shape: if submodel is True, must be set to the output_shape used in the current crown
+        finetune: specify if finetuning is allowed
 
     Returns:
         concatenated propagated backward bounds corresponding to each output node of the keras model
@@ -495,6 +507,7 @@ def crown_model(
             perturbation_domain_input=perturbation_domain_input,
             perturbation_domain=perturbation_domain,
             masks=masks,
+            finetune=finetune,
         )
         output += output_crown
 
@@ -514,6 +527,7 @@ def convert_backward(
     ibp_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]] = None,
     masks: Optional[dict[str, list[keras.KerasTensor]]] = None,
+    finetune: bool = False,
     **kwargs: Any,
 ) -> list[keras.KerasTensor]:
     """Convert keras model via backward propagation.
@@ -536,6 +550,7 @@ def convert_backward(
         forward_layer_map: forward decomon layer per node from a previously performed forward conversion.
             To be used for forward oracle if not empty.
         slope: slope used by decomon activation layers
+        finetune: specify if finetuning is allowed
         **kwargs: keyword arguments to pass to layer_fn
 
     Returns:
@@ -562,6 +577,7 @@ def convert_backward(
         perturbation_domain=perturbation_domain,
         propagation=propagation,
         mapping_keras2decomon_classes=mapping_keras2decomon_classes,
+        finetune=finetune,
         **kwargs,
     )
 
@@ -576,6 +592,7 @@ def convert_backward(
         forward_layer_map=forward_layer_map,
         ibp_output_map=ibp_output_map,
         masks=masks,
+        finetune=finetune,
     )
 
     return output
@@ -619,6 +636,7 @@ def include_kwargs_layer_fn(
     propagation: Propagation,
     slope: Slope,
     mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]],
+    finetune: bool = False,
     **kwargs: Any,
 ) -> Callable[[Layer, tuple[int, ...]], DecomonLayer]:
     """Include external parameters in the function converting layers
@@ -631,6 +649,7 @@ def include_kwargs_layer_fn(
         propagation:
         slope:
         mapping_keras2decomon_classes:
+        finetune: specify if finetuning is allowed
         **kwargs:
 
     Returns:
@@ -645,6 +664,7 @@ def include_kwargs_layer_fn(
             perturbation_domain=perturbation_domain,
             propagation=propagation,
             mapping_keras2decomon_classes=mapping_keras2decomon_classes,
+            finetune=finetune,
             **kwargs,
         )
 

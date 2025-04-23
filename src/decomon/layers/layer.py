@@ -116,6 +116,7 @@ class DecomonLayer(Wrapper):
         layer_backward: Layer = None,
         layer_pos: Layer = None,
         layer_neg: Layer = None,
+        finetune: bool = False,
         **kwargs: Any,
     ):
         """
@@ -180,6 +181,8 @@ class DecomonLayer(Wrapper):
         self.layer_backward = layer_backward
         self.layer_pos = layer_pos
         self.layer_neg = layer_neg
+
+        self.finetune = finetune
 
     def create_inputs_outputs_spec(
         self,
