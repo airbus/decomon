@@ -75,7 +75,7 @@ def test_split_activation_do_nothing(layer_class, layer_kwargs):
 
 def test_split_activation_uninitialized_layer_ko():
     layer = Dense(3, activation="relu")
-    with pytest.raises(ValueError):
+    with pytest.raises(AttributeError):
         layers = split_activation(layer)
 
 
