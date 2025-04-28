@@ -862,6 +862,9 @@ def get_adv_noise(
         if eps >= 0:
             decomon_model.set_domain(perturbation_domain)
 
+    assert isinstance(
+        model.perturbation_domain, BallDomain
+    ), "decomon model must have a ball perturbation domain for get_adv_noise()"
     eps = model.perturbation_domain.eps
 
     # if missing batch axis, add it
