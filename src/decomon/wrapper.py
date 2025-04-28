@@ -40,13 +40,13 @@ def prepare_labels(labels: LabelType, n_batch: int) -> np.typing.NDArray[np.int_
 ##### ADVERSARIAL ROBUSTTNESS #####
 def get_adv_box(
     model: Union[keras.Model, DecomonModel],
-    x_min: npt.NDArray[np.float_],
-    x_max: npt.NDArray[np.float_],
+    x_min: npt.NDArray[np.float64],
+    x_max: npt.NDArray[np.float64],
     source_labels: LabelType,
     target_labels: Optional[LabelType] = None,
     batch_size: int = -1,
     n_sub_boxes: int = 1,
-) -> npt.NDArray[np.float_]:
+) -> npt.NDArray[np.float64]:
     """if the output is negative, then it is a formal guarantee that there is no adversarial examples
 
     Args:
@@ -152,7 +152,7 @@ def get_adv_box(
         n_label = source_labels.shape[-1]
 
         # two possitible cases: the model improves the bound based on the knowledge of the labels
-        output: list[npt.NDArray[np.float_]]
+        output: list[npt.NDArray[np.float64]]
         needs_backward_bounds = len(decomon_model.inputs) > 1
         if needs_backward_bounds:  # backward bounds needed
             C = np.diag([1] * n_label)[None] - source_labels[:, :, None]
@@ -161,12 +161,12 @@ def get_adv_box(
             output = decomon_model.predict_on_single_batch_np(perturbation_domain_input)  # type: ignore
 
         def get_ibp_score(
-            u_c: npt.NDArray[np.float_],
-            l_c: npt.NDArray[np.float_],
+            u_c: npt.NDArray[np.float64],
+            l_c: npt.NDArray[np.float64],
             source_tensor: npt.NDArray[np.int_],
             target_tensor: Optional[npt.NDArray[np.int_]] = None,
             backward: bool = False,
-        ) -> npt.NDArray[np.float_]:
+        ) -> npt.NDArray[np.float64]:
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
 
@@ -188,15 +188,15 @@ def get_adv_box(
             return np.max(np.max(upper, -2), -1)
 
         def get_affine_score(
-            z_tensor: npt.NDArray[np.float_],
-            w_u: npt.NDArray[np.float_],
-            b_u: npt.NDArray[np.float_],
-            w_l: npt.NDArray[np.float_],
-            b_l: npt.NDArray[np.float_],
+            z_tensor: npt.NDArray[np.float64],
+            w_u: npt.NDArray[np.float64],
+            b_u: npt.NDArray[np.float64],
+            w_l: npt.NDArray[np.float64],
+            b_l: npt.NDArray[np.float64],
             source_tensor: npt.NDArray[np.int_],
             target_tensor: Optional[npt.NDArray[np.int_]] = None,
             backward: bool = False,
-        ) -> npt.NDArray[np.float_]:
+        ) -> npt.NDArray[np.float64]:
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
 
@@ -275,12 +275,12 @@ def get_adv_box(
 
 def check_adv_box(
     model: Union[keras.Model, DecomonModel],
-    x_min: npt.NDArray[np.float_],
-    x_max: npt.NDArray[np.float_],
+    x_min: npt.NDArray[np.float64],
+    x_max: npt.NDArray[np.float64],
     source_labels: npt.NDArray[np.int_],
     target_labels: Optional[npt.NDArray[np.int_]] = None,
     batch_size: int = -1,
-) -> npt.NDArray[np.float_]:
+) -> npt.NDArray[np.float64]:
     """if the output is negative, then it is a formal guarantee that there is no adversarial examples
 
     Args:
@@ -382,14 +382,14 @@ def check_adv_box(
         w_l_f, b_l_f, w_u_f, b_u_f = decomon_model.compute_affine_bounds_np([perturbation_domain_input])
 
         def get_affine_sample(
-            z_tensor: npt.NDArray[np.float_],
-            w_u: npt.NDArray[np.float_],
-            b_u: npt.NDArray[np.float_],
-            w_l: npt.NDArray[np.float_],
-            b_l: npt.NDArray[np.float_],
+            z_tensor: npt.NDArray[np.float64],
+            w_u: npt.NDArray[np.float64],
+            b_u: npt.NDArray[np.float64],
+            w_l: npt.NDArray[np.float64],
+            b_l: npt.NDArray[np.float64],
             source_tensor: npt.NDArray[np.int_],
             target_tensor: Optional[npt.NDArray[np.int_]] = None,
-        ) -> npt.NDArray[np.float_]:
+        ) -> npt.NDArray[np.float64]:
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
 
@@ -425,11 +425,11 @@ def check_adv_box(
 #### FORMAL BOUNDS ######
 def get_upper_box(
     model: Union[keras.Model, DecomonModel],
-    x_min: npt.NDArray[np.float_],
-    x_max: npt.NDArray[np.float_],
+    x_min: npt.NDArray[np.float64],
+    x_max: npt.NDArray[np.float64],
     batch_size: int = -1,
     n_sub_boxes: int = 1,
-) -> npt.NDArray[np.float_]:
+) -> npt.NDArray[np.float64]:
     """upper bound the maximum of a model in a given box
 
     Args:
@@ -448,11 +448,11 @@ def get_upper_box(
 
 def get_lower_box(
     model: Union[keras.Model, DecomonModel],
-    x_min: npt.NDArray[np.float_],
-    x_max: npt.NDArray[np.float_],
+    x_min: npt.NDArray[np.float64],
+    x_max: npt.NDArray[np.float64],
     batch_size: int = -1,
     n_sub_boxes: int = 1,
-) -> npt.NDArray[np.float_]:
+) -> npt.NDArray[np.float64]:
     """lower bound the minimum of a model in a given box
 
     Args:
@@ -471,11 +471,11 @@ def get_lower_box(
 
 def get_range_box(
     model: Union[keras.Model, DecomonModel],
-    x_min: npt.NDArray[np.float_],
-    x_max: npt.NDArray[np.float_],
+    x_min: npt.NDArray[np.float64],
+    x_max: npt.NDArray[np.float64],
     batch_size: int = -1,
     n_sub_boxes: int = 1,
-) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     """Bound the outputs of a model in a given box
 
     Args:
@@ -553,11 +553,11 @@ def get_range_box(
 # get upper bound of a sample with bounded noise
 def get_upper_noise(
     model: Union[keras.Model, DecomonModel],
-    x: npt.NDArray[np.float_],
+    x: npt.NDArray[np.float64],
     eps: float,
     p: float = np.inf,
     batch_size: int = -1,
-) -> npt.NDArray[np.float_]:
+) -> npt.NDArray[np.float64]:
     """upper bound the maximum of a model in an Lp Ball
 
     Args:
@@ -579,11 +579,11 @@ def get_upper_noise(
 # get upper bound of a sample with bounded noise
 def get_lower_noise(
     model: Union[keras.Model, DecomonModel],
-    x: npt.NDArray[np.float_],
+    x: npt.NDArray[np.float64],
     eps: float,
     p: float = np.inf,
     batch_size: int = -1,
-) -> npt.NDArray[np.float_]:
+) -> npt.NDArray[np.float64]:
     """lower bound the minimum of a model in an Lp Ball
 
     Args:
@@ -605,11 +605,11 @@ def get_lower_noise(
 # get upper bound of a sample with bounded noise
 def get_range_noise(
     model: Union[keras.Model, DecomonModel],
-    x: npt.NDArray[np.float_],
+    x: npt.NDArray[np.float64],
     eps: float,
     p: float = np.inf,
     batch_size: int = -1,
-) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     """Bound the output of a model on an Lp Ball
 
     Args:
@@ -669,8 +669,8 @@ def get_range_noise(
 
 
 def refine_boxes(
-    x_min: npt.NDArray[np.float_], x_max: npt.NDArray[np.float_], n_sub_boxes: int = 10
-) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
+    x_min: npt.NDArray[np.float64], x_max: npt.NDArray[np.float64], n_sub_boxes: int = 10
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     # flatten x_min and x_max
     shape = list(x_min.shape[1:])
     output_dim = np.prod(shape)
@@ -684,8 +684,8 @@ def refine_boxes(
     X_max = np.zeros((len(x_max), 1, n)) + x_max[:, None]
 
     def split(
-        x_min: npt.NDArray[np.float_], x_max: npt.NDArray[np.float_], j: npt.NDArray[np.int_]
-    ) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
+        x_min: npt.NDArray[np.float64], x_max: npt.NDArray[np.float64], j: npt.NDArray[np.int_]
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         n_0 = len(x_min)
         n_k = x_min.shape[1]
 
@@ -718,16 +718,16 @@ def refine_boxes(
 
 
 def refine_box(
-    func: Callable[..., npt.NDArray[np.float_]],
+    func: Callable[..., npt.NDArray[np.float64]],
     model: Union[keras.Model, DecomonModel],
-    x_min: npt.NDArray[np.float_],
-    x_max: npt.NDArray[np.float_],
+    x_min: npt.NDArray[np.float64],
+    x_max: npt.NDArray[np.float64],
     n_split: int,
     source_labels: Optional[npt.NDArray[np.int_]] = None,
     target_labels: Optional[npt.NDArray[np.int_]] = None,
     batch_size: int = -1,
     random: bool = True,
-) -> npt.NDArray[np.float_]:
+) -> npt.NDArray[np.float64]:
     if func.__name__ not in [
         elem.__name__ for elem in [get_upper_box, get_lower_box, get_adv_box, check_adv_box, get_range_box]
     ]:
@@ -763,7 +763,9 @@ def refine_box(
     if func.__name__ == get_lower_box.__name__:
         maximize = False
 
-    def priv_func(x_min_split: npt.NDArray[np.float_], x_max_split: npt.NDArray[np.float_]) -> npt.NDArray[np.float_]:
+    def priv_func(
+        x_min_split: npt.NDArray[np.float64], x_max_split: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]:
         if func.__name__ in [elem.__name__ for elem in [get_upper_box, get_lower_box, get_range_box]]:
             results = func(decomon_model, x_min=x_min_split, x_max=x_max_split, batch_size=batch_size)
 
@@ -824,13 +826,13 @@ def refine_box(
 ### adversarial robustness Lp norm
 def get_adv_noise(
     model: Union[keras.Model, DecomonModel],
-    x: npt.NDArray[np.float_],
+    x: npt.NDArray[np.float64],
     source_labels: LabelType,
     eps: float = 0.0,
     p: float = np.inf,
     target_labels: Optional[LabelType] = None,
     batch_size: int = -1,
-) -> npt.NDArray[np.float_]:
+) -> npt.NDArray[np.float64]:
     """if the output is negative, then it is a formal guarantee that there is no adversarial examples
 
     Args:
@@ -919,11 +921,11 @@ def get_adv_noise(
         output = decomon_model.predict_on_single_batch_np(x)
 
         def get_ibp_score(
-            u_c: npt.NDArray[np.float_],
-            l_c: npt.NDArray[np.float_],
+            u_c: npt.NDArray[np.float64],
+            l_c: npt.NDArray[np.float64],
             source_tensor: npt.NDArray[np.int_],
             target_tensor: Optional[npt.NDArray[np.int_]] = None,
-        ) -> npt.NDArray[np.float_]:
+        ) -> npt.NDArray[np.float64]:
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
 
@@ -942,14 +944,14 @@ def get_adv_noise(
             return np.max(np.max(upper, -2), -1)
 
         def get_affine_score(
-            z_tensor: npt.NDArray[np.float_],
-            w_u: npt.NDArray[np.float_],
-            b_u: npt.NDArray[np.float_],
-            w_l: npt.NDArray[np.float_],
-            b_l: npt.NDArray[np.float_],
+            z_tensor: npt.NDArray[np.float64],
+            w_u: npt.NDArray[np.float64],
+            b_u: npt.NDArray[np.float64],
+            w_l: npt.NDArray[np.float64],
+            b_l: npt.NDArray[np.float64],
             source_tensor: npt.NDArray[np.int_],
             target_tensor: Optional[npt.NDArray[np.int_]] = None,
-        ) -> npt.NDArray[np.float_]:
+        ) -> npt.NDArray[np.float64]:
             if target_tensor is None:
                 target_tensor = 1 - source_tensor
 
