@@ -1,3 +1,4 @@
+import os
 from typing import Optional, Union
 
 import keras
@@ -7,6 +8,7 @@ import numpy as np
 import pytest
 from keras import KerasTensor, Model, Sequential
 from keras.layers import Activation, Add, Conv2D, Dense, Flatten, Input
+from keras.src.backend.common.global_state import set_global_attribute
 from pytest_cases import (
     fixture,
     fixture_union,
@@ -26,6 +28,17 @@ from decomon.keras_utils import (
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.perturbation_domain import BoxDomain
 from decomon.types import BackendTensor, Tensor
+
+
+def pytest_sessionstart(session):
+    """
+    Called after the Session object has been created and
+    before performing collection and entering the run test loop.
+    """
+    if "KERAS_TORCH_DEVICE" in os.environ:
+        # to avoid strange errors on macos-latest github runner
+        set_global_attribute("torch_device", os.environ["KERAS_TORCH_DEVICE"])
+
 
 empty, diag, nobatch = param_fixtures(
     "empty, diag, nobatch",

@@ -110,6 +110,8 @@ jobs:
       - name: Run tox target env for ${{ env.TOXENV }}
         run: |
           python -m tox -e convert-doc-to-test  # extract code blocks from doc to test them
+          # set default torch device to cpu if on macos-latest to avois mps-related errors
+          export KERAS_TORCH_DEVICE=cpu
           python -m tox  # launch environment set by TOXENV at previous step
       - name: Check if coverage report exists
         id: check-coverage-report
