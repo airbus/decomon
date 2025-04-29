@@ -323,7 +323,10 @@ When deployed in the release doc, the pip spec for decomon will be automatically
 - Whenever adding some code, think to add some tests to the `tests/` folder.
 - Whenever fixing a bug, think to add a test that crashes before fixing the bug and does not afterwards.
 
-Follow [above instructions](#running-unit-tests) to run them with pytest.
+Follow [above instructions](#running-unit-tests) to run them.
+
+You can find more information how to easily add a test for a new decomon layer or how to test decomon clone on
+a new keras model in the dedicated page on [unit tests](tests).
 
 ### Writing the documentation
 
