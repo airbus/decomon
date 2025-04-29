@@ -38,5 +38,6 @@ getting_started
 tutorials
 api/modules
 contribute
+tests
 Github  <https://github.com/airbus/decomon>
 ```
