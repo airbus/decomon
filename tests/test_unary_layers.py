@@ -1,5 +1,6 @@
 import keras.ops as K
 import numpy as np
+import pytest
 from keras.layers import Activation, Dense
 from pytest_cases import fixture, fixture_union, parametrize, unpack_fixture
 
@@ -43,10 +44,10 @@ activation_keras_kwargs, activation_decomon_kwargs = unpack_fixture(
 
 
 @parametrize(
-    "decomon_layer_class, decomon_layer_kwargs, keras_layer_class, keras_layer_kwargs, is_actually_linear",
+    "decomon_layer_class, decomon_layer_kwargs, keras_layer_class, keras_layer_kwargs",
     [
-        (DecomonDense, {}, Dense, dense_keras_kwargs, None),
-        (DecomonActivation, activation_decomon_kwargs, Activation, activation_keras_kwargs, None),
+        (DecomonDense, {}, Dense, dense_keras_kwargs),
+        (DecomonActivation, activation_decomon_kwargs, Activation, activation_keras_kwargs),
     ],
 )
 def test_decomon_unary_layer(
@@ -54,7 +55,6 @@ def test_decomon_unary_layer(
     decomon_layer_kwargs,
     keras_layer_class,
     keras_layer_kwargs,
-    is_actually_linear,
     ibp,
     affine,
     propagation,
@@ -71,13 +71,15 @@ def test_decomon_unary_layer(
     helpers,
 ):
     decimal = 4
-    if is_actually_linear is None:
-        is_actually_linear = decomon_layer_class.linear
 
-    # init + build keras layer
+    # symbolic inputs for keras layer and keras model (supposed to contain the layer)
     keras_symbolic_model_input = keras_symbolic_model_input_fn()
     keras_symbolic_layer_input = keras_symbolic_layer_input_fn(keras_symbolic_model_input)
+
+    # init keras layer
     layer = keras_layer_class(**keras_layer_kwargs)
+
+    # build keras layer
     layer(keras_symbolic_layer_input)
 
     # randomize weights between -1 and 1 => non-zero biases
@@ -155,7 +157,7 @@ def test_decomon_unary_layer(
     )
 
     # before propagation through linear layer lower == upper => lower == upper after propagation
-    if is_actually_linear:
+    if decomon_layer_class.linear:
         helpers.assert_decomon_output_lower_equal_upper(
             decomon_output,
             ibp=ibp,
