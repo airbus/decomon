@@ -1377,6 +1377,57 @@ def helpers():
 
 
 @fixture
+def simple_layer_input_functions_from_input_shape_wo_batchsize(
+    ibp, affine, propagation, perturbation_domain, batchsize, equal_ibp, empty, diag, nobatch, helpers
+):
+    keras_symbolic_model_input_fn = lambda input_shape: Input(input_shape)
+    keras_symbolic_layer_input_fn = lambda input_shape, keras_symbolic_model_input: keras_symbolic_model_input
+
+    decomon_symbolic_input_fn = lambda input_shape, output_shape, linear: helpers.get_decomon_symbolic_inputs(
+        model_input_shape=input_shape,
+        model_output_shape=output_shape,
+        layer_input_shape=input_shape,
+        layer_output_shape=output_shape,
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        perturbation_domain=perturbation_domain,
+        empty=empty,
+        diag=diag,
+        nobatch=nobatch,
+        for_linear_layer=linear,
+    )
+
+    keras_model_input_fn = lambda input_shape: helpers.generate_random_tensor(input_shape, batchsize=batchsize)
+    keras_layer_input_fn = lambda input_shape, keras_model_input: keras_model_input
+
+    decomon_input_fn = lambda input_shape, keras_model_input, keras_layer_input, output_shape, linear: helpers.generate_simple_decomon_layer_inputs_from_keras_input(
+        keras_input=keras_layer_input,
+        layer_output_shape=output_shape,
+        ibp=ibp,
+        affine=affine,
+        propagation=propagation,
+        perturbation_domain=perturbation_domain,
+        empty=empty,
+        diag=diag,
+        nobatch=nobatch,
+        for_linear_layer=linear,
+        equal_ibp=equal_ibp,
+    )
+
+    return (
+        keras_symbolic_model_input_fn,
+        keras_symbolic_layer_input_fn,
+        decomon_symbolic_input_fn,
+        keras_model_input_fn,
+        keras_layer_input_fn,
+        decomon_input_fn,
+        equal_ibp,
+        True,
+    )
+
+
+@fixture
 def simple_layer_input_functions(
     ibp, affine, propagation, perturbation_domain, batchsize, input_shape, equal_ibp, empty, diag, nobatch, helpers
 ):
