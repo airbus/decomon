@@ -1,11 +1,11 @@
 import keras.ops as K
 import numpy as np
 import pytest
-from keras.layers import Activation, Dense
+from keras.layers import Activation, Dense, ZeroPadding2D
 from pytest_cases import fixture, fixture_union, parametrize, unpack_fixture
 
 from decomon.keras_utils import batch_multid_dot
-from decomon.layers import DecomonActivation, DecomonDense
+from decomon.layers import DecomonActivation, DecomonDense, DecomonZeroPadding2D
 from decomon.layers.activations.activation import DecomonLinear
 
 
@@ -48,6 +48,7 @@ activation_keras_kwargs, activation_decomon_kwargs = unpack_fixture(
     [
         (DecomonDense, {}, Dense, dense_keras_kwargs),
         (DecomonActivation, activation_decomon_kwargs, Activation, activation_keras_kwargs),
+        (DecomonZeroPadding2D, {}, ZeroPadding2D, dict(padding=((1, 3), (0, 5)))),
     ],
 )
 def test_decomon_unary_layer(
@@ -78,6 +79,11 @@ def test_decomon_unary_layer(
 
     # init keras layer
     layer = keras_layer_class(**keras_layer_kwargs)
+
+    # skip some cases where the input shape is incompatible with the layer
+    if isinstance(layer, ZeroPadding2D):
+        if len(keras_symbolic_layer_input.shape) != 4:
+            pytest.skip("ZeroPadding2D works only with 4D inputs")
 
     # build keras layer
     layer(keras_symbolic_layer_input)
