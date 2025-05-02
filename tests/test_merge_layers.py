@@ -78,17 +78,17 @@ class DecomonNonLinearNonDiagAdd(DecomonMerge):
 T = TypeVar("T")
 
 
-def double_input(input: T) -> list[T]:
-    return [input] * 2
+def repeat_input(input: T, n_repeat) -> list[T]:
+    return [input] * n_repeat
 
 
 @pytest.mark.parametrize(
-    "decomon_layer_class, decomon_layer_kwargs, keras_layer_class, keras_layer_kwargs, is_actually_linear",
+    "decomon_layer_class, decomon_layer_kwargs, keras_layer_class, keras_layer_kwargs, arity, is_actually_linear",
     [
-        (DecomonAdd, {}, Add, {}, True),
-        (DecomonNonDiagAdd, {}, Add, {}, True),
-        (DecomonNonLinearAdd, {}, Add, {}, True),
-        (DecomonNonLinearNonDiagAdd, {}, Add, {}, True),
+        (DecomonAdd, {}, Add, {}, 2, None),
+        (DecomonNonDiagAdd, {}, Add, {}, 2, True),
+        (DecomonNonLinearAdd, {}, Add, {}, 2, True),
+        (DecomonNonLinearNonDiagAdd, {}, Add, {}, 2, True),
     ],
 )
 def test_decomon_merge(
@@ -96,6 +96,7 @@ def test_decomon_merge(
     decomon_layer_kwargs,
     keras_layer_class,
     keras_layer_kwargs,
+    arity,
     is_actually_linear,
     ibp,
     affine,
@@ -120,7 +121,7 @@ def test_decomon_merge(
     keras_symbolic_model_input = keras_symbolic_model_input_fn()
     keras_symbolic_layer_input_0 = keras_symbolic_layer_input_fn(keras_symbolic_model_input)
     # we merge twice the same input
-    keras_symbolic_layer_input = double_input(keras_symbolic_layer_input_0)
+    keras_symbolic_layer_input = repeat_input(keras_symbolic_layer_input_0, n_repeat=arity)
     layer = keras_layer_class(**keras_layer_kwargs)
     layer(keras_symbolic_layer_input)
 
@@ -142,7 +143,7 @@ def test_decomon_merge(
 
     decomon_symbolic_inputs_0 = decomon_symbolic_input_fn(output_shape=output_shape, linear=decomon_layer.linear)
     decomon_symbolic_inputs = helpers.generate_merging_decomon_input_from_single_decomon_inputs(
-        decomon_inputs=double_input(decomon_symbolic_inputs_0),
+        decomon_inputs=repeat_input(decomon_symbolic_inputs_0, n_repeat=arity),
         ibp=ibp,
         affine=affine,
         propagation=propagation,
@@ -167,9 +168,9 @@ def test_decomon_merge(
         output_shape=output_shape,
         linear=decomon_layer.linear,
     )
-    keras_layer_input = double_input(keras_layer_input_0)
+    keras_layer_input = repeat_input(keras_layer_input_0, n_repeat=arity)
     decomon_inputs = helpers.generate_merging_decomon_input_from_single_decomon_inputs(
-        decomon_inputs=double_input(decomon_inputs_0),
+        decomon_inputs=repeat_input(decomon_inputs_0, n_repeat=arity),
         ibp=ibp,
         affine=affine,
         propagation=propagation,
