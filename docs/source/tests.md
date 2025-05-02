@@ -49,11 +49,11 @@ def test_decomon_unary_layer(...):
 ```
 
 Each line contains a tuple giving
-- decomon_layer_class: the class of the decomon layer to test
-- decomon_layer_kwargs: the keyword argument to use to initialize the decomon layer. Can be an empty dictionary,
+- `decomon_layer_class`: the class of the decomon layer to test
+- `decomon_layer_kwargs`: the keyword arguments to use to initialize the decomon layer. Can be an empty dictionary,
   can be used e.g. to test different slope modelling for activation layers
-- keras_layer_class: the corresponding keras layer class
-- keras_layer_kwargs: the keyword arguments to use to initialize the keras layer. Can be an empty dictionary.
+- `keras_layer_class`: the corresponding keras layer class
+- `keras_layer_kwargs`: the keyword arguments to use to initialize the keras layer. Can be an empty dictionary.
 
 If you want to test several parametrization of your decomon layer or of the keras layer it will have to compute the bounds,
 you can either
@@ -156,6 +156,56 @@ To test your decomon layer for unary keras layer you have to edit "tests/test_un
 
 ### Merging layers
 
+For merging layers (i.e. layers needing multiple inputs), the principle is exactly the same.
+The test `test_decomon_merge()` in "tests/test_merge_layers.py" is also parametrized with
+```python
+@pytest.mark.parametrize(
+    "decomon_layer_class, decomon_layer_kwargs, keras_layer_class, keras_layer_kwargs, arity, is_actually_linear",
+    [
+        (DecomonAdd, {}, Add, {}, 2, None),
+        ...
+    ],
+)
+def test_decomon_merge(...)
+    ...
+```
+with
+- `decomon_layer_class`: the class of the decomon layer to test
+- `decomon_layer_kwargs`: the keyword arguments to use to initialize the decomon layer. Can be an empty dictionary.
+- `keras_layer_class`: the corresponding keras layer class
+- `keras_layer_kwargs`: the keyword arguments to use to initialize the keras layer. Can be an empty dictionary.
+- `arity`: the arity of the keras layer in this test. Usually 2 but could be more.
+   For instance, can be used to test `Add` layer on a list of 3 inputs.
+- `is_actually_linear`: optional, boolean. Left it to None. It is used to test internal mechanics of decomon layer
+  depending on linearity of corresponing keras layer. We implement here a "non-linear" version of DecomonAdd to test
+  that event without the shortcuts used for linear layers, we still find the tight bounds (tested because `is_actually_linear` is set to `True`).
+
+The test use exactly the same inputs as for unary layers, except it repeats it according to the arity of the layer.
 
 
 ## Models
+
+We test decomon conversion on whole keras models in "tests/test_clone.py" with `test_clone()`.
+
+This tests several model inputs (as for layers):
+
+#### Layer inputs tested
+
+- "simple" ones which are generated at random thanks to fixture `simple_layer_input_functions` (defined in "conftest.py")
+  with given shapes:
+  - "0d": (None, 1),
+  - "1d": (None, 3),
+  - "multid": (None, 5, 6, 2)
+- "standard" ones which were already defined before the big refactoring (version <= 0.2.1), with several parameters:
+  - "0d": parameter `n` => different modelled functions, shape (None, 1)
+  - "1d": parameter `odd` => shape (None, 2) or (None, 3)
+  - "multid": parameter `data_format` ("channels_last" or "channels_first") => shape (None, 6, 6, 2) or (None, 2, 6, 6)
+
+
+### Keras models tested
+
+The models tested are outputs of the fixture `toy_model_fn` (see "conftest.py"), which takes
+a string argument `toy_model_name` which is here the parameter of the test.
+To add a new model to test,
+- modify `tests/conftest.py:toy_model_fn()`,
+- add the proper model_name in the `@parametrize()` above `tests/test_clone.py:test_clone()`.
