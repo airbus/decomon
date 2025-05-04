@@ -403,13 +403,48 @@ class DecomonLayer(Wrapper):
 
     def _forward_affine_propagate_linear(
         self,
-        layer,
-        layer_pos,
-        layer_neg,
-        layer_input_shape_wo_batchsize,
-        layer_output_shape_wo_batchsize,
+        layer: Layer,
+        layer_pos: Union[None, Layer],
+        layer_neg: Union[None, Layer],
+        layer_input_shape_wo_batchsize: list[int],
+        layer_output_shape_wo_batchsize: list[int],
         input_affine_bounds: list[Tensor],
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        """Propagate affine input bounds through a linear Keras layer.
+
+        This function performs forward affine bound propagation when the current layer is linear.
+        It supports different scenarios including diagonal bounds, monotonicity assumptions (increasing/decreasing),
+        and general affine propagation with separate positive/negative weights.
+
+        Args:
+            layer: linear layer used for standard propagation.
+            layer_pos: Layer variant that applies positive weights only, for mixed monotonicity handling.
+            layer_neg: Layer variant that applies negative weights only, for mixed monotonicity handling.
+            layer_input_shape_wo_batchsize: Input shape of the layer, excluding the batch size.
+            layer_output_shape_wo_batchsize: Output shape of the layer, excluding the batch size.
+            input_affine_bounds: List of four tensors [W_lower, b_lower, W_upper, b_upper] representing
+                the lower and upper affine bounds of the layer input with respect to model inputs.
+
+        Returns:
+            Tuple of four tensors (W_lower_out, b_lower_out, W_upper_out, b_upper_out), representing
+                the propagated affine bounds on the layer output.
+
+        Special Cases:
+            - If `input_affine_bounds` are diagonal, a simplified representation is used, and the output
+                is computed by composing the affine representations.
+            - If the input is from a linear layer, standard affine transformation is applied.
+            - If `self.increasing` or `self.decreasing` is True, it uses that monotonicity property
+                to compute the bounds more efficiently.
+            - If both `layer_pos` and `layer_neg` are provided, the method uses positive and negative weight
+                splitting to handle non-monotonic activations.
+
+        Note:
+            - This method assumes the layer has already been properly initialized and is compatible with
+                the input affine shape.
+            - The input bounds must match the expected shapes defined by `layer_input_shape_wo_batchsize`.
+
+        """
+
         w_l_in, b_l_in, w_u_in, b_u_in = input_affine_bounds
 
         is_from_linear = self.inputs_outputs_spec.is_wo_batch_bounds(input_affine_bounds)
