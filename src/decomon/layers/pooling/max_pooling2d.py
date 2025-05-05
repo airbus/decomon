@@ -1,11 +1,11 @@
 from typing import Any, Optional
 
-import keras.ops as K  # type:ignore
-import numpy as np  # type:ignore
-from jacobinet.layers.convert import get_backward  # type:ignore
-from jacobinet.layers.pooling.utils_max import get_linear_block_max  # type:ignore
-from keras.layers import Layer, MaxPooling2D, Reshape  # type:ignore
-from keras.models import Sequential  # type:ignore
+import keras.ops as K
+import numpy as np
+from jacobinet.layers.convert import get_backward
+from jacobinet.layers.pooling.utils_max import get_linear_block_max
+from keras.layers import Layer, MaxPooling2D, Reshape
+from keras.models import Sequential
 
 from decomon.constants import Propagation
 from decomon.layers import DecomonLayer
@@ -25,7 +25,7 @@ from .utils_conv import get_conv_op, get_in_channels
 
 class DecomonMaxPooling2D(DecomonLayer):
     layer: MaxPooling2D
-    linear: False
+    linear = False
     increasing = True
 
     def __init__(
@@ -66,7 +66,7 @@ class DecomonMaxPooling2D(DecomonLayer):
         self.axis = layer_backward_maxpool.axis
 
     def get_affine_bounds_with_linear_block_inputs(
-        self, lower_max: Tensor, upper_max: Tensor, axis=int
+        self, lower_max: Tensor, upper_max: Tensor, axis: int
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         w_l_max, b_l_max = get_affine_lower_bound_max(lower_max, upper_max, axis=axis, keepdims=False)
         w_u_max, b_u_max = get_affine_upper_bound_max(lower_max, upper_max, axis=axis, keepdims=False)
@@ -113,9 +113,9 @@ class DecomonMaxPooling2D(DecomonLayer):
             b_u = b_u_max
             b_l = b_l_max
 
-        return [w_l, b_l, w_u, b_u]
+        return (w_l, b_l, w_u, b_u)
 
-    def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         lower_max = self.linear_block(lower)
         upper_max = self.linear_block(upper)
 
@@ -201,7 +201,7 @@ class DecomonMaxPooling2D(DecomonLayer):
         # get input_constant_bounds after linear_block
         if is_from_linear:
             # add broadcast dimension for batch
-            linear_bounds = [K.expand_dims(e, 0) for e in linear_bounds]
+            linear_bounds = tuple(K.expand_dims(e, 0) for e in linear_bounds)
         w_l_out, b_l_out, w_u_out, b_u_out = linear_bounds
         dim = np.prod([self.layer.pool_size])
         broadcast_shape = [1] + [1] * len(self.model_input_shape) + [1] * len(layer_output_shape_wo_batchsize)
@@ -231,10 +231,10 @@ class DecomonMaxPooling2D(DecomonLayer):
         b_u_out = K.sum(K.sum(w_u_max_ * b_u_out, axis=tuple(np.arange(1, N + 1))), self.axis) + b_u_max
         b_l_out = K.sum(K.sum(w_l_max_ * b_l_out, axis=tuple(np.arange(1, N + 1))), self.axis) + b_l_max
 
-        return [w_l_out, b_l_out, w_u_out, b_u_out]
+        return (w_l_out, b_l_out, w_u_out, b_u_out)
 
     def backward_affine_propagate_single_channel(
-        self, lower, upper, output_affine_bounds: list[Tensor]
+        self, lower: Tensor, upper: Tensor, output_affine_bounds: list[Tensor]
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         is_output_linear = self.inputs_outputs_spec.is_wo_batch_bounds((output_affine_bounds))
 
@@ -252,8 +252,7 @@ class DecomonMaxPooling2D(DecomonLayer):
                 is_diagonal = w_.shape[1:] == b_.shape[1:]
         else:
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
-            layer_affine_bounds = [w_l, b_l, w_u, b_u]
-            return layer_affine_bounds
+            return (w_l, b_l, w_u, b_u)
 
         if is_diagonal:
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
@@ -334,10 +333,10 @@ class DecomonMaxPooling2D(DecomonLayer):
         w_l = w_l_0 - w_u_1
         b_l = b_l_0 - b_u_1 + b_l_out
 
-        return [w_l, b_l, w_u, b_u]
+        return (w_l, b_l, w_u, b_u)
 
     def backward_affine_propagate(
-        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
+        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor], **kwargs: Any
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Propagate model affine bounds in backward direction.
 
@@ -399,8 +398,7 @@ class DecomonMaxPooling2D(DecomonLayer):
                 is_diagonal = w_.shape[1:] == b_.shape[1:]
         else:
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
-            layer_affine_bounds = [w_l, b_l, w_u, b_u]
-            return layer_affine_bounds
+            return (w_l, b_l, w_u, b_u)
 
         if is_diagonal:
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
@@ -424,7 +422,7 @@ class DecomonMaxPooling2D(DecomonLayer):
         if is_output_linear:
             output_affine_bounds = [K.expand_dims(e, 0) for e in output_affine_bounds]
 
-        [w_l_out, b_l_out, w_u_out, b_u_out] = output_affine_bounds
+        w_l_out, b_l_out, w_u_out, b_u_out = output_affine_bounds
 
         lower_max = self.linear_block(lower)
         upper_max = self.linear_block(upper)
@@ -482,4 +480,4 @@ class DecomonMaxPooling2D(DecomonLayer):
         w_l = w_l_0 - w_u_1
         b_l = b_l_0 - b_u_1 + b_l_out
 
-        return [w_l, b_l, w_u, b_u]
+        return (w_l, b_l, w_u, b_u)

@@ -1,12 +1,22 @@
-from typing import Any
+from collections.abc import Callable
+from typing import Any, Optional
 
+import keras
 import keras.ops as K
 from keras.layers import BatchNormalization, Wrapper
 from keras.src import backend, ops
 
+from decomon.types import Tensor
+
 
 class BatchNormalization_kernel_constraint(Wrapper):
-    def __init__(self, layer: BatchNormalization, ops=K.maximum, add_bias=True, **kwargs: Any):
+    def __init__(
+        self,
+        layer: BatchNormalization,
+        ops: Callable[[Tensor, Tensor], Tensor] = K.maximum,
+        add_bias: bool = True,
+        **kwargs: Any,
+    ):
         super().__init__(layer=layer, **kwargs)
         self.ops = ops
         self.add_bias = add_bias
@@ -19,15 +29,15 @@ class BatchNormalization_kernel_constraint(Wrapper):
         self.axis = self.layer.axis
         self.epsilon = self.layer.epsilon
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: tuple[int, ...]) -> tuple[int, ...]:
         return self.layer.compute_output_shape(input_shape)
 
     @property
-    def gamma(self):
+    def gamma(self) -> keras.Variable:
         return self.ops(self.gamma_, 0)
 
     @property
-    def beta(self):
+    def beta(self) -> Optional[keras.Variable]:
         if self.beta_ is None:
             return self.beta_
         if self.add_bias:
@@ -36,13 +46,13 @@ class BatchNormalization_kernel_constraint(Wrapper):
             return 0.0 * self.beta_
 
     @property
-    def moving_mean(self):
+    def moving_mean(self) -> keras.Variable:
         if self.add_bias:
             return self.moving_mean_
         else:
             return 0.0 * self.moving_mean_
 
-    def call(self, inputs, training=None, mask=None):
+    def call(self, inputs: Tensor, training: Optional[bool] = None, mask: Optional[Tensor] = None) -> Tensor:
         # Check if the mask has one less dimension than the inputs.
         if mask is not None:
             if len(mask.shape) != len(inputs.shape) - 1:

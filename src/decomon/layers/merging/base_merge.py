@@ -31,13 +31,13 @@ class DecomonMerge(DecomonLayer):
         return len(self.keras_layer_input)
 
     @property
-    def layer_input_shape_wo_batchsize(self) -> list[int]:
+    def layer_input_shape_wo_batchsize(self) -> list[list[int]]:  # type: ignore
         if not isinstance(self.layer.input, list):
             return [list(self.layer.input.shape[1:])]
         else:
             return [list(e.shape[1:]) for e in self.layer.input]
 
-    def get_affine_representation(self) -> tuple[list[Tensor], Tensor]:
+    def get_affine_representation(self) -> tuple[list[Tensor], Tensor]:  # type: ignore
         """Get affine representation of the layer
 
         This computes the affine representation of the layer, when this is meaningful,
@@ -86,7 +86,7 @@ class DecomonMerge(DecomonLayer):
                 "`forward_ibp_propagate()`, `forward_affine_propagate()` and `backward_affine_propagate()`."
             )
 
-    def get_affine_bounds(
+    def get_affine_bounds(  # type: ignore
         self, lower: list[Tensor], upper: list[Tensor]
     ) -> tuple[list[Tensor], Tensor, list[Tensor], Tensor]:
         """Get affine bounds on layer outputs from layer inputs
@@ -243,7 +243,7 @@ class DecomonMerge(DecomonLayer):
                 b_l_out = self.layer(b_l_in_list)[0]
                 b_u_out = self.layer(b_u_in_list)[0]
 
-                return [w_l_out, b_l_out, w_u_out, b_u_out]
+                return (w_l_out, b_l_out, w_u_out, b_u_out)
 
             # reshape w
             w_l_in_list_ = [
@@ -260,14 +260,14 @@ class DecomonMerge(DecomonLayer):
                 w_u_out = self.layer(w_u_in_list_)
                 b_l_out = self.layer(b_l_in_list)
                 b_u_out = self.layer(b_u_in_list)
-                return [w_l_out, b_l_out, w_u_out, b_u_out]
+                return (w_l_out, b_l_out, w_u_out, b_u_out)
 
             if self.decreasing:
                 w_l_out = self.layer(w_l_in_list_)
                 w_u_out = self.layer(w_u_in_list_)
                 b_l_out = self.layer(b_l_in_list)
                 b_u_out = self.layer(b_u_in_list)
-                return [w_l_out, b_l_out, w_u_out, b_u_out]
+                return (w_l_out, b_l_out, w_u_out, b_u_out)
 
             else:
                 w, b = self.get_affine_representation()
@@ -336,7 +336,7 @@ class DecomonMerge(DecomonLayer):
             from_linear_layer_new = all(from_linear_add)
         return w_l_new, b_l_new, w_u_new, b_u_new
 
-    def backward_affine_propagate(
+    def backward_affine_propagate(  # type: ignore
         self, output_affine_bounds: list[Tensor], input_constant_bounds: list[list[Tensor]]
     ) -> list[tuple[Tensor, Tensor, Tensor, Tensor]]:
         """Propagate model affine bounds in backward direction.
@@ -476,7 +476,7 @@ class DecomonMerge(DecomonLayer):
             )
         ]
 
-    def call(self, inputs: list[Tensor]) -> list[Tensor]:
+    def call(self, inputs: list[Tensor], training: bool = False) -> list[Tensor]:
         """Propagate bounds in the specified direction `self.propagation`.
 
         Args:
@@ -514,4 +514,4 @@ class DecomonMerge(DecomonLayer):
             - in backward direction: affine_bounds_propagated_0 + ... + affine_bounds_propagated_k, affine bounds w.r.t to each keras layer input
 
         """
-        return super().call(inputs=inputs)
+        return super().call(inputs=inputs, training=training)

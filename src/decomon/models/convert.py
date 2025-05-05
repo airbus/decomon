@@ -2,9 +2,9 @@ import logging
 from collections.abc import Callable
 from typing import Any, Optional, Union
 
-import keras  # type:ignore
-from keras.layers import Layer  # type:ignore
-from keras.models import Model  # type:ignore
+import keras
+from keras.layers import Layer
+from keras.models import Model
 
 from decomon.constants import ConvertMethod, Propagation, Slope
 from decomon.layers import DecomonLayer
@@ -121,7 +121,7 @@ def convert(
     final_lower: bool = True,
     rm_last_softmax: bool = True,
     mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]] = None,
-    masks: Optional[dict[str, list[keras.KerasTensor]]] = None,
+    masks: Optional[dict[str, keras.KerasTensor]] = None,
     finetune: bool = False,
     **kwargs: Any,
 ) -> list[keras.KerasTensor]:
@@ -175,7 +175,7 @@ def convert(
     ibp, affine = get_ibp_affine_from_method(method)
     output: list[keras.KerasTensor] = []
 
-    ibp_output_map = {}
+    ibp_output_map: dict[int, list[keras.KerasTensor]] = {}
     if Propagation.FORWARD in propagations:
         output, forward_output_map, forward_layer_map = convert_forward(
             model=model,
@@ -273,8 +273,8 @@ def clone(
     from_linear_backward_bounds: Union[bool, list[bool]] = False,
     final_ibp: Optional[bool] = None,
     final_affine: Optional[bool] = None,
-    final_upper: Optional[bool] = True,
-    final_lower: Optional[bool] = True,
+    final_upper: bool = True,
+    final_lower: bool = True,
     layer_fn: Callable[..., DecomonLayer] = to_decomon,
     forward_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,

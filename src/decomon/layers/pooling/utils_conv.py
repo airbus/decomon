@@ -1,17 +1,15 @@
-from typing import Dict, Tuple
+from collections.abc import Callable
+from typing import Any, Union
 
-import keras  # type:ignore
-import keras.ops as K  # type:ignore
-import numpy as np  # type:ignore
-from keras.layers import (  # type:ignore
-    Conv2DTranspose,
-    DepthwiseConv2D,
-    Layer,
-    MaxPooling2D,
-)
+import keras
+import keras.ops as K
+import numpy as np
+from keras.layers import Conv2DTranspose, DepthwiseConv2D, Layer, MaxPooling2D
+
+from decomon.types import Tensor
 
 
-def get_in_channels(layer) -> int:
+def get_in_channels(layer: Union[Conv2DTranspose, DepthwiseConv2D, MaxPooling2D]) -> int:
     in_channels: int
     if layer.data_format == "channels_last":
         in_channels = layer.input.shape[-1]
@@ -21,11 +19,11 @@ def get_in_channels(layer) -> int:
     return in_channels
 
 
-def get_conv_op_config(config: Dict, in_channels: int) -> keras.Variable:
+def get_conv_op_config(config: dict[str, Any], in_channels: int) -> keras.Variable:
     pool_size_x: int
     pool_size_y: int
     pooling: int
-    kernel_pool: np.array.array
+    kernel_pool: np.ndarray
 
     pool_size_x, pool_size_y = config["pool_size"]
     pooling = pool_size_x * pool_size_y
@@ -42,15 +40,15 @@ def get_conv_op_config(config: Dict, in_channels: int) -> keras.Variable:
     return keras.Variable(kernel_pool, trainable=False)
 
 
-def get_conv_op(layer: MaxPooling2D) -> DepthwiseConv2D:
-    config: Dict = layer.get_config()
+def get_conv_op(layer: MaxPooling2D) -> tuple[DepthwiseConv2D, keras.Variable]:
+    config: dict[str, Any] = layer.get_config()
     in_channels = get_in_channels(layer)
     kernel: keras.Variable = get_conv_op_config(config, in_channels)
 
     # define convolution
     filters: int = np.prod(config["pool_size"])
     pool_size: tuple[int] = config["pool_size"]
-    strides: Tuple[int] = config["strides"]
+    strides: tuple[int] = config["strides"]
     padding: str = config["padding"]
     data_format: str = config["data_format"]
 
@@ -99,16 +97,16 @@ def get_backward_layer(layer: DepthwiseConv2D) -> Layer:
 
 
 def get_maxpool_backward_hull(
-    w_u_out_e,
-    w_u_out_pos_e,
-    w_u_out_neg_e,
-    w_l_out_pos_e,
-    w_l_out_neg_e,
-    upper_max,
-    lower_max,
-    axis,
-    get_affine_bounds_with_linear_block_inputs,
-):
+    w_u_out_e: Tensor,
+    w_u_out_pos_e: Tensor,
+    w_u_out_neg_e: Tensor,
+    w_l_out_pos_e: Tensor,
+    w_l_out_neg_e: Tensor,
+    upper_max: Tensor,
+    lower_max: Tensor,
+    axis: int,
+    get_affine_bounds_with_linear_block_inputs: Callable[[Tensor, Tensor, int], tuple[Tensor, Tensor, Tensor, Tensor]],
+) -> tuple[Tensor, Tensor, Tensor, Tensor]:
     # reshape lower_max and upper_max and update axis if necessary
     n_out = len(w_u_out_e.shape) - len(lower_max.shape)
     expand_shape = [-1] + list(lower_max.shape)[1:] + [1] * n_out
@@ -123,13 +121,13 @@ def get_maxpool_backward_hull(
     lower_max_u_0 = lower_max_e * w_u_out_pos_e
     upper_max_u_0 = upper_max_e * w_u_out_pos_e
     _, _, w_u_0, b_u_0 = get_affine_bounds_with_linear_block_inputs(
-        lower_max=lower_max_u_0, upper_max=upper_max_u_0, axis=axis_
+        lower_max=lower_max_u_0, upper_max=upper_max_u_0, axis=axis_  # type: ignore
     )
 
     lower_max_u_1 = -upper_max_e * w_u_out_neg_e
     upper_max_u_1 = -lower_max_e * w_u_out_neg_e
     w_l_1, b_l_1, _, _ = get_affine_bounds_with_linear_block_inputs(
-        lower_max=lower_max_u_1, upper_max=upper_max_u_1, axis=axis_
+        lower_max=lower_max_u_1, upper_max=upper_max_u_1, axis=axis_  # type: ignore
     )
 
     w_u = w_u_0 - w_l_1
@@ -139,15 +137,15 @@ def get_maxpool_backward_hull(
     lower_max_l_0 = lower_max_e * w_l_out_pos_e
     upper_max_l_0 = upper_max_e * w_l_out_pos_e
     w_l_0, b_l_0, _, _ = get_affine_bounds_with_linear_block_inputs(
-        lower_max=lower_max_l_0, upper_max=upper_max_l_0, axis=axis_
+        lower_max=lower_max_l_0, upper_max=upper_max_l_0, axis=axis_  # type: ignore
     )
     lower_max_l_1 = -upper_max_e * w_l_out_neg_e
     upper_max_l_1 = -lower_max_e * w_l_out_neg_e
     _, _, w_u_1, b_u_1 = get_affine_bounds_with_linear_block_inputs(
-        lower_max=lower_max_l_1, upper_max=upper_max_l_1, axis=axis_
+        lower_max=lower_max_l_1, upper_max=upper_max_l_1, axis=axis_  # type: ignore
     )
 
     w_l = w_l_0 - w_u_1
     b_l = b_l_0 - b_u_1
 
-    return [w_l, b_l, w_u, b_u]  # add bias b_u_out, b_l_out
+    return (w_l, b_l, w_u, b_u)  # add bias b_u_out, b_l_out

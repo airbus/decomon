@@ -1,10 +1,11 @@
 from typing import Any, Union
 
-import keras  # type:ignore
-import keras.ops as K  # type:ignore
-import numpy as np  # type:ignore
-from keras import Model  # type:ignore
-from keras.utils import serialize_keras_object  # type:ignore
+import keras
+import keras.ops as K
+import numpy as np
+import numpy.typing as npt
+from keras import Model
+from keras.utils import serialize_keras_object
 
 from decomon.constants import ConvertMethod
 from decomon.layers.output import ConvertOutput
@@ -99,8 +100,8 @@ class DecomonModel(keras.Model):
                 layer.perturbation_domain = self.perturbation_domain
 
     def predict_on_single_batch_np(
-        self, inputs: Union[np.ndarray, list[np.ndarray]]
-    ) -> Union[np.ndarray, list[np.ndarray]]:
+        self, inputs: Union[npt.NDArray[np.float64], list[npt.NDArray[np.float64]]]
+    ) -> Union[npt.NDArray[np.float64], list[npt.NDArray[np.float64]]]:
         """Make predictions on numpy arrays fitting in one batch
 
         Avoid using `self.predict()` known to be not designed for small arrays,

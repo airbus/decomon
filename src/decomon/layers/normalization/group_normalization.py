@@ -1,4 +1,4 @@
-from keras.layers import GroupNormalization  # type:ignore
+from keras.layers import GroupNormalization
 
 from decomon.layers import DecomonLayer
 from decomon.layers.utils import get_affine_representation_with_bias

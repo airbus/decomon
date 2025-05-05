@@ -1,10 +1,10 @@
 # define non native class Max
 # Decomon Custom for Max(axis...)
-from typing import List
+from typing import Any
 
-import keras.ops as K  # type:ignore
-import numpy as np  # type:ignore
-from keras_custom.layers import Min  # type:ignore
+import keras.ops as K
+import numpy as np
+from keras_custom.layers import Min
 
 from decomon.layers.custom.utils import (
     get_affine_lower_bound_max,
@@ -15,7 +15,7 @@ from decomon.types import Tensor
 
 
 class DecomonMin(DecomonLayer):
-    """
+    r"""
     y = min(x)= -max(-x); h = max(-x), z= -x thus z \in [-upper, -lower]
     if w_l*z + b_l <= h <= w_u*z+b_u
     the following results hold: w_u*x - b_u <= y <= w_l*x-b_l
@@ -25,7 +25,7 @@ class DecomonMin(DecomonLayer):
     linear = False
     increasing = True
 
-    def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         w_l: Tensor
         b_l: Tensor
         w_u: Tensor
@@ -40,9 +40,9 @@ class DecomonMin(DecomonLayer):
             axis_ = self.layer.axis
 
         # compute affine bounds for max(x, axis)
-        input_shape: List[int] = list(self.layer.input.shape)
-        input_shape_wo_batch: List[int] = input_shape[1:]
-        output_shape_wo_batch: List[int] = list(self.layer.output.shape[1:])
+        input_shape: list[int] = list(self.layer.input.shape)
+        input_shape_wo_batch: list[int] = input_shape[1:]
+        output_shape_wo_batch: list[int] = list(self.layer.output.shape[1:])
 
         w_l_0, b_l_0 = get_affine_lower_bound_max(-upper, -lower, axis=self.layer.axis, keepdims=self.layer.keepdims)
 
@@ -53,14 +53,14 @@ class DecomonMin(DecomonLayer):
         w_l = w_u_0
         b_l = -b_u_0
 
-        input_shape_wo_axis: int = np.prod(output_shape_wo_batch)
+        input_shape_wo_axis: int = int(np.prod(output_shape_wo_batch))
 
         if self.layer.keepdims:
             diag_ = K.reshape(K.eye(input_shape_wo_axis), [1] + output_shape_wo_batch + output_shape_wo_batch)
         else:
             # output_shape_broadcast_axis = output_shape_wo_batch[:axis_-1]+[1]+output_shape_wo_batch[axis_:]
-            output_shape_broadcast_axis: List[int] = input_shape_wo_batch[: axis_ - 1] + input_shape_wo_batch[axis_:]
-            target_shape: List[int] = [1] + output_shape_broadcast_axis + output_shape_wo_batch
+            output_shape_broadcast_axis: list[int] = input_shape_wo_batch[: axis_ - 1] + input_shape_wo_batch[axis_:]
+            target_shape: list[int] = [1] + output_shape_broadcast_axis + output_shape_wo_batch
             diag_ = K.reshape(K.eye(input_shape_wo_axis), target_shape)
 
         if not self.layer.keepdims:

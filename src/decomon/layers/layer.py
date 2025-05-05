@@ -1,12 +1,12 @@
 from inspect import Parameter, signature
 from typing import Any, Optional, Union
 
-import keras  # type:ignore
-import keras.ops as K  # type:ignore
-import numpy as np  # type:ignore
-from jacobinet.layers.convert import get_backward  # type:ignore
-from keras.layers import Layer, Wrapper  # type:ignore
-from keras.utils import serialize_keras_object  # type:ignore
+import keras
+import keras.ops as K
+import numpy as np
+from jacobinet.layers.convert import get_backward
+from keras.layers import Layer, Wrapper
+from keras.utils import serialize_keras_object
 
 from decomon.constants import Propagation
 from decomon.layers.fuse import (
@@ -79,14 +79,16 @@ class DecomonLayer(Wrapper):
     """
 
     increasing: bool = False
-    """
-    Flag telling that the layer is monotonic increasing thus \max_{x\in [lower, upper]} layer(x) = layer(upper) and \min_{x\in [lower, upper]} layer(x) = layer(lower)
+    r"""
+    Flag telling that the layer is monotonic increasing thus \max_{x\in [lower, upper]} layer(x) = layer(upper)
+    and \min_{x\in [lower, upper]} layer(x) = layer(lower)
     This is useful to computer upper and lower bounds at minimum cost
     """
 
     decreasing: bool = False
-    """
-    Flag telling that the layer is monotonic decreasing thus \max_{x\in [lower, upper]} layer(x) = layer(lower) and \min_{x\in [lower, upper]} layer(x) = layer(upper)
+    r"""
+    Flag telling that the layer is monotonic decreasing thus \max_{x\in [lower, upper]} layer(x) = layer(lower)
+    and \min_{x\in [lower, upper]} layer(x) = layer(upper)
     This is useful to computer upper and lower bounds at minimum cost
     """
 
@@ -219,7 +221,7 @@ class DecomonLayer(Wrapper):
 
     @property
     def layer_input_shape(self) -> tuple[int, ...]:
-        return self.inputs_outputs_spec.layer_input_shape
+        return self.inputs_outputs_spec.layer_input_shape  # type: ignore
 
     @property
     def model_input_shape(self) -> tuple[int, ...]:
@@ -307,7 +309,7 @@ class DecomonLayer(Wrapper):
             # create an identity matrix using the output shape
             return get_affine_representation_wo_bias(self.layer, diagonal=self.diagonal)
 
-    def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Get affine bounds on layer outputs from layer inputs
 
         This compute the affine relaxation of the layer, given the oracle constant bounds on the inputs.
@@ -382,13 +384,13 @@ class DecomonLayer(Wrapper):
 
         """
         if self.increasing:
-            return [self.layer(lower), self.layer(upper)]
+            return (self.layer(lower), self.layer(upper))
 
         if self.decreasing:
-            return [self.layer(upper), self.layer(lower)]
+            return (self.layer(upper), self.layer(lower))
 
         if not (self.layer_pos is None) and not (self.layer_neg is None):
-            return [self.layer_pos(lower) + self.layer_neg(upper), self.layer_pos(upper) + self.layer_neg(lower)]
+            return (self.layer_pos(lower) + self.layer_neg(upper), self.layer_pos(upper) + self.layer_neg(lower))
 
         if self.linear:
             w, b = self.get_affine_representation()
@@ -404,8 +406,8 @@ class DecomonLayer(Wrapper):
     def _forward_affine_propagate_linear(
         self,
         layer: Layer,
-        layer_pos: Union[None, Layer],
-        layer_neg: Union[None, Layer],
+        layer_pos: Optional[Layer],
+        layer_neg: Optional[Layer],
         layer_input_shape_wo_batchsize: list[int],
         layer_output_shape_wo_batchsize: list[int],
         input_affine_bounds: list[Tensor],
@@ -486,7 +488,7 @@ class DecomonLayer(Wrapper):
                 w_u_out = K.reshape(layer(w_u_in_), list(self.model_input_shape) + layer_output_shape_wo_batchsize)
                 b_u_out = layer(b_u_in_)[0]
 
-                return [w_l_out, b_l_out, w_u_out, b_u_out]
+                return (w_l_out, b_l_out, w_u_out, b_u_out)
             else:
                 if self.increasing:
                     w_l_out = K.reshape(
@@ -497,8 +499,8 @@ class DecomonLayer(Wrapper):
                         layer(w_u_in_), [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize
                     )
                     b_u_out = layer(b_u_in)
-                    return [w_l_out, b_l_out, w_u_out, b_u_out]
-                if self.decreasing:
+                    return (w_l_out, b_l_out, w_u_out, b_u_out)
+                elif self.decreasing:
                     w_l_out = K.reshape(
                         layer(w_u_in_), [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize
                     )
@@ -507,8 +509,8 @@ class DecomonLayer(Wrapper):
                         layer(w_l_in_), [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize
                     )
                     b_u_out = layer(b_l_in)
-                    return [w_l_out, b_l_out, w_u_out, b_u_out]
-                if not (layer_pos is None) and not (layer_neg is None):
+                    return (w_l_out, b_l_out, w_u_out, b_u_out)
+                elif not (layer_pos is None) and not (layer_neg is None):
                     w_l_out = K.reshape(
                         layer_pos(w_l_in_) + layer_neg(w_u_in_),
                         [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize,
@@ -520,7 +522,9 @@ class DecomonLayer(Wrapper):
                     )
                     b_u_out = layer_pos(b_u_in) + layer_neg(b_l_in)
 
-                    return [w_l_out, b_l_out, w_u_out, b_u_out]
+                    return (w_l_out, b_l_out, w_u_out, b_u_out)
+                else:
+                    raise NotImplementedError()
 
     def forward_affine_propagate(
         self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
@@ -580,17 +584,17 @@ class DecomonLayer(Wrapper):
             diagonal=diagonal,
         )
 
-    def apply_layer_backward(self, input_: Tensor):
+    def apply_layer_backward(self, input_: Tensor) -> Tensor:
         return self.layer_backward(input_)
 
-    def apply_layer_backward_upper(self, input_: Tensor):
+    def apply_layer_backward_upper(self, input_: Tensor) -> Tensor:
         return self.layer_backward(input_)
 
-    def apply_layer_backward_lower(self, input_: Tensor):
+    def apply_layer_backward_lower(self, input_: Tensor) -> Tensor:
         return self.layer_backward(input_)
 
     def backward_affine_propagate(
-        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor], **kwargs
+        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor], **kwargs: Any
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Propagate model affine bounds in backward direction.
 
@@ -631,7 +635,7 @@ class DecomonLayer(Wrapper):
         # if bounds are diagonal, call the affine bounds directly
         # check diagonal
         if len(output_affine_bounds):
-            [w_, b_, _, _] = output_affine_bounds
+            w_, b_, _, _ = output_affine_bounds
             if is_output_linear:
                 is_diagonal = w_.shape == b_.shape
             else:
@@ -661,7 +665,7 @@ class DecomonLayer(Wrapper):
                 diagonal=diagonal,
             )
         else:
-            [w_l, b_l, w_u, b_u] = output_affine_bounds
+            w_l, b_l, w_u, b_u = output_affine_bounds
 
             if is_output_linear:
                 w_l = w_l[None]
@@ -724,9 +728,9 @@ class DecomonLayer(Wrapper):
             bias_conv_l = K.sum(w_l * bias_, axis_sum) + b_l  # (batch_size, n_out_shape)
 
             if is_output_linear:
-                output = [w_l_conv[0], bias_conv_l[0], w_u_conv[0], bias_conv_u[0]]
+                output = (w_l_conv[0], bias_conv_l[0], w_u_conv[0], bias_conv_u[0])
             else:
-                output = [w_l_conv, bias_conv_l, w_u_conv, bias_conv_u]
+                output = (w_l_conv, bias_conv_l, w_u_conv, bias_conv_u)
 
             return output
 
@@ -847,7 +851,7 @@ class DecomonLayer(Wrapper):
             )
         )
 
-    def call(self, inputs: list[Tensor], training=False) -> list[Tensor]:
+    def call(self, inputs: list[Tensor], training: bool = False) -> list[Tensor]:
         """Propagate bounds in the specified direction `self.propagation`.
 
         Args:
@@ -970,15 +974,16 @@ class DecomonLayer(Wrapper):
         w_shape: Union[tuple[Optional[int], ...], list[tuple[Optional[int], ...]]]
         if self.linear and self.inputs_outputs_spec.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
             b_shape = b_shape_wo_batchisze
-            w_shape = w_shape_wo_batchsize
+            w_shape = w_shape_wo_batchsize  # type: ignore
         else:
             b_shape = (None,) + b_shape_wo_batchisze
             if self._is_merging_layer:
-                w_shape = [(None,) + sub_w_shape_wo_batchsize for sub_w_shape_wo_batchsize in w_shape_wo_batchsize]
+                w_shape = [(None,) + sub_w_shape_wo_batchsize for sub_w_shape_wo_batchsize in w_shape_wo_batchsize]  # type: ignore
             else:
-                w_shape = (None,) + w_shape_wo_batchsize
+                w_shape = (None,) + w_shape_wo_batchsize  # type: ignore
+        affine_bounds_propagated_shape: Union[list[tuple[Optional[int], ...]], list[list[tuple[Optional[int], ...]]]]
         if self._is_merging_layer:
-            affine_bounds_propagated_shape = [
+            affine_bounds_propagated_shape = [  # type: ignore
                 [
                     w_shape_i,
                     b_shape,
@@ -988,7 +993,7 @@ class DecomonLayer(Wrapper):
                 for w_shape_i in w_shape
             ]
         else:
-            affine_bounds_propagated_shape = [w_shape, b_shape, w_shape, b_shape]
+            affine_bounds_propagated_shape = [w_shape, b_shape, w_shape, b_shape]  # type: ignore
 
         return self.inputs_outputs_spec.flatten_outputs_shape(
             affine_bounds_propagated_shape=affine_bounds_propagated_shape
@@ -1074,15 +1079,15 @@ class DecomonLayer(Wrapper):
             w_shape: Union[tuple[Optional[int], ...], list[tuple[Optional[int], ...]]]
             if self.linear and self.inputs_outputs_spec.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
                 b_shape = b_shape_wo_batchisze
-                w_shape = w_shape_wo_batchsize
+                w_shape = w_shape_wo_batchsize  # type: ignore
             else:
                 b_shape = (None,) + b_shape_wo_batchisze
                 if self._is_merging_layer:
-                    w_shape = [(None,) + sub_w_shape_wo_batchsize for sub_w_shape_wo_batchsize in w_shape_wo_batchsize]
+                    w_shape = [(None,) + sub_w_shape_wo_batchsize for sub_w_shape_wo_batchsize in w_shape_wo_batchsize]  # type: ignore
                 else:
-                    w_shape = (None,) + w_shape_wo_batchsize
+                    w_shape = (None,) + w_shape_wo_batchsize  # type: ignore
             if self._is_merging_layer:
-                affine_bounds_propagated_shape = [
+                affine_bounds_propagated_shape = [  # type: ignore
                     [
                         w_shape_i,
                         b_shape,
@@ -1092,7 +1097,7 @@ class DecomonLayer(Wrapper):
                     for w_shape_i in w_shape
                 ]
             else:
-                affine_bounds_propagated_shape = [w_shape, b_shape, w_shape, b_shape]
+                affine_bounds_propagated_shape = [w_shape, b_shape, w_shape, b_shape]  # type: ignore
 
             return self.inputs_outputs_spec.flatten_outputs_shape(
                 affine_bounds_propagated_shape=affine_bounds_propagated_shape

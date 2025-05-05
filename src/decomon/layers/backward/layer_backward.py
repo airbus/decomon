@@ -1,5 +1,6 @@
 # jacobinet module
-from typing import Any, List, Optional
+from collections.abc import Callable
+from typing import Any, Optional, Union
 
 import keras.ops as K
 from jacobinet.layers import BackwardBoundedLinearizedLayer, BackwardLinearLayer
@@ -30,7 +31,7 @@ class DecomonLinearLayerBackward(DecomonLinearLayer):
         if self.use_bias:
             self.bias = self.layer_backward(K.zeros([1] + self.layer.input_dim_wo_batch))
 
-    def apply_layer_backward(self, input_: Tensor):
+    def apply_layer_backward(self, input_: Tensor) -> Tensor:
         # remove bias before apply layer_backward
         if self.use_bias:
             return self.layer_backward(input_) - self.bias
@@ -47,6 +48,8 @@ class DecomonLinearLayerBackward(DecomonLinearLayer):
             _,
         ) = self.inputs_outputs_spec.split_input_shape(input_shape=input_shape)
         keras_layer_output_shape_wo_batchsize = self.layer.input_dim_wo_batch
+        affine_bounds_propagated_shape: list[tuple[Optional[int], ...]]
+        constant_bounds_propagated_shape: list[tuple[Optional[int], ...]]
         if self.ibp:
             if isinstance(self.layer_backward, Merge):
                 # BackwardLayer returns a list of list
@@ -117,7 +120,7 @@ class DecomonBoundedLinearizedLayerBackward(DecomonLinearLayer):
             self.bias_up = self.layer_up(K.zeros([1] + self.layer.output_dim_wo_batch))
             self.bias_low = self.layer_low(K.zeros([1] + self.layer.output_dim_wo_batch))
 
-    def apply_layer_backward_upper(self, input_: Tensor):
+    def apply_layer_backward_upper(self, input_: Tensor) -> Tensor:
         # remove bias before apply layer_backward
         if self.increasing:
             if self.use_bias:
@@ -154,7 +157,7 @@ class DecomonBoundedLinearizedLayerBackward(DecomonLinearLayer):
             lower_bound = self.layer_low(lower)
             upper_bound = self.layer_up(upper)
 
-            return [lower_bound, upper_bound]
+            return (lower_bound, upper_bound)
 
         else:
             raise NotImplementedError()
@@ -176,7 +179,7 @@ class DecomonBoundedLinearizedLayerBackward(DecomonLinearLayer):
             w_u_out = K.reshape(self.layer_up(w_u_in_), output_shape)
             b_u_out = self.layer_up(b_u_in_)
 
-            return [w_l_out, b_l_out, w_u_out, b_u_out]
+            return (w_l_out, b_l_out, w_u_out, b_u_out)
         else:
             raise NotImplementedError()
 
@@ -201,12 +204,12 @@ class DecomonLinearMergeBackward(DecomonLinearLayer):
             [K.zeros([1] + input_dim_wo_batch_i) for input_dim_wo_batch_i in self.layer.input_dim_wo_batch]
         )
 
-    def apply_layer_backward(self, input_: Tensor):
+    def apply_layer_backward(self, input_: Tensor) -> Tensor:
         # remove bias before apply layer_backward
         raise NotImplementedError()
 
     @property
-    def layer_output_shape_wo_batchsize(self) -> list[int]:
+    def layer_output_shape_wo_batchsize(self) -> list[list[int]]:
         return [list(e.shape[1:]) for e in self.layer.output]
 
     def compute_output_shape_forward(
@@ -219,9 +222,10 @@ class DecomonLinearMergeBackward(DecomonLinearLayer):
             _,
         ) = self.inputs_outputs_spec.split_input_shape(input_shape=input_shape)
         keras_layer_output_shape_wo_batchsize = self.layer.input_dim_wo_batch
+        constant_bounds_propagated_shape: list[tuple[Optional[int], ...]]
         if self.ibp:
             constant_bounds_propagated_shape = [
-                [[1] + output_dim_i] * 2 for output_dim_i in keras_layer_output_shape_wo_batchsize
+                [(1,) + output_dim_i] * 2 for output_dim_i in keras_layer_output_shape_wo_batchsize
             ]
         else:
             constant_bounds_propagated_shape = []
@@ -231,7 +235,7 @@ class DecomonLinearMergeBackward(DecomonLinearLayer):
             # should be set to get accurate compute_output_shape()
 
             # outputs shape depends on layer and inputs being diagonal / linear (w/o batch)
-            b_out_shape_wo_batchsize: List = keras_layer_output_shape_wo_batchsize  # list
+            b_out_shape_wo_batchsize = keras_layer_output_shape_wo_batchsize  # list
 
             if self.diagonal and self.inputs_outputs_spec.is_diagonal_bounds_shape(affine_bounds_to_propagate_shape):
                 # propagated bounds still diagonal
@@ -243,13 +247,13 @@ class DecomonLinearMergeBackward(DecomonLinearLayer):
 
             if self.linear and self.inputs_outputs_spec.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
                 # no batch in propagated bounds
-                w_out_shape: List = w_out_shape_wo_batchsize
-                b_out_shape: List = b_out_shape_wo_batchsize
+                w_out_shape = w_out_shape_wo_batchsize
+                b_out_shape = b_out_shape_wo_batchsize
             else:
-                w_out_shape: List = [
+                w_out_shape = [
                     [None] + list(w_out_i) for w_out_i in w_out_shape_wo_batchsize
                 ]  # (None,) + w_out_shape_wo_batchsize
-                b_out_shape: List = [
+                b_out_shape = [
                     [None] + list(b_out_i) for b_out_i in b_out_shape_wo_batchsize
                 ]  # (None,) + b_out_shape_wo_batchsize
 
@@ -267,7 +271,7 @@ class DecomonLinearMergeBackward(DecomonLinearLayer):
 
     def forward_affine_propagate(
         self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
-    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    ) -> list[list[Tensor]]:  # type: ignore
         w_l_in, b_l_in, w_u_in, b_u_in = input_affine_bounds
         is_from_linear = self.inputs_outputs_spec.is_wo_batch_bounds(input_affine_bounds)
 
@@ -277,7 +281,9 @@ class DecomonLinearMergeBackward(DecomonLinearLayer):
         b_l_in_ = K.reshape(b_l_in, [-1] + self.layer_input_shape_wo_batchsize)
         b_u_in_ = K.reshape(b_u_in, [-1] + self.layer_input_shape_wo_batchsize)
 
-        def apply_layer_on_w(w_in, func, output_shape):
+        def apply_layer_on_w(
+            w_in: Tensor, func: Callable[[Tensor], list[Tensor]], output_shape: list[list[int]]
+        ) -> list[Tensor]:
             w_out_list = func(w_in)
             return [K.reshape(w_out_i, output_shape_i) for (w_out_i, output_shape_i) in zip(w_out_list, output_shape)]
 
@@ -376,7 +382,7 @@ class DecomonLinearMergeBackward(DecomonLinearLayer):
             else:
                 return super().forward_affine_propagate(input_affine_bounds, input_constant_bounds)
 
-    def forward_ibp_propagate(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor]:
+    def forward_ibp_propagate(self, lower: list[Tensor], upper: list[Tensor]) -> list[list[Tensor]]:  # type: ignore
         """Propagate ibp bounds through the layer.
 
         If the underlying keras layer is linear, it will be deduced from its affine representation.
@@ -423,4 +429,4 @@ class DecomonNonLinearBackward(DecomonMerge):
 
         upper = self.layer([g_upper, input_upper])
         lower = self.layer([g_lower, input_lower])
-        return [lower, upper]
+        return (lower, upper)

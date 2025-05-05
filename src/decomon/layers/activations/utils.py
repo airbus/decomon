@@ -12,7 +12,9 @@ from decomon.types import Tensor
 TensorFunction = Callable[[Tensor], Tensor]
 
 
-def get_convex_lower_affine_bound_at(x, func, func_prime) -> tuple[Tensor, Tensor]:
+def get_convex_lower_affine_bound_at(
+    x: Tensor, func: TensorFunction, func_prime: TensorFunction
+) -> tuple[Tensor, Tensor]:
     # affine lower bound for convex diagonal function
     # w = f'(x)
     # b = f(x) - f'(y)*y
@@ -24,7 +26,7 @@ def get_convex_lower_affine_bound_at(x, func, func_prime) -> tuple[Tensor, Tenso
 
 
 def get_convex_upper_affine_bound_unary(
-    lower: Tensor, upper: Tensor, func: Callable, func_prime: Callable, **kwargs: Any
+    lower: Tensor, upper: Tensor, func: TensorFunction, func_prime: TensorFunction, **kwargs: Any
 ) -> tuple[Tensor, Tensor]:
     # affine lower bound for convex diagonal function
     # w = f'(x)
@@ -53,7 +55,12 @@ def get_convex_upper_affine_bound_unary(
 
 
 def get_convex_lower_affine_bound_unary(
-    lower, upper, func, func_prime, slope=Slope.V_SLOPE, **kwargs: Any
+    lower: Tensor,
+    upper: Tensor,
+    func: TensorFunction,
+    func_prime: TensorFunction,
+    slope: Slope = Slope.V_SLOPE,
+    **kwargs: Any,
 ) -> tuple[Tensor, Tensor]:
     # affine lower bound for convex diagonal function
     # w = f'(x)

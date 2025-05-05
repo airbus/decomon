@@ -1,3 +1,5 @@
+from typing import Any
+
 import keras
 import keras.ops as K
 from jacobinet.layers.normalization.batch_normalization import (
@@ -15,7 +17,7 @@ class DecomonBackwardBatchNormalization(DecomonLinearLayerBackward):
     diagonal = True
     use_bias = True
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         # create positive and negative version
         self.layer_backward_pos = BatchNormalization_kernel_constraint(layer=self.layer_backward, ops=K.maximum)

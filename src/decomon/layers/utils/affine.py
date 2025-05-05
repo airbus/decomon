@@ -1,21 +1,21 @@
-from typing import List, Union
+from typing import Union
 
-import keras.ops as K  # type:ignore
-import numpy as np  # type:ignore
-from keras.layers import Layer  # type:ignore
+import keras.ops as K
+import numpy as np
+from keras.layers import Layer
 
-from decomon.types import Tensor  # type:ignore
+from decomon.types import Tensor
 
 
 def combine_affine(
-    layer,
-    w_in,
-    b_in,
-    model_input_shape_wo_batchsize,
-    layer_input_shape_wo_batchsize,
-    layer_output_shape_wo_batchsize,
-    layer_has_multiple_outputs,
-):
+    layer: Layer,
+    w_in: Tensor,
+    b_in: Tensor,
+    model_input_shape_wo_batchsize: list[int],
+    layer_input_shape_wo_batchsize: list[int],
+    layer_output_shape_wo_batchsize: list[int],
+    layer_has_multiple_outputs: bool,
+) -> tuple[Tensor, Tensor]:
     # apply layer on w_in, b_in
     b_out = layer(b_in)
     w_in_ = K.reshape([-1] + layer_input_shape_wo_batchsize)(w_in)
@@ -43,12 +43,12 @@ def get_affine_representation_wo_bias(layer: Layer, diagonal: bool = False) -> t
      the affine representation (w, b) such that: layer(x)= W*x
     """
 
-    input_shape_wo_batch: List[int] = list(layer.input.shape[1:])
-    N: int = np.prod(input_shape_wo_batch)
+    input_shape_wo_batch: list[int] = list(layer.input.shape[1:])
+    N: int = int(np.prod(input_shape_wo_batch))
     w: Tensor = K.reshape(K.eye(N), [-1] + input_shape_wo_batch)
     # apply the layer on w
     w = layer(w)  # (N, output_shape_wo_batch)
-    output_shape_wo_batch: List[int] = list(layer.output.shape[1:])
+    output_shape_wo_batch: list[int] = list(layer.output.shape[1:])
     b: Tensor = K.zeros(output_shape_wo_batch)
 
     if diagonal:
@@ -69,7 +69,7 @@ def get_bias(layer: Layer) -> Tensor:
      the affine representation b such that: layer(x)= W*x + b
     """
 
-    input_shape_wo_batch: List[int] = list(layer.input.shape[1:])
+    input_shape_wo_batch: list[int] = list(layer.input.shape[1:])
 
     w_b: Tensor = K.zeros([1] + input_shape_wo_batch)
     bias: Tensor = layer(w_b)[0]  # output_shape_wo_batch
@@ -91,17 +91,18 @@ def get_affine_representation_with_bias(layer: Layer, diagonal: bool = False) ->
      the affine representation (w, b) such that: layer(x)= W*x + b
     """
 
-    input_shape_wo_batch: List[int] = list(layer.input.shape[1:])
-    output_shape_wo_batch: List[int] = list(layer.output.shape[1:])
+    input_shape_wo_batch: list[int] = list(layer.input.shape[1:])
+    output_shape_wo_batch: list[int] = list(layer.output.shape[1:])
 
     w_b: Tensor = K.zeros([1] + input_shape_wo_batch)
     bias: Tensor = layer(w_b)[0]  # output_shape_wo_batch
+    w: Tensor
 
     if diagonal:
         w = layer(K.ones([1] + input_shape_wo_batch))[0] - bias
     else:
-        N: int = K.prod(input_shape_wo_batch)
-        w: Tensor = K.reshape(K.eye(N), [-1] + input_shape_wo_batch)
+        N: int = int(K.prod(input_shape_wo_batch))
+        w = K.reshape(K.eye(N), [-1] + input_shape_wo_batch)
         # apply the layer on w
         w = layer(w) - bias[None]  # (N, output_shape_wo_batch)
 
@@ -183,8 +184,8 @@ def apply_backward_layer(
         bias_conv_l = b_l  # (batch_size, n_out_shape)
 
     if is_output_linear:
-        output = [w_l_conv[0], bias_conv_l[0], w_u_conv[0], bias_conv_u[0]]
+        output = (w_l_conv[0], bias_conv_l[0], w_u_conv[0], bias_conv_u[0])
     else:
-        output = [w_l_conv, bias_conv_l, w_u_conv, bias_conv_u]
+        output = (w_l_conv, bias_conv_l, w_u_conv, bias_conv_u)
 
     return output

@@ -1,4 +1,4 @@
-from keras.src.utils.model_visualization import *  # type:ignore
+from keras.src.utils.model_visualization import *
 
 from decomon.layers.crown import ReduceCrownBounds
 from decomon.layers.fuse import Fuse

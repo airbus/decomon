@@ -1,9 +1,9 @@
 from collections.abc import Callable, Sequence
 from typing import Optional, Union
 
-import keras  # type:ignore
-import numpy as np  # type:ignore
-import numpy.typing as npt  # type:ignore
+import keras
+import numpy as np
+import numpy.typing as npt
 
 from decomon.constants import ConvertMethod
 from decomon.models.convert import clone
@@ -156,9 +156,9 @@ def get_adv_box(
         needs_backward_bounds = len(decomon_model.inputs) > 1
         if needs_backward_bounds:  # backward bounds needed
             C = np.diag([1] * n_label)[None] - source_labels[:, :, None]
-            output = decomon_model.predict_on_single_batch_np([perturbation_domain_input, C])
+            output = decomon_model.predict_on_single_batch_np([perturbation_domain_input, C])  # type: ignore
         else:
-            output = decomon_model.predict_on_single_batch_np(perturbation_domain_input)
+            output = decomon_model.predict_on_single_batch_np(perturbation_domain_input)  # type: ignore
 
         def get_ibp_score(
             u_c: npt.NDArray[np.float64],

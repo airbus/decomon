@@ -1,12 +1,12 @@
 from collections.abc import Callable
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union
 
-import keras  # type:ignore
-import keras.ops as K  # type:ignore
-import numpy as np  # type:ignore
-from keras.layers import InputLayer, Layer  # type:ignore
-from keras.models import Model  # type:ignore
-from keras.src.ops.node import Node  # type:ignore
+import keras
+import keras.ops as K
+import numpy as np
+from keras.layers import InputLayer, Layer
+from keras.models import Model
+from keras.src.ops.node import Node
 
 from decomon.constants import Propagation, Slope
 from decomon.layers import DecomonLayer
@@ -33,7 +33,7 @@ def crown(
     submodels_stack: list[Node],
     perturbation_domain_input: keras.KerasTensor,
     perturbation_domain: PerturbationDomain,
-    masks: Optional[dict[str, list[keras.KerasTensor]]] = None,
+    masks: Optional[dict[str, keras.KerasTensor]] = None,
     finetune: bool = False,
 ) -> list[keras.KerasTensor]:
     """
@@ -238,7 +238,7 @@ def get_oracle(
     crown_output_map: dict[int, list[keras.KerasTensor]],
     submodels_stack: list[Node],
     layer_fn: Callable[[Layer, tuple[int, ...]], DecomonLayer],
-    masks: Optional[dict[str, list[keras.KerasTensor]]] = None,
+    masks: Optional[dict[str, keras.KerasTensor]] = None,
     finetune: bool = False,
 ) -> Union[list[keras.KerasTensor], list[list[keras.KerasTensor]]]:
     """Get oracle bounds "on demand".
@@ -328,7 +328,7 @@ def get_oracle(
                     subcrown_output_shape = get_model_output_shape(node=parent, backward_bounds=[])
                     # for scalability issue we can split the input of crown, thus it increases the number of calls of crown on submodels
                     # do it if no other option for scalability has been set
-                    output_layer_shape: List[int] = list(parent.operation.output.shape[1:])
+                    output_layer_shape: list[int] = list(parent.operation.output.shape[1:])
 
                     if not mask_layer is None:
                         input_dim_wo_batch = list(node.operation.input.shape[1:])
@@ -438,7 +438,7 @@ def crown_model(
     ibp_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
     crown_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
-    masks: Optional[dict[str, list[keras.KerasTensor]]] = None,
+    masks: Optional[dict[str, keras.KerasTensor]] = None,
     finetune: bool = False,
 ) -> list[keras.KerasTensor]:
     """Convert a functional keras model via crown algorithm (backward propagation)
@@ -476,6 +476,8 @@ def crown_model(
         forward_output_map = {}
     if crown_output_map is None:
         crown_output_map = {}
+    if ibp_output_map is None:
+        ibp_output_map = {}
 
     # ensure (sub)model is functional
     model = ensure_functional_model(model)
@@ -527,7 +529,7 @@ def convert_backward(
     forward_layer_map: Optional[dict[int, DecomonLayer]] = None,
     ibp_output_map: Optional[dict[int, list[keras.KerasTensor]]] = None,
     mapping_keras2decomon_classes: Optional[dict[type[Layer], type[DecomonLayer]]] = None,
-    masks: Optional[dict[str, list[keras.KerasTensor]]] = None,
+    masks: Optional[dict[str, keras.KerasTensor]] = None,
     finetune: bool = False,
     **kwargs: Any,
 ) -> list[keras.KerasTensor]:

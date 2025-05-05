@@ -1,20 +1,23 @@
+from collections.abc import Callable
 from typing import Any
 
-import keras.ops as K  # type:ignore
-from keras.layers import Dense  # type:ignore
-from keras.layers import Wrapper  # type:ignore
+import keras
+import keras.ops as K
+from keras.layers import Dense, Wrapper
 
 from decomon.types import Tensor
 
 
 class Dense_kernel_constraint(Wrapper):
-    def __init__(self, layer: Dense, ops=K.maximum, add_bias=True, **kwargs: Any):
+    def __init__(
+        self, layer: Dense, ops: Callable[[Tensor, Tensor], Tensor] = K.maximum, add_bias: bool = True, **kwargs: Any
+    ):
         super().__init__(layer=layer, **kwargs)
         self.ops = ops
         self.add_bias = add_bias
 
     @property
-    def kernel(self):
+    def kernel(self) -> keras.Variable:
         return self.ops(0, self.layer.kernel)
 
     def call(self, inputs: list[Tensor]) -> list[Tensor]:
