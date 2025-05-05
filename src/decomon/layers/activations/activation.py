@@ -155,12 +155,15 @@ class DecomonBaseActivation(DecomonLayer):
     def backward_affine_propagate(
         self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        w_l_out, b_l_out, w_u_out, b_u_out = output_affine_bounds
-        lower, upper = input_constant_bounds
-        is_from_linear = self.inputs_outputs_spec.is_wo_batch_bounds(output_affine_bounds)
-        is_from_diagonal = self.inputs_outputs_spec.is_diagonal_bounds(output_affine_bounds)
+        
+        
 
         if self.finetune and self.diagonal:
+            w_l_out, b_l_out, w_u_out, b_u_out = output_affine_bounds
+            lower, upper = input_constant_bounds
+            is_from_linear = self.inputs_outputs_spec.is_wo_batch_bounds(output_affine_bounds)
+            is_from_diagonal = self.inputs_outputs_spec.is_diagonal_bounds(output_affine_bounds)
+
             if is_from_linear:
                 c_shape_wo_batch = list(b_l_out.shape)
             else:
