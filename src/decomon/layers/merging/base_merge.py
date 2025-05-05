@@ -32,7 +32,10 @@ class DecomonMerge(DecomonLayer):
 
     @property
     def layer_input_shape_wo_batchsize(self) -> list[int]:
-        return [list(e.shape[1:]) for e in self.layer.input]
+        if not isinstance(self.layer.input, list):
+            return [self.layer.input.shape[1:]]
+        else:
+            return [list(e.shape[1:]) for e in self.layer.input]
 
     def get_affine_representation(self) -> tuple[list[Tensor], Tensor]:
         """Get affine representation of the layer
