@@ -33,7 +33,7 @@ class DecomonMerge(DecomonLayer):
     @property
     def layer_input_shape_wo_batchsize(self) -> list[int]:
         if not isinstance(self.layer.input, list):
-            return [self.layer.input.shape[1:]]
+            return [list(self.layer.input.shape[1:])]
         else:
             return [list(e.shape[1:]) for e in self.layer.input]
 
