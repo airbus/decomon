@@ -1,7 +1,7 @@
 from typing import Any
 
-import keras  # type: ignore
-import keras.ops as K  # type: ignore
+import keras
+import keras.ops as K
 
 from decomon.keras_utils import add_tensors, batch_multid_dot
 from decomon.layers.fuse import combine_affine_bounds
@@ -336,7 +336,7 @@ class DecomonMerge(DecomonLayer):
             from_linear_layer_new = all(from_linear_add)
         return w_l_new, b_l_new, w_u_new, b_u_new
 
-    def backward_affine_propagate(  # type: ignore
+    def backward_affine_propagate(
         self, output_affine_bounds: list[Tensor], input_constant_bounds: list[list[Tensor]]
     ) -> list[tuple[Tensor, Tensor, Tensor, Tensor]]:
         """Propagate model affine bounds in backward direction.
@@ -421,7 +421,7 @@ class DecomonMerge(DecomonLayer):
         input_affine_bounds: list[list[Tensor]],
         input_constant_bounds: list[list[Tensor]],
         perturbation_domain_inputs: list[Tensor],
-    ) -> list[list[Tensor]]:  # type: ignore
+    ) -> list[list[Tensor]]:
         """Get constant oracle bounds on underlying keras layer input from forward input bounds.
 
         Args:
@@ -440,7 +440,11 @@ class DecomonMerge(DecomonLayer):
         from the affine bounds given the considered perturbation domain.
 
         """
-        return super().get_forward_oracle(input_affine_bounds=input_affine_bounds, input_constant_bounds=input_constant_bounds, perturbation_domain_inputs=perturbation_domain_inputs)  # type: ignore
+        return super().get_forward_oracle(
+            input_affine_bounds=input_affine_bounds,
+            input_constant_bounds=input_constant_bounds,
+            perturbation_domain_inputs=perturbation_domain_inputs,
+        )
 
     def call_forward(
         self,

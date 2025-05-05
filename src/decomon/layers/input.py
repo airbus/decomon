@@ -94,7 +94,7 @@ class ForwardInput(Layer):
         self,
         input_shape: tuple[Optional[int], ...],
     ) -> list[tuple[Optional[int], ...]]:
-        perturbation_domain_input_shape_wo_batchsize: tuple[int, ...] = input_shape[1:]  # type: ignore
+        perturbation_domain_input_shape_wo_batchsize: tuple[int, ...] = input_shape[1:]
         keras_input_shape_wo_batchsize = self.perturbation_domain.get_keras_input_shape_wo_batchsize(
             x_shape=perturbation_domain_input_shape_wo_batchsize
         )
@@ -111,7 +111,7 @@ class ForwardInput(Layer):
         else:
             constant_bounds_shape = []
         return self.inputs_outputs_spec.flatten_inputs_shape(
-            affine_bounds_to_propagate_shape=affine_bounds_shape,  # type: ignore
+            affine_bounds_to_propagate_shape=affine_bounds_shape,
             constant_oracle_bounds_shape=constant_bounds_shape,
             perturbation_domain_inputs_shape=[],
         )
@@ -164,7 +164,7 @@ class IdentityInput(Layer):
         self,
         input_shape: tuple[Optional[int], ...],
     ) -> list[tuple[Optional[int], ...]]:
-        perturbation_domain_input_shape_wo_batchsize: tuple[int, ...] = input_shape[1:]  # type: ignore
+        perturbation_domain_input_shape_wo_batchsize: tuple[int, ...] = input_shape[1:]
         keras_input_shape_wo_batchsize = self.perturbation_domain.get_keras_input_shape_wo_batchsize(
             x_shape=perturbation_domain_input_shape_wo_batchsize
         )

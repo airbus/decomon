@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from keras.layers import Conv1D  # type:ignore
+from keras.layers import Conv1D
 
 from .base_conv import DecomonBaseConv
 

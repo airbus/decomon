@@ -149,9 +149,7 @@ class ConvertOutput(Layer):
             affine_bounds_from_shape,
             constant_bounds_from_shape,
             perturbation_domain_inputs_shape,
-        ) = self.inputs_outputs_spec.split_input_shape(  # type: ignore
-            input_shape
-        )
+        ) = self.inputs_outputs_spec.split_input_shape(input_shape)
         constant_bounds_to_shape: list[list[tuple[Optional[int], ...]]]
         affine_bounds_to_shape: list[list[tuple[Optional[int], ...]]]
 
@@ -171,7 +169,7 @@ class ConvertOutput(Layer):
                 affine_bounds_to_shape = affine_bounds_from_shape
             else:
                 x_shape = perturbation_domain_inputs_shape[0]
-                x_shape_wo_batchsize: tuple[int, ...] = x_shape[1:]  # type: ignore
+                x_shape_wo_batchsize: tuple[int, ...] = x_shape[1:]
                 keras_input_shape = self.perturbation_domain.get_keras_input_shape_wo_batchsize(x_shape_wo_batchsize)
                 affine_bounds_to_shape = []
                 for model_output_shape in self.model_output_shapes:

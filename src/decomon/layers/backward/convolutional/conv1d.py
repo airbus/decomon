@@ -1,5 +1,5 @@
 import keras.ops as K
-from jacobinet.layers.convolutional.conv1d import BackwardConv1D  # type: ignore
+from jacobinet.layers.convolutional.conv1d import BackwardConv1D
 
 from decomon.layers.backward.layer_backward import DecomonLinearLayerBackward
 from decomon.layers.convolutional.utils import Conv_kernel_constraint

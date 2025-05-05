@@ -1,10 +1,8 @@
 from typing import Any, Optional
 
-import keras.ops as K  # type:ignore
-from keras.src.layers.convolutional.base_conv import BaseConv  # type:ignore
-from keras.src.layers.convolutional.base_depthwise_conv import (
-    BaseDepthwiseConv,  # type:ignore
-)
+import keras.ops as K
+from keras.src.layers.convolutional.base_conv import BaseConv
+from keras.src.layers.convolutional.base_depthwise_conv import BaseDepthwiseConv
 
 from decomon.layers.layer import DecomonLinearLayer
 
