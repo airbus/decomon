@@ -1,20 +1,21 @@
-from typing import Any
+from collections.abc import Callable
+from typing import Any, Optional
 
-import keras.ops as K  # type:ignore
-import numpy as np  # type:ignore
-from keras.layers import Conv2D  # type:ignore
-from keras.layers import Wrapper  # type:ignore
-from keras.ops.image import extract_patches  # type:ignore
-from keras.src.layers.convolutional.base_conv import BaseConv  # type:ignore
-from keras.src.layers.convolutional.base_depthwise_conv import (
-    BaseDepthwiseConv,  # type:ignore
-)
+import keras
+import keras.ops as K
+import numpy as np
+from keras.layers import Conv2D, Wrapper
+from keras.ops.image import extract_patches
+from keras.src.layers.convolutional.base_conv import BaseConv
+from keras.src.layers.convolutional.base_depthwise_conv import BaseDepthwiseConv
 
 from decomon.types import Tensor
 
 
 class Conv_kernel_constraint(Wrapper):
-    def __init__(self, layer: BaseConv, ops=K.maximum, add_bias=True, **kwargs: Any):
+    def __init__(
+        self, layer: BaseConv, ops: Callable[[Tensor, Tensor], Tensor] = K.maximum, add_bias: bool = True, **kwargs: Any
+    ):
         super().__init__(layer=layer, **kwargs)
         self.ops = ops
         self.add_bias = add_bias
@@ -30,16 +31,16 @@ class Conv_kernel_constraint(Wrapper):
         self.data_format = self.layer.data_format
 
     @property
-    def kernel(self):
+    def kernel(self) -> keras.Variable:
         return self.ops(self.kernel_, 0)
 
     @property
-    def bias(self):
+    def bias(self) -> Optional[keras.Variable]:
         if self.layer.use_bias and self.add_bias:
             return self.bias_
         return None
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: tuple[int, ...]) -> tuple[int, ...]:
         return self.layer.compute_output_shape(input_shape)
 
     def call(self, inputs: list[Tensor]) -> list[Tensor]:
@@ -57,12 +58,18 @@ class Conv_kernel_constraint(Wrapper):
 
         return y
 
-    def get_config(self):
+    def get_config(self) -> dict[str, Any]:
         return self.layer.get_config()
 
 
 class DepthwiseConv_kernel_constraint(Wrapper):
-    def __init__(self, layer: BaseDepthwiseConv, ops=K.maximum, add_bias=True, **kwargs: Any):
+    def __init__(
+        self,
+        layer: BaseDepthwiseConv,
+        ops: Callable[[Tensor, Tensor], Tensor] = K.maximum,
+        add_bias: bool = True,
+        **kwargs: Any,
+    ):
         super().__init__(layer=layer, **kwargs)
         self.ops = ops
         self.add_bias = add_bias
@@ -78,19 +85,19 @@ class DepthwiseConv_kernel_constraint(Wrapper):
         self.data_format = self.layer.data_format
 
     @property
-    def kernel(self):
+    def kernel(self) -> keras.Variable:
         return self.ops(self.kernel_, 0)
 
     @property
-    def bias(self):
+    def bias(self) -> Optional[keras.Variable]:
         if self.layer.use_bias and self.add_bias:
             return self.bias_
         return None
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: tuple[int, ...]) -> tuple[int, ...]:
         return self.layer.compute_output_shape(input_shape)
 
-    def _get_input_channel(self, input_shape):
+    def _get_input_channel(self, input_shape: tuple[int, ...]) -> int:
         return self.layer._get_input_channel(input_shape)
 
     def call(self, inputs: list[Tensor]) -> list[Tensor]:
@@ -108,7 +115,7 @@ class DepthwiseConv_kernel_constraint(Wrapper):
 
         return y
 
-    def get_config(self):
+    def get_config(self) -> dict[str, Any]:
         return self.layer.get_config()
 
 
@@ -121,7 +128,9 @@ def get_toeplitz_from_layer(conv_layer: Conv2D) -> Tensor:
     return get_toeplitz(kernel, input_shape, output_shape, config)
 
 
-def get_toeplitz(kernel, input_shape, output_shape, config) -> Tensor:
+def get_toeplitz(
+    kernel: keras.Variable, input_shape: list[int], output_shape: list[int], config: dict[str, Any]
+) -> Tensor:
     """Express formally the affine component of the convolution
     Conv is a linear operator but its affine component is implicit
     we use im2col and extract_patches to express the affine matrix

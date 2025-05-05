@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from keras.layers import Layer  # type:ignore
+from keras.layers import Layer
 
 from decomon.types import BackendTensor
 

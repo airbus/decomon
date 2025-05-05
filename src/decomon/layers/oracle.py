@@ -2,8 +2,8 @@
 
 from typing import Any, Optional, Union, overload
 
-from keras.layers import Layer  # type:ignore
-from keras.utils import serialize_keras_object  # type:ignore
+from keras.layers import Layer
+from keras.utils import serialize_keras_object
 
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.perturbation_domain import PerturbationDomain
@@ -134,12 +134,12 @@ class DecomonOracle(BaseOracle):
         if self.is_merging_layer:
             output_shape = []
             layer_input_shape_i: tuple[int, ...]
-            for layer_input_shape_i in self.layer_input_shape:
+            for layer_input_shape_i in self.layer_input_shape:  # type: ignore
                 layer_input_shape_w_batchsize_i = (None,) + layer_input_shape_i
                 output_shape.append([layer_input_shape_w_batchsize_i, layer_input_shape_w_batchsize_i])
             return output_shape
         else:
-            layer_input_shape_w_batchsize = (None,) + self.layer_input_shape
+            layer_input_shape_w_batchsize = (None,) + self.layer_input_shape  # type: ignore
             return [layer_input_shape_w_batchsize, layer_input_shape_w_batchsize]
 
 
@@ -222,7 +222,7 @@ def get_forward_oracle(
         x = perturbation_domain_inputs[0]
         if is_merging_layer:
             constant_bounds = []
-            for affine_bounds_i, from_linear_i in zip(affine_bounds, from_linear):
+            for affine_bounds_i, from_linear_i in zip(affine_bounds, from_linear):  # type: ignore
                 if len(affine_bounds_i) == 0:
                     # special case: empty affine bounds => identity bounds
                     l_affine = perturbation_domain.get_lower_x(x)

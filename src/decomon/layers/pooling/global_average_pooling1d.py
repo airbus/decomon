@@ -1,4 +1,4 @@
-from keras.layers import GlobalAveragePooling1D  # type:ignore
+from keras.layers import GlobalAveragePooling1D
 
 from decomon.layers import DecomonLayer
 from decomon.layers.utils import get_affine_representation_wo_bias

@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from keras.layers import Layer, SpectralNormalization  # type:ignore
+from keras.layers import Layer, SpectralNormalization
 
 from decomon.constants import Propagation, Slope
 from decomon.layers import DecomonLayer
@@ -61,10 +61,10 @@ class DecomonSpectralNormalization(DecomonLayer):
         )
 
     def backward_affine_propagate(
-        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
+        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor], **kwargs: Any
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         return self.decomon_layer.backward_affine_propagate(
-            output_affine_bounds=output_affine_bounds, input_constant_bounds=input_constant_bounds
+            output_affine_bounds=output_affine_bounds, input_constant_bounds=input_constant_bounds, **kwargs
         )
 
     def get_forward_oracle(
@@ -98,5 +98,5 @@ class DecomonSpectralNormalization(DecomonLayer):
             affine_bounds_to_propagate=affine_bounds_to_propagate, constant_oracle_bounds=constant_oracle_bounds
         )
 
-    def call(self, inputs: list[Tensor]) -> list[Tensor]:
-        return self.decomon_layer.call(inputs)
+    def call(self, inputs: list[Tensor], training: bool = False) -> list[Tensor]:
+        return self.decomon_layer.call(inputs, training=training)

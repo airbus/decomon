@@ -1,5 +1,5 @@
-import keras.ops as K  # type:ignore
-from keras.layers import Reshape  # type:ignore
+import keras.ops as K
+from keras.layers import Reshape
 
 from decomon.layers import DecomonLinearLayer
 

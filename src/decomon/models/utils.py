@@ -1,15 +1,16 @@
 from typing import Optional, Union
 
-import keras  # type:ignore
-import numpy as np  # type:ignore
-from keras import Model, Sequential  # type:ignore
-from keras.layers import Activation, Input, Layer  # type:ignore
-from keras.src import Functional  # type:ignore
-from keras.src.ops.node import Node  # type:ignore
+import keras
+import numpy as np
+from keras import Model, Sequential
+from keras.layers import Activation, Input, Layer
+from keras.src import Functional
+from keras.src.ops.node import Node
 
 from decomon.constants import ConvertMethod, Propagation
 from decomon.keras_utils import share_weights_and_build
 from decomon.perturbation_domain import PerturbationDomain
+from decomon.types import Tensor
 
 
 def generate_perturbation_domain_input(
@@ -246,20 +247,28 @@ def method2propagation(method: ConvertMethod) -> list[Propagation]:
         return [Propagation.FORWARD, Propagation.BACKWARD]
 
 
-def select_output(output, final_lower, final_upper, final_affine, final_ibp):
+def select_output(
+    output: list[Tensor], final_lower: bool, final_upper: bool, final_affine: bool, final_ibp: bool
+) -> list[Tensor]:
     if final_lower and final_upper:
         return output
-    if final_lower:
+    elif final_lower:
         if final_affine and final_ibp:
             return [output[i] for i in [0, 1, 4]]
-        if final_affine:
+        elif final_affine:
             return [output[i] for i in [0, 1]]
-        if final_ibp:
+        elif final_ibp:
             return [output[0]]
-    if final_upper:
+        else:
+            raise NotImplementedError("final_affine and final_ibp cannot be both False.")
+    elif final_upper:
         if final_affine and final_ibp:
             return [output[i] for i in [2, 3, 5]]
-        if final_affine:
+        elif final_affine:
             return [output[i] for i in [2, 3]]
-        if final_ibp:
+        elif final_ibp:
             return [output[1]]
+        else:
+            raise NotImplementedError("final_affine and final_ibp cannot be both False.")
+    else:
+        raise NotImplementedError("final_lower and final_upper cannot be both False.")

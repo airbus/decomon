@@ -1,3 +1,5 @@
+from typing import Any
+
 import keras.ops as K
 from jacobinet.layers.convolutional.conv1d import BackwardConv1D
 
@@ -9,7 +11,7 @@ from decomon.layers.utils import pre_built
 class DecomonBackwardConv1D(DecomonLinearLayerBackward):
     layer: BackwardConv1D
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         # create positive and negative version
 

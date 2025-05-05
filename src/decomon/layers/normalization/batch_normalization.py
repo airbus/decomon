@@ -1,5 +1,7 @@
-import keras.ops as K  # type:ignore
-from keras.layers import BatchNormalization  # type:ignore
+from typing import Any
+
+import keras.ops as K
+from keras.layers import BatchNormalization
 
 from decomon.layers.layer import DecomonLinearLayer
 from decomon.layers.normalization.utils import BatchNormalization_kernel_constraint
@@ -11,7 +13,7 @@ class DecomonBatchNormalization(DecomonLinearLayer):
     diagonal = True
     use_bias = True
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         # create positive and negative version
 

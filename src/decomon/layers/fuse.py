@@ -2,8 +2,8 @@
 
 from typing import Any, Optional
 
-from keras import ops as K  # type:ignore
-from keras.layers import Layer  # type:ignore
+from keras import ops as K
+from keras.layers import Layer
 
 from decomon.keras_utils import batch_multid_dot
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
@@ -234,7 +234,7 @@ class Fuse(Layer):
             ]
             affine_bounds_1_shape: list[tuple[Optional[int], ...]]
             constant_bounds_1_shape: list[tuple[Optional[int], ...]]
-            affine_bounds_1_shape, constant_bounds_1_shape = self.inputs_outputs_spec_1.split_output_shape(
+            affine_bounds_1_shape, constant_bounds_1_shape = self.inputs_outputs_spec_1.split_output_shape(  # type: ignore
                 bounds_1_i_shape
             )
 
@@ -248,7 +248,7 @@ class Fuse(Layer):
             (
                 affine_bounds_2_shape,
                 constant_bounds_2_shape,
-            ) = self.inputs_outputs_spec_2[  # type:ignore
+            ) = self.inputs_outputs_spec_2[  # type: ignore
                 0
             ].split_output_shape(bounds_2_i_shape)
 
@@ -272,9 +272,9 @@ class Fuse(Layer):
                 _, b2_shape, _, _ = affine_bounds_2_shape
                 model_2_output_shape_wo_batchisze: tuple[int, ...]
                 if self.from_linear_2[i]:
-                    model_2_output_shape_wo_batchisze = b2_shape
+                    model_2_output_shape_wo_batchisze = b2_shape  # type: ignore
                 else:
-                    model_2_output_shape_wo_batchisze = b2_shape[1:]
+                    model_2_output_shape_wo_batchisze = b2_shape[1:]  # type: ignore
 
                 diagonal = self.inputs_outputs_spec_1.is_diagonal_bounds_shape(
                     affine_bounds_1_shape

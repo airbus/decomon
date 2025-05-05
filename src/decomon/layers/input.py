@@ -2,10 +2,10 @@
 
 from typing import Any, Optional, Union
 
-import keras  # type:ignore
-import keras.ops as K  # type:ignore
-from keras.layers import Layer  # type:ignore
-from keras.utils import serialize_keras_object  # type:ignore
+import keras
+import keras.ops as K
+from keras.layers import Layer
+from keras.utils import serialize_keras_object
 
 from decomon.constants import Propagation
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
@@ -94,7 +94,7 @@ class ForwardInput(Layer):
         self,
         input_shape: tuple[Optional[int], ...],
     ) -> list[tuple[Optional[int], ...]]:
-        perturbation_domain_input_shape_wo_batchsize: tuple[int, ...] = input_shape[1:]
+        perturbation_domain_input_shape_wo_batchsize: tuple[int, ...] = input_shape[1:]  # type: ignore
         keras_input_shape_wo_batchsize = self.perturbation_domain.get_keras_input_shape_wo_batchsize(
             x_shape=perturbation_domain_input_shape_wo_batchsize
         )
@@ -111,7 +111,7 @@ class ForwardInput(Layer):
         else:
             constant_bounds_shape = []
         return self.inputs_outputs_spec.flatten_inputs_shape(
-            affine_bounds_to_propagate_shape=affine_bounds_shape,
+            affine_bounds_to_propagate_shape=affine_bounds_shape,  # type: ignore
             constant_oracle_bounds_shape=constant_bounds_shape,
             perturbation_domain_inputs_shape=[],
         )
@@ -164,7 +164,7 @@ class IdentityInput(Layer):
         self,
         input_shape: tuple[Optional[int], ...],
     ) -> list[tuple[Optional[int], ...]]:
-        perturbation_domain_input_shape_wo_batchsize: tuple[int, ...] = input_shape[1:]
+        perturbation_domain_input_shape_wo_batchsize: tuple[int, ...] = input_shape[1:]  # type: ignore
         keras_input_shape_wo_batchsize = self.perturbation_domain.get_keras_input_shape_wo_batchsize(
             x_shape=perturbation_domain_input_shape_wo_batchsize
         )

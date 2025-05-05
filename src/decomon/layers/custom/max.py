@@ -1,10 +1,9 @@
 # define non native class Max
 # Decomon Custom for Max(axis...)
-from typing import List
+from typing import Any
 
-import keras.ops as K  # type:ignore
-import numpy as np  # type:ignore
-from keras_custom.layers import Max  # type:ignore
+import keras.ops as K
+from keras_custom.layers import Max
 
 from decomon.layers.custom.utils import (
     get_affine_lower_bound_max,
@@ -17,22 +16,22 @@ from decomon.types import Tensor
 
 class DecomonMax(DecomonLayer):
     layer: Max
-    linear: False
+    linear = False
     increasing = True
 
     def get_affine_bounds_with_linear_block_inputs(
-        self, lower_max: Tensor, upper_max: Tensor, axis=int
+        self, lower_max: Tensor, upper_max: Tensor, axis: int
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         w_l, b_l = get_affine_lower_bound_max(lower_max, upper_max, axis=axis, keepdims=False)
         w_u, b_u = get_affine_upper_bound_max(lower_max, upper_max, axis=axis, keepdims=False)
 
-        return [w_l, b_l, w_u, b_u]
+        return (w_l, b_l, w_u, b_u)
 
-    def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         return self.get_affine_bounds_with_linear_block_inputs(lower_max=lower, upper_max=upper, axis=self.axis)
 
     def backward_affine_propagate(
-        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
+        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor], **kwargs: Any
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Propagate model affine bounds in backward direction.
 
@@ -84,8 +83,7 @@ class DecomonMax(DecomonLayer):
                 is_diagonal = w_.shape[1:] == b_.shape[1:]
         else:
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
-            layer_affine_bounds = [w_l, b_l, w_u, b_u]
-            return layer_affine_bounds
+            return (w_l, b_l, w_u, b_u)
 
         if is_diagonal:
             w_l, b_l, w_u, b_u = self.get_affine_bounds(lower=lower, upper=upper)
@@ -164,4 +162,4 @@ class DecomonMax(DecomonLayer):
         w_l = w_l_0 - w_u_1
         b_l = b_l_0 - b_u_1 + b_l_out
 
-        return [w_l, b_l, w_u, b_u]
+        return (w_l, b_l, w_u, b_u)

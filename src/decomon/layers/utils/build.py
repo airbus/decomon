@@ -1,11 +1,9 @@
-from typing import List
-
 import numpy as np
 from keras.layers import Layer
 from keras.models import Sequential
 
 
-def pre_built(layer: Layer, input_shape_wo_batch: List[int]):
+def pre_built(layer: Layer, input_shape_wo_batch: list[int]) -> None:
     """
     This function ensures that the provided Keras layer is built by passing a dummy input through it.
     If the layer has not been built yet, it creates a toy model with the given layer,

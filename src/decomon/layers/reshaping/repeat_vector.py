@@ -1,4 +1,4 @@
-from keras.layers import RepeatVector  # type:ignore
+from keras.layers import RepeatVector
 
 from decomon.layers import DecomonLinearLayer
 

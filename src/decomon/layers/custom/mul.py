@@ -1,5 +1,7 @@
 # onnx should use a custom library of keras...
-from keras_custom.layers import MulConstant  # type:ignore
+from typing import Any
+
+from keras_custom.layers import MulConstant
 
 from decomon.layers.layer import DecomonLayer
 from decomon.layers.utils.affine import get_affine_representation_wo_bias
@@ -16,7 +18,7 @@ class DecomonMulConstant(DecomonLayer):
 
     # override backward propagation
     def backward_affine_propagate(
-        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
+        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor], **kwargs: Any
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         if output_affine_bounds is None or len(output_affine_bounds) == 0:
             # no backward affine bounds are propagated; call the affine bounds directly

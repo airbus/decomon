@@ -1,13 +1,11 @@
-from typing import List, Tuple
-
-import keras  # type:ignore
-import keras.ops as K  # type:ignore
-import numpy as np  # type:ignore
+import keras
+import keras.ops as K
+import numpy as np
 
 from decomon.types import Tensor
 
 
-def get_affine_upper_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims: bool = True) -> Tuple[Tensor, Tensor]:
+def get_affine_upper_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims: bool = True) -> tuple[Tensor, Tensor]:
     """The get_affine_upper_bound_max function computes an affine upper bound approximation for the max function applied along a specified axis of tensors.
 
     Args:
@@ -37,8 +35,8 @@ def get_affine_upper_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims
     else:
         axis_ = axis
 
-    shape_prev: List[int] = list(lower.shape[1:axis_])
-    shape_after: List[int]
+    shape_prev: list[int] = list(lower.shape[1:axis_])
+    shape_after: list[int]
 
     if axis_ == N - 1:
         shape_after = []
@@ -46,18 +44,18 @@ def get_affine_upper_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims
         shape_after = list(lower.shape[axis_ + 1 :])
 
     # permute data so that the operator is on the last dimension ... ?
-    input_shape: List[int] = list(lower.shape)  # (batch, shape_prev, n_dim, shape_after)
+    input_shape: list[int] = list(lower.shape)  # (batch, shape_prev, n_dim, shape_after)
     # get the shape of the dimension
     n_dim: int = input_shape[axis_]  # n_dim
 
     # expand dim/broadcast
     mask: Tensor = K.eye(n_dim)  # (n_dim, n_dim)
 
-    mask_shape: array.array = np.ones(len(lower.shape) + 1, dtype="int")
+    mask_shape = np.ones(len(lower.shape) + 1, dtype="int")
     mask_shape[-1] = n_dim
     mask_shape[axis_] = n_dim
 
-    mask: Tensor = K.reshape(mask, tuple(mask_shape))  # (1, 1.., n_dim, 1.., n_dim)
+    mask = K.reshape(mask, tuple(mask_shape))  # (1, 1.., n_dim, 1.., n_dim)
 
     l_reshaped: Tensor = K.expand_dims(lower, -1)  # (batch, shape_prev, n_dim, shape_after, 1)
     u_reshaped: Tensor = K.expand_dims(upper, -1)  # (batch, shape_prev, n_dim, shape_after, 1)
@@ -105,17 +103,17 @@ def get_affine_upper_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims
     w_u = K.expand_dims(mask_collapse, axis) * w_u
     b_u = mask_collapse * b_u + (1 - mask_collapse) * K.max(lower, axis=axis)
 
-    return [w_u, b_u]
+    return (w_u, b_u)
 
 
-def max_prime(inputs, axis: int):
+def max_prime(inputs: Tensor, axis: int) -> Tensor:
     indices = K.argmax(inputs, axis)
     dim_i = inputs.shape[axis]
     output = K.one_hot(indices, dim_i, axis=axis)
     return output
 
 
-def get_affine_lower_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims: bool = True) -> Tuple[Tensor, Tensor]:
+def get_affine_lower_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims: bool = True) -> tuple[Tensor, Tensor]:
     """The get_affine_lower_bound_max function computes an affine lower bound approximation for the max function applied along a specified axis of tensors.
 
     Args:
@@ -156,4 +154,4 @@ def get_affine_lower_bound_max(lower: Tensor, upper: Tensor, axis: int, keepdims
     if keepdims:
         raise NotImplementedError()
 
-    return [w_l, b_l]
+    return (w_l, b_l)

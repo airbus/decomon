@@ -1,7 +1,7 @@
 from typing import Any
 
-import keras.ops as K  # type:ignore
-from keras.layers import Dense  # type:ignore
+import keras.ops as K
+from keras.layers import Dense
 
 from decomon.layers.layer import DecomonLinearLayer
 from decomon.types import Tensor
@@ -13,13 +13,13 @@ class DecomonDense(DecomonLinearLayer):
     def __init__(
         self,
         layer: Dense,
-        *args,
+        *args: Any,
         **kwargs: Any,
     ):
         layer_pos = Dense_kernel_constraint(layer=layer, ops=K.maximum, add_bias=True)
         layer_neg = Dense_kernel_constraint(layer=layer, ops=K.minimum, add_bias=False)
 
-        super().__init__(layer=layer, layer_pos=layer_pos, layer_neg=layer_neg, *args, **kwargs)
+        super().__init__(*args, layer=layer, layer_pos=layer_pos, layer_neg=layer_neg, **kwargs)  # type: ignore
 
     def get_affine_representation(self) -> tuple[Tensor, Tensor]:
         w = self.layer.kernel

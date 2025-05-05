@@ -1,9 +1,8 @@
 from collections.abc import Callable
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 import keras
 import keras.ops as K
-import numpy as np
 from keras import Layer
 from keras.activations import (
     elu,
@@ -146,14 +145,14 @@ class DecomonBaseActivation(DecomonLayer):
                     K.sum(w_l_pos * K.expand_dims(b_l_in_, 1), 1) + K.sum(w_l_neg * K.expand_dims(b_u_in_, 1), 1) + b_l
                 )
 
-            return [w_l_out, b_l_out, w_u_out, b_u_out]
+            return (w_l_out, b_l_out, w_u_out, b_u_out)
         else:
             return super().forward_affine_propagate(
                 input_affine_bounds=input_affine_bounds, input_constant_bounds=input_constant_bounds
             )
 
     def backward_affine_propagate(
-        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
+        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor], **kwargs: Any
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         if self.finetune and self.diagonal:
             w_l_out, b_l_out, w_u_out, b_u_out = output_affine_bounds
@@ -204,14 +203,14 @@ class DecomonBaseActivation(DecomonLayer):
             b_u_in = K.sum(K.maximum(w_u_out, 0) * b_u_ + K.minimum(w_u_out, 0) * b_l_, axis) + b_u_out
             b_l_in = K.sum(K.maximum(w_l_out, 0) * b_l_ + K.minimum(w_l_out, 0) * b_u_, axis) + b_l_out
 
-            return [w_l_in, b_l_in, w_u_in, b_u_in]
+            return (w_l_in, b_l_in, w_u_in, b_u_in)
         else:
             return super().backward_affine_propagate(output_affine_bounds, input_constant_bounds)
 
     def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
         super().build(input_shape=input_shape)
         if not self.linear and self.diagonal:
-            input_shape_wo_batch = list(self.layer.input.shape[1:])
+            input_shape_wo_batch = self.layer.input.shape[1:]
             model_input_shape = self.model_input_shape
             if self.finetune_upper and self.finetune:
                 self.coeff_upper = self.add_weight(name="coeff_upper", shape=(1,), initializer="ones", trainable=True)
@@ -288,43 +287,26 @@ class DecomonActivation(DecomonBaseActivation):
     def get_affine_representation(self) -> tuple[Tensor, Tensor]:
         return self.decomon_activation.get_affine_representation()
 
-    def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    def get_affine_bounds(
+        self,
+        lower: Tensor,
+        upper: Tensor,
+        **kwargs: Any,
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         return self.decomon_activation.get_affine_bounds(lower=lower, upper=upper)
 
     def forward_affine_propagate(
         self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        w_l_in, b_l_in, w_u_in, b_u_in = input_affine_bounds
-        lower, upper = input_constant_bounds
-
-        if self.finetune:
-            alpha_models = [None, None]
-            if self.finetune_upper:
-                alpha_models[0] = self.alpha_upper
-            if self.finetune_lower:
-                alpha_models[1] = self.alpha_lower
-            w_l, b_l, w_u, b_u = self.get_affine_bounds(lower, upper)
-            import pdb
-
-            pdb.set_trace()
-        if self.increasing:
-            # weights are always positive
-            if self.diagonal:
-                import pdb
-
-                pdb.set_trace()
-            else:
-                raise NotImplementedError()
-        else:
-            raise NotImplementedError()
-        """
         return self.decomon_activation.forward_affine_propagate(
             input_affine_bounds=input_affine_bounds, input_constant_bounds=input_constant_bounds
         )
-        """
 
     def backward_affine_propagate(
-        self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
+        self,
+        output_affine_bounds: list[Tensor],
+        input_constant_bounds: list[Tensor],
+        **kwargs: Any,
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         return self.decomon_activation.backward_affine_propagate(
             output_affine_bounds=output_affine_bounds, input_constant_bounds=input_constant_bounds
@@ -336,8 +318,8 @@ class DecomonActivation(DecomonBaseActivation):
     def compute_output_shape(self, input_shape: list[tuple[Optional[int], ...]]) -> list[tuple[Optional[int], ...]]:
         return self.decomon_activation.compute_output_shape(input_shape)
 
-    def call(self, inputs: list[Tensor]) -> list[Tensor]:
-        return self.decomon_activation.call(inputs=inputs)
+    def call(self, inputs: list[Tensor], training: bool = False) -> list[Tensor]:
+        return self.decomon_activation.call(inputs=inputs, training=training)
 
     def build(self, input_shape: list[tuple[Optional[int], ...]]) -> None:
         self.decomon_activation.build(input_shape=input_shape)
@@ -347,7 +329,7 @@ class DecomonLinear(DecomonBaseActivation):
     linear = True
     increasing = True
 
-    def call(self, inputs: list[Tensor]) -> list[Tensor]:
+    def call(self, inputs: list[Tensor], training: bool = False) -> list[Tensor]:
         (
             affine_bounds_to_propagate,
             constant_oracle_bounds,
@@ -371,7 +353,7 @@ class DecomonLinear(DecomonBaseActivation):
         ) = self.inputs_outputs_spec.split_input_shape(input_shape=input_shape)
         return self.inputs_outputs_spec.flatten_outputs_shape(
             affine_bounds_propagated_shape=affine_bounds_to_propagate_shape,
-            constant_bounds_propagated_shape=constant_oracle_bounds_shape,
+            constant_bounds_propagated_shape=constant_oracle_bounds_shape,  # type: ignore
         )
 
 
@@ -380,7 +362,7 @@ class DecomonActivationReLU(DecomonBaseActivation):
     increasing = True
     finetune_lower = True
 
-    def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         w_u, b_u, w_l, b_l = get_linear_hull_relu(upper=upper, lower=lower, slope=self.slope, **kwargs)
         return w_l, b_l, w_u, b_u
 
@@ -389,7 +371,7 @@ class DecomonActivationSoftSign(DecomonBaseActivation):
     diagonal = True
     increasing = True
 
-    def get_affine_bounds(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         func = softsign
         func_prime = softsign_prime
 

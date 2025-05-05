@@ -499,13 +499,13 @@ class InputsOutputsSpec:
         return self.propagation == Propagation.FORWARD and self.is_merging_layer
 
     @overload
-    def extract_shapes_from_affine_bounds(  # type:ignore
+    def extract_shapes_from_affine_bounds(  # type: ignore
         self, affine_bounds: list[Tensor], i: int = -1
     ) -> list[tuple[Optional[int], ...]]:
         ...
 
     @overload
-    def extract_shapes_from_affine_bounds(
+    def extract_shapes_from_affine_bounds(  # type: ignore
         self, affine_bounds: list[list[Tensor]], i: int = -1
     ) -> list[list[tuple[Optional[int], ...]]]:
         ...
@@ -516,7 +516,7 @@ class InputsOutputsSpec:
         if self.has_multiple_bounds_inputs() and i == -1:
             return [[t.shape for t in sub_bounds] for sub_bounds in affine_bounds]
         else:
-            return [t.shape for t in affine_bounds]
+            return [t.shape for t in affine_bounds]  # type: ignore
 
     def is_identity_bounds(self, affine_bounds: Union[list[Tensor], list[list[Tensor]]], i: int = -1) -> bool:
         return self.is_identity_bounds_shape(
@@ -530,7 +530,7 @@ class InputsOutputsSpec:
     ) -> bool:
         if self.has_multiple_bounds_inputs() and i == -1:
             return all(
-                self.is_identity_bounds_shape(affine_bounds_shape=affine_bounds_shape[i], i=i)
+                self.is_identity_bounds_shape(affine_bounds_shape=affine_bounds_shape[i], i=i)  # type: ignore
                 for i in range(self.nb_keras_inputs)
             )
         else:
@@ -548,7 +548,7 @@ class InputsOutputsSpec:
     ) -> bool:
         if self.has_multiple_bounds_inputs() and i == -1:
             return all(
-                self.is_diagonal_bounds_shape(affine_bounds_shape=affine_bounds_shape[i], i=i)
+                self.is_diagonal_bounds_shape(affine_bounds_shape=affine_bounds_shape[i], i=i)  # type: ignore
                 for i in range(self.nb_keras_inputs)
             )
         else:
@@ -560,7 +560,7 @@ class InputsOutputsSpec:
 
     def is_wo_batch_bounds(self, affine_bounds: Union[list[Tensor], list[list[Tensor]]], i: int = -1) -> bool:
         return self.is_wo_batch_bounds_shape(
-            affine_bounds_shape=self.extract_shapes_from_affine_bounds(affine_bounds=affine_bounds, i=i), i=i
+            affine_bounds_shape=self.extract_shapes_from_affine_bounds(affine_bounds=affine_bounds, i=i), i=i  # type: ignore
         )
 
     def is_wo_batch_bounds_shape(
@@ -570,7 +570,7 @@ class InputsOutputsSpec:
     ) -> bool:
         if self.has_multiple_bounds_inputs() and i == -1:
             return all(
-                self.is_wo_batch_bounds_shape(affine_bounds_shape=affine_bounds_shape[i], i=i)
+                self.is_wo_batch_bounds_shape(affine_bounds_shape=affine_bounds_shape[i], i=i)  # type: ignore
                 for i in range(self.nb_keras_inputs)
             )
         else:
@@ -579,14 +579,14 @@ class InputsOutputsSpec:
             b_shape = affine_bounds_shape[1]
             if self.propagation == Propagation.FORWARD:
                 if i > -1:
-                    return len(b_shape) == len(self.layer_input_shape[i])
+                    return len(b_shape) == len(self.layer_input_shape[i])  # type: ignore
                 else:
                     return len(b_shape) == len(self.layer_input_shape)
             else:
                 return len(b_shape) == len(self.model_output_shape)
 
     @overload
-    def is_wo_batch_bounds_by_keras_input(
+    def is_wo_batch_bounds_by_keras_input(  # type: ignore
         self,
         affine_bounds: list[Tensor],
     ) -> bool:

@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Optional
 
-from keras.layers import (  # type:ignore
+from keras.layers import (
     Activation,
     Add,
     Average,
@@ -41,7 +41,7 @@ from keras.layers import (  # type:ignore
     ZeroPadding2D,
     ZeroPadding3D,
 )
-from keras_custom.layers import Max, Min, MulConstant  # type:ignore
+from keras_custom.layers import Max, Min, MulConstant
 
 import decomon.layers
 from decomon.constants import Propagation, Slope

@@ -2,8 +2,8 @@
 
 from typing import Any, Optional
 
-import keras.ops as K  # type:ignore
-from keras.layers import Layer  # type:ignore
+import keras.ops as K
+from keras.layers import Layer
 
 from decomon.constants import Propagation
 from decomon.keras_utils import add_tensors

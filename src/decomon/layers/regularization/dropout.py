@@ -1,5 +1,5 @@
 # onnx should use a custom library of keras...
-from keras.layers import Dropout  # type:ignore
+from keras.layers import Dropout
 
 from decomon.layers import DecomonLayer
 from decomon.layers.utils.affine import get_affine_representation_wo_bias

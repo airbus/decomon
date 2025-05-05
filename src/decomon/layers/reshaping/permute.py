@@ -1,4 +1,4 @@
-from keras.layers import Permute  # type:ignore
+from keras.layers import Permute
 
 from decomon.layers import DecomonLinearLayer
 

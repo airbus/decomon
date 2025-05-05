@@ -7,9 +7,9 @@ It inherits from keras Sequential class.
 from collections.abc import Callable
 from typing import Any, Optional
 
-import keras  # type:ignore
-from keras.layers import InputLayer, Layer  # type:ignore
-from keras.models import Model  # type:ignore
+import keras
+from keras.layers import InputLayer, Layer
+from keras.models import Model
 
 from decomon.constants import Propagation, Slope
 from decomon.layers import DecomonLayer

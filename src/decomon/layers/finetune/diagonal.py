@@ -1,6 +1,5 @@
-from typing import Callable, List
+from typing import Optional
 
-import keras.ops as K
 from keras.layers import Concatenate, Dense, Input, Reshape
 from keras.models import Model, Sequential
 
@@ -9,10 +8,10 @@ from decomon.constants import Propagation
 
 def get_alpha_model_diagonal(
     propagation: Propagation,
-    input_shape_wo_batch: List[int],
-    model_input_shape: List[int] = [None],
-    alpha_model: Callable = None,
-):
+    input_shape_wo_batch: tuple[int, ...],
+    model_input_shape: Optional[tuple[int, ...]] = None,
+    alpha_model: Optional[Model] = None,
+) -> Model:
     if propagation == Propagation.FORWARD:
         return get_alpha_model_diagonal_forward(
             input_shape_wo_batch=input_shape_wo_batch, model_input_shape=model_input_shape, alpha_model=alpha_model
@@ -22,7 +21,9 @@ def get_alpha_model_diagonal(
     raise ValueError("unknow propagation mode {}".format(propagation))
 
 
-def get_alpha_model_diagonal_backward(input_shape_wo_batch: List[int], alpha_model: Callable = None):
+def get_alpha_model_diagonal_backward(
+    input_shape_wo_batch: tuple[int, ...], alpha_model: Optional[Model] = None
+) -> Model:
     # function description
     # Note: If the input to the layer has a rank greater than 2,
     # Dense computes the dot product between the inputs and the kernel along the last axis of the
@@ -30,12 +31,12 @@ def get_alpha_model_diagonal_backward(input_shape_wo_batch: List[int], alpha_mod
     # step 1: create input for lower and upper bounds of the layer
     lower = Input(input_shape_wo_batch)
     upper = Input(input_shape_wo_batch)
-    w_lower = Input(input_shape_wo_batch + [None])  # last tensor dimension is unknown
-    w_upper = Input(input_shape_wo_batch + [None])  # last tensor dimension is unknown
+    w_lower = Input(input_shape_wo_batch + (None,))  # last tensor dimension is unknown
+    w_upper = Input(input_shape_wo_batch + (None,))  # last tensor dimension is unknown
 
     # concat everything
-    layer_reshape_0 = Reshape(input_shape_wo_batch + [-1, 1])
-    layer_reshape_1 = Reshape(input_shape_wo_batch + [-1, 1])
+    layer_reshape_0 = Reshape(input_shape_wo_batch + (-1, 1))
+    layer_reshape_1 = Reshape(input_shape_wo_batch + (-1, 1))
     w_reshaped = [layer_reshape_1(inp) for inp in [w_lower, w_upper]]
     inputs_reshaped = [layer_reshape_0(inp) + 0 * w_reshaped[0] for inp in [lower, upper]]
 
@@ -49,7 +50,7 @@ def get_alpha_model_diagonal_backward(input_shape_wo_batch: List[int], alpha_mod
                 Dense(80, activation="relu"),
                 Dense(20, activation="relu"),
                 Dense(1, activation="sigmoid"),
-                Reshape(input_shape_wo_batch + [-1]),
+                Reshape(input_shape_wo_batch + (-1,)),
             ]
         )
 
@@ -60,23 +61,28 @@ def get_alpha_model_diagonal_backward(input_shape_wo_batch: List[int], alpha_mod
 
 
 def get_alpha_model_diagonal_forward(
-    input_shape_wo_batch: List[int], model_input_shape: List[int] = [None], alpha_model: Callable = None
-):
+    input_shape_wo_batch: tuple[int, ...],
+    model_input_shape: Optional[tuple[int, ...]] = None,
+    alpha_model: Optional[Model] = None,
+) -> Model:
     # function description
     # Note: If the input to the layer has a rank greater than 2,
     # Dense computes the dot product between the inputs and the kernel along the last axis of the
 
+    if model_input_shape is None:
+        model_input_shape = tuple()
+
     # step 1: create input for lower and upper bounds of the layer
     lower = Input(input_shape_wo_batch)
     upper = Input(input_shape_wo_batch)
-    w_lower = Input(list(model_input_shape) + input_shape_wo_batch)
-    w_upper = Input(list(model_input_shape) + input_shape_wo_batch)
+    w_lower = Input(model_input_shape + input_shape_wo_batch)
+    w_upper = Input(model_input_shape + input_shape_wo_batch)
     b_lower = Input(input_shape_wo_batch)
     b_upper = Input(input_shape_wo_batch)
 
     # concat everything
-    layer_reshape_0 = Reshape([-1] + input_shape_wo_batch + [1])
-    layer_reshape_1 = Reshape([-1] + input_shape_wo_batch + [1])
+    layer_reshape_0 = Reshape((-1,) + input_shape_wo_batch + (1,))
+    layer_reshape_1 = Reshape((-1,) + input_shape_wo_batch + (1,))
 
     inputs_0 = (
         Concatenate(-1)([layer_reshape_0(inp) for inp in [lower, upper, b_lower, b_upper]])
@@ -96,7 +102,7 @@ def get_alpha_model_diagonal_forward(
                 Dense(80, activation="relu"),
                 Dense(20, activation="relu"),
                 Dense(1, activation="sigmoid"),
-                Reshape([-1] + input_shape_wo_batch),
+                Reshape((-1,) + input_shape_wo_batch),
             ]
         )
 

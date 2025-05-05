@@ -1,5 +1,5 @@
-import keras.ops as K  # type:ignore
-from keras.layers import Average  # type:ignore
+import keras.ops as K
+from keras.layers import Average
 
 from decomon.layers.merging.base_merge import DecomonMerge
 from decomon.types import Tensor

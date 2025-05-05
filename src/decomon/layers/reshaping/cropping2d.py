@@ -1,4 +1,4 @@
-from keras.layers import Cropping2D  # type:ignore
+from keras.layers import Cropping2D
 
 from decomon.layers import DecomonLinearLayer
 
