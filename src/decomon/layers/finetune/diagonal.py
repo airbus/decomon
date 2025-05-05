@@ -55,7 +55,7 @@ def get_alpha_model_diagonal_backward(input_shape_wo_batch: List[int], alpha_mod
 
     output = alpha_model(inputs_cat)  # (input_shape_wo_batch+[None])
 
-    #return Model([lower, upper, w_lower, w_upper], K.sum(output, axis=-1))
+    # return Model([lower, upper, w_lower, w_upper], K.sum(output, axis=-1))
     return Model([lower, upper, w_lower, w_upper], output)
 
 
