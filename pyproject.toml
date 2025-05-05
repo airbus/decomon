@@ -36,9 +36,6 @@ testpaths = ["tests"]
 addopts = [
     "--import-mode=importlib",
     "--ignore=tests/lirpa_comparison",
-    "--ignore=tests/old",
-    "--ignore=tests/test_deel_lip.py",
-    "--ignore=tests/test_core_backward.py",
 ]
 
 [tool.black]
