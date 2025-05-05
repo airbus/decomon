@@ -156,9 +156,9 @@ def get_adv_box(
         needs_backward_bounds = len(decomon_model.inputs) > 1
         if needs_backward_bounds:  # backward bounds needed
             C = np.diag([1] * n_label)[None] - source_labels[:, :, None]
-            output = decomon_model.predict_on_single_batch_np([perturbation_domain_input, C])  # type: ignore
+            output = decomon_model.predict_on_single_batch_np([perturbation_domain_input, C])
         else:
-            output = decomon_model.predict_on_single_batch_np(perturbation_domain_input)  # type: ignore
+            output = decomon_model.predict_on_single_batch_np(perturbation_domain_input)
 
         def get_ibp_score(
             u_c: npt.NDArray[np.float64],

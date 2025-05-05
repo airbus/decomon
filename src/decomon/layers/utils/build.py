@@ -1,8 +1,8 @@
 from typing import List
 
-import numpy as np  # type:ignore
-from keras.layers import Layer  # type:ignore
-from keras.models import Sequential  # type:ignore
+import numpy as np
+from keras.layers import Layer
+from keras.models import Sequential
 
 
 def pre_built(layer: Layer, input_shape_wo_batch: List[int]):

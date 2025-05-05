@@ -1,4 +1,4 @@
-from keras.layers import DepthwiseConv2D  # type:ignore
+from keras.layers import DepthwiseConv2D
 
 from .base_conv import DecomonBaseDepthwiseConv
 

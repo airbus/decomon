@@ -1,4 +1,4 @@
-from jacobinet.layers import (  # type: ignore; non linear layers
+from jacobinet.layers import (  # non linear layers
     BackwardActivation,
     BackwardAdd,
     BackwardAveragePooling1D,

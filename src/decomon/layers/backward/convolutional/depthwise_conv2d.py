@@ -1,7 +1,5 @@
 import keras.ops as K
-from jacobinet.layers.convolutional.depthwise_conv2d import (
-    BackwardDepthwiseConv2D,  # type: ignore
-)
+from jacobinet.layers.convolutional.depthwise_conv2d import BackwardDepthwiseConv2D
 
 from decomon.layers.backward.layer_backward import DecomonLinearLayerBackward
 from decomon.layers.convolutional.utils import DepthwiseConv_kernel_constraint

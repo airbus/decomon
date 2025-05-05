@@ -1,8 +1,8 @@
 from typing import Callable, List
 
-import keras.ops as K  # type:ignore
-from keras.layers import Concatenate, Dense, Input, Reshape  # type:ignore
-from keras.models import Model, Sequential  # type:ignore
+import keras.ops as K
+from keras.layers import Concatenate, Dense, Input, Reshape
+from keras.models import Model, Sequential
 
 from decomon.constants import Propagation
 

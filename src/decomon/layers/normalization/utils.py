@@ -1,10 +1,8 @@
 from typing import Any
 
-import keras.ops as K  # type:ignore
-from keras.layers import BatchNormalization  # type:ignore
-from keras.layers import Wrapper  # type:ignore
-from keras.src import backend  # type:ignore
-from keras.src import ops  # type:ignore
+import keras.ops as K
+from keras.layers import BatchNormalization, Wrapper
+from keras.src import backend, ops
 
 
 class BatchNormalization_kernel_constraint(Wrapper):

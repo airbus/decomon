@@ -1,4 +1,4 @@
-from keras.layers import Conv3D  # type:ignore
+from keras.layers import Conv3D
 
 from .base_conv import DecomonBaseConv
 

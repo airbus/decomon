@@ -219,7 +219,7 @@ class DecomonLayer(Wrapper):
 
     @property
     def layer_input_shape(self) -> tuple[int, ...]:
-        return self.inputs_outputs_spec.layer_input_shape  # type: ignore
+        return self.inputs_outputs_spec.layer_input_shape
 
     @property
     def model_input_shape(self) -> tuple[int, ...]:
@@ -970,13 +970,13 @@ class DecomonLayer(Wrapper):
         w_shape: Union[tuple[Optional[int], ...], list[tuple[Optional[int], ...]]]
         if self.linear and self.inputs_outputs_spec.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
             b_shape = b_shape_wo_batchisze
-            w_shape = w_shape_wo_batchsize  # type: ignore
+            w_shape = w_shape_wo_batchsize
         else:
             b_shape = (None,) + b_shape_wo_batchisze
             if self._is_merging_layer:
-                w_shape = [(None,) + sub_w_shape_wo_batchsize for sub_w_shape_wo_batchsize in w_shape_wo_batchsize]  # type: ignore
+                w_shape = [(None,) + sub_w_shape_wo_batchsize for sub_w_shape_wo_batchsize in w_shape_wo_batchsize]
             else:
-                w_shape = (None,) + w_shape_wo_batchsize  # type: ignore
+                w_shape = (None,) + w_shape_wo_batchsize
         if self._is_merging_layer:
             affine_bounds_propagated_shape = [
                 [
@@ -1074,13 +1074,13 @@ class DecomonLayer(Wrapper):
             w_shape: Union[tuple[Optional[int], ...], list[tuple[Optional[int], ...]]]
             if self.linear and self.inputs_outputs_spec.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape):
                 b_shape = b_shape_wo_batchisze
-                w_shape = w_shape_wo_batchsize  # type: ignore
+                w_shape = w_shape_wo_batchsize
             else:
                 b_shape = (None,) + b_shape_wo_batchisze
                 if self._is_merging_layer:
-                    w_shape = [(None,) + sub_w_shape_wo_batchsize for sub_w_shape_wo_batchsize in w_shape_wo_batchsize]  # type: ignore
+                    w_shape = [(None,) + sub_w_shape_wo_batchsize for sub_w_shape_wo_batchsize in w_shape_wo_batchsize]
                 else:
-                    w_shape = (None,) + w_shape_wo_batchsize  # type: ignore
+                    w_shape = (None,) + w_shape_wo_batchsize
             if self._is_merging_layer:
                 affine_bounds_propagated_shape = [
                     [

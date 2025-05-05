@@ -1,5 +1,5 @@
 import keras.ops as K
-from jacobinet.layers.core.dense import BackwardDense  # type: ignore
+from jacobinet.layers.core.dense import BackwardDense
 
 from decomon.layers.backward.layer_backward import DecomonLinearLayerBackward
 from decomon.layers.core.utils import Dense_kernel_constraint
