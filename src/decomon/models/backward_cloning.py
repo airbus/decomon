@@ -130,12 +130,13 @@ def crown(
                 finetune=finetune,
             )
             # tighten the bounds with forward_output_map
-
+            """
             if id(node) in ibp_output_map.keys():
                 constants_bounds_ibp = ibp_output_map[id(node)]
                 lower = K.maximum(constants_bounds_ibp[0], constant_oracle_bounds[0])
                 upper = K.minimum(constants_bounds_ibp[1], constant_oracle_bounds[1])
                 constant_oracle_bounds = [lower, upper]
+            """
 
         else:
             constant_oracle_bounds = []
