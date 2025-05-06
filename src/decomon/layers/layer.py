@@ -468,8 +468,16 @@ class DecomonLayer(Wrapper):
         else:
             w_l_in_ = K.reshape(w_l_in, [-1] + layer_input_shape_wo_batchsize)
             w_u_in_ = K.reshape(w_u_in, [-1] + layer_input_shape_wo_batchsize)
-            b_l_in_ = K.reshape(b_l_in, [-1] + layer_input_shape_wo_batchsize)
-            b_u_in_ = K.reshape(b_u_in, [-1] + layer_input_shape_wo_batchsize)
+            if len(b_u_in.shape) == 0:
+                # b_u_in is a scalar value
+                b_u_in_ = K.zeros_like([1] + layer_input_shape_wo_batchsize) + b_u_in
+            else:
+                b_u_in_ = K.reshape(b_u_in, [-1] + layer_input_shape_wo_batchsize)
+            if len(b_l_in.shape) == 0:
+                # b_l_in is a scalar value
+                b_l_in_ = K.zeros_like([1] + layer_input_shape_wo_batchsize) + b_l_in
+            else:
+                b_l_in_ = K.reshape(b_l_in, [-1] + layer_input_shape_wo_batchsize)
 
             if is_from_linear:
                 # apply layer
