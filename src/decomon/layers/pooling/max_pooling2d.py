@@ -4,23 +4,17 @@ import keras.ops as K
 import numpy as np
 from jacobinet.layers.convert import get_backward
 from jacobinet.layers.pooling.utils_max import get_linear_block_max
-from keras.layers import Layer, MaxPooling2D, Reshape
-from keras.models import Sequential
+from keras.layers import Layer, MaxPooling2D
 
 from decomon.constants import Propagation
 from decomon.layers import DecomonLayer
-from decomon.layers.convolutional.utils import get_toeplitz
 from decomon.layers.custom.utils import (
     get_affine_lower_bound_max,
     get_affine_upper_bound_max,
 )
 from decomon.layers.fuse import combine_affine_bounds
-from decomon.layers.utils.affine import get_bias
 from decomon.perturbation_domain import PerturbationDomain
 from decomon.types import Tensor
-from decomon.utils import memory_limit
-
-from .utils_conv import get_conv_op, get_in_channels
 
 
 class DecomonMaxPooling2D(DecomonLayer):
