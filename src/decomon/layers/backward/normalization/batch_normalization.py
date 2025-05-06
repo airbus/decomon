@@ -1,11 +1,9 @@
 from typing import Any
 
-import keras
 import keras.ops as K
 from jacobinet.layers.normalization.batch_normalization import (
     BackwardBatchNormalization,  # type: ignore
 )
-from keras.src import ops
 
 from decomon.layers.backward.layer_backward import DecomonLinearLayerBackward
 from decomon.layers.normalization.utils import BatchNormalizationKernelConstraint

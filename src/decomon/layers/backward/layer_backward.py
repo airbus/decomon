@@ -1,6 +1,6 @@
 # jacobinet module
 from collections.abc import Callable
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import keras.ops as K
 from jacobinet.layers import BackwardBoundedLinearizedLayer, BackwardLinearLayer

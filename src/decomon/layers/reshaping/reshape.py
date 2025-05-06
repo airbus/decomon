@@ -1,4 +1,3 @@
-import keras.ops as K
 from keras.layers import Reshape
 
 from decomon.layers import DecomonLinearLayer
