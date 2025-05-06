@@ -83,5 +83,8 @@ module = [
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = "decomon.visualization.model_visualization"
+module = [
+    "decomon.visualization.model_visualization",
+    "decomon.layers.backward.layer_backward"
+]
 ignore_errors = true
