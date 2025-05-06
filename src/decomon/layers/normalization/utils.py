@@ -9,7 +9,7 @@ from keras.src import backend, ops
 from decomon.types import Tensor
 
 
-class BatchNormalization_kernel_constraint(Wrapper):
+class BatchNormalizationKernelConstraint(Wrapper):
     def __init__(
         self,
         layer: BatchNormalization,

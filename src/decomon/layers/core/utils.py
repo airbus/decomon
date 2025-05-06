@@ -8,7 +8,7 @@ from keras.layers import Dense, Wrapper
 from decomon.types import Tensor
 
 
-class Dense_kernel_constraint(Wrapper):
+class DenseKernelConstraint(Wrapper):
     def __init__(
         self, layer: Dense, ops: Callable[[Tensor, Tensor], Tensor] = K.maximum, add_bias: bool = True, **kwargs: Any
     ):

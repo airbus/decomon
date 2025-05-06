@@ -4,7 +4,7 @@ import keras.ops as K
 from jacobinet.layers.convolutional.conv2d import BackwardConv2D
 
 from decomon.layers.backward.layer_backward import DecomonLinearLayerBackward
-from decomon.layers.convolutional.utils import Conv_kernel_constraint
+from decomon.layers.convolutional.utils import ConvKernelConstraint
 from decomon.layers.utils import pre_built
 
 
@@ -15,8 +15,8 @@ class DecomonBackwardConv2D(DecomonLinearLayerBackward):
         super().__init__(*args, **kwargs)
         # create positive and negative version
 
-        self.layer_backward_pos = Conv_kernel_constraint(layer=self.layer_backward, ops=K.maximum)
-        self.layer_backward_neg = Conv_kernel_constraint(layer=self.layer_backward, ops=K.minimum, add_bias=False)
+        self.layer_backward_pos = ConvKernelConstraint(layer=self.layer_backward, ops=K.maximum)
+        self.layer_backward_neg = ConvKernelConstraint(layer=self.layer_backward, ops=K.minimum, add_bias=False)
 
         # pre built the layers
 

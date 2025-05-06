@@ -6,7 +6,7 @@ from keras.src.layers.convolutional.base_depthwise_conv import BaseDepthwiseConv
 
 from decomon.layers.layer import DecomonLinearLayer
 
-from .utils import Conv_kernel_constraint, DepthwiseConv_kernel_constraint
+from .utils import ConvKernelConstraint, DepthwiseConvKernelConstraint
 
 
 class DecomonBaseConv(DecomonLinearLayer):
@@ -16,8 +16,8 @@ class DecomonBaseConv(DecomonLinearLayer):
         *args: Any,
         **kwargs: Any,
     ):
-        layer_pos = Conv_kernel_constraint(layer=layer, ops=K.maximum, add_bias=True)
-        layer_neg = Conv_kernel_constraint(layer=layer, ops=K.minimum, add_bias=False)
+        layer_pos = ConvKernelConstraint(layer=layer, ops=K.maximum, add_bias=True)
+        layer_neg = ConvKernelConstraint(layer=layer, ops=K.minimum, add_bias=False)
         super().__init__(layer=layer, layer_pos=layer_pos, layer_neg=layer_neg, *args, **kwargs)  # type: ignore
 
 
@@ -28,6 +28,6 @@ class DecomonBaseDepthwiseConv(DecomonLinearLayer):
         *args: Any,
         **kwargs: Any,
     ):
-        layer_pos = DepthwiseConv_kernel_constraint(layer=layer, ops=K.maximum, add_bias=True)
-        layer_neg = DepthwiseConv_kernel_constraint(layer=layer, ops=K.minimum, add_bias=False)
+        layer_pos = DepthwiseConvKernelConstraint(layer=layer, ops=K.maximum, add_bias=True)
+        layer_neg = DepthwiseConvKernelConstraint(layer=layer, ops=K.minimum, add_bias=False)
         super().__init__(layer=layer, layer_pos=layer_pos, layer_neg=layer_neg, *args, **kwargs)  # type: ignore

@@ -8,7 +8,7 @@ from jacobinet.layers.normalization.batch_normalization import (
 from keras.src import ops
 
 from decomon.layers.backward.layer_backward import DecomonLinearLayerBackward
-from decomon.layers.normalization.utils import BatchNormalization_kernel_constraint
+from decomon.layers.normalization.utils import BatchNormalizationKernelConstraint
 from decomon.layers.utils import pre_built
 
 
@@ -20,8 +20,8 @@ class DecomonBackwardBatchNormalization(DecomonLinearLayerBackward):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         # create positive and negative version
-        self.layer_backward_pos = BatchNormalization_kernel_constraint(layer=self.layer_backward, ops=K.maximum)
-        self.layer_backward_neg = BatchNormalization_kernel_constraint(
+        self.layer_backward_pos = BatchNormalizationKernelConstraint(layer=self.layer_backward, ops=K.maximum)
+        self.layer_backward_neg = BatchNormalizationKernelConstraint(
             layer=self.layer_backward, ops=K.minimum, add_bias=False
         )
 

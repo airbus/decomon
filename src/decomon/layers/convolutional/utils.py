@@ -12,7 +12,7 @@ from keras.src.layers.convolutional.base_depthwise_conv import BaseDepthwiseConv
 from decomon.types import Tensor
 
 
-class Conv_kernel_constraint(Wrapper):
+class ConvKernelConstraint(Wrapper):
     def __init__(
         self, layer: BaseConv, ops: Callable[[Tensor, Tensor], Tensor] = K.maximum, add_bias: bool = True, **kwargs: Any
     ):
@@ -62,7 +62,7 @@ class Conv_kernel_constraint(Wrapper):
         return self.layer.get_config()
 
 
-class DepthwiseConv_kernel_constraint(Wrapper):
+class DepthwiseConvKernelConstraint(Wrapper):
     def __init__(
         self,
         layer: BaseDepthwiseConv,
