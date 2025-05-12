@@ -2,10 +2,10 @@ from jacobinet.layers.reshaping.repeat_vector import (
     BackwardRepeatVector,  # type: ignore
 )
 
-from decomon.layers.backward.layer_backward import DecomonLinearLayerBackward
+from decomon.layers.backward.layer_backward import DecomonBackwardLinearLayer
 
 
-class DecomonBackwardRepeatVector(DecomonLinearLayerBackward):
+class DecomonBackwardRepeatVector(DecomonBackwardLinearLayer):
     layer: BackwardRepeatVector
     use_bias = False
     increasing = True

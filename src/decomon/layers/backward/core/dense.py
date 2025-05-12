@@ -3,12 +3,12 @@ from typing import Any
 import keras.ops as K
 from jacobinet.layers.core.dense import BackwardDense
 
-from decomon.layers.backward.layer_backward import DecomonLinearLayerBackward
+from decomon.layers.backward.layer_backward import DecomonBackwardLinearLayer
 from decomon.layers.core.utils import DenseKernelConstraint
 from decomon.layers.utils import pre_built
 
 
-class DecomonBackwardDense(DecomonLinearLayerBackward):
+class DecomonBackwardDense(DecomonBackwardLinearLayer):
     layer: BackwardDense
 
     def __init__(self, *args: Any, **kwargs: Any):
