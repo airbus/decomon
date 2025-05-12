@@ -3,11 +3,11 @@ from typing import Any
 import keras.ops as K
 from keras.layers import BatchNormalization
 
-from decomon.layers.layer import DecomonLinearLayer
+from decomon.layers.layer import DecomonLayer
 from decomon.layers.normalization.utils import BatchNormalizationKernelConstraint
 
 
-class DecomonBatchNormalization(DecomonLinearLayer):
+class DecomonBatchNormalization(DecomonLayer):
     layer: BatchNormalization
     linear = True
     diagonal = True

@@ -7,12 +7,12 @@ from jacobinet.layers import BackwardBoundedLinearizedLayer, BackwardLinearLayer
 from jacobinet.layers.merging.base_merge import BackwardMergeLinearLayer
 from keras.src.layers.merging.base_merge import Merge
 
-from decomon.layers.layer import DecomonLinearLayer
+from decomon.layers.layer import DecomonLayer
 from decomon.layers.merging.base_merge import DecomonMerge
 from decomon.types import Tensor
 
 
-class DecomonLinearLayerBackward(DecomonLinearLayer):
+class DecomonLinearLayerBackward(DecomonLayer):
     "Use jacobinet to init layer_backward"
 
     linear: bool = True
@@ -98,7 +98,7 @@ class DecomonLinearLayerBackward(DecomonLinearLayer):
         )
 
 
-class DecomonBoundedLinearizedLayerBackward(DecomonLinearLayer):
+class DecomonBoundedLinearizedLayerBackward(DecomonLayer):
     "Use jacobinet to init layer_backward"
 
     linear: bool = True
@@ -184,7 +184,7 @@ class DecomonBoundedLinearizedLayerBackward(DecomonLinearLayer):
             raise NotImplementedError()
 
 
-class DecomonLinearMergeBackward(DecomonLinearLayer):
+class DecomonLinearMergeBackward(DecomonLayer):
     "a backxard merge layer take one tensor as input and return a list of tensor"
 
     linear: bool = True

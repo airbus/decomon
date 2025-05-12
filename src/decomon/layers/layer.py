@@ -15,7 +15,11 @@ from decomon.layers.fuse import (
 )
 from decomon.layers.inputs_outputs_specs import InputsOutputsSpec
 from decomon.layers.oracle import get_forward_oracle
-from decomon.layers.utils import get_affine_representation_wo_bias, get_bias
+from decomon.layers.utils import (
+    get_affine_representation_with_bias,
+    get_affine_representation_wo_bias,
+    get_bias,
+)
 from decomon.perturbation_domain import BoxDomain, PerturbationDomain
 from decomon.types import Tensor
 from decomon.utils import fit_memory
@@ -115,9 +119,9 @@ class DecomonLayer(Wrapper):
         propagation: Propagation = Propagation.FORWARD,
         model_input_shape: Optional[tuple[int, ...]] = None,
         model_output_shape: Optional[tuple[int, ...]] = None,
-        layer_backward: Layer = None,
-        layer_pos: Layer = None,
-        layer_neg: Layer = None,
+        layer_backward: Optional[Layer] = None,
+        layer_pos: Optional[Layer] = None,
+        layer_neg: Optional[Layer] = None,
         finetune: bool = False,
         **kwargs: Any,
     ):
@@ -179,6 +183,14 @@ class DecomonLayer(Wrapper):
             self.output_shape_wo_batch = [list(e.shape[1:]) for e in self.layer.output]
         else:
             self.output_shape_wo_batch = list(self.layer.output.shape[1:])
+
+        if layer_backward is None and self.linear:
+            # use jacobinet to automatically get layer_backward (useful only for linear layers)
+            try:
+                layer_backward = get_backward(layer)
+            except ValueError:
+                # layer not yet registered in jacobinet mapping: never mind.
+                pass
 
         self.layer_backward = layer_backward
         self.layer_pos = layer_pos
@@ -306,8 +318,10 @@ class DecomonLayer(Wrapper):
         if not self.linear:
             raise RuntimeError("You should not call `get_affine_representation()` when `self.linear` is False.")
         else:
-            # create an identity matrix using the output shape
-            return get_affine_representation_wo_bias(self.layer, diagonal=self.diagonal)
+            if self.use_bias:
+                return get_affine_representation_with_bias(self.layer, diagonal=self.diagonal)
+            else:
+                return get_affine_representation_wo_bias(self.layer, diagonal=self.diagonal)
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Get affine bounds on layer outputs from layer inputs
@@ -585,12 +599,15 @@ class DecomonLayer(Wrapper):
         )
 
     def apply_layer_backward(self, input_: Tensor) -> Tensor:
+        assert self.layer_backward is not None, "apply_layer_backward() cannot be called if self.layer_backward is None"
         return self.layer_backward(input_)
 
     def apply_layer_backward_upper(self, input_: Tensor) -> Tensor:
+        assert self.layer_backward is not None, "apply_layer_backward() cannot be called if self.layer_backward is None"
         return self.layer_backward(input_)
 
     def apply_layer_backward_lower(self, input_: Tensor) -> Tensor:
+        assert self.layer_backward is not None, "apply_layer_backward() cannot be called if self.layer_backward is None"
         return self.layer_backward(input_)
 
     def backward_affine_propagate(
@@ -1102,40 +1119,3 @@ class DecomonLayer(Wrapper):
             return self.inputs_outputs_spec.flatten_outputs_shape(
                 affine_bounds_propagated_shape=affine_bounds_propagated_shape
             )
-
-
-class DecomonLinearLayer(DecomonLayer):
-    "Use jacobinet to init layer_backward"
-
-    linear: bool = True
-
-    def __init__(
-        self,
-        layer: Layer,
-        perturbation_domain: Optional[PerturbationDomain] = None,
-        ibp: bool = True,
-        affine: bool = True,
-        propagation: Propagation = Propagation.FORWARD,
-        model_input_shape: Optional[tuple[int, ...]] = None,
-        model_output_shape: Optional[tuple[int, ...]] = None,
-        **kwargs: Any,
-    ):
-        try:
-            layer_backward = get_backward(layer)
-        except:
-            layer_backward = None
-
-        super().__init__(
-            layer=layer,
-            perturbation_domain=perturbation_domain,
-            ibp=ibp,
-            affine=affine,
-            propagation=propagation,
-            model_input_shape=model_input_shape,
-            model_output_shape=model_output_shape,
-            layer_backward=layer_backward,
-            **kwargs,
-        )
-
-    def get_affine_representation(self) -> tuple[Tensor, Tensor]:
-        return get_affine_representation_wo_bias(self.layer, diagonal=self.diagonal)
