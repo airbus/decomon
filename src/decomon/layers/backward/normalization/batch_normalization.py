@@ -5,12 +5,12 @@ from jacobinet.layers.normalization.batch_normalization import (
     BackwardBatchNormalization,  # type: ignore
 )
 
-from decomon.layers.backward.layer_backward import DecomonLinearLayerBackward
+from decomon.layers.backward.layer_backward import DecomonBackwardLinearLayer
 from decomon.layers.normalization.utils import BatchNormalizationKernelConstraint
 from decomon.layers.utils import pre_built
 
 
-class DecomonBackwardBatchNormalization(DecomonLinearLayerBackward):
+class DecomonBackwardBatchNormalization(DecomonBackwardLinearLayer):
     layer: BackwardBatchNormalization
     diagonal = True
     use_bias = True

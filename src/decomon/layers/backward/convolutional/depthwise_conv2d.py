@@ -3,12 +3,12 @@ from typing import Any
 import keras.ops as K
 from jacobinet.layers.convolutional.depthwise_conv2d import BackwardDepthwiseConv2D
 
-from decomon.layers.backward.layer_backward import DecomonLinearLayerBackward
+from decomon.layers.backward.layer_backward import DecomonBackwardLinearLayer
 from decomon.layers.convolutional.utils import DepthwiseConvKernelConstraint
 from decomon.layers.utils import pre_built
 
 
-class DecomonBackwardDepthwiseConv2D(DecomonLinearLayerBackward):
+class DecomonBackwardDepthwiseConv2D(DecomonBackwardLinearLayer):
     layer: BackwardDepthwiseConv2D
 
     def __init__(self, *args: Any, **kwargs: Any):
