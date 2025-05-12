@@ -2,7 +2,7 @@ from typing import Any
 
 import keras
 
-from decomon.layers import DecomonLinearLayer
+from decomon.layers import DecomonLayer
 from decomon.layers.merging.base_merge import DecomonMerge
 from decomon.layers.utils import pre_built
 
@@ -12,7 +12,7 @@ class DecomonFuseGradients(DecomonMerge):
     increasing = True
 
 
-class DecomonGradConstant(DecomonLinearLayer):
+class DecomonGradConstant(DecomonLayer):
     linear = True
     increasing = True
 

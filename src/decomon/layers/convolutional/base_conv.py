@@ -4,12 +4,14 @@ import keras.ops as K
 from keras.src.layers.convolutional.base_conv import BaseConv
 from keras.src.layers.convolutional.base_depthwise_conv import BaseDepthwiseConv
 
-from decomon.layers.layer import DecomonLinearLayer
+from decomon.layers.layer import DecomonLayer
 
 from .utils import ConvKernelConstraint, DepthwiseConvKernelConstraint
 
 
-class DecomonBaseConv(DecomonLinearLayer):
+class DecomonBaseConv(DecomonLayer):
+    linear = True
+
     def __init__(
         self,
         layer: BaseConv,
@@ -21,7 +23,9 @@ class DecomonBaseConv(DecomonLinearLayer):
         super().__init__(layer=layer, layer_pos=layer_pos, layer_neg=layer_neg, *args, **kwargs)  # type: ignore
 
 
-class DecomonBaseDepthwiseConv(DecomonLinearLayer):
+class DecomonBaseDepthwiseConv(DecomonLayer):
+    linear = True
+
     def __init__(
         self,
         layer: BaseDepthwiseConv,

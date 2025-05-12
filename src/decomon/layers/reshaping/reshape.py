@@ -1,8 +1,9 @@
 from keras.layers import Reshape
 
-from decomon.layers import DecomonLinearLayer
+from decomon.layers import DecomonLayer
 
 
-class DecomonReshape(DecomonLinearLayer):
+class DecomonReshape(DecomonLayer):
     layer: Reshape
+    linear = True
     increasing = True

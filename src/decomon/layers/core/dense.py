@@ -3,13 +3,15 @@ from typing import Any
 import keras.ops as K
 from keras.layers import Dense
 
-from decomon.layers.layer import DecomonLinearLayer
+from decomon.layers.layer import DecomonLayer
 from decomon.types import Tensor
 
 from .utils import DenseKernelConstraint
 
 
-class DecomonDense(DecomonLinearLayer):
+class DecomonDense(DecomonLayer):
+    linear = True
+
     def __init__(
         self,
         layer: Dense,

@@ -21,7 +21,7 @@ from .convolutional import (
 )
 from .core.dense import DecomonDense
 from .custom import DecomonMax, DecomonMin, DecomonMulConstant
-from .layer import DecomonLayer, DecomonLinearLayer
+from .layer import DecomonLayer
 from .merging import DecomonAdd, DecomonAverage, DecomonSubtract
 from .normalization import (
     DecomonBatchNormalization,

@@ -1,9 +1,9 @@
 from keras.layers import UpSampling1D
 
-from decomon.layers import DecomonLinearLayer
+from decomon.layers import DecomonLayer
 
 
-class DecomonUpSampling1D(DecomonLinearLayer):
+class DecomonUpSampling1D(DecomonLayer):
     layer: UpSampling1D
     linear = True
     increasing = True
