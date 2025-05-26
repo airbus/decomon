@@ -10,7 +10,7 @@ from decomon.types import Tensor
 
 class DenseKernelConstraint(Wrapper):
     def __init__(
-        self, layer: Dense, ops: Callable[[Tensor, Tensor], Tensor] = K.maximum, add_bias: bool = True, **kwargs: Any
+        self, layer: Dense, ops: Callable[[Tensor, Tensor], Tensor] = K.maximum, add_bias: bool = False, **kwargs: Any
     ):
         super().__init__(layer=layer, **kwargs)
         self.ops = ops

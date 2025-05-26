@@ -16,7 +16,7 @@ class DecomonBackwardConv3D(DecomonBackwardLinearLayer):
         # create positive and negative version
 
         self.layer_backward_pos = ConvKernelConstraint(layer=self.layer_backward, ops=K.maximum)
-        self.layer_backward_neg = ConvKernelConstraint(layer=self.layer_backward, ops=K.minimum, add_bias=False)
+        self.layer_backward_neg = ConvKernelConstraint(layer=self.layer_backward, ops=K.minimum)
 
         # pre built the layers
 

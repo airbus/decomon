@@ -19,9 +19,7 @@ class DecomonBackwardBatchNormalization(DecomonBackwardLinearLayer):
         super().__init__(*args, **kwargs)
         # create positive and negative version
         self.layer_backward_pos = BatchNormalizationKernelConstraint(layer=self.layer_backward, ops=K.maximum)
-        self.layer_backward_neg = BatchNormalizationKernelConstraint(
-            layer=self.layer_backward, ops=K.minimum, add_bias=False
-        )
+        self.layer_backward_neg = BatchNormalizationKernelConstraint(layer=self.layer_backward, ops=K.minimum)
 
         # pre built the layers
 

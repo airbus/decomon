@@ -18,8 +18,8 @@ class DecomonDense(DecomonLayer):
         *args: Any,
         **kwargs: Any,
     ):
-        layer_pos = DenseKernelConstraint(layer=layer, ops=K.maximum, add_bias=True)
-        layer_neg = DenseKernelConstraint(layer=layer, ops=K.minimum, add_bias=False)
+        layer_pos = DenseKernelConstraint(layer=layer, ops=K.maximum)
+        layer_neg = DenseKernelConstraint(layer=layer, ops=K.minimum)
 
         super().__init__(*args, layer=layer, layer_pos=layer_pos, layer_neg=layer_neg, **kwargs)  # type: ignore
 

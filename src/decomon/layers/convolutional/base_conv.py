@@ -18,8 +18,8 @@ class DecomonBaseConv(DecomonLayer):
         *args: Any,
         **kwargs: Any,
     ):
-        layer_pos = ConvKernelConstraint(layer=layer, ops=K.maximum, add_bias=True)
-        layer_neg = ConvKernelConstraint(layer=layer, ops=K.minimum, add_bias=False)
+        layer_pos = ConvKernelConstraint(layer=layer, ops=K.maximum)
+        layer_neg = ConvKernelConstraint(layer=layer, ops=K.minimum)
         super().__init__(layer=layer, layer_pos=layer_pos, layer_neg=layer_neg, *args, **kwargs)  # type: ignore
 
 
@@ -32,6 +32,6 @@ class DecomonBaseDepthwiseConv(DecomonLayer):
         *args: Any,
         **kwargs: Any,
     ):
-        layer_pos = DepthwiseConvKernelConstraint(layer=layer, ops=K.maximum, add_bias=True)
-        layer_neg = DepthwiseConvKernelConstraint(layer=layer, ops=K.minimum, add_bias=False)
+        layer_pos = DepthwiseConvKernelConstraint(layer=layer, ops=K.maximum)
+        layer_neg = DepthwiseConvKernelConstraint(layer=layer, ops=K.minimum)
         super().__init__(layer=layer, layer_pos=layer_pos, layer_neg=layer_neg, *args, **kwargs)  # type: ignore
