@@ -236,8 +236,8 @@ class DecomonMerge(DecomonLayer):
 
             # reshape
             if is_from_linear:
-                b_l_in_list_ = [b[None] for b in b_l_in_list]
-                b_u_in_list_ = [b[None] for b in b_u_in_list]
+                b_l_in_list = [b[None] for b in b_l_in_list]
+                b_u_in_list = [b[None] for b in b_u_in_list]
                 w_l_out = self.layer(w_l_in_list)
                 w_u_out = self.layer(w_u_in_list)
                 b_l_out = self.layer(b_l_in_list)[0]
@@ -246,25 +246,25 @@ class DecomonMerge(DecomonLayer):
                 return (w_l_out, b_l_out, w_u_out, b_u_out)
 
             # reshape w
-            w_l_in_list_ = [
+            w_l_in_list = [
                 K.reshape(w_l_i, [-1] + list(self.model_input_shape) + e)
                 for (w_l_i, e) in zip(w_l_in_list, self.layer_input_shape_wo_batchsize)
             ]
-            w_u_in_list_ = [
+            w_u_in_list = [
                 K.reshape(w_u_i, [-1] + list(self.model_input_shape) + e)
                 for (w_u_i, e) in zip(w_u_in_list, self.layer_input_shape_wo_batchsize)
             ]
 
             if self.increasing:
-                w_l_out = self.layer(w_l_in_list_)
-                w_u_out = self.layer(w_u_in_list_)
+                w_l_out = self.layer(w_l_in_list)
+                w_u_out = self.layer(w_u_in_list)
                 b_l_out = self.layer(b_l_in_list)
                 b_u_out = self.layer(b_u_in_list)
                 return (w_l_out, b_l_out, w_u_out, b_u_out)
 
             if self.decreasing:
-                w_l_out = self.layer(w_l_in_list_)
-                w_u_out = self.layer(w_u_in_list_)
+                w_l_out = self.layer(w_l_in_list)
+                w_u_out = self.layer(w_u_in_list)
                 b_l_out = self.layer(b_l_in_list)
                 b_u_out = self.layer(b_u_in_list)
                 return (w_l_out, b_l_out, w_u_out, b_u_out)
