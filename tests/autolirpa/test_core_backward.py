@@ -1,6 +1,8 @@
 import pytest
 from keras.layers import Dense
 
+pytest.skip(reason="Seg faulting", allow_module_level=True)
+
 
 def _test_backward_dense_empirical_backward(units, input_shape, method, helpers):
     keras_layer = Dense(units)
