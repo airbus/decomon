@@ -1,21 +1,12 @@
 import keras
-import keras.ops as K
-import numpy as np
 import pytest
-import torch
 from keras.layers import BatchNormalization
 
-from decomon.layers.normalization.utils import BatchNormalization_kernel_constraint
 
-from .conftest import build_keras_model, check_layer, empirical_check_layer, train_model
-
-
-def _test_backward_batchnorm_empirical(input_shape, method, wo_linearity):
+def _test_backward_batchnorm_empirical(input_shape, method, wo_linearity, helpers):
     keras_layer = BatchNormalization()
     input_dim = 30
-    keras_model = build_keras_model(keras_layer, input_shape, input_dim, wo_linearity=True, output_dim=1)
-    # train model
-    # train_model(keras_model)
+    keras_model = helpers.build_keras_model(keras_layer, input_shape, input_dim, wo_linearity=True, output_dim=1)
 
     weights = keras_layer.get_weights()
 
@@ -25,12 +16,11 @@ def _test_backward_batchnorm_empirical(input_shape, method, wo_linearity):
     weights[0] = gamma
     keras_layer.set_weights(weights)
 
-    empirical_check_layer(
+    helpers.empirical_check_layer(
         keras_layer, input_shape, method=method, wo_linearity=wo_linearity, decimal=0, keras_model=keras_model
     )
 
 
-# @pytest.mark.parametrize("method", ["forward-affine", "forward-hybrid",  "crown", "crown-forward-ibp", "crown-forward-affine"])
 @pytest.mark.parametrize(
     "method, data_format",
     [
@@ -44,18 +34,18 @@ def _test_backward_batchnorm_empirical(input_shape, method, wo_linearity):
         ("crown", "channels_last"),
     ],
 )
-def test_backward_batchnorm_empirical(method, data_format):
+def test_backward_batchnorm_empirical(method, data_format, helpers):
     keras.config.set_image_data_format(data_format)
     if data_format == "channels_first":
         input_shape = (2, 10)
     else:
         input_shape = (10, 2)
-    _test_backward_batchnorm_empirical(input_shape, method, wo_linearity=False)
-    _test_backward_batchnorm_empirical(input_shape, method, wo_linearity=True)
+    _test_backward_batchnorm_empirical(input_shape, method, wo_linearity=False, helpers=helpers)
+    _test_backward_batchnorm_empirical(input_shape, method, wo_linearity=True, helpers=helpers)
 
     if data_format == "channels_first":
         input_shape = (3, 11)
     else:
         input_shape = (11, 3)
-    _test_backward_batchnorm_empirical(input_shape, method, wo_linearity=False)
-    _test_backward_batchnorm_empirical(input_shape, method, wo_linearity=True)
+    _test_backward_batchnorm_empirical(input_shape, method, wo_linearity=False, helpers=helpers)
+    _test_backward_batchnorm_empirical(input_shape, method, wo_linearity=True, helpers=helpers)
