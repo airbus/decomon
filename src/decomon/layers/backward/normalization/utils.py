@@ -14,7 +14,7 @@ class BatchNormalizationKernelConstraint(Wrapper):
         self,
         layer: BatchNormalization,
         ops: Callable[[Tensor, Tensor], Tensor] = K.maximum,
-        add_bias: bool = True,
+        add_bias: bool = False,
         **kwargs: Any,
     ):
         super().__init__(layer=layer, **kwargs)

@@ -404,7 +404,14 @@ class DecomonLayer(Wrapper):
             return (self.layer(upper), self.layer(lower))
 
         if not (self.layer_pos is None) and not (self.layer_neg is None):
-            return (self.layer_pos(lower) + self.layer_neg(upper), self.layer_pos(upper) + self.layer_neg(lower))
+            if self.use_bias:
+                bias = get_bias(self.layer)
+                return (
+                    self.layer_pos(lower) + self.layer_neg(upper) + bias,
+                    self.layer_pos(upper) + self.layer_neg(lower) + bias,
+                )
+            else:
+                return (self.layer_pos(lower) + self.layer_neg(upper), self.layer_pos(upper) + self.layer_neg(lower))
 
         if self.linear:
             w, b = self.get_affine_representation()
@@ -460,6 +467,10 @@ class DecomonLayer(Wrapper):
             - The input bounds must match the expected shapes defined by `layer_input_shape_wo_batchsize`.
 
         """
+        if len(input_affine_bounds) == 0:
+            # special case: empty bounds <=> identity bounds
+            w, b = self.get_affine_representation()
+            return (w, b, w, b)
 
         w_l_in, b_l_in, w_u_in, b_u_in = input_affine_bounds
 
@@ -467,7 +478,7 @@ class DecomonLayer(Wrapper):
         is_from_diagonal = self.inputs_outputs_spec.is_diagonal_bounds(input_affine_bounds)
 
         if is_from_diagonal:
-            w_out, b_out = get_affine_representation_wo_bias(layer, diagonal=self.diagonal)  # Not Implemented
+            w_out, b_out = self.get_affine_representation()
             layer_affine_bounds = [w_out, b_out] * 2
 
             from_linear_layer = (self.inputs_outputs_spec.is_wo_batch_bounds(input_affine_bounds), True)
@@ -494,34 +505,44 @@ class DecomonLayer(Wrapper):
                 b_l_in_ = K.zeros_like([1] + layer_input_shape_wo_batchsize) + b_l_in
             else:
                 b_l_in_ = K.reshape(b_l_in, [-1] + layer_input_shape_wo_batchsize)
+            if self.use_bias:
+                bias = get_bias(layer)
+            else:
+                bias = 0
 
             if is_from_linear:
+                # this means that b_u = b_l and w_l = w_u
                 # apply layer
-                w_l_out = K.reshape(layer(w_l_in_), list(self.model_input_shape) + layer_output_shape_wo_batchsize)
                 b_l_out = layer(b_l_in_)[0]
-                w_u_out = K.reshape(layer(w_u_in_), list(self.model_input_shape) + layer_output_shape_wo_batchsize)
-                b_u_out = layer(b_u_in_)[0]
+                b_u_out = b_l_out
+                w_l_out = layer(w_l_in_)
+                if self.use_bias:
+                    w_l_out = w_l_out - bias
+                w_l_out = K.reshape(w_l_out, list(self.model_input_shape) + layer_output_shape_wo_batchsize)
+                w_u_out = w_l_out
 
                 return (w_l_out, b_l_out, w_u_out, b_u_out)
             else:
                 if self.increasing:
-                    w_l_out = K.reshape(
-                        layer(w_l_in_), [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize
-                    )
+                    w_l_out = layer(w_l_in_)
+                    w_u_out = layer(w_u_in_)
+                    if self.use_bias:
+                        w_l_out = w_l_out - bias
+                        w_u_out = w_u_out - bias
+                    w_l_out = K.reshape(w_l_out, [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize)
+                    w_u_out = K.reshape(w_u_out, [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize)
                     b_l_out = layer(b_l_in)
-                    w_u_out = K.reshape(
-                        layer(w_u_in_), [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize
-                    )
                     b_u_out = layer(b_u_in)
                     return (w_l_out, b_l_out, w_u_out, b_u_out)
                 elif self.decreasing:
-                    w_l_out = K.reshape(
-                        layer(w_u_in_), [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize
-                    )
+                    w_l_out = layer(w_u_in_)
+                    w_u_out = layer(w_l_in_)
+                    if self.use_bias:
+                        w_l_out = w_l_out - bias
+                        w_u_out = w_u_out - bias
+                    w_l_out = K.reshape(w_l_out, [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize)
+                    w_u_out = K.reshape(w_u_out, [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize)
                     b_l_out = layer(b_u_in)
-                    w_u_out = K.reshape(
-                        layer(w_l_in_), [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize
-                    )
                     b_u_out = layer(b_l_in)
                     return (w_l_out, b_l_out, w_u_out, b_u_out)
                 elif not (layer_pos is None) and not (layer_neg is None):
@@ -529,16 +550,31 @@ class DecomonLayer(Wrapper):
                         layer_pos(w_l_in_) + layer_neg(w_u_in_),
                         [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize,
                     )
-                    b_l_out = layer_pos(b_l_in) + layer_neg(b_u_in)
                     w_u_out = K.reshape(
                         layer_pos(w_u_in_) + layer_neg(w_l_in_),
                         [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize,
                     )
+                    b_l_out = layer_pos(b_l_in) + layer_neg(b_u_in)
                     b_u_out = layer_pos(b_u_in) + layer_neg(b_l_in)
+                    if self.use_bias:
+                        b_l_out = b_l_out + bias
+                        b_u_out = b_u_out + bias
 
                     return (w_l_out, b_l_out, w_u_out, b_u_out)
                 else:
-                    raise NotImplementedError()
+                    w, b = self.get_affine_representation()
+                    layer_affine_bounds = [w, b, w, b]
+                    from_linear_layer = (is_from_linear, self.linear)
+                    diagonal = (
+                        is_from_diagonal,
+                        self.inputs_outputs_spec.is_diagonal_bounds(layer_affine_bounds),
+                    )
+                    return combine_affine_bounds(
+                        affine_bounds_1=input_affine_bounds,
+                        affine_bounds_2=layer_affine_bounds,
+                        from_linear_layer=from_linear_layer,
+                        diagonal=diagonal,
+                    )
 
     def forward_affine_propagate(
         self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]

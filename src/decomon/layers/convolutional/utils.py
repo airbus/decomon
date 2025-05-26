@@ -14,7 +14,11 @@ from decomon.types import Tensor
 
 class ConvKernelConstraint(Wrapper):
     def __init__(
-        self, layer: BaseConv, ops: Callable[[Tensor, Tensor], Tensor] = K.maximum, add_bias: bool = True, **kwargs: Any
+        self,
+        layer: BaseConv,
+        ops: Callable[[Tensor, Tensor], Tensor] = K.maximum,
+        add_bias: bool = False,
+        **kwargs: Any,
     ):
         super().__init__(layer=layer, **kwargs)
         self.ops = ops
@@ -67,7 +71,7 @@ class DepthwiseConvKernelConstraint(Wrapper):
         self,
         layer: BaseDepthwiseConv,
         ops: Callable[[Tensor, Tensor], Tensor] = K.maximum,
-        add_bias: bool = True,
+        add_bias: bool = False,
         **kwargs: Any,
     ):
         super().__init__(layer=layer, **kwargs)

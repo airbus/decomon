@@ -70,10 +70,6 @@ def get_bias(layer: Layer) -> Tensor:
     """
 
     input_shape_wo_batch: list[int] = list(layer.input.shape[1:])
-
-    w_b: Tensor = K.zeros([1] + input_shape_wo_batch)
-    bias: Tensor = layer(w_b)[0]  # output_shape_wo_batch
-
     w_b = K.expand_dims(K.zeros(input_shape_wo_batch), 0)
     bias = layer(w_b)[0]  # output_shape_wo_batch
     return bias
