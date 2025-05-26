@@ -1,7 +1,7 @@
 import keras.ops as K
 import numpy as np
 import pytest
-from keras.layers import Activation, Dense, Input
+from keras.layers import Activation, Dense, Identity, Input
 from keras.models import Model
 from pytest_cases import parametrize
 
@@ -16,7 +16,7 @@ from decomon.perturbation_domain import BoxDomain
 def test_clone_nok_several_inputs():
     a = Input((1,))
     b = Input((2,))
-    model = Model([a, b], a)
+    model = Model([a, b], a + b)
 
     with pytest.raises(ValueError, match="only 1 input"):
         clone(model)
