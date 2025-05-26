@@ -95,10 +95,10 @@ class DecomonBaseActivation(DecomonLayer):
     def forward_affine_propagate(
         self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        w_l_in, b_l_in, w_u_in, b_u_in = input_affine_bounds
-        lower, upper = input_constant_bounds
+        if self.finetune and self.diagonal and len(input_affine_bounds) > 0:
+            w_l_in, b_l_in, w_u_in, b_u_in = input_affine_bounds
+            lower, upper = input_constant_bounds
 
-        if self.finetune and self.diagonal:
             # warning not working if diagonal propagation !
             w_l_in_ = K.reshape(w_l_in, [-1] + list(self.model_input_shape) + self.layer_input_shape_wo_batchsize)
             w_u_in_ = K.reshape(w_u_in, [-1] + list(self.model_input_shape) + self.layer_input_shape_wo_batchsize)
