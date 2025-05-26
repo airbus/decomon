@@ -8,8 +8,6 @@ from keras_custom.layers.reduce.base_reduce import BaseAxisKeepdimsLayer
 
 from decomon.layers.custom import DecomonMax
 
-from .conftest import check_layer, check_layer_linear
-
 
 class Max(BaseAxisKeepdimsLayer):
     """
@@ -31,14 +29,15 @@ class TorchMax(nn.Module):
         return torch.max(x, axis=self.axis).values
 
 
-def test_max(method="crown"):
+def test_max(helpers):
+    method = "crown"
     pytest.skip()
     input_shape = (10, 10)
     axis = -1
     keras_layer = Max(axis=axis)
     torch_layer = TorchMax(axis=axis)
     mapping_keras2decomon_classes = {Max: DecomonMax}
-    check_layer(
+    helpers.check_layer(
         keras_layer,
         torch_layer,
         input_shape,
