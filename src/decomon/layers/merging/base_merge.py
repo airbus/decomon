@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import keras
 import keras.ops as K
@@ -228,46 +228,55 @@ class DecomonMerge(DecomonLayer):
         """
 
         is_from_linear = self.inputs_outputs_spec.is_wo_batch_bounds(input_affine_bounds)
+        is_from_diag = self.inputs_outputs_spec.is_diagonal_bounds(input_affine_bounds)
         if self.linear:
-            w_l_in_list = [e[0] for e in input_affine_bounds]
-            b_l_in_list = [e[1] for e in input_affine_bounds]
-            w_u_in_list = [e[2] for e in input_affine_bounds]
-            b_u_in_list = [e[3] for e in input_affine_bounds]
+            if is_from_linear or self.increasing or self.decreasing:  # shortcuts by using self.layer directly
+                w_l_in_list = [e[0] for e in input_affine_bounds]
+                b_l_in_list = [e[1] for e in input_affine_bounds]
+                w_u_in_list = [e[2] for e in input_affine_bounds]
+                b_u_in_list = [e[3] for e in input_affine_bounds]
 
-            # reshape
-            if is_from_linear:
-                b_l_in_list = [b[None] for b in b_l_in_list]
-                b_u_in_list = [b[None] for b in b_u_in_list]
-                w_l_out = self.layer(w_l_in_list)
-                w_u_out = self.layer(w_u_in_list)
-                b_l_out = self.layer(b_l_in_list)[0]
-                b_u_out = self.layer(b_u_in_list)[0]
+                if is_from_linear:
+                    b_l_in_list = [b[None] for b in b_l_in_list]
+                    b_u_in_list = [b[None] for b in b_u_in_list]
+                    w_l_out = self.layer(w_l_in_list)
+                    w_u_out = self.layer(w_u_in_list)
+                    b_l_out = self.layer(b_l_in_list)[0]
+                    b_u_out = self.layer(b_u_in_list)[0]
 
-                return (w_l_out, b_l_out, w_u_out, b_u_out)
+                    return (w_l_out, b_l_out, w_u_out, b_u_out)
 
-            # reshape w
-            w_l_in_list = [
-                K.reshape(w_l_i, [-1] + list(self.model_input_shape) + e)
-                for (w_l_i, e) in zip(w_l_in_list, self.layer_input_shape_wo_batchsize)
-            ]
-            w_u_in_list = [
-                K.reshape(w_u_i, [-1] + list(self.model_input_shape) + e)
-                for (w_u_i, e) in zip(w_u_in_list, self.layer_input_shape_wo_batchsize)
-            ]
+                # reshape w
+                if is_from_diag:
+                    w_l_in_list = [K.reshape(w_l_i, [-1] + list(self.model_input_shape)) for w_l_i in w_l_in_list]
+                    w_u_in_list = [K.reshape(w_u_i, [-1] + list(self.model_input_shape)) for w_u_i in w_u_in_list]
+                else:
+                    w_l_in_list = [
+                        K.reshape(w_l_i, [-1] + list(self.model_input_shape) + e)
+                        for (w_l_i, e) in zip(w_l_in_list, self.layer_input_shape_wo_batchsize)
+                    ]
+                    w_u_in_list = [
+                        K.reshape(w_u_i, [-1] + list(self.model_input_shape) + e)
+                        for (w_u_i, e) in zip(w_u_in_list, self.layer_input_shape_wo_batchsize)
+                    ]
 
-            if self.increasing:
-                w_l_out = self.layer(w_l_in_list)
-                w_u_out = self.layer(w_u_in_list)
-                b_l_out = self.layer(b_l_in_list)
-                b_u_out = self.layer(b_u_in_list)
-                return (w_l_out, b_l_out, w_u_out, b_u_out)
+                if self.increasing:
+                    w_l_out = self.layer(w_l_in_list)
+                    w_u_out = self.layer(w_u_in_list)
+                    b_l_out = self.layer(b_l_in_list)
+                    b_u_out = self.layer(b_u_in_list)
+                    return (w_l_out, b_l_out, w_u_out, b_u_out)
 
-            if self.decreasing:
-                w_l_out = self.layer(w_l_in_list)
-                w_u_out = self.layer(w_u_in_list)
-                b_l_out = self.layer(b_l_in_list)
-                b_u_out = self.layer(b_u_in_list)
-                return (w_l_out, b_l_out, w_u_out, b_u_out)
+                elif self.decreasing:
+                    w_l_out = self.layer(w_l_in_list)
+                    w_u_out = self.layer(w_u_in_list)
+                    b_l_out = self.layer(b_l_in_list)
+                    b_u_out = self.layer(b_u_in_list)
+                    return (w_l_out, b_l_out, w_u_out, b_u_out)
+
+                else:
+                    # should never come here
+                    raise NotImplementedError()
 
             else:
                 w, b = self.get_affine_representation()
@@ -415,6 +424,32 @@ class DecomonMerge(DecomonLayer):
                 )
             )
         return propagated_affine_bounds
+
+    def compute_output_shape_forward(
+        self, input_shape: list[tuple[Optional[int], ...]]
+    ) -> list[tuple[Optional[int], ...]]:
+        # We override in case of shortcuts possible by using self.layer in forward_affine_propagate()
+        if self.linear and self.affine:  # affine propagation with linear layer
+            (
+                affine_bounds_to_propagate_shape,
+                constant_oracle_bounds_shape,
+                perturbation_domain_inputs_shape,
+            ) = self.inputs_outputs_spec.split_input_shape(input_shape)
+            is_from_diag = self.inputs_outputs_spec.is_diagonal_bounds_shape(affine_bounds_to_propagate_shape)
+            is_from_linear = self.inputs_outputs_spec.is_wo_batch_bounds_shape(affine_bounds_to_propagate_shape)
+            if is_from_linear and is_from_diag:
+                (
+                    affine_bounds_propagated_shape,
+                    constant_bounds_propagated_shape,
+                ) = self.inputs_outputs_spec.split_output_shape(super().compute_output_shape_forward(input_shape))
+                # remains diago => w and b share shapes
+                w_l_shape, b_l_shape, w_u_shape, b_u_shape = affine_bounds_propagated_shape
+                affine_bounds_propagated_shape = [b_l_shape, b_l_shape, b_u_shape, b_u_shape]  # type: ignore
+                return self.inputs_outputs_spec.flatten_outputs_shape(
+                    affine_bounds_propagated_shape=affine_bounds_propagated_shape,
+                    constant_bounds_propagated_shape=constant_bounds_propagated_shape,
+                )
+        return super().compute_output_shape_forward(input_shape)
 
     def get_forward_oracle(
         self,
