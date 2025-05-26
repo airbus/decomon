@@ -493,18 +493,18 @@ class DecomonLayer(Wrapper):
                 diagonal=diagonal,
             )
         else:
-            w_l_in_ = K.reshape(w_l_in, [-1] + layer_input_shape_wo_batchsize)
-            w_u_in_ = K.reshape(w_u_in, [-1] + layer_input_shape_wo_batchsize)
+            w_l_in = K.reshape(w_l_in, [-1] + layer_input_shape_wo_batchsize)
+            w_u_in = K.reshape(w_u_in, [-1] + layer_input_shape_wo_batchsize)
             if len(b_u_in.shape) == 0:
                 # b_u_in is a scalar value
-                b_u_in_ = K.zeros_like([1] + layer_input_shape_wo_batchsize) + b_u_in
+                b_u_in = K.zeros([1] + layer_input_shape_wo_batchsize, dtype=b_u_in.dtype) + b_u_in
             else:
-                b_u_in_ = K.reshape(b_u_in, [-1] + layer_input_shape_wo_batchsize)
+                b_u_in = K.reshape(b_u_in, [-1] + layer_input_shape_wo_batchsize)
             if len(b_l_in.shape) == 0:
                 # b_l_in is a scalar value
-                b_l_in_ = K.zeros_like([1] + layer_input_shape_wo_batchsize) + b_l_in
+                b_l_in = K.zeros([1] + layer_input_shape_wo_batchsize, dtype=b_l_in.dtype) + b_l_in
             else:
-                b_l_in_ = K.reshape(b_l_in, [-1] + layer_input_shape_wo_batchsize)
+                b_l_in = K.reshape(b_l_in, [-1] + layer_input_shape_wo_batchsize)
             if self.use_bias:
                 bias = get_bias(layer)
             else:
@@ -513,9 +513,9 @@ class DecomonLayer(Wrapper):
             if is_from_linear:
                 # this means that b_u = b_l and w_l = w_u
                 # apply layer
-                b_l_out = layer(b_l_in_)[0]
+                b_l_out = layer(b_l_in)[0]
                 b_u_out = b_l_out
-                w_l_out = layer(w_l_in_)
+                w_l_out = layer(w_l_in)
                 if self.use_bias:
                     w_l_out = w_l_out - bias
                 w_l_out = K.reshape(w_l_out, list(self.model_input_shape) + layer_output_shape_wo_batchsize)
@@ -524,8 +524,8 @@ class DecomonLayer(Wrapper):
                 return (w_l_out, b_l_out, w_u_out, b_u_out)
             else:
                 if self.increasing:
-                    w_l_out = layer(w_l_in_)
-                    w_u_out = layer(w_u_in_)
+                    w_l_out = layer(w_l_in)
+                    w_u_out = layer(w_u_in)
                     if self.use_bias:
                         w_l_out = w_l_out - bias
                         w_u_out = w_u_out - bias
@@ -535,8 +535,8 @@ class DecomonLayer(Wrapper):
                     b_u_out = layer(b_u_in)
                     return (w_l_out, b_l_out, w_u_out, b_u_out)
                 elif self.decreasing:
-                    w_l_out = layer(w_u_in_)
-                    w_u_out = layer(w_l_in_)
+                    w_l_out = layer(w_u_in)
+                    w_u_out = layer(w_l_in)
                     if self.use_bias:
                         w_l_out = w_l_out - bias
                         w_u_out = w_u_out - bias
@@ -547,11 +547,11 @@ class DecomonLayer(Wrapper):
                     return (w_l_out, b_l_out, w_u_out, b_u_out)
                 elif not (layer_pos is None) and not (layer_neg is None):
                     w_l_out = K.reshape(
-                        layer_pos(w_l_in_) + layer_neg(w_u_in_),
+                        layer_pos(w_l_in) + layer_neg(w_u_in),
                         [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize,
                     )
                     w_u_out = K.reshape(
-                        layer_pos(w_u_in_) + layer_neg(w_l_in_),
+                        layer_pos(w_u_in) + layer_neg(w_l_in),
                         [-1] + list(self.model_input_shape) + layer_output_shape_wo_batchsize,
                     )
                     b_l_out = layer_pos(b_l_in) + layer_neg(b_u_in)
