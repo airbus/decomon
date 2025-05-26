@@ -10,7 +10,7 @@ from decomon.layers.merging.add import DecomonAdd, DecomonMerge
 from decomon.types import Tensor
 
 
-# Defining non-linear and/or non-diagonal versions of DecomonAdd
+# Defining non-linear and/or non-diagonal / non-increasing versions of DecomonAdd
 class DecomonNonDiagAdd(DecomonMerge):
     layer: Add
     linear = True
@@ -75,6 +75,10 @@ class DecomonNonLinearNonDiagAdd(DecomonMerge):
         return sum(lower), sum(upper)
 
 
+class DecomonNonIncreasingAdd(DecomonAdd):
+    increasing = False
+
+
 T = TypeVar("T")
 
 
@@ -86,6 +90,7 @@ def repeat_input(input: T, n_repeat) -> list[T]:
     "decomon_layer_class, decomon_layer_kwargs, keras_layer_class, keras_layer_kwargs, arity, is_actually_linear",
     [
         (DecomonAdd, {}, Add, {}, 2, None),
+        (DecomonNonIncreasingAdd, {}, Add, {}, 2, True),
         (DecomonNonDiagAdd, {}, Add, {}, 2, True),
         (DecomonNonLinearAdd, {}, Add, {}, 2, True),
         (DecomonNonLinearNonDiagAdd, {}, Add, {}, 2, True),
