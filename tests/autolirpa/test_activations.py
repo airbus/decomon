@@ -1,9 +1,7 @@
 import pytest
 import torch
 import torch.nn as nn
-from keras.layers import Activation, LeakyReLU, ReLU
-
-from .conftest import check_layer, check_layer_activation, empirical_check_layer
+from keras.layers import Activation
 
 
 class ExpModule(nn.Module):
@@ -48,12 +46,12 @@ def _test_backward_activation(keras_layer, torch_layer, input_shape, method):
         # ('leaky_relu', "forward-ibp"), ('leaky_relu', "crown-forward-ibp"), ('leaky_relu', "crown"),
     ],
 )
-def test_backward_activation(activation, method):
+def test_backward_activation(activation, method, helpers):
     input_dim = 10
     keras_layer = Activation(activation)
     torch_layer = map_keras_2_torch_activation[activation]
-    check_layer_activation(keras_layer, torch_layer, input_dim, method=method, decimal=0, finetune=False)
-    check_layer_activation(keras_layer, torch_layer, input_dim, method=method, decimal=0, finetune=True)
+    helpers.check_layer_activation(keras_layer, torch_layer, input_dim, method=method, decimal=0, finetune=False)
+    helpers.check_layer_activation(keras_layer, torch_layer, input_dim, method=method, decimal=0, finetune=True)
 
 
 @pytest.mark.parametrize(
@@ -97,7 +95,7 @@ def test_backward_activation(activation, method):
         ("softplus", "crown"),  # not supported by autoLirpa
     ],
 )
-def test_backward_activation_empirical(activation, method):
+def test_backward_activation_empirical(activation, method, helpers):
     input_dim = (10,)
     keras_layer = Activation(activation)
-    empirical_check_layer(keras_layer, input_dim, method=method, decimal=1)
+    helpers.empirical_check_layer(keras_layer, input_dim, method=method, decimal=1)

@@ -14,43 +14,41 @@ from keras.layers import (
     MaxPooling2D,
 )
 
-from .conftest import check_layer, check_layer_linear, empirical_check_layer
 
-
-def _test_backward_MaxPooling2D(pool_size, strides, padding, input_shape, method):
+def _test_backward_MaxPooling2D(pool_size, strides, padding, input_shape, method, helpers):
     keras_layer = MaxPooling2D(pool_size=pool_size, strides=strides, padding=padding)
-    empirical_check_layer(keras_layer, input_shape, method=method, decimal=4)
+    helpers.empirical_check_layer(keras_layer, input_shape, method=method, decimal=4)
 
 
-def _test_backward_AveragePooling2D_linear(pool_size, strides, padding, input_shape, method):
+def _test_backward_AveragePooling2D_linear(pool_size, strides, padding, input_shape, method, helpers):
     keras_layer = AveragePooling2D(pool_size=pool_size, strides=strides, padding=padding)
-    check_layer_linear(keras_layer, input_shape, method, decimal=6)
+    helpers.check_layer_linear(keras_layer, input_shape, method, decimal=6)
 
 
-def _test_backward_AveragePooling1D(pool_size, strides, padding, input_shape, method):
+def _test_backward_AveragePooling1D(pool_size, strides, padding, input_shape, method, helpers):
     keras_layer = AveragePooling1D(pool_size=pool_size, strides=strides, padding=padding)
-    check_layer_linear(keras_layer, input_shape, method, decimal=6)
+    helpers.check_layer_linear(keras_layer, input_shape, method, decimal=6)
 
 
-def _test_backward_AveragePooling3D(pool_size, strides, padding, input_shape, method):
+def _test_backward_AveragePooling3D(pool_size, strides, padding, input_shape, method, helpers):
     keras_layer = AveragePooling3D(pool_size=pool_size, strides=strides, padding=padding)
-    check_layer_linear(keras_layer, input_shape, method, decimal=6)
+    helpers.check_layer_linear(keras_layer, input_shape, method, decimal=6)
 
 
 #####
-def _test_backward_GlobalAveragePooling2D_linear(input_shape, method):
+def _test_backward_GlobalAveragePooling2D_linear(input_shape, method, helpers):
     keras_layer = GlobalAveragePooling2D()
-    check_layer_linear(keras_layer, input_shape, method, decimal=6)
+    helpers.check_layer_linear(keras_layer, input_shape, method, decimal=6)
 
 
-def _test_backward_GlobalAveragePooling1D(input_shape, method):
+def _test_backward_GlobalAveragePooling1D(input_shape, method, helpers):
     keras_layer = GlobalAveragePooling1D()
-    check_layer_linear(keras_layer, input_shape, method, decimal=6)
+    helpers.check_layer_linear(keras_layer, input_shape, method, decimal=6)
 
 
-def _test_backward_GlobalAveragePooling3D(input_shape, method):
+def _test_backward_GlobalAveragePooling3D(input_shape, method, helpers):
     keras_layer = GlobalAveragePooling3D()
-    check_layer_linear(keras_layer, input_shape, method, decimal=6)
+    helpers.check_layer_linear(keras_layer, input_shape, method, decimal=6)
 
 
 @pytest.mark.parametrize(
@@ -66,7 +64,7 @@ def _test_backward_GlobalAveragePooling3D(input_shape, method):
         ("crown", "channels_last"),
     ],
 )
-def test_backward_MaxPooling2D(method, data_format):
+def test_backward_MaxPooling2D(method, data_format, helpers):
     keras.config.set_image_data_format(data_format)
     if data_format == "channels_first":
         input_shape = (1, 10, 10)
@@ -75,7 +73,7 @@ def test_backward_MaxPooling2D(method, data_format):
     pool_size = (2, 2)
     strides = 1
     padding = "valid"
-    _test_backward_MaxPooling2D(pool_size, strides, padding, input_shape, method)
+    _test_backward_MaxPooling2D(pool_size, strides, padding, input_shape, method, helpers)
     if data_format == "channels_first":
         input_shape = (1, 10, 10)
     else:
@@ -83,58 +81,58 @@ def test_backward_MaxPooling2D(method, data_format):
     pool_size = (2, 2)
     strides = 1
     padding = "same"
-    _test_backward_MaxPooling2D(pool_size, strides, padding, input_shape, method)
+    _test_backward_MaxPooling2D(pool_size, strides, padding, input_shape, method, helpers)
 
 
 @pytest.mark.parametrize("method", ["crown"])
-def test_backward_AveragePooling2D_linear(method):
+def test_backward_AveragePooling2D_linear(method, helpers):
     keras.config.set_image_data_format("channels_first")
     input_shape = (1, 10, 10)
     pool_size = (2, 2)
     strides = 1
     padding = "valid"
-    _test_backward_AveragePooling2D_linear(pool_size, strides, padding, input_shape, method)
+    _test_backward_AveragePooling2D_linear(pool_size, strides, padding, input_shape, method, helpers)
 
     input_shape = (1, 10, 10)
     pool_size = (2, 2)
     strides = 1
     padding = "same"
-    _test_backward_AveragePooling2D_linear(pool_size, strides, padding, input_shape, method)
+    _test_backward_AveragePooling2D_linear(pool_size, strides, padding, input_shape, method, helpers)
 
 
 @pytest.mark.parametrize("method", ["crown"])
-def test_backward_GlobalAveragePooling2D_linear(method):
+def test_backward_GlobalAveragePooling2D_linear(method, helpers):
     keras.config.set_image_data_format("channels_first")
 
     input_shape = (1, 10, 10)
-    _test_backward_GlobalAveragePooling2D_linear(input_shape, method)
+    _test_backward_GlobalAveragePooling2D_linear(input_shape, method, helpers)
 
 
 @pytest.mark.parametrize("method", ["crown"])
-def test_backward_AveragePooling1D_linear(method):
+def test_backward_AveragePooling1D_linear(method, helpers):
     keras.config.set_image_data_format("channels_first")
     input_shape = (1, 10)
     pool_size = (2,)
     strides = 1
     padding = "valid"
-    _test_backward_AveragePooling1D(pool_size, strides, padding, input_shape, method)
+    _test_backward_AveragePooling1D(pool_size, strides, padding, input_shape, method, helpers)
 
     input_shape = (1, 10)
     pool_size = (2,)
     strides = 1
     padding = "same"
-    _test_backward_AveragePooling1D(pool_size, strides, padding, input_shape, method)
+    _test_backward_AveragePooling1D(pool_size, strides, padding, input_shape, method, helpers)
 
 
 @pytest.mark.parametrize("method", ["crown"])
-def test_backward_GlobalAveragePooling1D_linear(method):
+def test_backward_GlobalAveragePooling1D_linear(method, helpers):
     keras.config.set_image_data_format("channels_first")
     input_shape = (1, 10)
-    _test_backward_GlobalAveragePooling1D(input_shape, method)
+    _test_backward_GlobalAveragePooling1D(input_shape, method, helpers)
 
 
 @pytest.mark.parametrize("method", ["crown"])
-def test_backward_AveragePooling3D_linear(method):
+def test_backward_AveragePooling3D_linear(method, helpers):
     keras.config.set_image_data_format("channels_first")
     # skip tests on MPS device as Conv3DTranspose is not implemented
     if keras.config.backend() == "torch":
@@ -146,17 +144,17 @@ def test_backward_AveragePooling3D_linear(method):
     pool_size = (2, 2, 2)
     strides = 1
     padding = "valid"
-    _test_backward_AveragePooling3D(pool_size, strides, padding, input_shape, method)
+    _test_backward_AveragePooling3D(pool_size, strides, padding, input_shape, method, helpers)
 
     input_shape = (1, 10, 11, 10)
     pool_size = (2, 2, 2)
     strides = 1
     padding = "same"
-    _test_backward_AveragePooling3D(pool_size, strides, padding, input_shape, method)
+    _test_backward_AveragePooling3D(pool_size, strides, padding, input_shape, method, helpers)
 
 
 @pytest.mark.parametrize("method", ["crown"])
-def test_backward_GlobalAveragePooling3D_linear(method):
+def test_backward_GlobalAveragePooling3D_linear(method, helpers):
     keras.config.set_image_data_format("channels_first")
     # skip tests on MPS device as Conv3DTranspose is not implemented
     if keras.config.backend() == "torch":
@@ -165,4 +163,4 @@ def test_backward_GlobalAveragePooling3D_linear(method):
         if torch.backends.mps.is_available():
             pytest.skip("skip tests on MPS device as AveragePooling3D is not implemented")
     input_shape = (1, 10, 11, 10)
-    _test_backward_GlobalAveragePooling3D(input_shape, method)
+    _test_backward_GlobalAveragePooling3D(input_shape, method, helpers)
