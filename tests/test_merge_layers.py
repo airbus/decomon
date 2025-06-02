@@ -3,10 +3,11 @@ from typing import TypeVar
 import keras.ops as K
 import numpy as np
 import pytest
-from keras.layers import Add
+from keras.layers import Add, Average, Subtract
 
 from decomon.keras_utils import batch_multid_dot
-from decomon.layers.merging.add import DecomonAdd, DecomonMerge
+from decomon.layers import DecomonAdd, DecomonAverage, DecomonSubtract
+from decomon.layers.merging.base_merge import DecomonMerge
 from decomon.types import Tensor
 
 
@@ -94,6 +95,8 @@ def repeat_input(input: T, n_repeat) -> list[T]:
         (DecomonNonDiagAdd, {}, Add, {}, 2, True),
         (DecomonNonLinearAdd, {}, Add, {}, 2, True),
         (DecomonNonLinearNonDiagAdd, {}, Add, {}, 2, True),
+        (DecomonSubtract, {}, Subtract, {}, 2, None),
+        (DecomonAverage, {}, Average, {}, 2, None),
     ],
 )
 def test_decomon_merge(
