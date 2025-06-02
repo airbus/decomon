@@ -159,9 +159,13 @@ def data_format_kwargs(data_format):
     "decomon_layer_class, decomon_layer_kwargs, keras_layer_class, keras_layer_kwargs",
     [
         (DecomonDense, {}, Dense, dense_keras_kwargs),
-        (DecomonActivation, activation_decomon_kwargs, Activation, activation_keras_kwargs),
-        # (DecomonActivation, decomon_kwargs_activation_with_slope, Activation, keras_kwargs_activation_with_slope),  # to fix
-        # (DecomonActivation, {}, Activation, keras_kwargs_activation_without_slope),  # to fix
+        (
+            DecomonActivation,
+            decomon_kwargs_activation_with_slope,
+            Activation,
+            keras_kwargs_activation_with_slope,
+        ),  # to fix
+        (DecomonActivation, {}, Activation, keras_kwargs_activation_without_slope),  # to fix
         (DecomonZeroPadding2D, {}, ZeroPadding2D, dict(padding=((1, 3), (0, 5)))),
         (DecomonCropping2D, {}, Cropping2D, data_format_kwargs),
         (DecomonUpSampling2D, {}, UpSampling2D, data_format_kwargs),
@@ -170,20 +174,20 @@ def data_format_kwargs(data_format):
         (DecomonPermute, {}, Permute, dict(dims=(2, 3, 1))),
         (DecomonFlatten, {}, Flatten, dict()),
         (DecomonDropout, {}, Dropout, dict(rate=0.2)),
-        # (DecomonMaxPooling2D, {}, MaxPooling2D, data_format_kwargs),  # error with diagonal entries
+        (DecomonMaxPooling2D, {}, MaxPooling2D, data_format_kwargs),  # error with diagonal entries
         (DecomonAveragePooling2D, {}, AveragePooling2D, dict(pool_size=2)),
         (DecomonGlobalAveragePooling2D, {}, GlobalAveragePooling2D, data_format_kwargs),
         (DecomonGlobalAveragePooling2D, {}, GlobalAveragePooling2D, data_format_kwargs),
-        # (DecomonUnitNormalization, {}, UnitNormalization, dict()),  # "wrong affine representation"
-        # (DecomonLayerNormalization, {}, LayerNormalization, dict()),  # "wrong affine representation"
-        # (DecomonGroupNormalization, {}, GroupNormalization, dict(groups=2)),  # "wrong affine representation"
-        # (DecomonBatchNormalization, {}, BatchNormalization, dict()),  # lower_affine not ok
+        (DecomonUnitNormalization, {}, UnitNormalization, dict()),  # "wrong affine representation"
+        (DecomonLayerNormalization, {}, LayerNormalization, dict()),  # "wrong affine representation"
+        (DecomonGroupNormalization, {}, GroupNormalization, dict(groups=2)),  # "wrong affine representation"
+        (DecomonBatchNormalization, {}, BatchNormalization, dict()),  # lower_affine not ok
         (DecomonConv2D, {}, Conv2D, dict(filters=2, kernel_size=2)),
         (DecomonDepthwiseConv2D, {}, DepthwiseConv2D, dict(kernel_size=2)),
-        # (DecomonMax, {}, Max, dict(axis=1)),  # to be fixed
-        # (DecomonMulConstant, {}, MulConstant, dict(constant=3.14)),  # to be fixed
-        # (DecomonMin, {}, Min, dict(axis=1)),  # to be fixed
-        # (DecomonLeakyReLU, {}, LeakyReLU, {}),  # to be fixed
+        (DecomonMax, {}, Max, dict(axis=1)),  # to be fixed
+        (DecomonMulConstant, {}, MulConstant, dict(constant=3.14)),  # to be fixed
+        (DecomonMin, {}, Min, dict(axis=1)),  # to be fixed
+        (DecomonLeakyReLU, {}, LeakyReLU, {}),  # to be fixed
     ],
 )
 def test_decomon_unary_layer(
@@ -351,7 +355,13 @@ def test_decomon_unary_layer(
         (DecomonGlobalAveragePooling1D, {}, GlobalAveragePooling1D, data_format_kwargs, (3, 2)),
         (DecomonGlobalAveragePooling3D, {}, GlobalAveragePooling3D, data_format_kwargs, (2, 3, 2, 3)),
         (DecomonAveragePooling1D, {}, AveragePooling1D, dict(pool_size=2), (5, 1)),
-        # (DecomonAveragePooling3D, {}, AveragePooling3D, dict(pool_size=(2,1,1)), (5,2,2,1)),  # expected scalar type Float but found Double
+        (
+            DecomonAveragePooling3D,
+            {},
+            AveragePooling3D,
+            dict(pool_size=(2, 1, 1)),
+            (5, 2, 2, 1),
+        ),  # expected scalar type Float but found Double
         (DecomonConv1D, {}, Conv1D, dict(filters=2, kernel_size=2), (5, 3)),
         (DecomonConv3D, {}, Conv3D, dict(filters=2, kernel_size=2), (3, 3, 3, 2)),
         (DecomonDepthwiseConv1D, {}, DepthwiseConv1D, dict(kernel_size=2), (5, 2)),
