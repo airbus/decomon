@@ -1,13 +1,85 @@
 import keras.ops as K
 import numpy as np
 import pytest
-from keras.layers import Activation, Dense, ZeroPadding1D, ZeroPadding2D, ZeroPadding3D
-from pytest_cases import fixture, fixture_union, parametrize, unpack_fixture
+from keras.layers import (
+    Activation,
+    AveragePooling1D,
+    AveragePooling2D,
+    AveragePooling3D,
+    BatchNormalization,
+    Conv1D,
+    Conv2D,
+    Conv3D,
+    Cropping1D,
+    Cropping2D,
+    Cropping3D,
+    Dense,
+    DepthwiseConv1D,
+    DepthwiseConv2D,
+    Dropout,
+    Flatten,
+    GlobalAveragePooling1D,
+    GlobalAveragePooling2D,
+    GlobalAveragePooling3D,
+    GroupNormalization,
+    LayerNormalization,
+    LeakyReLU,
+    MaxPooling2D,
+    Permute,
+    RepeatVector,
+    Reshape,
+    UnitNormalization,
+    UpSampling1D,
+    UpSampling2D,
+    UpSampling3D,
+    ZeroPadding1D,
+    ZeroPadding2D,
+    ZeroPadding3D,
+)
+from keras_custom.layers import Max, Min, MulConstant
+from pytest_cases import (
+    fixture,
+    fixture_union,
+    param_fixture,
+    parametrize,
+    unpack_fixture,
+)
 
 from decomon.keras_utils import batch_multid_dot
 from decomon.layers import (
     DecomonActivation,
+    DecomonAveragePooling1D,
+    DecomonAveragePooling2D,
+    DecomonAveragePooling3D,
+    DecomonBatchNormalization,
+    DecomonConv1D,
+    DecomonConv2D,
+    DecomonConv3D,
+    DecomonCropping1D,
+    DecomonCropping2D,
+    DecomonCropping3D,
     DecomonDense,
+    DecomonDepthwiseConv1D,
+    DecomonDepthwiseConv2D,
+    DecomonDropout,
+    DecomonFlatten,
+    DecomonGlobalAveragePooling1D,
+    DecomonGlobalAveragePooling2D,
+    DecomonGlobalAveragePooling3D,
+    DecomonGroupNormalization,
+    DecomonLayerNormalization,
+    DecomonLeakyReLU,
+    DecomonMax,
+    DecomonMaxPooling2D,
+    DecomonMin,
+    DecomonMulConstant,
+    DecomonPermute,
+    DecomonRepeatVector,
+    DecomonReshape,
+    DecomonUnitNormalization,
+    DecomonUpSampling1D,
+    DecomonUpSampling2D,
+    DecomonUpSampling3D,
     DecomonZeroPadding1D,
     DecomonZeroPadding2D,
     DecomonZeroPadding3D,
@@ -18,6 +90,35 @@ from decomon.layers.activations.activation import DecomonLinear
 @fixture
 def dense_keras_kwargs(use_bias):
     return dict(units=7, use_bias=use_bias)
+
+
+activation_with_slope = param_fixture(
+    "activation_with_slope", ["relu", "exponential", "elu", "leaky_relu", "selu", "softplus"]
+)
+activation_without_slope = param_fixture(
+    "activation_without_slope",
+    [
+        None,
+        "softsign",
+        "sigmoid",
+        "tanh",
+    ],
+)
+
+
+@fixture
+def keras_kwargs_activation_with_slope(activation_with_slope):
+    return dict(activation=activation_with_slope)
+
+
+@fixture
+def decomon_kwargs_activation_with_slope(slope):
+    return dict(slope=slope)
+
+
+@fixture
+def keras_kwargs_activation_without_slope(activation_without_slope):
+    return dict(activation=activation_without_slope)
 
 
 def _activation_kwargs(activation, slope=None):
@@ -49,12 +150,40 @@ activation_keras_kwargs, activation_decomon_kwargs = unpack_fixture(
 )
 
 
+@fixture
+def data_format_kwargs(data_format):
+    return dict(data_format=data_format)
+
+
 @parametrize(
     "decomon_layer_class, decomon_layer_kwargs, keras_layer_class, keras_layer_kwargs",
     [
         (DecomonDense, {}, Dense, dense_keras_kwargs),
         (DecomonActivation, activation_decomon_kwargs, Activation, activation_keras_kwargs),
+        # (DecomonActivation, decomon_kwargs_activation_with_slope, Activation, keras_kwargs_activation_with_slope),  # to fix
+        # (DecomonActivation, {}, Activation, keras_kwargs_activation_without_slope),  # to fix
         (DecomonZeroPadding2D, {}, ZeroPadding2D, dict(padding=((1, 3), (0, 5)))),
+        (DecomonCropping2D, {}, Cropping2D, data_format_kwargs),
+        (DecomonUpSampling2D, {}, UpSampling2D, data_format_kwargs),
+        (DecomonReshape, {}, Reshape, dict(target_shape=(2, -1))),
+        (DecomonRepeatVector, {}, RepeatVector, dict(n=2)),
+        (DecomonPermute, {}, Permute, dict(dims=(2, 3, 1))),
+        (DecomonFlatten, {}, Flatten, dict()),
+        (DecomonDropout, {}, Dropout, dict(rate=0.2)),
+        # (DecomonMaxPooling2D, {}, MaxPooling2D, data_format_kwargs),  # error with diagonal entries
+        (DecomonAveragePooling2D, {}, AveragePooling2D, dict(pool_size=2)),
+        (DecomonGlobalAveragePooling2D, {}, GlobalAveragePooling2D, data_format_kwargs),
+        (DecomonGlobalAveragePooling2D, {}, GlobalAveragePooling2D, data_format_kwargs),
+        # (DecomonUnitNormalization, {}, UnitNormalization, dict()),  # "wrong affine representation"
+        # (DecomonLayerNormalization, {}, LayerNormalization, dict()),  # "wrong affine representation"
+        # (DecomonGroupNormalization, {}, GroupNormalization, dict(groups=2)),  # "wrong affine representation"
+        # (DecomonBatchNormalization, {}, BatchNormalization, dict()),  # lower_affine not ok
+        (DecomonConv2D, {}, Conv2D, dict(filters=2, kernel_size=2)),
+        (DecomonDepthwiseConv2D, {}, DepthwiseConv2D, dict(kernel_size=2)),
+        # (DecomonMax, {}, Max, dict(axis=1)),  # to be fixed
+        # (DecomonMulConstant, {}, MulConstant, dict(constant=3.14)),  # to be fixed
+        # (DecomonMin, {}, Min, dict(axis=1)),  # to be fixed
+        # (DecomonLeakyReLU, {}, LeakyReLU, {}),  # to be fixed
     ],
 )
 def test_decomon_unary_layer(
@@ -87,10 +216,32 @@ def test_decomon_unary_layer(
     layer = keras_layer_class(**keras_layer_kwargs)
 
     # skip some cases where the input shape is incompatible with the layer
-    if isinstance(layer, ZeroPadding2D):
+    keras_layer_class_for_4dinputs_only = {
+        ZeroPadding2D,
+        Cropping2D,
+        MaxPooling2D,
+        UpSampling2D,
+        AveragePooling2D,
+        GlobalAveragePooling2D,
+        Conv2D,
+        DepthwiseConv2D,
+    }
+    if keras_layer_class in keras_layer_class_for_4dinputs_only:
         if len(keras_symbolic_layer_input.shape) != 4:
-            pytest.skip("ZeroPadding2D works only with 4D inputs")
+            pytest.skip(f"{keras_layer_class.__name__} works only with 4D inputs")
+    if isinstance(layer, Reshape):
+        if np.prod(keras_symbolic_layer_input.shape[1:]) % 2 != 0:
+            pytest.skip("reshaping only even shaped inputs in this test")
+    if isinstance(layer, GroupNormalization):
+        if keras_symbolic_layer_input.shape[-1] % 2 != 0:
+            pytest.skip("Group normalization only even channels")
 
+    if isinstance(layer, RepeatVector):
+        if len(keras_symbolic_layer_input.shape) != 2:
+            pytest.skip("RepeatVector works only with 2D inputs")
+    if isinstance(layer, Permute):
+        if len(keras_symbolic_layer_input.shape) != 4:
+            pytest.skip("test Permute in 4D only")
     # build keras layer
     layer(keras_symbolic_layer_input)
 
@@ -186,6 +337,24 @@ def test_decomon_unary_layer(
     [
         (DecomonZeroPadding1D, {}, ZeroPadding1D, dict(padding=(0, 5)), (2, 3)),
         (DecomonZeroPadding3D, {}, ZeroPadding3D, dict(padding=2), (1, 2, 2, 3)),
+        (DecomonCropping1D, {}, Cropping1D, {}, (3, 2)),
+        (DecomonCropping3D, {}, Cropping3D, dict(cropping=((0, 1), (2, 2), (1, 0))), (2, 5, 3, 2)),
+        (
+            DecomonCropping3D,
+            {},
+            Cropping3D,
+            dict(data_format="channels_first", cropping=((0, 1), (2, 2), (1, 0))),
+            (2, 2, 5, 3),
+        ),
+        (DecomonUpSampling1D, {}, UpSampling1D, {}, (1, 2)),
+        (DecomonUpSampling3D, {}, UpSampling3D, data_format_kwargs, (2, 2, 2, 2)),
+        (DecomonGlobalAveragePooling1D, {}, GlobalAveragePooling1D, data_format_kwargs, (3, 2)),
+        (DecomonGlobalAveragePooling3D, {}, GlobalAveragePooling3D, data_format_kwargs, (2, 3, 2, 3)),
+        (DecomonAveragePooling1D, {}, AveragePooling1D, dict(pool_size=2), (5, 1)),
+        # (DecomonAveragePooling3D, {}, AveragePooling3D, dict(pool_size=(2,1,1)), (5,2,2,1)),  # expected scalar type Float but found Double
+        (DecomonConv1D, {}, Conv1D, dict(filters=2, kernel_size=2), (5, 3)),
+        (DecomonConv3D, {}, Conv3D, dict(filters=2, kernel_size=2), (3, 3, 3, 2)),
+        (DecomonDepthwiseConv1D, {}, DepthwiseConv1D, dict(kernel_size=2), (5, 2)),
     ],
 )
 def test_decomon_unary_layer_specific_shapes(
