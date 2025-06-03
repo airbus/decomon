@@ -7,3 +7,4 @@ class DecomonFlatten(DecomonLayer):
     layer: Flatten
     linear = True
     increasing = True
+    use_bias = False

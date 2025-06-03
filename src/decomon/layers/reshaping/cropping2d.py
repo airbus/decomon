@@ -7,3 +7,4 @@ class DecomonCropping2D(DecomonLayer):
     layer: Cropping2D
     linear = True
     increasing = True
+    use_bias = False

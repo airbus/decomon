@@ -7,3 +7,4 @@ class DecomonRepeatVector(DecomonLayer):
     layer: RepeatVector
     linear = True
     increasing = True
+    use_bias = False

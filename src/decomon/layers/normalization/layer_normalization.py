@@ -9,6 +9,3 @@ class DecomonLayerNormalization(DecomonLayer):
     layer: LayerNormalization
     linear = True
     diagonal = True
-
-    def get_affine_representation(self) -> tuple[Tensor, Tensor]:
-        return get_affine_representation_with_bias(self.layer, diagonal=self.diagonal)

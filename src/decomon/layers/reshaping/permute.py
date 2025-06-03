@@ -7,3 +7,4 @@ class DecomonPermute(DecomonLayer):
     layer: Permute
     linear = True
     increasing = True
+    use_bias = False
