@@ -7,3 +7,4 @@ class DecomonZeroPadding3D(DecomonLayer):
     layer: ZeroPadding3D
     linear = True
     increasing = True
+    use_bias = False

@@ -7,3 +7,4 @@ class DecomonUpSampling1D(DecomonLayer):
     layer: UpSampling1D
     linear = True
     increasing = True
+    use_bias = False

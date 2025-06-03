@@ -7,3 +7,4 @@ class DecomonReshape(DecomonLayer):
     layer: Reshape
     linear = True
     increasing = True
+    use_bias = False
