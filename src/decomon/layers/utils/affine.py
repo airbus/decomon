@@ -107,6 +107,13 @@ def get_affine_representation_with_bias(layer: Layer, diagonal: bool = False) ->
     return w, bias
 
 
+def get_affine_representation(layer: Layer, diagonal: bool = False, use_bias: bool = False) -> tuple[Tensor, Tensor]:
+    if use_bias:
+        return get_affine_representation_with_bias(layer, diagonal=diagonal)
+    else:
+        return get_affine_representation_wo_bias(layer, diagonal=diagonal)
+
+
 def apply_backward_layer(
     output_affine_bounds: list[Tensor],
     layer_backward: Layer,

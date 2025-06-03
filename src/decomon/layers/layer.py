@@ -20,6 +20,7 @@ from decomon.layers.utils import (
     get_affine_representation_wo_bias,
     get_bias,
 )
+from decomon.layers.utils.affine import get_affine_representation
 from decomon.perturbation_domain import BoxDomain, PerturbationDomain
 from decomon.types import Tensor
 from decomon.utils import fit_memory
@@ -315,13 +316,7 @@ class DecomonLayer(Wrapper):
 
 
         """
-        if not self.linear:
-            raise RuntimeError("You should not call `get_affine_representation()` when `self.linear` is False.")
-        else:
-            if self.use_bias:
-                return get_affine_representation_with_bias(self.layer, diagonal=self.diagonal)
-            else:
-                return get_affine_representation_wo_bias(self.layer, diagonal=self.diagonal)
+        return get_affine_representation(layer=self.layer, diagonal=self.diagonal, use_bias=self.use_bias)
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Get affine bounds on layer outputs from layer inputs
