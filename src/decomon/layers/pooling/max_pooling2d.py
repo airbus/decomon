@@ -8,9 +8,9 @@ from keras.layers import Layer, MaxPooling2D
 
 from decomon.constants import Propagation
 from decomon.layers import DecomonLayer
-from decomon.layers.custom.utils import (
-    get_affine_lower_bound_max,
-    get_affine_upper_bound_max,
+from decomon.layers.custom.reduce.utils import (
+    get_affine_lower_bound_max_before_reduction,
+    get_affine_upper_bound_max_before_reduction,
 )
 from decomon.layers.fuse import combine_affine_bounds
 from decomon.perturbation_domain import PerturbationDomain
@@ -63,8 +63,8 @@ class DecomonMaxPooling2D(DecomonLayer):
     def get_affine_bounds_with_linear_block_inputs(
         self, lower_max: Tensor, upper_max: Tensor, axis: int
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        w_l_max, b_l_max = get_affine_lower_bound_max(lower_max, upper_max, axis=axis, keepdims=False)
-        w_u_max, b_u_max = get_affine_upper_bound_max(lower_max, upper_max, axis=axis, keepdims=False)
+        w_l_max, b_l_max = get_affine_lower_bound_max_before_reduction(lower_max, upper_max, axis=axis, keepdims=False)
+        w_u_max, b_u_max = get_affine_upper_bound_max_before_reduction(lower_max, upper_max, axis=axis, keepdims=False)
 
         output_shape_wo_batch = list(self.linear_block.output.shape[1:])
 
@@ -210,8 +210,12 @@ class DecomonMaxPooling2D(DecomonLayer):
         lower = self.perturbation_domain.get_lower(x, w_l_out, b_l_out, missing_batchsize=False)
         upper = self.perturbation_domain.get_upper(x, w_u_out, b_u_out, missing_batchsize=False)
 
-        w_u_max, b_u_max = get_affine_upper_bound_max(lower=lower, upper=upper, axis=self.axis, keepdims=False)
-        w_l_max, b_l_max = get_affine_lower_bound_max(lower=lower, upper=upper, axis=self.axis, keepdims=False)
+        w_u_max, b_u_max = get_affine_upper_bound_max_before_reduction(
+            lower=lower, upper=upper, axis=self.axis, keepdims=False
+        )
+        w_l_max, b_l_max = get_affine_lower_bound_max_before_reduction(
+            lower=lower, upper=upper, axis=self.axis, keepdims=False
+        )
 
         N = len(self.model_input_shape)
         w_u_max_ = K.reshape(w_u_max, [-1] + [1] * N + list(w_u_max.shape[1:]))
