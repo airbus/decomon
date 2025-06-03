@@ -2,16 +2,16 @@
 # Decomon Custom for Max(axis...)
 from typing import Any
 
-import keras.ops as K
 from keras_custom.layers import Max
 
-from decomon.layers.custom.utils import (
-    get_affine_lower_bound_max,
-    get_affine_upper_bound_max,
-)
-from decomon.layers.fuse import combine_affine_bounds
 from decomon.layers.layer import DecomonLayer
 from decomon.types import Tensor
+
+from .utils import (
+    get_affine_lower_bound_max_before_reduction,
+    get_affine_upper_bound_max_before_reduction,
+    get_batch_multi_dot_repr_for_axis_reduce_weights,
+)
 
 
 class DecomonMax(DecomonLayer):
@@ -19,16 +19,8 @@ class DecomonMax(DecomonLayer):
     linear = False
     increasing = True
 
-    def get_affine_bounds_with_linear_block_inputs(
-        self, lower_max: Tensor, upper_max: Tensor, axis: int
-    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        w_l, b_l = get_affine_lower_bound_max(lower_max, upper_max, axis=axis, keepdims=False)
-        w_u, b_u = get_affine_upper_bound_max(lower_max, upper_max, axis=axis, keepdims=False)
-
-        return (w_l, b_l, w_u, b_u)
-
     def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        return self.get_affine_bounds_with_linear_block_inputs(lower_max=lower, upper_max=upper, axis=self.axis)
+        return get_affine_bounds_max(lower=lower, upper=upper, axis=self.layer.axis, keepdims=self.layer.keepdims)
 
     def backward_affine_propagate(
         self, output_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor], **kwargs: Any
@@ -134,14 +126,14 @@ class DecomonMax(DecomonLayer):
 
         lower_max_u_0 = lower_max_e * w_u_out_pos_e
         upper_max_u_0 = upper_max_e * w_u_out_pos_e
-        _, _, w_u_0, b_u_0 = self.get_affine_bounds_with_linear_block_inputs(
-            lower_max=lower_max_u_0, upper_max=upper_max_u_0, axis=axis_
+        _, _, w_u_0, b_u_0 = get_affine_bounds_with_linear_block_inputs(
+            lower=lower_max_u_0, upper=upper_max_u_0, axis=axis_
         )
 
         lower_max_u_1 = -lower_max_e * w_u_out_neg_e
         upper_max_u_1 = -upper_max_e * w_u_out_neg_e
-        w_l_1, b_l_1, _, _ = self.get_affine_bounds_with_linear_block_inputs(
-            lower_max=lower_max_u_1, upper_max=upper_max_u_1, axis=axis_
+        w_l_1, b_l_1, _, _ = get_affine_bounds_with_linear_block_inputs(
+            lower=lower_max_u_1, upper=upper_max_u_1, axis=axis_
         )
 
         w_u = w_u_0 - w_l_1
@@ -150,16 +142,30 @@ class DecomonMax(DecomonLayer):
         #### lower bound
         lower_max_l_0 = lower_max_e * w_l_out_pos_e
         upper_max_l_0 = upper_max_e * w_l_out_pos_e
-        w_l_0, b_l_0, _, _ = self.get_affine_bounds_with_linear_block_inputs(
-            lower_max=lower_max_l_0, upper_max=upper_max_l_0, axis=axis_
+        w_l_0, b_l_0, _, _ = get_affine_bounds_with_linear_block_inputs(
+            lower=lower_max_l_0, upper=upper_max_l_0, axis=axis_
         )
         lower_max_l_1 = -lower_max_e * w_l_out_neg_e
         upper_max_l_1 = -upper_max_e * w_l_out_neg_e
-        _, _, w_u_1, b_u_1 = self.get_affine_bounds_with_linear_block_inputs(
-            lower_max=lower_max_l_1, upper_max=upper_max_l_1, axis=axis_
+        _, _, w_u_1, b_u_1 = get_affine_bounds_with_linear_block_inputs(
+            lower=lower_max_l_1, upper=upper_max_l_1, axis=axis_
         )
 
         w_l = w_l_0 - w_u_1
         b_l = b_l_0 - b_u_1 + b_l_out
 
         return (w_l, b_l, w_u, b_u)
+
+
+def get_affine_bounds_max(
+    lower: Tensor, upper: Tensor, axis: int, keepdims: bool
+) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    w_l, b_l = get_affine_lower_bound_max_before_reduction(lower, upper, axis=axis, keepdims=keepdims)
+    w_u, b_u = get_affine_upper_bound_max_before_reduction(lower, upper, axis=axis, keepdims=keepdims)
+
+    # for now the lower bound is given by sum(w_l*x, axis=axis) + b,
+    # so we need another transformation to get the final w_l
+    w_l = get_batch_multi_dot_repr_for_axis_reduce_weights(w_l, axis=axis, keepdims=keepdims)
+    w_u = get_batch_multi_dot_repr_for_axis_reduce_weights(w_u, axis=axis, keepdims=keepdims)
+
+    return (w_l, b_l, w_u, b_u)
