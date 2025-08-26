@@ -133,18 +133,17 @@ class Helpers:
         np.testing.assert_almost_equal(weights, k_uA, decimal=decimal)
 
     @staticmethod
-    def share_weights_torch_2_keras(torch_model, keras_model, axis_to_permute_kernel=(2, 3, 1, 0)):
+    def share_weights_torch_2_keras(torch_model, keras_model, axis_to_permute_kernel=None):
         # copy weights from torch to keras
         keras_params = []
         for layer in torch_model.layers:
             t_w, t_b = layer.state_dict().values()
             if len(t_w.shape) == 2:
                 keras_params.append(t_w.T)
-            elif len(t_w.shape) == 4:
-                w = K.transpose(t_w, axis_to_permute_kernel)
-                keras_params.append(w)
             else:
-                # keras_params.append(K.transpose(t_w, (2, 1, 0)))
+                if axis_to_permute_kernel is None:
+                    axis_to_permute_kernel = tuple(range(2, len(t_w.shape))) + (1, 0)
+
                 keras_params.append(K.transpose(t_w, axis_to_permute_kernel))
 
             keras_params.append(t_b)
@@ -192,7 +191,7 @@ class Helpers:
         torch_layer,
         input_shape,
         method,
-        axis_to_permute_kernel=(2, 3, 1, 0),
+        axis_to_permute_kernel=None,
         wo_linearity=False,
         decimal=3,
         mapping_keras2decomon_classes={},
