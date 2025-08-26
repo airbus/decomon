@@ -360,7 +360,6 @@ class DecomonLinear(DecomonBaseActivation):
 class DecomonActivationReLU(DecomonBaseActivation):
     diagonal = True
     increasing = True
-    finetune_lower = True
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         w_u, b_u, w_l, b_l = get_linear_hull_relu(upper=upper, lower=lower, slope=self.slope, **kwargs)
@@ -442,7 +441,6 @@ class DecomonActivationTanh(DecomonBaseActivation):
 class DecomonActivationExponential(DecomonBaseActivation):
     diagonal = True
     increasing = True
-    # finetune_lower = True
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         func = exponential
@@ -457,7 +455,6 @@ class DecomonActivationExponential(DecomonBaseActivation):
 class DecomonActivationELU(DecomonBaseActivation):
     diagonal = True
     increasing = True
-    # finetune_lower = True
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         func = elu
@@ -472,7 +469,6 @@ class DecomonActivationELU(DecomonBaseActivation):
 class DecomonActivationLeakyReLU(DecomonBaseActivation):
     diagonal = True
     increasing = True
-    # finetune_lower = True
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         func = leaky_relu
@@ -487,7 +483,6 @@ class DecomonActivationLeakyReLU(DecomonBaseActivation):
 class DecomonActivationSeLU(DecomonBaseActivation):
     diagonal = True
     increasing = True
-    # finetune_lower = True
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         func = selu
@@ -502,7 +497,6 @@ class DecomonActivationSeLU(DecomonBaseActivation):
 class DecomonActivationSoftplus(DecomonBaseActivation):
     diagonal = True
     increasing = True
-    finetune_lower = True
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         func = softplus
