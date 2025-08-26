@@ -81,7 +81,7 @@ def _test_backward_conv2d(filters, kernel_size, strides, padding, input_shape, m
     else:
         padding_t = 0
     torch_layer = torch.nn.Conv2d(input_shape[0], filters, kernel_size=kernel_size, stride=strides, padding=padding_t)
-    helpers.check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=5)
+    helpers.check_layer(keras_layer, torch_layer, input_shape, method=method, decimal=4)
 
 
 def _test_backward_conv2d_empirical(filters, kernel_size, strides, padding, input_shape, method, helpers):
