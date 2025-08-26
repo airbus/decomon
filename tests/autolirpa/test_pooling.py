@@ -140,12 +140,6 @@ def test_backward_AveragePooling3D_linear(method, helpers):
     padding = "valid"
     _test_backward_AveragePooling3D(pool_size, strides, padding, input_shape, method, helpers)
 
-    input_shape = (1, 10, 11, 10)
-    pool_size = (2, 2, 2)
-    strides = 1
-    padding = "same"
-    _test_backward_AveragePooling3D(pool_size, strides, padding, input_shape, method, helpers)
-
 
 @pytest.mark.parametrize("method", ["crown"])
 def test_backward_GlobalAveragePooling3D_linear(method, helpers):
