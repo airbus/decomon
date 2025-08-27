@@ -14,16 +14,15 @@ def elu_prime(x: Tensor, alpha: float = 1.0) -> Tensor:
     # 1 if x>=0
     # alpha*exp(x) = elu(x)+1 if x<=0
     mask = K.relu(K.sign(x))
-    return mask + (1 - mask) * (K.elu(x) + 1)
+    return mask + (1 - mask) * alpha * K.exp(x)
 
 
-def selu_prime(x: Tensor, alpha: float = 1.0) -> Tensor:
+def selu_prime(x: Tensor) -> Tensor:
     # selu = scale*elu(x, alpha)
     # alpha=1.67326324` and `scale=1.05070098
     alpha = 1.67326324
     scale = 1.05070098
-    mask = K.relu(K.sign(x))
-    return scale * (mask + (1 - mask) * (K.elu(x, alpha=alpha) + 1))
+    return scale * elu_prime(x, alpha=alpha)
 
 
 def leaky_relu_prime(x: Tensor, negative_slope: float = 0.3) -> Tensor:

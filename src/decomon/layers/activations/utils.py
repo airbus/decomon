@@ -4,9 +4,11 @@ from typing import Any, Union
 import keras
 import numpy as np
 from keras import ops as K
+from keras.src.activations import selu
 from keras.src.backend import epsilon
 
 from decomon.constants import Slope
+from decomon.layers.activations.prime import selu_prime
 from decomon.types import Tensor
 
 TensorFunction = Callable[[Tensor], Tensor]
@@ -470,3 +472,53 @@ def get_t_lower(
     b_l = -w_l * u_c_flat + s_u  # func(u_c_flat)
 
     return w_l, b_l
+
+
+def get_selu_affine_bounds(
+    lower: Tensor, upper: Tensor, slope: Slope = Slope.V_SLOPE, **kwargs: Any
+) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    func = selu
+    func_prime = selu_prime
+
+    dtype = lower.dtype
+
+    z_value = K.cast(0.0, dtype=dtype)
+    o_value = K.cast(1.0, dtype=dtype)
+    scale = 1.05070098
+
+    s_l = selu(lower)
+    s_u = selu(upper)
+
+    w_u_cvx, b_u_cvx = get_convex_upper_affine_bound_unary(lower, upper, func, func_prime, **kwargs)
+    w_l_cvx, b_l_cvx = get_convex_lower_affine_bound_unary(lower, upper, func, func_prime, slope=slope, **kwargs)
+
+    w_linear = scale + z_value * lower
+    b_linear = z_value * lower
+
+    alpha_cvx = o_value - K.sign(K.sign(upper) + o_value)
+    alpha_linear = K.sign(K.sign(lower) + o_value)
+    alpha_other = o_value - alpha_linear - alpha_cvx
+
+    alpha_other_u_linear = K.where(
+        K.greater_equal(w_linear * lower + b_linear, s_l), o_value + z_value * lower, z_value * lower
+    )
+    w_u_other = alpha_other_u_linear * w_linear + (1 - alpha_other_u_linear) * w_u_cvx
+    b_u_other = alpha_other_u_linear * b_linear + (1 - alpha_other_u_linear) * b_u_cvx
+
+    w_l_selu_prime_l = selu_prime(lower)
+    b_l_selu_prime_l = s_l - w_l_selu_prime_l * lower
+    w_chord = (s_u - s_l) / K.maximum(K.cast(epsilon(), dtype=dtype), upper - lower)
+    b_chord = K.minimum(s_l - w_chord * lower, s_u - w_chord * upper)
+
+    alpha_other_l_chord = K.where(
+        K.greater_equal(w_l_selu_prime_l, w_chord), o_value + z_value * lower, z_value * lower
+    )
+    w_l_other = alpha_other_l_chord * w_chord + (1 - alpha_other_l_chord) * w_l_selu_prime_l
+    b_l_other = alpha_other_l_chord * b_chord + (1 - alpha_other_l_chord) * b_l_selu_prime_l
+
+    w_u = alpha_cvx * w_u_cvx + alpha_linear * w_linear + alpha_other * w_u_other
+    b_u = alpha_cvx * b_u_cvx + alpha_linear * b_linear + alpha_other * b_u_other
+    w_l = alpha_cvx * w_l_cvx + alpha_linear * w_linear + alpha_other * w_l_other
+    b_l = alpha_cvx * b_l_cvx + alpha_linear * b_linear + alpha_other * b_l_other
+
+    return w_l, b_l, w_u, b_u

@@ -34,6 +34,7 @@ from decomon.layers.activations.utils import (
     get_convex_upper_affine_bound_unary,
     get_linear_hull_relu,
     get_linear_hull_s_shape,
+    get_selu_affine_bounds,
 )
 from decomon.layers.finetune import get_alpha_model_diagonal
 from decomon.layers.layer import DecomonLayer
@@ -460,6 +461,7 @@ class DecomonActivationELU(DecomonBaseActivation):
         func = elu
         func_prime = elu_prime
 
+        # here we assume default alpha = 1.0 => convex activation
         w_u, b_u = get_convex_upper_affine_bound_unary(lower, upper, func, func_prime, **kwargs)
         w_l, b_l = get_convex_lower_affine_bound_unary(lower, upper, func, func_prime, slope=self.slope, **kwargs)
 
@@ -485,13 +487,7 @@ class DecomonActivationSeLU(DecomonBaseActivation):
     increasing = True
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        func = selu
-        func_prime = selu_prime
-
-        w_u, b_u = get_convex_upper_affine_bound_unary(lower, upper, func, func_prime, **kwargs)
-        w_l, b_l = get_convex_lower_affine_bound_unary(lower, upper, func, func_prime, slope=self.slope, **kwargs)
-
-        return w_l, b_l, w_u, b_u
+        return get_selu_affine_bounds(lower=lower, upper=upper, slope=self.slope, **kwargs)
 
 
 class DecomonActivationSoftplus(DecomonBaseActivation):
