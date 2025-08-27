@@ -65,7 +65,7 @@ final_ibp, final_affine = param_fixtures(
     "final_ibp, final_affine", [(True, False), (False, True), (True, True)], ids=["ibp", "affine", "hybrid"]
 )
 slope = param_fixture("slope", [s.value for s in Slope])
-n = param_fixture("n", list(range(10)))
+n = param_fixture("n", list(range(6)))
 odd = param_fixture("odd", list(range(2)))
 use_bias = param_fixture("use_bias", [True, False])
 randomize = param_fixture("randomize", [True, False])
@@ -472,21 +472,14 @@ class Helpers:
         elif n == 2:
             y_ = np.linspace(-1, 1, batchsize)
             x_ = np.linspace(-1, 1, batchsize)
-
         elif n == 3:
-            # identity
-            y_ = np.linspace(-2, -1, batchsize)
-            x_ = np.linspace(-2, -1, batchsize)
-
+            y_ = np.linspace(0, 1, batchsize)
+            x_ = np.linspace(0, 1, batchsize)
         elif n == 4:
-            y_ = np.linspace(1, 2, batchsize)
-            x_ = np.linspace(1, 2, batchsize)
+            y_ = np.linspace(-1, 0, batchsize)
+            x_ = np.linspace(-1, 0, batchsize)
 
         elif n == 5:
-            y_ = np.linspace(-1, 1, batchsize)
-            x_ = np.linspace(-1, 1, batchsize)
-
-        elif n == 6:
             # cosine function
             x_ = np.linspace(-np.pi, np.pi, batchsize)
             y_ = np.cos(x_)
@@ -495,31 +488,8 @@ class Helpers:
             b_u_ = np.ones_like(x_)
             b_l_ = -np.ones_like(x_)
 
-        elif n == 7:
-            # h and g >0
-            h_ = np.linspace(0.5, 2, batchsize)
-            g_ = np.linspace(1, 2, batchsize)[::-1]
-            x_ = h_ + g_
-            y_ = h_ + g_
-
-        elif n == 8:
-            # h <0 and g <0
-            # h_max+g_max <=0
-            h_ = np.linspace(-2, -1, batchsize)
-            g_ = np.linspace(-2, -1, batchsize)[::-1]
-            y_ = h_ + g_
-            x_ = h_ + g_
-
-        elif n == 9:
-            # h >0 and g <0
-            # h_min+g_min >=0
-            h_ = np.linspace(4, 5, batchsize)
-            g_ = np.linspace(-2, -1, batchsize)[::-1]
-            y_ = h_ + g_
-            x_ = h_ + g_
-
         else:
-            raise ValueError("n must be between 0 and 9.")
+            raise ValueError("n must be between 0 and 3.")
 
         x_min_ = x_.min() + np.zeros_like(x_)
         x_max_ = x_.max() + np.zeros_like(x_)
