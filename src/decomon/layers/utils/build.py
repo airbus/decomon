@@ -3,7 +3,7 @@ from keras.layers import Layer
 from keras.models import Sequential
 
 
-def pre_built(layer: Layer, input_shape_wo_batch: list[int]) -> None:
+def pre_built(layer: Layer, input_shape_wo_batch: tuple[int, ...]) -> None:
     """
     This function ensures that the provided Keras layer is built by passing a dummy input through it.
     If the layer has not been built yet, it creates a toy model with the given layer,
@@ -19,5 +19,5 @@ def pre_built(layer: Layer, input_shape_wo_batch: list[int]) -> None:
     """
     if not layer.built:
         toy_model = Sequential([layer])
-        input = np.zeros([1] + input_shape_wo_batch)
+        input = np.zeros((1,) + input_shape_wo_batch)
         _ = toy_model(input)
