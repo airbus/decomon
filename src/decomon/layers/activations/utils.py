@@ -34,9 +34,8 @@ def get_convex_upper_affine_bound_unary(
 
     f_u = func(upper)
     f_l = func(lower)
-    axis = [i + 1 for i in range(len(lower.shape) - 1)]
     w = (f_u - f_l) / K.maximum(upper - lower, keras.backend.epsilon())
-    b = 0.5 * (f_u + f_l - w * (upper + lower))
+    b = K.maximum(f_u - w * upper, f_l - w * lower)
 
     if "finetune_forward" in kwargs:
         # retrieve variables to optimize the slopes
