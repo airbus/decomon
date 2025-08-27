@@ -27,7 +27,7 @@ class DecomonBackwardLinearLayer(DecomonLayer):
         self.layer_backward = layer_backward
 
         if self.use_bias:
-            self.bias = self.layer_backward(K.zeros([1] + self.layer.input_dim_wo_batch))
+            self.bias = self.layer_backward(K.zeros((1,) + self.layer.input_dim_wo_batch))
 
     def apply_layer_backward(self, input_: Tensor) -> Tensor:
         # remove bias before apply layer_backward
