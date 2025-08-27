@@ -26,6 +26,7 @@ from keras.layers import (
     LeakyReLU,
     MaxPooling2D,
     Permute,
+    ReLU,
     RepeatVector,
     Reshape,
     UnitNormalization,
@@ -45,6 +46,7 @@ from pytest_cases import (
     unpack_fixture,
 )
 
+from decomon.constants import Slope
 from decomon.keras_utils import batch_multid_dot
 from decomon.layers import (
     DecomonActivation,
@@ -74,6 +76,7 @@ from decomon.layers import (
     DecomonMin,
     DecomonMulConstant,
     DecomonPermute,
+    DecomonReLU,
     DecomonRepeatVector,
     DecomonReshape,
     DecomonUnitNormalization,
@@ -93,7 +96,15 @@ def dense_keras_kwargs(use_bias):
 
 
 activation_with_slope = param_fixture(
-    "activation_with_slope", ["relu", "exponential", "elu", "leaky_relu", "selu", "softplus"]
+    "activation_with_slope",
+    [
+        "relu",
+        "exponential",
+        "elu",
+        "leaky_relu",
+        "selu",
+        "softplus",
+    ],
 )
 activation_without_slope = param_fixture(
     "activation_without_slope",
@@ -107,18 +118,18 @@ activation_without_slope = param_fixture(
 
 
 @fixture
-def keras_kwargs_activation_with_slope(activation_with_slope):
-    return dict(activation=activation_with_slope)
+def activation_without_slope_kwargs(activation_without_slope):
+    return _activation_kwargs(activation=activation_without_slope)
 
 
 @fixture
-def decomon_kwargs_activation_with_slope(slope):
-    return dict(slope=slope)
+def activation_with_slope_kwargs(activation_with_slope, slope):
+    # skip adaptative slope for non relu activation (not yet implemented)
+    if Slope(slope) == Slope.A_SLOPE:
+        if activation_with_slope != "relu":
+            pytest.skip("adaptative slope not implemented for non-relu activations")
 
-
-@fixture
-def keras_kwargs_activation_without_slope(activation_without_slope):
-    return dict(activation=activation_without_slope)
+    return _activation_kwargs(activation=activation_with_slope, slope=slope)
 
 
 def _activation_kwargs(activation, slope=None):
@@ -130,20 +141,9 @@ def _activation_kwargs(activation, slope=None):
     return keras_kwargs, decomon_kwargs
 
 
-@fixture
-@parametrize("activation", [None, "softsign"])
-def non_relu_activation_kwargs(activation):
-    return _activation_kwargs(activation)
-
-
-@fixture
-def relu_activation_kwargs(slope):
-    return _activation_kwargs(activation="relu", slope=slope)
-
-
 activation_kwargs = fixture_union(
     "activation_kwargs",
-    [non_relu_activation_kwargs, relu_activation_kwargs],
+    [activation_without_slope_kwargs, activation_with_slope_kwargs],
 )
 activation_keras_kwargs, activation_decomon_kwargs = unpack_fixture(
     "activation_keras_kwargs, activation_decomon_kwargs", activation_kwargs
@@ -160,8 +160,6 @@ def data_format_kwargs(data_format):
     [
         (DecomonDense, {}, Dense, dense_keras_kwargs),
         (DecomonActivation, activation_decomon_kwargs, Activation, activation_keras_kwargs),
-        # (DecomonActivation, decomon_kwargs_activation_with_slope, Activation, keras_kwargs_activation_with_slope),  # to fix
-        # (DecomonActivation, {}, Activation, keras_kwargs_activation_without_slope),  # to fix
         (DecomonZeroPadding2D, {}, ZeroPadding2D, dict(padding=((1, 3), (0, 5)))),
         (DecomonCropping2D, {}, Cropping2D, data_format_kwargs),
         (DecomonUpSampling2D, {}, UpSampling2D, data_format_kwargs),
@@ -183,7 +181,8 @@ def data_format_kwargs(data_format):
         # (DecomonMax, {}, Max, dict(axis=1)),  # to be fixed
         # (DecomonMulConstant, {}, MulConstant, dict(constant=3.14)),  # to be fixed
         # (DecomonMin, {}, Min, dict(axis=1)),  # to be fixed
-        # (DecomonLeakyReLU, {}, LeakyReLU, {}),  # to be fixed
+        (DecomonLeakyReLU, {}, LeakyReLU, {}),
+        (DecomonReLU, {}, ReLU, {}),
     ],
 )
 def test_decomon_unary_layer(
@@ -242,6 +241,7 @@ def test_decomon_unary_layer(
     if isinstance(layer, Permute):
         if len(keras_symbolic_layer_input.shape) != 4:
             pytest.skip("test Permute in 4D only")
+
     # build keras layer
     layer(keras_symbolic_layer_input)
 
