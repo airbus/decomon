@@ -306,7 +306,6 @@ def get_linear_hull_s_shape(
 
     z_value = K.cast(0.0, dtype=dtype)
     o_value = K.cast(1.0, dtype=dtype)
-    t_value = K.cast(2.0, dtype=dtype)
 
     # flatten
     shape = list(lower.shape[1:])
@@ -325,7 +324,7 @@ def get_linear_hull_s_shape(
     alpha_u_0 = K.where(
         K.greater_equal(s_u_prime, coeff), o_value + z_value * upper_flat, z_value * upper_flat
     )  # (None, n)
-    alpha_u_1 = (o_value - alpha_u_0) * ((K.sign(lower_flat) + o_value) / t_value)
+    alpha_u_1 = (o_value - alpha_u_0) * (K.sign(K.sign(lower_flat) + o_value))  # 0 si <0, +1 si >=0
 
     w_u_0 = coeff
     b_u_0 = -w_u_0 * lower_flat + s_l
@@ -343,7 +342,7 @@ def get_linear_hull_s_shape(
     alpha_l_0 = K.where(
         K.greater_equal(s_l_prime, coeff), o_value + z_value * lower_flat, z_value * lower_flat
     )  # (None, n)
-    alpha_l_1 = (o_value - alpha_l_0) * ((K.sign(-upper_flat) + o_value) / t_value)
+    alpha_l_1 = (o_value - alpha_l_0) * (K.sign(K.sign(-upper_flat) + o_value))  # 0 si >0, +1 si <=0
 
     w_l_0 = coeff
     b_l_0 = -w_l_0 * upper_flat + s_u
