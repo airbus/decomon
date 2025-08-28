@@ -1,3 +1,4 @@
+import inspect
 from collections.abc import Callable
 from typing import Any, Optional
 
@@ -32,6 +33,7 @@ from decomon.layers.activations.prime import (
 from decomon.layers.activations.utils import (
     get_convex_lower_affine_bound_unary,
     get_convex_upper_affine_bound_unary,
+    get_leakyrelu_affine_bounds,
     get_linear_hull_relu,
     get_linear_hull_s_shape,
     get_selu_affine_bounds,
@@ -468,18 +470,23 @@ class DecomonActivationELU(DecomonBaseActivation):
         return w_l, b_l, w_u, b_u
 
 
+try:
+    # try to extract default value from signature
+    leaky_relu_default_negative_slope = inspect.signature(leaky_relu).parameters["negative_slope"].default
+except:
+    # default slope for leaky_relu activation function
+    # NB: this is different from default negative slope for LeakyReLU layer (0.3)
+    leaky_relu_default_negative_slope = 0.2
+
+
 class DecomonActivationLeakyReLU(DecomonBaseActivation):
     diagonal = True
     increasing = True
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        func = leaky_relu
-        func_prime = leaky_relu_prime
-
-        w_u, b_u = get_convex_upper_affine_bound_unary(lower, upper, func, func_prime, **kwargs)
-        w_l, b_l = get_convex_lower_affine_bound_unary(lower, upper, func, func_prime, slope=self.slope, **kwargs)
-
-        return w_l, b_l, w_u, b_u
+        return get_leakyrelu_affine_bounds(
+            lower=lower, upper=upper, slope=self.slope, negative_slope=leaky_relu_default_negative_slope, **kwargs
+        )
 
 
 class DecomonActivationSeLU(DecomonBaseActivation):

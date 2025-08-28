@@ -4,11 +4,11 @@ from typing import Any, Union
 import keras
 import numpy as np
 from keras import ops as K
-from keras.src.activations import selu
-from keras.src.backend import epsilon
+from keras.activations import leaky_relu, selu
+from keras.backend import epsilon
 
 from decomon.constants import Slope
-from decomon.layers.activations.prime import selu_prime
+from decomon.layers.activations.prime import leaky_relu_prime, selu_prime
 from decomon.types import Tensor
 
 TensorFunction = Callable[[Tensor], Tensor]
@@ -520,5 +520,21 @@ def get_selu_affine_bounds(
     b_u = alpha_cvx * b_u_cvx + alpha_linear * b_linear + alpha_other * b_u_other
     w_l = alpha_cvx * w_l_cvx + alpha_linear * w_linear + alpha_other * w_l_other
     b_l = alpha_cvx * b_l_cvx + alpha_linear * b_linear + alpha_other * b_l_other
+
+    return w_l, b_l, w_u, b_u
+
+
+def get_leakyrelu_affine_bounds(
+    lower: Tensor, upper: Tensor, slope: Slope = Slope.V_SLOPE, negative_slope=0.3, **kwargs: Any
+) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    if negative_slope > 1.0:
+        # concave activation
+        raise NotImplementedError("leakyrelu affine bounds not yet implemented in concave case.")
+
+    func = lambda x: leaky_relu(x, negative_slope=negative_slope)
+    func_prime = lambda x: leaky_relu_prime(x, negative_slope=negative_slope)
+
+    w_l, b_l = get_convex_lower_affine_bound_unary(lower, upper, func, func_prime, slope=slope)
+    w_u, b_u = get_convex_upper_affine_bound_unary(lower, upper, func, func_prime)
 
     return w_l, b_l, w_u, b_u
