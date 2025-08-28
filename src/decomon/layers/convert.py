@@ -29,6 +29,7 @@ from keras.layers import (
     LeakyReLU,
     MaxPooling2D,
     Permute,
+    ReLU,
     RepeatVector,
     Reshape,
     SpectralNormalization,
@@ -76,6 +77,7 @@ from decomon.layers import (  # DecomonLinear,
     DecomonMin,
     DecomonMulConstant,
     DecomonPermute,
+    DecomonReLU,
     DecomonRepeatVector,
     DecomonReshape,
     DecomonSpectralNormalization,
@@ -137,6 +139,7 @@ default_mapping_keras2decomon_classes: dict[type[Layer], type[DecomonLayer]] = {
     MaxPooling2D: DecomonMaxPooling2D,
     MulConstant: DecomonMulConstant,
     Dropout: DecomonDropout,
+    ReLU: DecomonReLU,
 }
 default_mapping_keras2decomon_classes.update(default_mapping_jacobinet2decomon_classes)
 """Default mapping between keras layers and decomon layers."""
