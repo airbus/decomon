@@ -12,6 +12,7 @@ from .activations.activation import (
     DecomonLinear,
 )
 from .activations.leaky_relu import DecomonLeakyReLU
+from .activations.relu import DecomonReLU
 from .convolutional import (
     DecomonConv1D,
     DecomonConv2D,
