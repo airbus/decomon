@@ -180,9 +180,13 @@ def data_format_kwargs(data_format):
         # (DecomonBatchNormalization, {}, BatchNormalization, dict()),  # lower_affine not ok
         (DecomonConv2D, {}, Conv2D, dict(filters=2, kernel_size=2)),
         (DecomonDepthwiseConv2D, {}, DepthwiseConv2D, dict(kernel_size=2)),
-        # (DecomonMax, {}, Max, dict(axis=1)),  # to be fixed
+        (DecomonMax, {}, Max, dict(axis=1, keepdims=False)),
+        (DecomonMax, {}, Max, dict(axis=1, keepdims=True)),
         # (DecomonMulConstant, {}, MulConstant, dict(constant=3.14)),  # to be fixed
-        # (DecomonMin, {}, Min, dict(axis=1)),  # to be fixed
+        (DecomonMin, {}, Min, dict(axis=1, keepdims=False)),
+        (DecomonMin, {}, Min, dict(axis=1, keepdims=True)),
+        (DecomonMin, {}, Min, dict(axis=-1, keepdims=False)),
+        (DecomonMin, {}, Min, dict(axis=-1, keepdims=True)),
         # (DecomonLeakyReLU, {}, LeakyReLU, {}),  # to be fixed
     ],
 )
@@ -242,6 +246,11 @@ def test_decomon_unary_layer(
     if isinstance(layer, Permute):
         if len(keras_symbolic_layer_input.shape) != 4:
             pytest.skip("test Permute in 4D only")
+
+    if isinstance(layer, Max) or isinstance(layer, Min):
+        if len(keras_symbolic_layer_input.shape) <= 2 and not layer.keepdims:
+            pytest.skip("test Max for 0d/1d input only with keepdims=True")
+
     # build keras layer
     layer(keras_symbolic_layer_input)
 
