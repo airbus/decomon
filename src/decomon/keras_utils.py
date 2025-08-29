@@ -20,7 +20,7 @@ def batch_multid_dot(
 ) -> Tensor:
     """Dot product of tensors by batch, along multiple axes
 
-    Hypothesis: we sum over last axes of x and first axes (skipping the batch one) of x.
+    Hypothesis: we sum over last axes of x and first axes (skipping the batch one) of y.
 
     The 1-dimensional equivalent would be `batch_dot(x,y, axes=(-1, 1))`
     or `keras.layers.Dot(axes=(-1, 1))(x,y)`
