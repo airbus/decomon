@@ -1,7 +1,11 @@
 import pytest
 from keras.layers import Dense
 
-pytest.skip(reason="Seg faulting", allow_module_level=True)
+pytest.skip(
+    reason="Decomon for backward layers not yet mature. "
+    "Bounds for backward layers are different from autolirpa ones.",
+    allow_module_level=True,
+)
 
 
 def _test_backward_dense_empirical_backward(units, input_shape, method, helpers):
