@@ -166,7 +166,8 @@ def data_format_kwargs(data_format):
         (DecomonAveragePooling2D, {}, AveragePooling2D, dict(pool_size=2)),
         (DecomonGlobalAveragePooling2D, {}, GlobalAveragePooling2D, data_format_kwargs),
         (DecomonGlobalAveragePooling2D, {}, GlobalAveragePooling2D, data_format_kwargs),
-        # (DecomonBatchNormalization, {}, BatchNormalization, dict()),  # lower_affine not ok
+        (DecomonBatchNormalization, {}, BatchNormalization, dict()),
+        (DecomonBatchNormalization, {}, BatchNormalization, dict(center=False, scale=False)),
         (DecomonConv2D, {}, Conv2D, dict(filters=2, kernel_size=2)),
         (DecomonDepthwiseConv2D, {}, DepthwiseConv2D, dict(kernel_size=2)),
         # (DecomonMax, {}, Max, dict(axis=1)),  # to be fixed
@@ -233,15 +234,18 @@ def test_decomon_unary_layer(
     # build keras layer
     layer(keras_symbolic_layer_input)
 
-    # randomize weights between -1 and 1 => non-zero biases
+    # randomize weights (e.g. to test non-zero biases)
     for w in layer.weights:
-        w.assign(2.0 * np.random.random(w.shape) - 1.0)
+        # positive-only weights ?
+        if "variance" in w.name:  # like BatchNormalization.moving_variance
+            w.assign(np.random.random(w.shape) + 0.5)  # between 0.5 and 1.5
+        else:
+            w.assign(2.0 * np.random.random(w.shape) - 1.0)  # between -1 and 1
 
     # init + build decomon layer
     output_shape = layer.output.shape[1:]
     model_output_shape = output_shape
     model_input_shape = keras_symbolic_model_input.shape[1:]
-
     decomon_layer = decomon_layer_class(
         layer=layer,
         ibp=ibp,
