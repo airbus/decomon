@@ -180,7 +180,7 @@ def data_format_kwargs(data_format):
         (DecomonDepthwiseConv2D, {}, DepthwiseConv2D, dict(kernel_size=2)),
         (DecomonMax, {}, Max, dict(axis=1, keepdims=False)),
         (DecomonMax, {}, Max, dict(axis=1, keepdims=True)),
-        # (DecomonMulConstant, {}, MulConstant, dict(constant=3.14)),  # to be fixed
+        (DecomonMulConstant, {}, MulConstant, dict(constant=3.14)),
         (DecomonMin, {}, Min, dict(axis=1, keepdims=False)),
         (DecomonMin, {}, Min, dict(axis=1, keepdims=True)),
         (DecomonMin, {}, Min, dict(axis=-1, keepdims=False)),
