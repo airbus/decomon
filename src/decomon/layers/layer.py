@@ -441,8 +441,8 @@ class DecomonLayer(Wrapper):
 
         Args:
             layer: linear layer used for standard propagation.
-            layer_pos: Layer variant that applies positive weights only, for mixed monotonicity handling.
-            layer_neg: Layer variant that applies negative weights only, for mixed monotonicity handling.
+            layer_pos: Layer variant that applies positive weights only, for mixed monotonicity handling, does not apply bias.
+            layer_neg: Layer variant that applies negative weights only, for mixed monotonicity handling, does not apply bias.
             layer_input_shape_wo_batchsize: Input shape of the layer, excluding the batch size.
             layer_output_shape_wo_batchsize: Output shape of the layer, excluding the batch size.
             input_affine_bounds: List of four tensors [W_lower, b_lower, W_upper, b_upper] representing

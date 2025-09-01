@@ -14,11 +14,13 @@ class BatchNormalizationKernelConstraint(Wrapper):
         self,
         layer: BatchNormalization,
         ops: Callable[[Tensor, Tensor], Tensor] = K.maximum,
-        add_moving_mean: bool = True,
-        center: bool = True,
+        add_moving_mean: bool = False,
+        center: bool = False,
+        null_if_noscale: bool = False,
         **kwargs: Any,
     ):
         super().__init__(layer=layer, **kwargs)
+        self.null_if_noscale = null_if_noscale
         self.ops = ops
         self.add_moving_mean = add_moving_mean
         self.moving_mean_ = self.layer.moving_mean
@@ -54,6 +56,10 @@ class BatchNormalizationKernelConstraint(Wrapper):
                     "than the inputs. Received: "
                     f"mask.shape={mask.shape}, inputs.shape={inputs.shape}"
                 )
+
+        # special case: no scale => layer_neg should not exist
+        if not self.scale and self.null_if_noscale:
+            return K.zeros_like(inputs)
 
         compute_dtype = backend.result_type(inputs.dtype, "float32")
         # BN is prone to overflow with float16/bfloat16 inputs, so we upcast to

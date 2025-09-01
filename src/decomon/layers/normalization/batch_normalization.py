@@ -17,5 +17,5 @@ class DecomonBatchNormalization(DecomonLayer):
         super().__init__(*args, **kwargs)
         # create positive and negative version
 
-        self.layer_pos = BatchNormalizationKernelConstraint(layer=self.layer, ops=K.maximum, center=self.layer.center)
-        self.layer_neg = BatchNormalizationKernelConstraint(layer=self.layer, ops=K.minimum, center=False)
+        self.layer_pos = BatchNormalizationKernelConstraint(layer=self.layer, ops=K.maximum)
+        self.layer_neg = BatchNormalizationKernelConstraint(layer=self.layer, ops=K.minimum, null_if_noscale=True)
