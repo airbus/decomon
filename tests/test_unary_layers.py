@@ -21,14 +21,11 @@ from keras.layers import (
     GlobalAveragePooling1D,
     GlobalAveragePooling2D,
     GlobalAveragePooling3D,
-    GroupNormalization,
-    LayerNormalization,
     LeakyReLU,
     MaxPooling2D,
     Permute,
     RepeatVector,
     Reshape,
-    UnitNormalization,
     UpSampling1D,
     UpSampling2D,
     UpSampling3D,
@@ -66,8 +63,6 @@ from decomon.layers import (
     DecomonGlobalAveragePooling1D,
     DecomonGlobalAveragePooling2D,
     DecomonGlobalAveragePooling3D,
-    DecomonGroupNormalization,
-    DecomonLayerNormalization,
     DecomonLeakyReLU,
     DecomonMax,
     DecomonMaxPooling2D,
@@ -76,7 +71,6 @@ from decomon.layers import (
     DecomonPermute,
     DecomonRepeatVector,
     DecomonReshape,
-    DecomonUnitNormalization,
     DecomonUpSampling1D,
     DecomonUpSampling2D,
     DecomonUpSampling3D,
@@ -174,9 +168,6 @@ def data_format_kwargs(data_format):
         (DecomonAveragePooling2D, {}, AveragePooling2D, dict(pool_size=2)),
         (DecomonGlobalAveragePooling2D, {}, GlobalAveragePooling2D, data_format_kwargs),
         (DecomonGlobalAveragePooling2D, {}, GlobalAveragePooling2D, data_format_kwargs),
-        # (DecomonUnitNormalization, {}, UnitNormalization, dict()),  # "wrong affine representation"
-        # (DecomonLayerNormalization, {}, LayerNormalization, dict()),  # "wrong affine representation"
-        # (DecomonGroupNormalization, {}, GroupNormalization, dict(groups=2)),  # "wrong affine representation"
         # (DecomonBatchNormalization, {}, BatchNormalization, dict()),  # lower_affine not ok
         (DecomonConv2D, {}, Conv2D, dict(filters=2, kernel_size=2)),
         (DecomonDepthwiseConv2D, {}, DepthwiseConv2D, dict(kernel_size=2)),
@@ -232,9 +223,6 @@ def test_decomon_unary_layer(
     if isinstance(layer, Reshape):
         if np.prod(keras_symbolic_layer_input.shape[1:]) % 2 != 0:
             pytest.skip("reshaping only even shaped inputs in this test")
-    if isinstance(layer, GroupNormalization):
-        if keras_symbolic_layer_input.shape[-1] % 2 != 0:
-            pytest.skip("Group normalization only even channels")
 
     if isinstance(layer, RepeatVector):
         if len(keras_symbolic_layer_input.shape) != 2:
