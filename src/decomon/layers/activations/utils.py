@@ -525,7 +525,7 @@ def get_selu_affine_bounds(
 
 
 def get_leakyrelu_affine_bounds(
-    lower: Tensor, upper: Tensor, slope: Slope = Slope.V_SLOPE, negative_slope=0.3, **kwargs: Any
+    lower: Tensor, upper: Tensor, slope: Slope = Slope.V_SLOPE, negative_slope: float = 0.3, **kwargs: Any
 ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
     if negative_slope > 1.0:
         # concave activation
