@@ -17,7 +17,7 @@ class DecomonNonDiagAdd(DecomonMerge):
     linear = True
     diagonal = False
 
-    def get_affine_representation(self) -> tuple[list[Tensor], Tensor]:
+    def get_affine_representation(self, layer=None) -> tuple[list[Tensor], Tensor]:
         w = []
         for input_i in self.keras_layer_input:
             diag_shape = input_i.shape[1:]

@@ -287,8 +287,8 @@ class DecomonActivation(DecomonBaseActivation):
         # so do the inputs/outputs format
         self.inputs_outputs_spec = self.decomon_activation.inputs_outputs_spec
 
-    def get_affine_representation(self) -> tuple[Tensor, Tensor]:
-        return self.decomon_activation.get_affine_representation()
+    def get_affine_representation(self, layer: Optional[Layer] = None) -> tuple[Tensor, Tensor]:
+        return self.decomon_activation.get_affine_representation(layer=layer)
 
     def get_affine_bounds(
         self,

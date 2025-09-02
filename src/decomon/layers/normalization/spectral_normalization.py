@@ -47,8 +47,8 @@ class DecomonSpectralNormalization(DecomonLayer):
         self.sub_layer: Layer = self.layer.layer
         self.decomon_layer = self.layer
 
-    def get_affine_representation(self) -> tuple[Tensor, Tensor]:
-        return self.decomon_layer.get_affine_representation()
+    def get_affine_representation(self, layer: Optional[Layer] = None) -> tuple[Tensor, Tensor]:
+        return self.decomon_layer.get_affine_representation(layer=layer)
 
     def forward_ibp_propagate(self, lower: Tensor, upper: Tensor) -> tuple[Tensor, Tensor]:
         return self.decomon_layer.forward_ibp_propagate(lower, upper)

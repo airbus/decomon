@@ -276,7 +276,7 @@ class DecomonLayer(Wrapper):
     def get_affine_representation_lower(self) -> tuple[Tensor, Tensor]:
         return self.get_affine_representation()
 
-    def get_affine_representation(self) -> tuple[Tensor, Tensor]:
+    def get_affine_representation(self, layer: Optional[Layer] = None) -> tuple[Tensor, Tensor]:
         """Get affine representation of the layer
 
         This computes the affine representation of the layer, when this is meaningful,
@@ -286,6 +286,7 @@ class DecomonLayer(Wrapper):
         For non-linear layers, one should implement `get_affine_bounds()` instead.
 
         Args:
+            layer: linear component of a more complex layer. Default to `self.layer`.
 
         Returns:
             w, b: affine representation of the layer satisfying
@@ -316,7 +317,9 @@ class DecomonLayer(Wrapper):
 
 
         """
-        return get_affine_representation(layer=self.layer, diagonal=self.diagonal, use_bias=self.use_bias)
+        if layer is None:
+            layer = self.layer
+        return get_affine_representation(layer=layer, diagonal=self.diagonal, use_bias=self.use_bias)
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Get affine bounds on layer outputs from layer inputs
@@ -464,7 +467,7 @@ class DecomonLayer(Wrapper):
         """
         if len(input_affine_bounds) == 0:
             # special case: empty bounds <=> identity bounds
-            w, b = self.get_affine_representation()
+            w, b = self.get_affine_representation(layer=layer)
             return (w, b, w, b)
 
         w_l_in, b_l_in, w_u_in, b_u_in = input_affine_bounds
@@ -473,7 +476,7 @@ class DecomonLayer(Wrapper):
         is_from_diagonal = self.inputs_outputs_spec.is_diagonal_bounds(input_affine_bounds)
 
         if is_from_diagonal:
-            w_out, b_out = self.get_affine_representation()
+            w_out, b_out = self.get_affine_representation(layer=layer)
             layer_affine_bounds = [w_out, b_out] * 2
 
             from_linear_layer = (self.inputs_outputs_spec.is_wo_batch_bounds(input_affine_bounds), True)
@@ -557,7 +560,7 @@ class DecomonLayer(Wrapper):
 
                     return (w_l_out, b_l_out, w_u_out, b_u_out)
                 else:
-                    w, b = self.get_affine_representation()
+                    w, b = self.get_affine_representation(layer=layer)
                     layer_affine_bounds = [w, b, w, b]
                     from_linear_layer = (is_from_linear, self.linear)
                     diagonal = (

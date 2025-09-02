@@ -2,6 +2,7 @@ from typing import Any, Optional
 
 import keras
 import keras.ops as K
+from keras import Layer
 
 from decomon.keras_utils import add_tensors, batch_multid_dot
 from decomon.layers.fuse import combine_affine_bounds
@@ -37,7 +38,7 @@ class DecomonMerge(DecomonLayer):
         else:
             return [list(e.shape[1:]) for e in self.layer.input]
 
-    def get_affine_representation(self) -> tuple[list[Tensor], Tensor]:  # type: ignore
+    def get_affine_representation(self, layer: Optional[Layer] = None) -> tuple[list[Tensor], Tensor]:  # type: ignore
         """Get affine representation of the layer
 
         This computes the affine representation of the layer, when this is meaningful,

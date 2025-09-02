@@ -194,21 +194,11 @@ class DecomonMaxPooling2D(DecomonLayer):
         )
 
         # get input_constant_bounds after linear_block
-        if is_from_linear:
-            # add broadcast dimension for batch
-            linear_bounds = tuple(K.expand_dims(e, 0) for e in linear_bounds)
         w_l_out, b_l_out, w_u_out, b_u_out = linear_bounds
-        dim = np.prod([self.layer.pool_size])
-        broadcast_shape = [1] + [1] * len(self.model_input_shape) + [1] * len(layer_output_shape_wo_batchsize)
-
-        if self.axis > 0:
-            broadcast_shape[len(self.model_input_shape) + self.axis] = dim
-        else:
-            broadcast_shape[self.axis] = dim
 
         x = input_constant_bounds[0]
-        lower = self.perturbation_domain.get_lower(x, w_l_out, b_l_out, missing_batchsize=False)
-        upper = self.perturbation_domain.get_upper(x, w_u_out, b_u_out, missing_batchsize=False)
+        lower = self.perturbation_domain.get_lower(x, w_l_out, b_l_out, missing_batchsize=is_from_linear)
+        upper = self.perturbation_domain.get_upper(x, w_u_out, b_u_out, missing_batchsize=is_from_linear)
 
         w_u_max, b_u_max = get_affine_upper_bound_max_before_reduction(
             lower=lower, upper=upper, axis=self.axis, keepdims=False
@@ -220,6 +210,13 @@ class DecomonMaxPooling2D(DecomonLayer):
         N = len(self.model_input_shape)
         w_u_max_ = K.reshape(w_u_max, [-1] + [1] * N + list(w_u_max.shape[1:]))
         w_l_max_ = K.reshape(w_l_max, [-1] + [1] * N + list(w_u_max.shape[1:]))
+
+        if is_from_linear:
+            # add broadcast dimension for batch
+            w_l_out = w_l_out[None]
+            w_u_out = w_u_out[None]
+            b_u_out = b_u_out[None]
+            b_l_out = b_l_out[None]
 
         if self.axis > 0:
             axis_ = self.axis + N
