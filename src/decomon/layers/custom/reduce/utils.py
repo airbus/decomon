@@ -125,7 +125,7 @@ def get_batch_multi_dot_repr_for_axis_reduce_weights(w: Tensor, axis: int, keepd
     input_shape_wo_batch = tuple(w.shape[1:])
     batchsize = w.shape[0]
     if keepdims:
-        reduced_axis_shape = (1,)
+        reduced_axis_shape: tuple[int, ...] = (1,)
     else:
         reduced_axis_shape = tuple()
     output_shape_wo_batch = input_shape_wo_batch[: axis_ - 1] + reduced_axis_shape + input_shape_wo_batch[axis_:]
