@@ -111,6 +111,12 @@ class DecomonLayer(Wrapper):
     finetune_lower: bool = False
     "Flag telling that the layer can have its affine lower bound finetuned"
 
+    skip_forward_oracle: bool = False
+    """Flag to skip the forward_oracle in `call_forward()`.
+    In this case we keep passing perturbation_domain_inputs to `forward_affine_propagate`.
+    This can be useful with layers having linear parts like `MaxPooling2D`.
+    """
+
     def __init__(
         self,
         layer: Layer,
@@ -575,7 +581,10 @@ class DecomonLayer(Wrapper):
                     )
 
     def forward_affine_propagate(
-        self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
+        self,
+        input_affine_bounds: list[Tensor],
+        input_constant_bounds: list[Tensor],
+        perturbation_domain_inputs: list[Tensor],
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Propagate model affine bounds in forward direction.
 
@@ -587,6 +596,7 @@ class DecomonLayer(Wrapper):
                 affine bounds on underlying keras layer input w.r.t. model input
             input_constant_bounds: [l_c_in, u_c_in]
                 constant oracle bounds on underlying keras layer input (already deduced from affine ones if necessary)
+            perturbation_domain_inputs: perturbation domain input, wrapped in a list. Necessary only in self.skip_forward_oracle, else empty.
 
         Returns:
             w_l, b_l, w_u, b_u: affine bounds on underlying keras layer *output* w.r.t. model input
@@ -858,18 +868,27 @@ class DecomonLayer(Wrapper):
         # Affine bounds propagation
         if self.affine:
             if not self.linear:
-                # get oracle input bounds (because input_bounds_to_propagate could be empty at this point)
-                input_constant_bounds = self.get_forward_oracle(
-                    input_affine_bounds=affine_bounds_to_propagate,
-                    input_constant_bounds=input_bounds_to_propagate,
-                    perturbation_domain_inputs=perturbation_domain_inputs,
-                )
+                if self.skip_forward_oracle:
+                    # we skip the oracle (should be done later during forward_affine_propagate)
+                    input_constant_bounds = input_bounds_to_propagate
+                    perturbation_domain_inputs_ = perturbation_domain_inputs
+                else:
+                    # get oracle input bounds (because input_bounds_to_propagate could be empty at this point)
+                    input_constant_bounds = self.get_forward_oracle(
+                        input_affine_bounds=affine_bounds_to_propagate,
+                        input_constant_bounds=input_bounds_to_propagate,
+                        perturbation_domain_inputs=perturbation_domain_inputs,
+                    )
+                    perturbation_domain_inputs_ = []
             else:
                 input_constant_bounds = []
+                perturbation_domain_inputs_ = []
             # forward propagation
             output_affine_bounds = list(
                 self.forward_affine_propagate(
-                    input_affine_bounds=affine_bounds_to_propagate, input_constant_bounds=input_constant_bounds
+                    input_affine_bounds=affine_bounds_to_propagate,
+                    input_constant_bounds=input_constant_bounds,
+                    perturbation_domain_inputs=perturbation_domain_inputs_,
                 )
             )
         else:

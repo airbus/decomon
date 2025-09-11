@@ -200,7 +200,10 @@ class DecomonMerge(DecomonLayer):
             )
 
     def forward_affine_propagate(
-        self, input_affine_bounds: list[list[Tensor]], input_constant_bounds: list[list[Tensor]]
+        self,
+        input_affine_bounds: list[list[Tensor]],
+        input_constant_bounds: list[list[Tensor]],
+        perturbation_domain_inputs: list[Tensor],
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Propagate model affine bounds in forward direction.
 
@@ -212,6 +215,7 @@ class DecomonMerge(DecomonLayer):
                 affine bounds on underlying keras layer i-th input w.r.t. model input
             input_constant_bounds[i]: [l_c_in[i], u_c_in[i]]
                 constant oracle bounds on underlying keras layer i-th input (already deduced from affine ones if necessary)
+            perturbation_domain_inputs: perturbation domain input, wrapped in a list. Necessary only in self.skip_forward_oracle, else empty.
 
         Returns:
             w_l_new, b_l_new, w_u_new, b_u_new: affine bounds on underlying keras layer *output* w.r.t. model input

@@ -22,6 +22,7 @@ class DecomonMaxPooling2D(DecomonLayer):
     linear = False
     increasing = True
     use_bias = False
+    skip_forward_oracle = True  # forward oracle performed in overriden forward_affine_propagate()
 
     def __init__(
         self,
@@ -116,71 +117,11 @@ class DecomonMaxPooling2D(DecomonLayer):
 
         return self.get_affine_bounds_with_linear_block_inputs(lower_max=lower_max, upper_max=upper_max, axis=self.axis)
 
-    def call_forward(
-        self,
-        affine_bounds_to_propagate: list[Tensor],
-        input_bounds_to_propagate: list[Tensor],
-        perturbation_domain_inputs: list[Tensor],
-    ) -> tuple[list[Tensor], list[Tensor]]:
-        """Propagate forward affine and constant bounds through the layer.
-
-        Args:
-            affine_bounds_to_propagate: affine bounds on keras layer input w.r.t model input.
-            Can be empty if not in affine mode.
-            Can also be empty in case of identity affine bounds => we simply return layer affine bounds.
-            input_bounds_to_propagate: ibp constant bounds on keras layer input. Can be empty if not in ibp mode.
-            perturbation_domain_inputs: perturbation domain input, wrapped in a list. Necessary only in affine mode, else empty.
-
-        Returns:
-            output_affine_bounds, output_constant_bounds: affine and constant bounds on the underlying keras layer output
-
-        Note:
-            In hybrid case (ibp+affine), the constant bounds are assumed to be already tight in input, and we will return
-            the tighter constant bounds in output. This means that
-            - for the output: we take the tighter constant bounds between the ibp ones and the ones deduced
-                from the affine bounds given the considered perturbation domain, on the output.
-            - for the input: we do not need it, as it should already have been taken care of in the previous layer
-
-        """
-
-        # IBP: interval bounds propragation
-        if self.ibp:
-            lower, upper = self.inputs_outputs_spec.split_constant_bounds(constant_bounds=input_bounds_to_propagate)
-            output_constant_bounds = list(self.forward_ibp_propagate(lower=lower, upper=upper))
-        else:
-            output_constant_bounds = []
-
-        # Affine bounds propagation
-        if self.affine:
-            # forward propagation
-            output_affine_bounds = list(
-                self.forward_affine_propagate(
-                    input_affine_bounds=affine_bounds_to_propagate, input_constant_bounds=perturbation_domain_inputs
-                )
-            )
-        else:
-            output_affine_bounds = []
-
-        # Tighten constant bounds in hybrid mode (ibp+affine)
-        if self.ibp and self.affine:
-            if len(perturbation_domain_inputs) == 0:
-                raise RuntimeError("keras model input is necessary for call_forward() in affine mode.")
-            x = perturbation_domain_inputs[0]
-            l_ibp, u_ibp = output_constant_bounds
-            w_l, b_l, w_u, b_u = output_affine_bounds
-            from_linear = self.linear and self.inputs_outputs_spec.is_wo_batch_bounds(
-                affine_bounds=affine_bounds_to_propagate
-            )
-            l_affine = self.perturbation_domain.get_lower(x, w_l, b_l, missing_batchsize=from_linear)
-            u_affine = self.perturbation_domain.get_upper(x, w_u, b_u, missing_batchsize=from_linear)
-            u = K.minimum(u_ibp, u_affine)
-            l = K.maximum(l_ibp, l_affine)
-            output_constant_bounds = [l, u]
-
-        return output_affine_bounds, output_constant_bounds
-
     def forward_affine_propagate(
-        self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
+        self,
+        input_affine_bounds: list[Tensor],
+        input_constant_bounds: list[Tensor],
+        perturbation_domain_inputs: list[Tensor],
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         is_from_linear = self.inputs_outputs_spec.is_wo_batch_bounds(input_affine_bounds)
         layer_output_shape_wo_batchsize = list(self.linear_block.output.shape[1:])
@@ -193,18 +134,32 @@ class DecomonMaxPooling2D(DecomonLayer):
             input_affine_bounds,
         )
 
-        # get input_constant_bounds after linear_block
         w_l_out, b_l_out, w_u_out, b_u_out = linear_bounds
 
-        x = input_constant_bounds[0]
-        lower = self.perturbation_domain.get_lower(x, w_l_out, b_l_out, missing_batchsize=is_from_linear)
-        upper = self.perturbation_domain.get_upper(x, w_u_out, b_u_out, missing_batchsize=is_from_linear)
+        # get constant bounds after linear_block
+        x = perturbation_domain_inputs[0]
+        lower_max_input_affine = self.perturbation_domain.get_lower(
+            x, w_l_out, b_l_out, missing_batchsize=is_from_linear
+        )
+        upper_max_input_affine = self.perturbation_domain.get_upper(
+            x, w_u_out, b_u_out, missing_batchsize=is_from_linear
+        )
+        if self.ibp:
+            # tighten with ibp propagation
+            lower, upper = self.inputs_outputs_spec.split_constant_bounds(constant_bounds=input_constant_bounds)
+            lower_max_input_ibp = self.linear_block(lower)
+            upper_max_input_ibp = self.linear_block(upper)
+            lower_max_input = K.maximum(lower_max_input_ibp, lower_max_input_affine)
+            upper_max_input = K.minimum(upper_max_input_ibp, upper_max_input_affine)
+        else:
+            lower_max_input = lower_max_input_affine
+            upper_max_input = upper_max_input_affine
 
         w_u_max, b_u_max = get_affine_upper_bound_max_before_reduction(
-            lower=lower, upper=upper, axis=self.axis, keepdims=False
+            lower=lower_max_input, upper=upper_max_input, axis=self.axis, keepdims=False
         )
         w_l_max, b_l_max = get_affine_lower_bound_max_before_reduction(
-            lower=lower, upper=upper, axis=self.axis, keepdims=False
+            lower=lower_max_input, upper=upper_max_input, axis=self.axis, keepdims=False
         )
 
         N = len(self.model_input_shape)

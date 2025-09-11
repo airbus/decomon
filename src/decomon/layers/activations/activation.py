@@ -96,7 +96,10 @@ class DecomonBaseActivation(DecomonLayer):
         return self.layer.activation(lower), self.layer.activation(upper)
 
     def forward_affine_propagate(
-        self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
+        self,
+        input_affine_bounds: list[Tensor],
+        input_constant_bounds: list[Tensor],
+        perturbation_domain_inputs: list[Tensor],
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         if self.finetune and self.diagonal and len(input_affine_bounds) > 0:
             w_l_in, b_l_in, w_u_in, b_u_in = input_affine_bounds
@@ -151,7 +154,9 @@ class DecomonBaseActivation(DecomonLayer):
             return (w_l_out, b_l_out, w_u_out, b_u_out)
         else:
             return super().forward_affine_propagate(
-                input_affine_bounds=input_affine_bounds, input_constant_bounds=input_constant_bounds
+                input_affine_bounds=input_affine_bounds,
+                input_constant_bounds=input_constant_bounds,
+                perturbation_domain_inputs=perturbation_domain_inputs,
             )
 
     def backward_affine_propagate(
@@ -299,10 +304,15 @@ class DecomonActivation(DecomonBaseActivation):
         return self.decomon_activation.get_affine_bounds(lower=lower, upper=upper)
 
     def forward_affine_propagate(
-        self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
+        self,
+        input_affine_bounds: list[Tensor],
+        input_constant_bounds: list[Tensor],
+        perturbation_domain_inputs: list[Tensor],
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         return self.decomon_activation.forward_affine_propagate(
-            input_affine_bounds=input_affine_bounds, input_constant_bounds=input_constant_bounds
+            input_affine_bounds=input_affine_bounds,
+            input_constant_bounds=input_constant_bounds,
+            perturbation_domain_inputs=perturbation_domain_inputs,
         )
 
     def backward_affine_propagate(
