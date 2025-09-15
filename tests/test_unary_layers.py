@@ -1,3 +1,4 @@
+import keras.backend
 import keras.ops as K
 import numpy as np
 import pytest
@@ -242,6 +243,10 @@ def test_decomon_unary_layer(
     if isinstance(layer, MaxPooling2D):
         if propagation == Propagation.BACKWARD and layer.data_format == "channels_last":
             pytest.skip("Wrong backward bounds for maxpooling2d with 'channels_last' data format.")
+        if layer.data_format == "channels_first" and keras.backend.backend() == "tensorflow":
+            pytest.skip(
+                "Error when initializing 'BackwardMaxPooling2D' with 'channels_first' data format and 'tensorflow' backend in on some machines."
+            )
 
     # build keras layer
     layer(keras_symbolic_layer_input)
