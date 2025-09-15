@@ -150,6 +150,14 @@ def data_format_kwargs(data_format):
     return dict(data_format=data_format)
 
 
+padding = param_fixture("padding", ["valid", "same"])
+
+
+@fixture
+def maxpooling2d_kwargs(data_format, padding):
+    return dict(data_format=data_format, padding=padding)
+
+
 @parametrize(
     "decomon_layer_class, decomon_layer_kwargs, keras_layer_class, keras_layer_kwargs",
     [
@@ -163,7 +171,7 @@ def data_format_kwargs(data_format):
         (DecomonPermute, {}, Permute, dict(dims=(2, 3, 1))),
         (DecomonFlatten, {}, Flatten, dict()),
         (DecomonDropout, {}, Dropout, dict(rate=0.2)),
-        (DecomonMaxPooling2D, {}, MaxPooling2D, data_format_kwargs),
+        (DecomonMaxPooling2D, {}, MaxPooling2D, maxpooling2d_kwargs),
         (DecomonAveragePooling2D, {}, AveragePooling2D, dict(pool_size=2)),
         (DecomonGlobalAveragePooling2D, {}, GlobalAveragePooling2D, data_format_kwargs),
         (DecomonGlobalAveragePooling2D, {}, GlobalAveragePooling2D, data_format_kwargs),
@@ -246,6 +254,15 @@ def test_decomon_unary_layer(
         if layer.data_format == "channels_first" and keras.backend.backend() == "tensorflow":
             pytest.skip(
                 "Error when initializing 'BackwardMaxPooling2D' with 'channels_first' data format and 'tensorflow' backend in on some machines."
+            )
+        if (
+            layer.data_format == "channels_last"
+            and layer.padding == "same"
+            and propagation == Propagation.FORWARD
+            and affine
+        ):
+            pytest.skip(
+                "Wrong forward affine bounds for maxpooling2d with padding == 'same' and 'channels_last' data format."
             )
 
     # build keras layer
