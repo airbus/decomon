@@ -1,7 +1,7 @@
-from typing import Any
+from typing import Any, Optional
 
 import keras.ops as K
-from keras.layers import Dense
+from keras.layers import Dense, Layer
 
 from decomon.layers.layer import DecomonLayer
 from decomon.types import Tensor
@@ -23,7 +23,7 @@ class DecomonDense(DecomonLayer):
 
         super().__init__(*args, layer=layer, layer_pos=layer_pos, layer_neg=layer_neg, **kwargs)  # type: ignore
 
-    def get_affine_representation(self) -> tuple[Tensor, Tensor]:
+    def get_affine_representation(self, layer: Optional[Layer] = None) -> tuple[Tensor, Tensor]:
         w = self.layer.kernel
         b = self.layer.bias if self.layer.use_bias else K.zeros((self.layer.units,))
 

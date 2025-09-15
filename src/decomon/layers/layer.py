@@ -20,6 +20,7 @@ from decomon.layers.utils import (
     get_affine_representation_wo_bias,
     get_bias,
 )
+from decomon.layers.utils.affine import get_affine_representation
 from decomon.perturbation_domain import BoxDomain, PerturbationDomain
 from decomon.types import Tensor
 from decomon.utils import fit_memory
@@ -109,6 +110,12 @@ class DecomonLayer(Wrapper):
 
     finetune_lower: bool = False
     "Flag telling that the layer can have its affine lower bound finetuned"
+
+    skip_forward_oracle: bool = False
+    """Flag to skip the forward_oracle in `call_forward()`.
+    In this case we keep passing perturbation_domain_inputs to `forward_affine_propagate`.
+    This can be useful with layers having linear parts like `MaxPooling2D`.
+    """
 
     def __init__(
         self,
@@ -275,7 +282,7 @@ class DecomonLayer(Wrapper):
     def get_affine_representation_lower(self) -> tuple[Tensor, Tensor]:
         return self.get_affine_representation()
 
-    def get_affine_representation(self) -> tuple[Tensor, Tensor]:
+    def get_affine_representation(self, layer: Optional[Layer] = None) -> tuple[Tensor, Tensor]:
         """Get affine representation of the layer
 
         This computes the affine representation of the layer, when this is meaningful,
@@ -285,6 +292,7 @@ class DecomonLayer(Wrapper):
         For non-linear layers, one should implement `get_affine_bounds()` instead.
 
         Args:
+            layer: linear component of a more complex layer. Default to `self.layer`.
 
         Returns:
             w, b: affine representation of the layer satisfying
@@ -315,13 +323,9 @@ class DecomonLayer(Wrapper):
 
 
         """
-        if not self.linear:
-            raise RuntimeError("You should not call `get_affine_representation()` when `self.linear` is False.")
-        else:
-            if self.use_bias:
-                return get_affine_representation_with_bias(self.layer, diagonal=self.diagonal)
-            else:
-                return get_affine_representation_wo_bias(self.layer, diagonal=self.diagonal)
+        if layer is None:
+            layer = self.layer
+        return get_affine_representation(layer=layer, diagonal=self.diagonal, use_bias=self.use_bias)
 
     def get_affine_bounds(self, lower: Tensor, upper: Tensor, **kwargs: Any) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Get affine bounds on layer outputs from layer inputs
@@ -469,7 +473,7 @@ class DecomonLayer(Wrapper):
         """
         if len(input_affine_bounds) == 0:
             # special case: empty bounds <=> identity bounds
-            w, b = self.get_affine_representation()
+            w, b = self.get_affine_representation(layer=layer)
             return (w, b, w, b)
 
         w_l_in, b_l_in, w_u_in, b_u_in = input_affine_bounds
@@ -478,7 +482,7 @@ class DecomonLayer(Wrapper):
         is_from_diagonal = self.inputs_outputs_spec.is_diagonal_bounds(input_affine_bounds)
 
         if is_from_diagonal:
-            w_out, b_out = self.get_affine_representation()
+            w_out, b_out = self.get_affine_representation(layer=layer)
             layer_affine_bounds = [w_out, b_out] * 2
 
             from_linear_layer = (self.inputs_outputs_spec.is_wo_batch_bounds(input_affine_bounds), True)
@@ -562,7 +566,7 @@ class DecomonLayer(Wrapper):
 
                     return (w_l_out, b_l_out, w_u_out, b_u_out)
                 else:
-                    w, b = self.get_affine_representation()
+                    w, b = self.get_affine_representation(layer=layer)
                     layer_affine_bounds = [w, b, w, b]
                     from_linear_layer = (is_from_linear, self.linear)
                     diagonal = (
@@ -577,7 +581,10 @@ class DecomonLayer(Wrapper):
                     )
 
     def forward_affine_propagate(
-        self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
+        self,
+        input_affine_bounds: list[Tensor],
+        input_constant_bounds: list[Tensor],
+        perturbation_domain_inputs: list[Tensor],
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Propagate model affine bounds in forward direction.
 
@@ -589,6 +596,7 @@ class DecomonLayer(Wrapper):
                 affine bounds on underlying keras layer input w.r.t. model input
             input_constant_bounds: [l_c_in, u_c_in]
                 constant oracle bounds on underlying keras layer input (already deduced from affine ones if necessary)
+            perturbation_domain_inputs: perturbation domain input, wrapped in a list. Necessary only in self.skip_forward_oracle, else empty.
 
         Returns:
             w_l, b_l, w_u, b_u: affine bounds on underlying keras layer *output* w.r.t. model input
@@ -860,18 +868,27 @@ class DecomonLayer(Wrapper):
         # Affine bounds propagation
         if self.affine:
             if not self.linear:
-                # get oracle input bounds (because input_bounds_to_propagate could be empty at this point)
-                input_constant_bounds = self.get_forward_oracle(
-                    input_affine_bounds=affine_bounds_to_propagate,
-                    input_constant_bounds=input_bounds_to_propagate,
-                    perturbation_domain_inputs=perturbation_domain_inputs,
-                )
+                if self.skip_forward_oracle:
+                    # we skip the oracle (should be done later during forward_affine_propagate)
+                    input_constant_bounds = input_bounds_to_propagate
+                    perturbation_domain_inputs_ = perturbation_domain_inputs
+                else:
+                    # get oracle input bounds (because input_bounds_to_propagate could be empty at this point)
+                    input_constant_bounds = self.get_forward_oracle(
+                        input_affine_bounds=affine_bounds_to_propagate,
+                        input_constant_bounds=input_bounds_to_propagate,
+                        perturbation_domain_inputs=perturbation_domain_inputs,
+                    )
+                    perturbation_domain_inputs_ = []
             else:
                 input_constant_bounds = []
+                perturbation_domain_inputs_ = []
             # forward propagation
             output_affine_bounds = list(
                 self.forward_affine_propagate(
-                    input_affine_bounds=affine_bounds_to_propagate, input_constant_bounds=input_constant_bounds
+                    input_affine_bounds=affine_bounds_to_propagate,
+                    input_constant_bounds=input_constant_bounds,
+                    perturbation_domain_inputs=perturbation_domain_inputs_,
                 )
             )
         else:

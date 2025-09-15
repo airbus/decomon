@@ -37,7 +37,7 @@ class MyLinearDecomonDense1d(DecomonLayer):
     linear = True
     layer: Dense
 
-    def get_affine_representation(self):
+    def get_affine_representation(self, layer=None):
         return self.layer.kernel, self.layer.bias
 
 

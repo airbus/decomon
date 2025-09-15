@@ -137,9 +137,23 @@ def get_batch_multi_dot_repr_for_axis_reduce_weights(w: Tensor, axis: int, keepd
 
 
 def max_prime(inputs: Tensor, axis: int) -> Tensor:
-    indices = K.argmax(inputs, axis)
-    dim_i = inputs.shape[axis]
-    output = K.one_hot(indices, dim_i, axis=axis)
+    # preprocessing: need to overcome max nb of dimension for argmax (7 with tensorflow) => reshape
+    if axis < 0:
+        axis_ = len(inputs.shape) + axis
+    else:
+        axis_ = axis
+    oldshape = inputs.shape
+    newshape = (int(np.prod(inputs.shape[:axis_])), inputs.shape[axis_], int(np.prod(inputs.shape[axis_ + 1 :])))
+    inputs_reshaped = K.reshape(inputs, newshape=newshape)
+    axis_reshaped = 1
+
+    # max_prime: one-hot encoding of argmax
+    indices = K.argmax(inputs_reshaped, axis_reshaped)
+    dim_i = inputs_reshaped.shape[axis_reshaped]
+    output_reshaped = K.one_hot(indices, dim_i, axis=axis_reshaped)
+
+    # postprocessing: reshape back
+    output = K.reshape(output_reshaped, newshape=oldshape)
     return output
 
 

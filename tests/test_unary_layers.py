@@ -1,3 +1,4 @@
+import keras.backend
 import keras.ops as K
 import numpy as np
 import pytest
@@ -43,7 +44,7 @@ from pytest_cases import (
     unpack_fixture,
 )
 
-from decomon.constants import Slope
+from decomon.constants import Propagation, Slope
 from decomon.keras_utils import batch_multid_dot
 from decomon.layers import (
     DecomonActivation,
@@ -149,6 +150,14 @@ def data_format_kwargs(data_format):
     return dict(data_format=data_format)
 
 
+padding = param_fixture("padding", ["valid", "same"])
+
+
+@fixture
+def maxpooling2d_kwargs(data_format, padding):
+    return dict(data_format=data_format, padding=padding)
+
+
 @parametrize(
     "decomon_layer_class, decomon_layer_kwargs, keras_layer_class, keras_layer_kwargs",
     [
@@ -162,7 +171,7 @@ def data_format_kwargs(data_format):
         (DecomonPermute, {}, Permute, dict(dims=(2, 3, 1))),
         (DecomonFlatten, {}, Flatten, dict()),
         (DecomonDropout, {}, Dropout, dict(rate=0.2)),
-        # (DecomonMaxPooling2D, {}, MaxPooling2D, data_format_kwargs),  # error with diagonal entries
+        (DecomonMaxPooling2D, {}, MaxPooling2D, maxpooling2d_kwargs),
         (DecomonAveragePooling2D, {}, AveragePooling2D, dict(pool_size=2)),
         (DecomonGlobalAveragePooling2D, {}, GlobalAveragePooling2D, data_format_kwargs),
         (DecomonGlobalAveragePooling2D, {}, GlobalAveragePooling2D, data_format_kwargs),
@@ -237,6 +246,24 @@ def test_decomon_unary_layer(
     if isinstance(layer, Max) or isinstance(layer, Min):
         if len(keras_symbolic_layer_input.shape) <= 2 and not layer.keepdims:
             pytest.skip("test Max for 0d/1d input only with keepdims=True")
+
+    # Bugs to fix:
+    if isinstance(layer, MaxPooling2D):
+        if propagation == Propagation.BACKWARD and layer.data_format == "channels_last":
+            pytest.skip("Wrong backward bounds for maxpooling2d with 'channels_last' data format.")
+        if layer.data_format == "channels_first" and keras.backend.backend() == "tensorflow":
+            pytest.skip(
+                "Error when initializing 'BackwardMaxPooling2D' with 'channels_first' data format and 'tensorflow' backend in on some machines."
+            )
+        if (
+            layer.data_format == "channels_last"
+            and layer.padding == "same"
+            and propagation == Propagation.FORWARD
+            and affine
+        ):
+            pytest.skip(
+                "Wrong forward affine bounds for maxpooling2d with padding == 'same' and 'channels_last' data format."
+            )
 
     # build keras layer
     layer(keras_symbolic_layer_input)

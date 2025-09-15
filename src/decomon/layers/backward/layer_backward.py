@@ -159,7 +159,10 @@ class DecomonBackwardBoundedLinearizedLayer(DecomonLayer):
             raise NotImplementedError()
 
     def forward_affine_propagate(
-        self, input_affine_bounds: list[Tensor], input_constant_bounds: list[Tensor]
+        self,
+        input_affine_bounds: list[Tensor],
+        input_constant_bounds: list[Tensor],
+        perturbation_domain_inputs: list[Tensor],
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         w_l_in, b_l_in, w_u_in, b_u_in = input_affine_bounds
         # reshape
