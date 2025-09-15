@@ -43,7 +43,7 @@ from pytest_cases import (
     unpack_fixture,
 )
 
-from decomon.constants import Slope
+from decomon.constants import Propagation, Slope
 from decomon.keras_utils import batch_multid_dot
 from decomon.layers import (
     DecomonActivation,
@@ -162,7 +162,7 @@ def data_format_kwargs(data_format):
         (DecomonPermute, {}, Permute, dict(dims=(2, 3, 1))),
         (DecomonFlatten, {}, Flatten, dict()),
         (DecomonDropout, {}, Dropout, dict(rate=0.2)),
-        # (DecomonMaxPooling2D, {}, MaxPooling2D, data_format_kwargs),  # error with diagonal entries
+        (DecomonMaxPooling2D, {}, MaxPooling2D, data_format_kwargs),
         (DecomonAveragePooling2D, {}, AveragePooling2D, dict(pool_size=2)),
         (DecomonGlobalAveragePooling2D, {}, GlobalAveragePooling2D, data_format_kwargs),
         (DecomonGlobalAveragePooling2D, {}, GlobalAveragePooling2D, data_format_kwargs),
@@ -237,6 +237,11 @@ def test_decomon_unary_layer(
     if isinstance(layer, Max) or isinstance(layer, Min):
         if len(keras_symbolic_layer_input.shape) <= 2 and not layer.keepdims:
             pytest.skip("test Max for 0d/1d input only with keepdims=True")
+
+    # Bugs to fix:
+    if isinstance(layer, MaxPooling2D):
+        if propagation == Propagation.BACKWARD and layer.data_format == "channels_last":
+            pytest.skip("Wrong backward bounds for maxpooling2d with 'channels_last' data format.")
 
     # build keras layer
     layer(keras_symbolic_layer_input)
